@@ -1,0 +1,32 @@
+{ lib, pkgs, ... }:
+
+{
+  imports = [
+    ../options.nix
+  ];
+
+  nixpkgs.config.allowUnfree = true;
+
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    trusted-users = [ "root" "@wheel" ];
+  };
+
+  programs.zsh.enable = true;
+  time.timeZone = lib.mkDefault "Australia/Perth";
+
+  users.users.martinfan = {
+    isNormalUser = true;
+    home = "/home/martinfan";
+    extraGroups = [ "wheel" ];
+    shell = pkgs.zsh;
+  };
+
+  environment.systemPackages = with pkgs; [
+    curl
+    git
+    vim
+  ];
+
+  system.stateVersion = lib.mkDefault "25.05";
+}

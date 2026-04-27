@@ -1,0 +1,8 @@
+{
+  "name": "sourcegraph-amp-nix-wrapper",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@sourcegraph/amp": "0.0.1777279908-g9ebba6"
+  }
+}

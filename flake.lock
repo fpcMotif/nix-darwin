@@ -1,5 +1,29 @@
 {
   "nodes": {
+    "agent-skills": {
+      "inputs": {
+        "home-manager": [
+          "home-manager"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1776741567,
+        "narHash": "sha256-TbTToAtfQBhMr85xQOQ1ZJggnt6bt8eU1RW6zxHT1rQ=",
+        "ref": "master",
+        "rev": "bb2ababb31f83be94eefe76009602c926025cafb",
+        "revCount": 72,
+        "type": "git",
+        "url": "https://github.com/Kyure-A/agent-skills-nix.git"
+      },
+      "original": {
+        "ref": "master",
+        "type": "git",
+        "url": "https://github.com/Kyure-A/agent-skills-nix.git"
+      }
+    },
     "darwin": {
       "inputs": {
         "nixpkgs": [
@@ -17,6 +41,39 @@
       "original": {
         "owner": "nix-darwin",
         "repo": "nix-darwin",
+        "type": "github"
+      }
+    },
+    "dotfiles": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1777268404,
+        "narHash": "sha256-GTUjH7H9xfnGjE2nOKaotKwx8c83CekUvl+dZ+VLrcs=",
+        "ref": "main",
+        "rev": "794472a428b42d4c45b387dade52030e3623ab5f",
+        "revCount": 26,
+        "type": "git",
+        "url": "ssh://git@github.com/fpcMotif/dotfiles.git"
+      },
+      "original": {
+        "ref": "main",
+        "type": "git",
+        "url": "ssh://git@github.com/fpcMotif/dotfiles.git"
+      }
+    },
+    "flake-compat": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1767039857,
+        "narHash": "sha256-vNpUSpF5Nuw8xvDLj2KCwwksIbjua2LZCqhV1LNRDns=",
+        "owner": "edolstra",
+        "repo": "flake-compat",
+        "rev": "5edf11c44bc78a0d334f6334cdaf7d60d732daab",
+        "type": "github"
+      },
+      "original": {
+        "owner": "edolstra",
+        "repo": "flake-compat",
         "type": "github"
       }
     },
@@ -40,6 +97,45 @@
         "type": "github"
       }
     },
+    "mattpocock-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1777232946,
+        "narHash": "sha256-+6C7uTbdCyGz/VjU15zqALzRrrWI2/0I3mhEmwdUHDg=",
+        "ref": "main",
+        "rev": "90ea8eec03d4ae8f43427aaf6fe4722653561a42",
+        "revCount": 34,
+        "type": "git",
+        "url": "https://github.com/mattpocock/skills.git"
+      },
+      "original": {
+        "ref": "main",
+        "type": "git",
+        "url": "https://github.com/mattpocock/skills.git"
+      }
+    },
+    "nixos-wsl": {
+      "inputs": {
+        "flake-compat": "flake-compat",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1776910211,
+        "narHash": "sha256-0ku3gW8bZ9TTpEU2fQw86oU6ZLT2vF6pacF+cLaf7VY=",
+        "ref": "main",
+        "rev": "4e6cad241baa0115a7aae8c55b04c166da4997c9",
+        "revCount": 762,
+        "type": "git",
+        "url": "https://github.com/nix-community/NixOS-WSL.git"
+      },
+      "original": {
+        "ref": "main",
+        "type": "git",
+        "url": "https://github.com/nix-community/NixOS-WSL.git"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1776949667,
@@ -58,8 +154,12 @@
     },
     "root": {
       "inputs": {
+        "agent-skills": "agent-skills",
         "darwin": "darwin",
+        "dotfiles": "dotfiles",
         "home-manager": "home-manager",
+        "mattpocock-skills": "mattpocock-skills",
+        "nixos-wsl": "nixos-wsl",
         "nixpkgs": "nixpkgs"
       }
     }
