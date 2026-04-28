@@ -28,7 +28,7 @@ in
   ];
 
   # Keep this module on the upstream agent-skills-nix Home Manager DSL instead of
-  # hand-rolled activation scripts. See ARCHITECTURE.md#agent-skills-nix-setup
+  # hand-rolled activation scripts. See ARCHITECTURE.md#agent-skills
   # for target policy, revision notes, and citable upstream references.
   programs.agent-skills = {
     enable = true;
