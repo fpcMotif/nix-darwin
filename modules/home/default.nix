@@ -10,6 +10,7 @@ in
 {
   imports = [
     ./packages.nix
+    ./prompt.nix
     ./skills.nix
   ];
 
