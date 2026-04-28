@@ -7,11 +7,15 @@
 
 stdenv.mkDerivation {
   pname = "google-drive";
-  version = "latest";
+  # Google does not publish versioned .dmg URLs; this label tracks the
+  # current upstream release for review-time visibility, but the URL
+  # itself still resolves to "latest". Bumps stay manual — see
+  # ARCHITECTURE.md §"Package ownership".
+  version = "124.0";
 
   src = fetchurl {
     url = "https://dl.google.com/drive-file-stream/GoogleDrive.dmg";
-    hash = "sha256-zrFs+5BWqjSzvxrQFcR1NlGes8Mhp6OLdx6sjYFuZGY=";
+    hash = "sha256-sq26uY6KME65Xjof9kuHABD8RFkXtgD0LIBEeGTgFig=";
   };
 
   nativeBuildInputs = [ undmg ];
