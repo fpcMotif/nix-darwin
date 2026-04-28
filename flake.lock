@@ -47,18 +47,17 @@
     "dotfiles": {
       "flake": false,
       "locked": {
-        "lastModified": 1777268404,
-        "narHash": "sha256-GTUjH7H9xfnGjE2nOKaotKwx8c83CekUvl+dZ+VLrcs=",
-        "ref": "main",
-        "rev": "794472a428b42d4c45b387dade52030e3623ab5f",
-        "revCount": 26,
-        "type": "git",
-        "url": "ssh://git@github.com/fpcMotif/dotfiles.git"
+        "lastModified": 1777305354,
+        "narHash": "sha256-WpFi6DknVMzlIyZnUT/1oUCrRvMW+HPZ9AHh0glmx5s=",
+        "owner": "fpcMotif",
+        "repo": "dotfiles",
+        "rev": "f065dd140f8a4ddb087d74da5c29fabe896e661e",
+        "type": "github"
       },
       "original": {
-        "ref": "main",
-        "type": "git",
-        "url": "ssh://git@github.com/fpcMotif/dotfiles.git"
+        "owner": "fpcMotif",
+        "repo": "dotfiles",
+        "type": "github"
       }
     },
     "flake-compat": {

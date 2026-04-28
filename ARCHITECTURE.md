@@ -111,6 +111,30 @@ Do this one file at a time:
 3. Enable the relevant Home Manager `programs.*` module.
 4. Rebuild and verify ownership.
 
+#### Worked example: `~/.config/starship.toml`
+
+```bash
+# 1-2. Hand off the file from chezmoi.
+chezmoi forget --force ~/.config/starship.toml
+rm ~/.config/starship.toml
+
+# 3. Enable on the active host (in hosts/darwin/default.nix):
+#    martin.prompt.starship.enable = true;
+#    martin.prompt.starship.palette.enable = true;
+#    martin.prompt.starship.powerline.enable = true;
+#    martin.prompt.starship.segments.{rootIndicator,path,git,status,rPromptTime}.enable = true;
+
+# 4. Activate.
+sudo darwin-rebuild switch --flake .#Martins-Mac-mini
+
+# Verify Nix ownership.
+ls -la ~/.config/starship.toml      # → symlink into /nix/store/...
+```
+
+`modules/home/prompt.nix` adds an activation-time guard that aborts the rebuild
+with a specific remediation message if steps 1–2 are skipped, instead of Home
+Manager's generic "file in the way" error.
+
 ## Where things belong: hosts vs modules vs pkgs
 
 | If the change is…                                                | Put it in…                                |
@@ -150,6 +174,7 @@ The active Darwin host (`hosts/darwin/default.nix`) sets:
 modules/home/
 ├── default.nix         # username, homeDirectory, stateVersion, imports
 ├── packages.nix        # common + Darwin-only packages
+├── prompt.nix          # option-gated Starship config (dormant by default; replaces chezmoi-owned starship.toml when enabled)
 └── skills.nix          # agent skill bundle activation
 ```
 
@@ -300,6 +325,30 @@ sudo darwin-rebuild --rollback
 # Or activate a specific generation
 sudo darwin-rebuild --switch-generation <N>
 ```
+
+### Roll back a single prompt setting
+
+`martin.prompt.starship` is composed of independently-toggleable
+`mkEnableOption`s — disable any one without affecting the rest:
+
+```bash
+# Edit hosts/darwin/default.nix, e.g.:
+#   martin.prompt.starship.segments.rPromptTime.enable = false;
+
+sudo darwin-rebuild switch --flake .#Martins-Mac-mini
+```
+
+The toggle ladder, finest → coarsest:
+
+| Disable                                                        | Effect                                  |
+|----------------------------------------------------------------|-----------------------------------------|
+| `martin.prompt.starship.segments.<name>.enable = false`        | Drops one segment; others unchanged.    |
+| `martin.prompt.starship.palette.enable = false`                | Falls back to bold styles, no colors.   |
+| `martin.prompt.starship.powerline.enable = false`              | Drops chevrons; backgrounds remain.     |
+| `martin.prompt.starship.enable = false`                        | Disables Starship; `~/.config/starship.toml` becomes unmanaged again (chezmoi can re-claim it). |
+
+If a prompt regression makes the shell unusable mid-session, the larger blast
+radius is generation rollback (above): `sudo darwin-rebuild --rollback`.
 
 ### Add a CLI tool
 
