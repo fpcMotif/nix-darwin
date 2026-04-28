@@ -52,22 +52,33 @@ let
       name = "martin-agent-skills-bundle";
     };
 
-  syncTargets = dest: {
-    default = {
-      inherit dest;
+  syncTargets = {
+    pi = {
+      dest = "$HOME/.pi/agent/skills";
+      enable = true;
+      structure = "symlink-tree";
+      systems = [ ];
+    };
+    claude = {
+      dest = "\${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills";
+      enable = true;
+      structure = "symlink-tree";
+      systems = [ ];
+    };
+    shared = {
+      dest = "$HOME/.agents/skills";
       enable = true;
       structure = "symlink-tree";
       systems = [ ];
     };
   };
 
-  syncScript = dest:
-    agentLib.mkSyncScript {
-      inherit pkgs bundle;
-      targets = syncTargets dest;
-      system = currentSystem;
-      excludePatterns = agentLib.defaultExcludePatterns;
-    };
+  syncScript = agentLib.mkSyncScript {
+    inherit pkgs bundle;
+    targets = syncTargets;
+    system = currentSystem;
+    excludePatterns = agentLib.defaultExcludePatterns;
+  };
 in
 {
   # Known but intentionally omitted until their source and name are verified:
@@ -76,12 +87,5 @@ in
   # manim-skill, mgrep, modern-bash, notebooklm, oracle, qmd, remotion,
   # stitch-mcp.
 
-  home.activation.agentSkillsPi = lib.hm.dag.entryAfter [ "writeBoundary" ]
-    (syncScript "$HOME/.pi/agent/skills");
-
-  home.activation.agentSkillsClaude = lib.hm.dag.entryAfter [ "writeBoundary" ]
-    (syncScript "\${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills");
-
-  home.activation.agentSkillsShared = lib.hm.dag.entryAfter [ "writeBoundary" ]
-    (syncScript "$HOME/.agents/skills");
+  home.activation.agentSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] syncScript;
 }
