@@ -16,8 +16,6 @@ in
   home = {
     username = currentSystemUser;
     inherit homeDirectory;
-
-    # Pin the Home Manager schema we wrote against. Bump deliberately.
     stateVersion = "24.05";
   };
 }

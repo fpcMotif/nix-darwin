@@ -1,8 +1,6 @@
 { ... }:
 
 {
-  martin.targets.x230.enable = true;
-
   networking.hostName = "x230";
 
   boot.loader.grub = {

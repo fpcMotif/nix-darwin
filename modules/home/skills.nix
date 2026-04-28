@@ -1,28 +1,16 @@
-{ lib, pkgs, inputs, currentSystem ? pkgs.stdenv.hostPlatform.system, ... }:
+{ inputs, ... }:
 
 let
-  agentLib = inputs.agent-skills.lib.agent-skills;
-
-  filteredSource = path: subdir: nameRegex: {
-    inherit path subdir;
+  filteredSource = input: subdir: nameRegex: {
+    inherit input subdir;
     filter = {
       inherit nameRegex;
       maxDepth = 1;
     };
   };
 
-  singleSkillSource = path: subdir: {
-    inherit path subdir;
-    filter.maxDepth = 0;
-  };
-
-  sources = {
-    dotfiles-pi = filteredSource inputs.dotfiles "dot_pi/agent/skills"
-      "^(git-workflow|review|ralph-loop|web-browser)$";
-    dotfiles-claude = filteredSource inputs.dotfiles "dot_claude/skills"
-      "^(lazygit)$";
-
-    grill-me = singleSkillSource inputs.mattpocock-skills "grill-me";
+  rootSkillSource = input: subdir: {
+    inherit input subdir;
   };
 
   enabledSkillIds = [
@@ -33,55 +21,53 @@ let
     "review"
     "web-browser"
   ];
-
-  bundle =
-    let
-      catalog = agentLib.discoverCatalog sources;
-      allowlist = agentLib.allowlistFor {
-        inherit catalog sources;
-        enable = enabledSkillIds;
-        enableAll = false;
-      };
-      selection = agentLib.selectSkills {
-        inherit catalog allowlist sources;
-        skills = { };
-      };
-    in
-    agentLib.mkBundle {
-      inherit pkgs selection;
-      name = "martin-agent-skills-bundle";
-    };
-
-  syncTargets = dest: {
-    default = {
-      inherit dest;
-      enable = true;
-      structure = "symlink-tree";
-      systems = [ ];
-    };
-  };
-
-  syncScript = dest:
-    agentLib.mkSyncScript {
-      inherit pkgs bundle;
-      targets = syncTargets dest;
-      system = currentSystem;
-      excludePatterns = agentLib.defaultExcludePatterns;
-    };
 in
 {
-  # Known but intentionally omitted until their source and name are verified:
-  # agent-browser, ast-grep, crush, doc, every-team-compounding, figma,
-  # find-skills, gh-address-comments, gh-fix-ci, github-mcp, linear,
-  # manim-skill, mgrep, modern-bash, notebooklm, oracle, qmd, remotion,
-  # stitch-mcp.
+  imports = [
+    inputs.agent-skills.homeManagerModules.default
+  ];
 
-  home.activation.agentSkillsPi = lib.hm.dag.entryAfter [ "writeBoundary" ]
-    (syncScript "$HOME/.pi/agent/skills");
+  # Keep this module on the upstream agent-skills-nix Home Manager DSL instead of
+  # hand-rolled activation scripts. See ARCHITECTURE.md#agent-skills-nix-setup
+  # for target policy, revision notes, and citable upstream references.
+  programs.agent-skills = {
+    enable = true;
 
-  home.activation.agentSkillsClaude = lib.hm.dag.entryAfter [ "writeBoundary" ]
-    (syncScript "\${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills");
+    sources = {
+      dotfiles-pi = filteredSource "dotfiles" "dot_pi/agent/skills"
+        "^(git-workflow|review|ralph-loop|web-browser)$";
 
-  home.activation.agentSkillsShared = lib.hm.dag.entryAfter [ "writeBoundary" ]
-    (syncScript "$HOME/.agents/skills");
+      dotfiles-claude = filteredSource "dotfiles" "dot_claude/skills"
+        "^(lazygit)$";
+
+      grill-me = rootSkillSource "mattpocock-skills" "grill-me";
+    };
+
+    skills = {
+      enable = enabledSkillIds;
+      enableAll = false;
+      explicit = { };
+    };
+
+    targets = {
+      # Shared Open Agent Skills registry. This is the primary Codex path and
+      # is also supported by Cursor.
+      agents.enable = true;
+
+      # Tool-specific mirrors keep discovery predictable in clients that prefer
+      # or require their own config root.
+      claude.enable = true;
+      cursor.enable = true;
+      codex.enable = true;
+
+      # Oh My Pi / Pi harness target is not an upstream default target, so keep
+      # it explicit while sharing the same declarative bundle and sync logic.
+      pi = {
+        enable = true;
+        dest = "$HOME/.pi/agent/skills";
+        structure = "symlink-tree";
+        systems = [ ];
+      };
+    };
+  };
 }
