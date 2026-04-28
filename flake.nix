@@ -26,7 +26,7 @@
     };
 
     dotfiles = {
-      url = "git+ssh://git@github.com/fpcMotif/dotfiles.git?ref=main";
+      url = "github:fpcMotif/dotfiles";
       flake = false;
     };
 
