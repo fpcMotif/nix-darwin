@@ -31,7 +31,6 @@ This repository is Martin's cross-platform Nix configuration. The active product
 │   └── home/                 # Martin's Home Manager profile
 ├── pkgs/                     # custom package derivations/overlay
 ├── references/               # external sample repos, reference-only
-├── home.nix                  # compatibility shim
 └── skills.nix                # compatibility shim
 ```
 
