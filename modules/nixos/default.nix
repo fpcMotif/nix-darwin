@@ -1,4 +1,4 @@
-{ lib, pkgs, currentSystemUser, ... }:
+{ lib, pkgs, currentSystemUser, currentSystemUserHome, ... }:
 
 {
   nix.settings = {
@@ -14,7 +14,7 @@
 
   users.users.${currentSystemUser} = {
     isNormalUser = true;
-    home = "/home/${currentSystemUser}";
+    home = currentSystemUserHome;
     extraGroups = [ "wheel" ];
     shell = pkgs.zsh;
   };
