@@ -1,4 +1,4 @@
-{ lib, pkgs, ... }:
+{ lib, pkgs, currentSystemUser, ... }:
 
 {
   imports = [
@@ -15,9 +15,9 @@
   programs.zsh.enable = true;
   time.timeZone = lib.mkDefault "Australia/Perth";
 
-  users.users.martinfan = {
+  users.users.${currentSystemUser} = {
     isNormalUser = true;
-    home = "/home/martinfan";
+    home = "/home/${currentSystemUser}";
     extraGroups = [ "wheel" ];
     shell = pkgs.zsh;
   };

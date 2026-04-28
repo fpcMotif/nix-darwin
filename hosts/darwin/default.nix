@@ -1,10 +1,10 @@
-{ pkgs, ... }:
+{ pkgs, currentSystemUser, ... }:
 
 {
-  users.users.martinfan.home = "/Users/martinfan";
+  users.users.${currentSystemUser}.home = "/Users/${currentSystemUser}";
 
   system = {
-    primaryUser = "martinfan";
+    primaryUser = currentSystemUser;
     stateVersion = 5;
   };
 

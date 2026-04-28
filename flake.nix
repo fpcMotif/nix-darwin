@@ -1,5 +1,5 @@
 {
-  description = "Martin's Apple Silicon nix-darwin and optional NixOS scaffolds";
+  description = "Martin's cross-platform Nix config: active nix-darwin Mac with Linux/WSL scaffolds";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";

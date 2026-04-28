@@ -1,73 +1,23 @@
-{ lib, pkgs, ... }:
+{ pkgs, currentSystemUser, ... }:
 
 let
-  isDarwin = pkgs.stdenv.isDarwin;
   homeDirectory =
-    if isDarwin then
-      "/Users/martinfan"
+    if pkgs.stdenv.isDarwin then
+      "/Users/${currentSystemUser}"
     else
-      "/home/martinfan";
-
-  commonPackages = with pkgs; [
-    # File ops and viewing.
-    bat
-    fd
-    ripgrep
-    eza
-    dust
-    tree
-
-    # System/process inspection.
-    procs
-    bottom
-
-    # Navigation/search.
-    zoxide
-    fzf
-    ast-grep
-    mgrep
-
-    # Git.
-    git
-    lazygit
-    delta
-
-    # Shell UX.
-    starship
-    sheldon
-
-    # Utilities.
-    jq
-    gh
-    chezmoi
-    just
-    bun
-    nodejs_24
-  ];
-
-  darwinPackages = with pkgs; [
-    martin.gemini-cli-preview
-    martin.sourcegraph-amp
-    codex
-    crush
-    martin.pi-coding-agent
-    martin.oh-my-pi
-    martin.pi-npm-bun
-  ];
+      "/home/${currentSystemUser}";
 in
-
 {
   imports = [
+    ./packages.nix
     ./skills.nix
   ];
 
   home = {
-    username = "martinfan";
+    username = currentSystemUser;
     inherit homeDirectory;
 
     # Pin the Home Manager schema we wrote against. Bump deliberately.
     stateVersion = "24.05";
-
-    packages = commonPackages ++ lib.optionals isDarwin darwinPackages;
   };
 }

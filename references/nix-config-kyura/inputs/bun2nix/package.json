@@ -1,0 +1,7 @@
+{
+  "name": "bun2nix-packages",
+  "private": true,
+  "dependencies": {
+    "atcoder-cli": "2.2.0"
+  }
+}

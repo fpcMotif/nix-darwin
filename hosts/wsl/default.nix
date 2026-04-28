@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ inputs, currentSystemUser, ... }:
 
 {
   imports = [
@@ -11,6 +11,6 @@
 
   wsl = {
     enable = true;
-    defaultUser = "martinfan";
+    defaultUser = currentSystemUser;
   };
 }
