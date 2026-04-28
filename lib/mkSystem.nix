@@ -1,29 +1,22 @@
 { inputs, overlays }:
 
 {
-  name,
   system,
   user,
-  platform,
   hostModule,
 }:
 
 let
-  isDarwin = platform == "darwin";
+  isDarwin = inputs.nixpkgs.lib.hasSuffix "darwin" system;
   systemFunc =
     if isDarwin then
       inputs.darwin.lib.darwinSystem
     else
       inputs.nixpkgs.lib.nixosSystem;
   homeManagerModule =
-    if isDarwin then
-      inputs.home-manager.darwinModules.home-manager
-    else
-      inputs.home-manager.nixosModules.home-manager;
+    inputs.home-manager.${if isDarwin then "darwinModules" else "nixosModules"}.home-manager;
   sharedArgs = {
     inherit inputs;
-    currentSystem = system;
-    currentSystemName = name;
     currentSystemUser = user;
   };
 in

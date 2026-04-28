@@ -25,35 +25,32 @@ This repository is Martin's cross-platform Nix configuration. The active product
 │   ├── wsl/default.nix       # inactive NixOS-WSL scaffold
 │   └── x230/default.nix      # inactive ThinkPad scaffold
 ├── modules/
-│   ├── options.nix           # cross-platform martin.* options
 │   ├── darwin/               # nix-darwin shared modules
 │   ├── nixos/                # inactive shared NixOS module
 │   └── home/                 # Martin's Home Manager profile
 ├── pkgs/                     # custom package derivations/overlay
 ├── references/               # external sample repos, reference-only
-├── home.nix                  # compatibility shim
-└── skills.nix                # compatibility shim
+├── home.nix                  # standalone Home Manager entry (off-flake fallback)
+└── skills.nix                # standalone agent-skills entry (off-flake fallback)
 ```
 
 `flake.nix` should stay thin: it wires inputs, overlays, systems, and formatters. Host- and feature-specific behavior belongs in `hosts/` and `modules/`.
 
 ## Composition Model
 
-`lib/mkSystem.nix` is the central constructor. Each system supplies:
+`lib/mkSystem.nix` is the central constructor. Each system supplies three facts:
 
-- `name` — flake output/system name
-- `system` — platform triple, e.g. `aarch64-darwin`
-- `user` — current Martin user for that host
-- `platform` — `darwin` or `nixos`
-- `hostModule` — host-specific module path
+- `system` — platform triple, e.g. `aarch64-darwin` (Darwin vs NixOS is inferred from the suffix).
+- `user` — current Martin user for that host.
+- `hostModule` — host-specific module path.
 
 The constructor:
 
-1. selects nix-darwin or NixOS,
+1. selects nix-darwin or NixOS based on the `system` suffix,
 2. applies the shared overlay from `pkgs/default.nix`,
 3. imports shared platform modules,
 4. wires Home Manager as a system module,
-5. passes `currentSystem`, `currentSystemName`, and `currentSystemUser` through `specialArgs`.
+5. passes `inputs` and `currentSystemUser` through `specialArgs`.
 
 Shared modules should use `currentSystemUser` instead of hardcoding `martinfan`. The profile is still Martin-specific; it is not a generic multi-user framework.
 
@@ -111,49 +108,72 @@ Common packages should be portable across Mac, future Omakub Home Manager, and N
 
 ## Agent Skills Nix Setup
 
-The active skills module is `modules/home/skills.nix`. It currently uses `inputs.agent-skills.lib.agent-skills` directly to discover selected `SKILL.md` directories, build one Nix store bundle, and sync that bundle to:
+The active skills module is `modules/home/skills.nix`. It imports `inputs.agent-skills.homeManagerModules.default` and uses the upstream `programs.agent-skills` DSL instead of custom activation scripts. The module now owns one declarative bundle of selected `SKILL.md` directories and syncs that bundle to enabled targets.
 
-- `$HOME/.pi/agent/skills` for Oh My Pi / Pi harness skills,
-- `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills` for Claude Code personal skills,
-- `$HOME/.agents/skills` as the vendor-neutral shared user skill registry.
+Current enabled targets:
 
-This one-file library setup is acceptable while the target matrix is small, but the preferred universal shape for broader Codex/Claude/Cursor coverage is the upstream Home Manager DSL from `agent-skills-nix`:
+- `$HOME/.agents/skills` via `targets.agents`: shared Open Agent Skills registry and the primary Codex-compatible path.
+- `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills` via `targets.claude`: Claude Code personal skills.
+- `$HOME/.cursor/skills` via `targets.cursor`: Cursor-native user skills.
+- `${CODEX_HOME:-$HOME/.codex}/skills` via `targets.codex`: compatibility mirror from `agent-skills-nix`; keep `$HOME/.agents/skills` as the primary Codex path.
+- `$HOME/.pi/agent/skills` via custom `targets.pi`: Oh My Pi / Pi harness skills.
+
+Current selected sources and skills:
 
 ```nix
-imports = [ inputs.agent-skills.homeManagerModules.default ];
-
 programs.agent-skills = {
   enable = true;
 
-  sources.<name> = {
-    input = "<flake-input-name>";
-    subdir = "skills";
-    # Use idPrefix when two sources expose the same skill name.
-    # idPrefix = "openai";
-    filter.maxDepth = null;
+  sources = {
+    dotfiles-pi = { input = "dotfiles"; subdir = "dot_pi/agent/skills"; };
+    dotfiles-claude = { input = "dotfiles"; subdir = "dot_claude/skills"; };
+    grill-me = { input = "mattpocock-skills"; subdir = "grill-me"; };
   };
 
-  # Prefer explicit allowlists for third-party skill repos.
-  skills.enable = [ "skill-a" "skill-b" ];
-  # Use enableAll only for tightly trusted private sources.
-  # skills.enableAll = [ "private" ];
-
-  targets = {
-    agents.enable = true; # $HOME/.agents/skills: shared Open Agent Skills registry
-    claude.enable = true; # ${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills
-    cursor.enable = true; # $HOME/.cursor/skills
-    codex.enable = true;  # ${CODEX_HOME:-$HOME/.codex}/skills, useful as a compatibility mirror
-  };
+  skills.enable = [
+    "git-workflow"
+    "grill-me"
+    "lazygit"
+    "ralph-loop"
+    "review"
+    "web-browser"
+  ];
 };
 ```
 
-Universal policy: publish the same bundle once, then mirror it to each agent-native directory that has documented skill discovery. `$HOME/.agents/skills` is the first-class shared target because Codex documents it for user skills and Cursor documents it as a user-level skills directory. Claude Code still documents `~/.claude/skills`, so keep a Claude-specific mirror. Cursor also documents `~/.cursor/skills` and compatibility loading from `.claude` and `.codex`; mirroring to Cursor is optional if `$HOME/.agents/skills` already works, but useful when debugging tool-specific discovery.
+Universal policy: publish one Nix-built skill bundle, then mirror it only to agent-native directories with documented or consciously accepted discovery behavior. `$HOME/.agents/skills` is the first-class shared target because Codex documents it for user skills and Cursor documents it as a user-level skills directory. Claude Code documents `~/.claude/skills`, so keep the Claude mirror. Cursor documents `~/.cursor/skills` and compatibility loading from `.claude` and `.codex`, so the Cursor mirror is useful for deterministic Cursor discovery.
 
-Project-local skills should be a separate decision from user-global skills. Use the upstream `mkLocalInstallScript` or `mkShellHook` with `defaultLocalTargets` when a repository should receive checked-in or dev-shell-installed skills under `.agents/skills`, `.claude/skills`, `.cursor/skills`, or `.codex/skills`. Use `copy-tree` for local targets so a project can inspect/edit generated files without following Nix store symlinks; use `symlink-tree` for global Home Manager targets. Avoid `link` when the destination uses shell variables such as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}` because `home.file` cannot expand them at activation time.
+Revision guide:
 
-Zed and VS Code are not equivalent skill targets today. Zed's published AI docs document `.rules`, `.cursorrules`, `AGENTS.md`, `CLAUDE.md`, and related rule files; Agent Skills support is visible in an open upstream PR, not a stable documented target. VS Code Copilot documents `AGENTS.md`, `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md`, not `SKILL.md` directories. For those editors, keep shared instructions in `AGENTS.md` and add editor-native rule/instruction files only when needed; do not invent Nix skill mirrors until the editor documents a stable skills path.
+1. To add a trusted upstream skill source, add a flake input, add `programs.agent-skills.sources.<name>`, and add specific IDs to `skills.enable`. Prefer explicit allowlists for public third-party sources.
+2. Use `skills.enableAll = [ "source" ]` only for tightly trusted private sources. It is intentionally not enabled globally.
+3. If two sources expose the same skill name, set `idPrefix` on at least one source and enable the prefixed IDs, for example `openai/pdf` and `anthropic/pdf`.
+4. Keep recursive discovery (`filter.maxDepth = null`) unless a source is known to be flat-only. Use `filter.maxDepth = 1` for flat-only roots such as the current curated dotfiles folders.
+5. Use `skills.explicit.<name>.packages` and `transform` when a skill needs Nix-provided tools; this bundles local dependency paths into the skill and avoids undeclared global package assumptions.
+6. Keep `excludePatterns = [ "/.system" ]` unless Nix must own every file in the target directory. This leaves room for agents to manage their own system/runtime skill subtrees.
+7. Do not enable every upstream default target just because it exists. Each enabled target uses rsync with deletion semantics; enabling a target means Nix owns that target directory.
 
-Skill authoring rules: follow the Agent Skills spec (`SKILL.md` with `name` and `description` frontmatter), keep each skill focused, namespace duplicate upstream IDs with `idPrefix`, keep recursive discovery enabled unless a source is known to be flat-only, and keep `excludePatterns = [ "/.system" ]` unless Nix must own every file in the target directory. Use `skills.explicit.<name>.packages` and `transform` when a skill needs Nix-provided tools; this keeps dependencies bundled as local paths inside the skill and avoids global package assumptions.
+Project-local skills are a separate decision from user-global skills. Use upstream `mkLocalInstallScript` or `mkShellHook` with `defaultLocalTargets` when a repository should receive generated local skills under `.agents/skills`, `.claude/skills`, `.cursor/skills`, or `.codex/skills`. Use `copy-tree` for local targets so a project can inspect or edit generated files without following Nix store symlinks; use `symlink-tree` for global Home Manager targets. Avoid `link` when the destination uses shell variables such as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}` because `home.file` cannot expand them at activation time.
+
+Zed and VS Code are not equivalent skill targets today. Zed's published AI docs document `.rules`, `.cursorrules`, `AGENTS.md`, `CLAUDE.md`, and related rule files; Agent Skills support is visible in an open upstream PR, not a stable documented release target. VS Code Copilot documents `AGENTS.md`, `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md`, not `SKILL.md` directories. For those editors, keep shared instructions in `AGENTS.md` and add editor-native rule/instruction files only when needed; do not invent Nix skill mirrors until the editor documents a stable skills path.
+
+Grill-me review of this design:
+
+- Should the module use raw library functions or the Home Manager DSL? Use the DSL. It keeps this repo aligned with upstream options, target defaults, warnings, and future `agent-skills-nix` changes.
+- Should `$HOME/.agents/skills` or `$HOME/.codex/skills` be the Codex source of truth? `$HOME/.agents/skills`. Codex documents `.agents/skills`; `targets.codex` is only a compatibility mirror.
+- Should unsupported editor paths be created preemptively? No. Zed and VS Code currently need rules/instructions, not declared `SKILL.md` mirrors.
+- What is the main operational risk? Enabled targets are rsync-managed. Adding a target can delete unmanaged files in that target directory. Enable new targets deliberately.
+
+Citable references for future review:
+
+- Agent Skills specification: <https://agentskills.io/specification>
+- `agent-skills-nix` target matrix and Home Manager DSL: <https://github.com/Kyure-A/agent-skills-nix#default-target-paths>
+- Codex Agent Skills locations and behavior: <https://developers.openai.com/codex/skills#where-to-save-skills>
+- Claude Code skills locations and frontmatter: <https://code.claude.com/docs/en/skills#where-skills-live>
+- Cursor skill directories and compatibility paths: <https://cursor.com/docs/skills#skill-directories>
+- Zed current rules-file behavior: <https://zed.dev/docs/ai/rules#rules-files>
+- Zed Agent Skills implementation status to revisit later: <https://github.com/zed-industries/zed/pull/50453>
+- VS Code Copilot custom instructions and `AGENTS.md` behavior: <https://code.visualstudio.com/docs/copilot/customization/custom-instructions>
 
 ## Package Ownership
 
@@ -224,7 +244,7 @@ They are not active inputs and are not imported by this flake. Borrow patterns s
 - from Mitchellh: simple `mkSystem`, machine/user/home separation, pragmatic WSL/VM scaffolding,
 - from Agent Skills Nix: Home Manager DSL, target syncing, local install scripts, and skill packaging patterns.
 
-Do not copy Linux-specific NixOS concepts into nix-darwin modules without translation. Do not migrate `modules/home/skills.nix` to the Agent Skills Home Manager DSL until that is a deliberate follow-up change.
+Do not copy Linux-specific NixOS concepts into nix-darwin modules without translation.
 
 ## Workflows
 

@@ -34,7 +34,6 @@
       url = "git+https://github.com/mattpocock/skills.git?ref=main";
       flake = false;
     };
-
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:
@@ -49,30 +48,24 @@
     in
     {
       darwinConfigurations."Martins-Mac-mini" = mkSystem {
-        name = "Martins-Mac-mini";
         system = "aarch64-darwin";
         user = "martinfan";
-        platform = "darwin";
         hostModule = ./hosts/darwin;
       };
 
       nixosConfigurations.wsl = mkSystem {
-        name = "wsl";
         system = "x86_64-linux";
         user = "martinfan";
-        platform = "nixos";
         hostModule = ./hosts/wsl;
       };
 
       nixosConfigurations.x230 = mkSystem {
-        name = "x230";
         system = "x86_64-linux";
         user = "martinfan";
-        platform = "nixos";
         hostModule = ./hosts/x230;
       };
 
-      formatter.aarch64-darwin = nixpkgs.legacyPackages.aarch64-darwin.nixpkgs-fmt;
-      formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
+      formatter = nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-linux" ]
+        (s: nixpkgs.legacyPackages.${s}.nixpkgs-fmt);
     };
 }
