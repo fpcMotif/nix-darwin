@@ -12,7 +12,7 @@ stdenv.mkDerivation {
   src = fetchurl {
     url = "https://api.raycast.app/v2/download";
     name = "Raycast.dmg";
-    hash = "sha256-XNGUMjIAJmHOz8uwfCor3vcR9n2hftEo5TmWwZMcojQ=";
+    hash = "sha256-27kvr1ilsjmYYiZnffJO8U5GFwpM82hc/DoBcgE+Lrc=";
   };
 
   nativeBuildInputs = [ undmg ];
