@@ -12,7 +12,7 @@ stdenv.mkDerivation {
   src = fetchurl {
     url = "https://www.dropbox.com/download?plat=mac&full=1";
     name = "Dropbox.dmg";
-    hash = "sha256-i6tOrY1MZBcK018q1YlXIf3CagcI9zpGl6wJjYZ7ha4=";
+    hash = "sha256-pIKS73MwH9SBXg39zqevGxcHXbK0jFjz+onWhG4/E3g=";
   };
 
   nativeBuildInputs = [ undmg ];
