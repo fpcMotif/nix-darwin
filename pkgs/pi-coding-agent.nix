@@ -26,10 +26,10 @@
 #        H=$(nix-prefetch-url https://github.com/badlogic/pi-mono/releases/download/v<VER>/pi-darwin-arm64.tar.gz)
 #        nix hash convert --to sri --hash-algo sha256 "$H"
 
-{
-  lib,
-  stdenvNoCC,
-  fetchurl,
+{ lib
+, stdenvNoCC
+, fetchurl
+,
 }:
 
 stdenvNoCC.mkDerivation (finalAttrs: {
@@ -45,8 +45,8 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
   dontConfigure = true;
   dontBuild = true;
-  dontStrip = true;     # don't strip a Bun-compiled standalone
-  dontPatchELF = true;  # macOS, but be explicit
+  dontStrip = true; # don't strip a Bun-compiled standalone
+  dontPatchELF = true; # macOS, but be explicit
 
   installPhase = ''
     runHook preInstall

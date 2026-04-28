@@ -22,18 +22,18 @@
 #   4. update `npmDepsHash` via the lib.fakeHash dance
 #      (set to lib.fakeHash, build, copy "got: sha256-…" back).
 
-{
-  lib,
-  stdenv,
-  buildNpmPackage,
-  fetchFromGitHub,
-  jq,
-  pkg-config,
-  makeWrapper,
-  clang_20,
-  libsecret,
-  ripgrep,
-  nodejs_22,
+{ lib
+, stdenv
+, buildNpmPackage
+, fetchFromGitHub
+, jq
+, pkg-config
+, makeWrapper
+, clang_20
+, libsecret
+, ripgrep
+, nodejs_22
+,
 }:
 
 buildNpmPackage (finalAttrs: {

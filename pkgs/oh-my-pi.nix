@@ -21,10 +21,10 @@
 #        H=$(nix-prefetch-url https://github.com/can1357/oh-my-pi/releases/download/v<VER>/omp-darwin-arm64.tar.gz)
 #        nix hash convert --to sri --hash-algo sha256 "$H"
 
-{
-  lib,
-  stdenvNoCC,
-  fetchurl,
+{ lib
+, stdenvNoCC
+, fetchurl
+,
 }:
 
 stdenvNoCC.mkDerivation (finalAttrs: {
