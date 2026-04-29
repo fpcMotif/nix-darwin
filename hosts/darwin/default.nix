@@ -24,6 +24,7 @@
         rootIndicator.enable = true;
         path.enable = true;
         git.enable = true;
+        jj.enable = true;
         status.enable = true;
         rPromptTime.enable = true;
       };
@@ -32,7 +33,18 @@
     terminal.ghostty = {
       enable = true;
 
-      theme.auto = true;
+      theme = {
+        auto = false;
+        fixed = "rose-pine-moon";
+        boldIsBright = false;
+        customThemes."rose-pine-moon" =
+          builtins.readFile ../../modules/home/ghostty-themes/rose-pine-moon;
+      };
+
+      transparency = {
+        opacity = 0.85;
+        blur = 20;
+      };
 
       font = {
         family = "Maple Mono NF CN";
@@ -51,7 +63,7 @@
         titlebarStyle = "transparent";
         saveState = "always";
         confirmClose = false;
-        minimumContrast = 1.1;
+        minimumContrast = 1.08;
         padding = {
           x = 4;
           y = 4;

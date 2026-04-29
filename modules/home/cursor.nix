@@ -60,24 +60,25 @@ in
       "$HOME/Library/Application Support/Cursor/User/settings.json"
   '';
 
-  home.activation.cursorExtensions = let
-    extensionArgs = lib.concatMapStringsSep " " lib.escapeShellArg cursorExtensions;
-  in
-  lib.hm.dag.entryAfter [ "cursorSettings" ] ''
-    cursor_cmd=""
-    if command -v cursor >/dev/null 2>&1; then
-      cursor_cmd="$(command -v cursor)"
-    elif [ -x "/Applications/Cursor.app/Contents/Resources/app/bin/cursor" ]; then
-      cursor_cmd="/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
-    fi
+  home.activation.cursorExtensions =
+    let
+      extensionArgs = lib.concatMapStringsSep " " lib.escapeShellArg cursorExtensions;
+    in
+    lib.hm.dag.entryAfter [ "cursorSettings" ] ''
+      cursor_cmd=""
+      if command -v cursor >/dev/null 2>&1; then
+        cursor_cmd="$(command -v cursor)"
+      elif [ -x "/Applications/Cursor.app/Contents/Resources/app/bin/cursor" ]; then
+        cursor_cmd="/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
+      fi
 
-    if [ -z "$cursor_cmd" ]; then
-      echo "Cursor CLI not available, skipping extension sync."
-      exit 0
-    fi
+      if [ -z "$cursor_cmd" ]; then
+        echo "Cursor CLI not available, skipping extension sync."
+        exit 0
+      fi
 
-    for ext in ${extensionArgs}; do
-      "$cursor_cmd" --install-extension "$ext" --force
-    done
-  '';
+      for ext in ${extensionArgs}; do
+        "$cursor_cmd" --install-extension "$ext" --force
+      done
+    '';
 }

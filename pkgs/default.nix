@@ -1,6 +1,10 @@
 final: _prev:
 
 {
+  direnv = _prev.direnv.overrideAttrs (_old: {
+    doCheck = false;
+  });
+
   crush = _prev.crush.overrideAttrs (_old: rec {
     version = "0.63.0";
 

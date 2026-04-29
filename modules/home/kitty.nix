@@ -1,8 +1,21 @@
-{ ... }:
+{ pkgs, lib, ... }:
 
+let
+  sxyaziIcon = pkgs.fetchurl {
+    url = "https://raw.githubusercontent.com/sxyazi/dotfiles/main/kitty/kitty.app.icns";
+    sha256 = "110s4gb6mkgnmh6hl1jy361kji14v9hl30g9vb48xah6zs6zzqh8";
+  };
+
+  kittyWithIcon = pkgs.kitty.overrideAttrs (old: {
+    postInstall = (old.postInstall or "") + lib.optionalString pkgs.stdenv.isDarwin ''
+      cp -f ${sxyaziIcon} $out/Applications/kitty.app/Contents/Resources/kitty.icns
+    '';
+  });
+in
 {
   programs.kitty = {
     enable = true;
+    package = kittyWithIcon;
     themeFile = "Catppuccin-Macchiato";
 
     font = {

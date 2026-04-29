@@ -23,10 +23,20 @@ let
     if lib.hasSuffix "." trimmed then trimmed + "0" else trimmed;
 
   themeLines =
-    if cfg.theme.auto then
-      [ "theme = light:${cfg.theme.light},dark:${cfg.theme.dark}" ]
-    else
-      [ "theme = ${cfg.theme.fixed}" ];
+    (
+      if cfg.theme.auto then
+        [ "theme = light:${cfg.theme.light},dark:${cfg.theme.dark}" ]
+      else
+        [ "theme = ${cfg.theme.fixed}" ]
+    )
+    ++ lib.optional (cfg.theme.boldIsBright != null)
+      "bold-is-bright = ${bool cfg.theme.boldIsBright}";
+
+  transparencyLines =
+    lib.optional (cfg.transparency.opacity != null)
+      "background-opacity = ${formatFloat cfg.transparency.opacity}"
+    ++ lib.optional (cfg.transparency.blur != null)
+      "background-blur = ${toString cfg.transparency.blur}";
 
   fontStyleLine = suffix: value:
     lib.optional (value != null) "font-style${suffix} = ${value}";
@@ -126,6 +136,7 @@ let
       ""
     ]
     ++ section "Theme" themeLines
+    ++ section "Transparency" transparencyLines
     ++ section "Font" fontLines
     ++ section "Window" windowLines
     ++ section "Cursor" cursorLines
@@ -161,6 +172,41 @@ in
         type = lib.types.str;
         default = "Catppuccin Macchiato";
         description = "Single theme name used when theme.auto = false.";
+      };
+
+      boldIsBright = lib.mkOption {
+        type = lib.types.nullOr lib.types.bool;
+        default = null;
+        description = "Map bold text to the bright color palette. null = Ghostty default.";
+      };
+
+      customThemes = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        example = lib.literalExpression ''
+          { "rose-pine-moon" = builtins.readFile ./themes/rose-pine-moon; }
+        '';
+        description = ''
+          Custom theme files keyed by theme name. Each entry is written to
+          ~/.config/ghostty/themes/<name>, so the matching name can be used in
+          theme.fixed or theme.light/dark.
+        '';
+      };
+    };
+
+    transparency = {
+      opacity = lib.mkOption {
+        type = lib.types.nullOr (lib.types.either lib.types.float lib.types.int);
+        default = null;
+        example = 0.85;
+        description = "Background opacity 0.0–1.0. null = Ghostty default (opaque).";
+      };
+
+      blur = lib.mkOption {
+        type = lib.types.nullOr lib.types.int;
+        default = null;
+        example = 20;
+        description = "Background blur radius (macOS / supported compositors). null = disabled.";
       };
     };
 
@@ -369,6 +415,10 @@ in
         pkgs.ghostty.terminfo
       ];
 
-    xdg.configFile."ghostty/config".text = configText;
+    xdg.configFile = {
+      "ghostty/config".text = configText;
+    } // lib.mapAttrs'
+      (name: contents: lib.nameValuePair "ghostty/themes/${name}" { text = contents; })
+      cfg.theme.customThemes;
   };
 }

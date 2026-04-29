@@ -10,12 +10,14 @@ let
     text = "#494D64";
     yellow = "#FFEE58";
     red = "#ff8080";
+    teal = "#80E7C9";
   };
 
-  pwSep = "";
-  xMark = "";
-  bolt = "";
-  gitIcon = "";
+  pwSep = "";
+  xMark = "";
+  bolt = "⚡";
+  gitIcon = "";
+  jjIcon = "";
 
   pathStyle =
     if cfg.palette.enable then "fg:${palette.white} bg:${palette.grey}" else "bold";
@@ -33,6 +35,14 @@ let
     else
       "";
 
+  jjStyle =
+    if cfg.palette.enable then "fg:${palette.text} bg:${palette.teal}" else "bold";
+  jjTrail =
+    if cfg.powerline.enable && cfg.palette.enable then
+      "[${pwSep}](fg:${palette.teal})"
+    else
+      "";
+
   rootStyle = if cfg.palette.enable then "fg:${palette.yellow}" else "bold yellow";
 
   statusFg = if cfg.palette.enable then "fg:${palette.white}" else "fg:white";
@@ -46,8 +56,8 @@ let
 
   timeStyle = if cfg.palette.enable then "fg:${palette.lavender}" else "bold";
 
-  rootIndicatorAttrs = lib.optionalAttrs cfg.segments.rootIndicator.enable {
-    custom.root_indicator = {
+  rootIndicatorCustom = lib.optionalAttrs cfg.segments.rootIndicator.enable {
+    root_indicator = {
       description = "Lightning bolt when running as root (EUID=0).";
       when = ''[ "$(id -u)" = "0" ]'';
       format = "[ ${bolt} ](${rootStyle})";
@@ -57,6 +67,30 @@ let
       ];
     };
   };
+
+  jjCustom = lib.optionalAttrs cfg.segments.jj.enable {
+    jj = {
+      description = "Jujutsu change-id (and bookmarks if any) inside a jj repo.";
+      when = "jj root";
+      command = "jj --ignore-working-copy log -r @ -n 1 --no-graph --no-pager --color=never -T 'change_id.shortest(8) ++ if(bookmarks, \" \" ++ bookmarks.map(|b| b.name()).join(\",\"), \"\")' 2>/dev/null";
+      format = "[ ${jjIcon} $output ](${jjStyle})${jjTrail}";
+      shell = [
+        "sh"
+        "-c"
+      ];
+    };
+  };
+
+  customSegments = rootIndicatorCustom // jjCustom;
+
+  customAttrs = lib.optionalAttrs (customSegments != { }) { custom = customSegments; };
+
+  formatString =
+    (lib.optionalString cfg.segments.rootIndicator.enable "$custom.root_indicator")
+    + "$directory"
+    + (lib.optionalString cfg.segments.jj.enable "$custom.jj")
+    + "$git_branch"
+    + "$character";
 in
 {
   options.martin.prompt.starship = {
@@ -71,6 +105,7 @@ in
       rootIndicator.enable = lib.mkEnableOption "Yellow lightning-bolt when EUID=0";
       path.enable = lib.mkEnableOption "Powerline path block (fish-style abbreviation)";
       git.enable = lib.mkEnableOption "Lavender git_branch block; git_status disabled to match omp fetch_status:false";
+      jj.enable = lib.mkEnableOption "Teal jj block (change-id + bookmarks) inside a jj repo via 'jj log' custom segment";
       status.enable = lib.mkEnableOption "Red X-mark on non-zero exit via [character] error_symbol";
       rPromptTime.enable = lib.mkEnableOption "Right-prompt time in lavender (zsh; bash needs ble.sh)";
     };
@@ -93,7 +128,7 @@ in
       settings = {
         add_newline = false;
         command_timeout = 2000;
-        format = "$custom$directory$git_branch$character";
+        format = formatString;
         right_format = "$time";
 
         git_status.disabled = true;
@@ -171,7 +206,7 @@ in
             }
           else
             { disabled = true; };
-      } // rootIndicatorAttrs;
+      } // customAttrs;
     };
   };
 }
