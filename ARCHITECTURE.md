@@ -1,7 +1,7 @@
 # Nix Architecture — Martin's cross-platform config
 
 > **Active target:** `darwinConfigurations.Martins-Mac-mini` (Apple Silicon, nix-darwin).
-> **Last reviewed:** 2026-04-28.
+> **Last reviewed:** 2026-04-29.
 
 This repository is Martin's cross-platform Nix configuration. The Mac is the active target; Linux/Omakub and NixOS targets are deliberately staged behind it.
 
@@ -94,22 +94,23 @@ final: prev: {
 
 Three layers, one writer per concern:
 
-| Layer          | Tool                | Owns                                                          |
-|----------------|---------------------|---------------------------------------------------------------|
-| System         | nix-darwin / NixOS  | OS settings, users, shells, services, system apps             |
-| User packages  | Home Manager        | per-user CLI/dev packages, activation scripts                 |
-| Config text    | chezmoi / dotfiles  | zsh, git, starship, editor, terminal, agent config files      |
+| Layer               | Tool                           | Owns                                                                 |
+|---------------------|--------------------------------|----------------------------------------------------------------------|
+| System              | nix-darwin / NixOS             | OS settings, users, shells, services, system apps                    |
+| User packages       | Home Manager                   | per-user CLI/dev packages, activation scripts                        |
+| Selected config     | Home Manager `martin.*` modules | Nix-owned config files that have explicit options and cutover guards |
+| Remaining dotfiles  | chezmoi / dotfiles             | config files not yet migrated into a Nix module                      |
 
-Home Manager intentionally installs binaries (`starship`, `sheldon`, `git`, `bat`, `fd`, `rg`, …) **without** enabling the matching `programs.<tool>` modules, because those config files are managed by chezmoi. This keeps Nix from clobbering chezmoi-owned files.
+Home Manager still installs many binaries (`sheldon`, `git`, `fd`, `rg`, …) without enabling the matching `programs.<tool>` modules when chezmoi owns those configs. The exception is explicit Nix ownership under options such as `martin.prompt.starship.*` and `martin.dotfiles.*`. Those modules must guard live paths before Home Manager links files into `$HOME`.
 
 ### Migrating a config file from chezmoi to Nix
 
-Do this one file at a time:
+Do this one config boundary at a time:
 
-1. Stop tracking the file in chezmoi.
-2. Remove the live unmanaged file from `$HOME`.
-3. Enable the relevant Home Manager `programs.*` module.
-4. Rebuild and verify ownership.
+1. Stop tracking the file or directory in chezmoi.
+2. Remove the live unmanaged path from `$HOME`.
+3. Enable the relevant `martin.*` Home Manager option on the host.
+4. Rebuild and verify the target is a symlink into `/nix/store`.
 
 #### Worked example: `~/.config/starship.toml`
 
@@ -118,11 +119,11 @@ Do this one file at a time:
 chezmoi forget --force ~/.config/starship.toml
 rm ~/.config/starship.toml
 
-# 3. Enable on the active host (in hosts/darwin/default.nix):
-#    martin.prompt.starship.enable = true;
-#    martin.prompt.starship.palette.enable = true;
-#    martin.prompt.starship.powerline.enable = true;
-#    martin.prompt.starship.segments.{rootIndicator,path,git,status,rPromptTime}.enable = true;
+# 3. Enable on the active host through Home Manager (in hosts/darwin/default.nix):
+#    home-manager.users.${currentSystemUser}.martin.prompt.starship.enable = true;
+#    home-manager.users.${currentSystemUser}.martin.prompt.starship.palette.enable = true;
+#    home-manager.users.${currentSystemUser}.martin.prompt.starship.powerline.enable = true;
+#    home-manager.users.${currentSystemUser}.martin.prompt.starship.segments.{rootIndicator,path,git,status,rPromptTime}.enable = true;
 
 # 4. Activate.
 sudo darwin-rebuild switch --flake .#Martins-Mac-mini
@@ -131,9 +132,7 @@ sudo darwin-rebuild switch --flake .#Martins-Mac-mini
 ls -la ~/.config/starship.toml      # → symlink into /nix/store/...
 ```
 
-`modules/home/prompt.nix` adds an activation-time guard that aborts the rebuild
-with a specific remediation message if steps 1–2 are skipped, instead of Home
-Manager's generic "file in the way" error.
+`modules/home/prompt.nix` and `modules/home/dotfiles/lib.nix` add activation-time guards that abort the rebuild with a specific remediation message if steps 1–2 are skipped, instead of Home Manager's generic "file in the way" error.
 
 ## Where things belong: hosts vs modules vs pkgs
 
@@ -152,11 +151,12 @@ When a change fits two slots, prefer the more specific one and lift it later whe
 
 ```text
 modules/darwin/
-├── default.nix         # imports the Darwin module set + base nixpkgs config
-├── nix.nix             # flakes / nix-command / trusted users
-├── shell.nix           # zsh shell registration
-├── security.nix        # Touch ID sudo
-└── brew-variants.nix   # dormant brew-family scaffolds (see policy below)
+├── default.nix            # imports the Darwin module set + base nixpkgs config
+├── nix.nix                # flakes / nix-command / trusted users / GC policy
+├── shell.nix              # zsh shell registration
+├── security.nix           # Touch ID sudo
+├── system-defaults.nix    # aggressive, opinionated macOS defaults
+└── brew-variants.nix      # dormant brew-family scaffolds (see policy below)
 ```
 
 The active Darwin host (`hosts/darwin/default.nix`) sets:
@@ -164,7 +164,8 @@ The active Darwin host (`hosts/darwin/default.nix`) sets:
 - the current user's macOS home directory,
 - `system.primaryUser`,
 - `system.stateVersion`,
-- system-level GUI packages from `pkgs.martin`.
+- system-level GUI packages from `pkgs.martin`,
+- and a default `martin.dotfiles` set for low-risk CLI UX assets.
 
 `system.stateVersion` is set once per host and is **not** bumped casually — bumping it opts into nix-darwin's newer defaults, which is independent of upgrading nixpkgs.
 
@@ -174,11 +175,34 @@ The active Darwin host (`hosts/darwin/default.nix`) sets:
 modules/home/
 ├── default.nix         # username, homeDirectory, stateVersion, imports
 ├── packages.nix        # common + Darwin-only packages
+├── dotfiles/           # option-gated adapted dotfiles from references/dotfiles-main
 ├── prompt.nix          # option-gated Starship config (dormant by default; replaces chezmoi-owned starship.toml when enabled)
 └── skills.nix          # agent skill bundle activation
 ```
 
 Common packages should be portable across Mac, future Omakub Home Manager, and NixOS where practical. Darwin-only packages live behind `pkgs.stdenv.isDarwin` checks.
+
+### Dotfiles module set
+
+`modules/home/dotfiles/` is the maintained Nix-owned copy of selected assets adapted from `references/dotfiles-main/`; modules must never import from `references/` directly. The public option namespace is `martin.dotfiles.*`.
+
+Default active Darwin host settings enable only the low-risk static/dev-tool set:
+
+```nix
+home-manager.users.${currentSystemUser}.martin.dotfiles = {
+  keymap.profile = "vim";
+  bat.enable = true;
+  less.enable = true;
+  lazygit.enable = true;
+  rules.enable = true;
+};
+```
+
+High-blast-radius modules (`zsh`, `tmux`, `yazi`, `kitty`, `nvim`, `mpv`) are present but disabled by default. `nvim.enable` additionally requires `nvim.allowRuntimeManagers = true`, because the reference config self-bootstraps `lazy.nvim` and Mason outside pure Nix. `kitty.allowRemoteControl` and `tmux.enableTpm` are explicit opt-ins for socket remote-control and TPM behavior.
+
+Keymap profiles are shared across keymap-heavy assets: `vim` is the default conventional h/j/k/l profile; `sxyazi` preserves the reference u/e/n/i movement model and CSI-u terminal integration. If a tool's upstream defaults are already vim-like, the `vim` profile should avoid unnecessary full-file remaps.
+
+Every enabled dotfile path uses an activation guard from `modules/home/dotfiles/lib.nix`. If a live target exists and is not a symlink into `/nix/store`, activation aborts with a `chezmoi forget --force ...` and remove-path remediation message.
 
 ## Agent Skills
 
@@ -385,27 +409,42 @@ sudo darwin-rebuild switch --flake .#Martins-Mac-mini
 
 ## Linux / Omakub plan
 
-Omakub is Ubuntu-focused, so it should not become a `nixosConfigurations.*` output. The likely future shape is a standalone Home Manager output:
+Omakub is Ubuntu-focused, so Linux support is staged in two tracks:
 
-```nix
-homeConfigurations.martinfan-omakub
-```
+1. **Short term:** continue testing against NixOS-based scaffolds (`wsl`, `x230`) for parity and migration sanity.
+2. **Medium term:** introduce a dedicated `homeConfigurations.martinfan-omakub` output when the following are confirmed:
+   - architecture and Nix user model,
+   - username/home path contract,
+   - package split between shared/common and Ubuntu-only,
+   - final dotfiles ownership boundary.
 
-Do not add that output until these are settled:
-
-- exact Linux architecture,
-- username and home path,
-- whether Nix is single-user or multi-user,
-- which packages are shared with the Mac,
-- which dotfiles remain chezmoi-owned.
-
-Until then, Omakub is a design target documented here only.
+Until then, Ubuntu/Omakub remains documented-only, with `home.nix` as a non-flake fallback for recovery.
 
 ## WSL and X230 scaffolds
 
-`wsl` and `x230` remain in the flake as inactive NixOS scaffolds. They are useful for future experimentation — Windows-app testing, NixOS-on-laptop experiments — but they are lower priority than Mac and future Omakub.
+`wsl` and `x230` are intentionally inactive NixOS scaffolds:
 
-Do not assume they are production-ready until they have been evaluated on real Nix systems.
+- `wsl` remains the platform for Windows-subsystem Linux experiments.
+- `x230` remains the laptop/NixOS hardware path for future physical-machine tests.
+
+Both share the same `modules/nixos/default.nix` baseline and `modules/home` user profile.
+
+Build checks (or quick offline validation):
+
+```bash
+nix build .#nixosConfigurations.wsl.config.system.build.toplevel
+nix build .#nixosConfigurations.x230.config.system.build.toplevel
+```
+
+When you switch a real machine:
+
+```bash
+# On a Linux machine evaluating this checkout with an active target:
+sudo nixos-rebuild switch --flake .#wsl    # (equivalently .#nixosConfigurations.wsl)
+sudo nixos-rebuild switch --flake .#x230   # (equivalently .#nixosConfigurations.x230)
+```
+
+Current WSL host defaults now include a conservative baseline (`hostName`, `defaultUser`, `startMenuLaunchers`, and `/mnt` automount root). Expand with care; keep `wsl`/`x230` as experimental scaffolds until real-world validation proves stable.
 
 ## Reference repositories
 
@@ -416,6 +455,7 @@ Do not assume they are production-ready until they have been evaluated on real N
 | `references/nix-config-kyura/`        | Program/package splits, Darwin defaults, font/app examples, overlays.                                |
 | `references/nixos-config-mitchellh/`  | Simple `mkSystem`, machine/user/home separation, pragmatic WSL/VM scaffolding.                       |
 | `references/agent-skills-nix-master/` | Home Manager DSL, target syncing, local install scripts, skill packaging patterns.                   |
+| `references/dotfiles-main/`       | Source material for adapted zsh/tmux/lazygit/bat/less/yazi/kitty/nvim/mpv/rules assets; never an active import path. |
 
 Borrow patterns selectively. Do not copy Linux-specific NixOS concepts into nix-darwin modules without translation.
 
@@ -427,6 +467,8 @@ Borrow patterns selectively. Do not copy Linux-specific NixOS concepts into nix-
 - Keep Home Manager from clobbering chezmoi-owned config files.
 - Keep brew variants disabled unless explicitly testing an escape hatch.
 - Treat sample repos as references, never as active configuration.
+- Copy/adapt selected dotfile assets into `modules/home/dotfiles/assets/`; do not import them from `references/` directly.
+- Keep `martin.dotfiles.keymap.profile = "vim"` as the default; make nonstandard movement opt-in.
 - Adding an agent-skills target enables rsync-with-delete on that directory; enable deliberately.
 
 ## Maintaining this document
@@ -440,6 +482,7 @@ Update this doc in the same PR when you:
 - change the agent-skills target set or policy,
 - add CI, formatter, or secrets management,
 - promote Omakub or any inactive scaffold to active.
+- change `martin.dotfiles.*` ownership, defaults, or keymap profile semantics.
 
 Bump the **Last reviewed** date at the top whenever you re-read the whole doc end-to-end.
 

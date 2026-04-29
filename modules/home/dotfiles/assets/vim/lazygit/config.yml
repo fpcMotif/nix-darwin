@@ -1,0 +1,66 @@
+gui:
+  sidePanelWidth: 0.2
+  expandFocusedSidePanel: true
+  language: en
+  mouseEvents: false
+  nerdFontsVersion: "3"
+git:
+  pagers:
+    - colorArg: always
+      # pager: delta --dark --paging=never --syntax-theme="Catppuccin Mocha"
+      externalDiffCommand: difft --color=always --display=inline --syntax-highlight=off
+update:
+  method: never
+notARepository: quit
+promptToReturnFromSubprocess: false
+keybinding:
+  universal:
+    prevItem-alt: k
+    nextItem-alt: j
+    prevBlock-alt: h
+    nextBlock-alt: l
+    nextBlock-alt2: <disabled>
+    prevBlock-alt2: <disabled>
+    scrollUpMain-alt1: K
+    scrollDownMain-alt1: J
+    scrollLeft: H
+    scrollRight: L
+    nextMatch: n
+    prevMatch: N
+    new: n
+    edit: e
+    openFile: o
+    nextTab: <tab>
+    prevTab: <backtab>
+    undo: u
+    redo: U
+  status:
+    checkForUpdate: <disabled>
+  files:
+    ignoreFile: .
+  branches:
+    viewGitFlowOptions: F
+    setUpstream: s
+  commits:
+    moveUpCommit: <c-k>
+    moveDownCommit: <c-j>
+    startInteractiveRebase: R
+  main:
+    editSelectHunk: <disabled>
+  submodules:
+    init: c
+customCommands:
+  - key: v
+    context: localBranches
+    loadingText: Checking out GitHub Pull Request...
+    command: gh pr checkout {{.Form.PullRequestNumber}}
+    prompts:
+      - type: menuFromCommand
+        title: Which PR do you want to check out?
+        key: PullRequestNumber
+        command: >-
+          gh pr list --json number,title,headRefName,updatedAt
+          --template '{{`{{range .}}{{printf "#%v: %s - %s (%s)" .number .title .headRefName (timeago .updatedAt)}}{{end}}`}}'
+        filter: "#(?P<number>[0-9]+): (?P<title>.+) - (?P<ref_name>[^ ]+).*"
+        valueFormat: "{{.number}}"
+        labelFormat: '{{"#" | black | bold}}{{.number | white | bold}} {{.title | yellow | bold}}{{" [" | black | bold}}{{.ref_name | green}}{{"]" | black | bold}}'

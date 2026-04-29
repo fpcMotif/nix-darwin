@@ -6,7 +6,22 @@
     trusted-users = [ "root" "@wheel" ];
   };
 
-  programs.zsh.enable = true;
+  # Keep CLI tools predictable across hosts and shell paths.
+  environment = {
+    pathsToLink = [ "/share/zsh" ];
+    systemPackages = with pkgs; [
+      curl
+      git
+      vim
+    ];
+  };
+
+  programs = {
+    zsh.enable = true;
+    # Helpful for unpatched Linux binaries in dev workflows.
+    nix-ld.enable = true;
+  };
+
   time.timeZone = lib.mkDefault "Australia/Perth";
 
   users.users.${currentSystemUser} = {
@@ -15,12 +30,6 @@
     extraGroups = [ "wheel" ];
     shell = pkgs.zsh;
   };
-
-  environment.systemPackages = with pkgs; [
-    curl
-    git
-    vim
-  ];
 
   system.stateVersion = lib.mkDefault "25.05";
 }

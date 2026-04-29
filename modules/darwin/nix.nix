@@ -1,11 +1,17 @@
 { currentSystemUser, ... }:
 
 {
-  nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
-    trusted-users = [
-      "root"
-      currentSystemUser
-    ];
+  nix = {
+    settings = {
+      experimental-features = [ "nix-command" "flakes" ];
+      trusted-users = [
+        "root"
+        currentSystemUser
+      ];
+    };
+
+    gc = {
+      automatic = true;
+    };
   };
 }

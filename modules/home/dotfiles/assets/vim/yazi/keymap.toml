@@ -1,0 +1,41 @@
+"$schema" = "https://yazi-rs.github.io/schemas/keymap.json"
+
+[mgr]
+
+prepend_keymap = [
+	# Operation. Keep h/j/k/l on upstream navigation semantics.
+	{ on = "L", run = "link" },
+	{ on = [ "g", "L" ], run = "link --relative" },
+
+	# Find
+	{ on = "n", run = "find_arrow" },
+	{ on = "N", run = "find_arrow --previous" },
+
+	# Goto
+	{ on = [ "g", "r" ], run = 'shell -- ya emit cd "$(git rev-parse --show-toplevel)"' },
+	{ on = [ "g", "v" ], run = 'shell -- ya emit cd "$(zoxide query disk2)"' },
+	{ on = [ "g", "c" ], run = "plugin vcs-files" },
+
+	# Shell
+	{ on = "$", run = "shell --block $SHELL" },
+
+	# Plugins
+	{ on = "M",          run = "plugin mount" },
+	{ on = "<C-d>",      run = "plugin diff" },
+	{ on = [ "c", "m" ], run = "plugin chmod" },
+	{ on = [ "b", "a" ], run = "plugin mactag add" },
+	{ on = [ "b", "r" ], run = "plugin mactag remove" },
+	{ on = "<C-1>", run = "plugin toggle-pane max-parent" },
+	{ on = "<C-2>", run = "plugin toggle-pane max-current" },
+	{ on = "<C-3>", run = "plugin toggle-pane max-preview" },
+]
+
+[input]
+
+prepend_keymap = [
+	# Conventional readline-style additions.
+	{ on = "<C-a>", run = "move bol" },
+	{ on = "<C-e>", run = "move eol" },
+	{ on = "<C-u>", run = "kill bol" },
+	{ on = "<C-k>", run = "kill eol" },
+]

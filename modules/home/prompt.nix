@@ -82,7 +82,7 @@ in
         echo "ERROR: chezmoi still owns ~/.config/starship.toml. To migrate:" >&2
         echo "  chezmoi forget --force ~/.config/starship.toml" >&2
         echo "  rm ~/.config/starship.toml" >&2
-        echo "Then re-run darwin-rebuild." >&2
+        echo "Then re-run your system activation (darwin-rebuild / nixos-rebuild / home-manager switch)." >&2
         exit 1
       fi
     '';
