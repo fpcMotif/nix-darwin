@@ -99,26 +99,27 @@ Three layers, one writer per concern:
 |----------------|---------------------|---------------------------------------------------------------|
 | System         | nix-darwin / NixOS  | OS settings, users, shells, services, system apps             |
 | User packages  | Home Manager        | per-user CLI/dev packages, activation scripts                 |
-| Config text    | Home Manager        | zsh, git, starship, tmux, Ghostty, shell/terminal preferences |
+| Config text    | chezmoi / dotfiles by default; explicit HM modules by exception | zsh, git, starship, editor, terminal, agent config files |
 
-Home Manager now owns the selected shell, prompt, terminal, and git config text in Nix, including generated files like `~/.zshrc`, `~/.config/starship.toml`, `~/.config/tmux/tmux.conf`, `~/.config/ghostty/config`, and `~/.config/git/config`. Legacy Stow/Homebrew dotfiles are inventory only; they are not an active writer for migrated concerns.
+Home Manager intentionally installs binaries like `starship`, `git`, `bat`, `fd`, `rg`, `eza`, and `zoxide` without enabling matching `programs.<tool>` modules unless a module explicitly takes ownership. Config text remains chezmoi-owned by default. New Home Manager ownership must be opt-in, focused, and guarded against clobbering existing dotfiles.
 
-### Migrating a config file into Nix ownership
+### Migrating a config file from chezmoi to Nix
 
 Do this one file at a time:
 
 1. Decide that the file should become Nix-owned configuration.
-2. Move or remove the live unmanaged file from `$HOME`.
+2. Remove the live file from chezmoi ownership and from `$HOME`.
 3. Enable the relevant Home Manager `programs.*` or `xdg.configFile` module.
 4. Rebuild and verify ownership.
 
 #### Worked example: `~/.config/starship.toml`
 
 ```bash
-# 1-2. Hand off the file from manual management.
+# 1-2. Hand off the file from chezmoi management.
+chezmoi forget --force ~/.config/starship.toml
 rm ~/.config/starship.toml
 
-# 3. Enable on the active host (in hosts/darwin/default.nix):
+# 3. Enable deliberately in a host or module:
 #    martin.prompt.starship.enable = true;
 #    martin.prompt.starship.palette.enable = true;
 #    martin.prompt.starship.powerline.enable = true;
@@ -153,7 +154,6 @@ When a change fits two slots, prefer the more specific one and lift it later whe
 ```text
 modules/darwin/
 ├── default.nix         # imports the Darwin module set + base nixpkgs config
-├── defaults.nix        # selected macOS defaults (keyboard, Finder, Dock, trackpad, screenshots)
 ├── nix.nix             # flakes / nix-command / trusted users
 ├── shell.nix           # zsh shell registration
 ├── security.nix        # Touch ID sudo
@@ -177,12 +177,12 @@ The platform-specific home path is computed once in `lib/mkSystem.nix` and expos
 modules/home/
 ├── default.nix         # username, homeDirectory, stateVersion, imports
 ├── packages.nix        # common + Darwin-only packages
-├── zsh.nix             # zsh, fzf, direnv, aliases/functions, editor env
-├── prompt.nix          # option-gated Starship config (enabled on active Mac)
-├── tmux.nix            # tmux behavior from legacy dotfiles, without TPM bootstrap
-├── ghostty.nix         # Ghostty config managed as XDG text
-├── git.nix             # Git behavior without copied identity/signing keys
-└── skills.nix          # agent skill bundle activation
+├── prompt.nix          # option-gated Starship config with migration guard
+├── skills.nix          # agent skill bundle activation
+├── claude-code.nix     # stable Claude Code user-PATH shim
+├── droid.nix           # stable Factory Droid user-PATH shim
+├── opencode.nix        # OpenCode shims + seeded mutable config
+└── zed.nix             # Zed package/module wiring
 ```
 
 Common packages should be portable across Mac, future Omakub Home Manager, and NixOS where practical. Darwin-only packages live behind `pkgs.stdenv.isDarwin` checks.
@@ -215,32 +215,20 @@ programs.agent-skills = {
   sources = {
     dotfiles-pi     = { input = "dotfiles";          subdir = "dot_pi/agent/skills"; };
     dotfiles-claude = { input = "dotfiles";          subdir = "dot_claude/skills"; };
-    grill-me        = { input = "mattpocock-skills"; subdir = "grill-me"; };
+    grill-me        = { input = "mattpocock-skills"; subdir = "skills/productivity/grill-me"; };
   };
 
   skills = {
-    enable = [ ];
+    enable = [
+      "git-workflow"
+      "grill-me"
+      "lazygit"
+      "ralph-loop"
+      "review"
+      "web-browser"
+    ];
     enableAll = false;
-    explicit = {
-      git-workflow = {
-        from = "dotfiles-pi";
-        path = "git-workflow";
-        packages = [ pkgs.git pkgs.gh pkgs.jq ];
-      };
-      review = {
-        from = "dotfiles-pi";
-        path = "review";
-        packages = [ pkgs.git pkgs.gh pkgs.jq ];
-      };
-      lazygit = {
-        from = "dotfiles-claude";
-        path = "lazygit";
-        packages = [ pkgs.git pkgs.lazygit ];
-      };
-      ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
-      web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
-      grill-me = { from = "grill-me"; path = "."; packages = [ ]; };
-    };
+    explicit = { };
   };
 };
 ```
@@ -248,7 +236,7 @@ programs.agent-skills = {
 ### Policy
 
 - **Publish once, mirror deliberately.** Build one Nix-managed bundle, then mirror only to agent-native directories whose discovery behavior is documented or consciously accepted.
-- **Allowlist public sources.** Use explicit skill entries for selected third-party skills when they need Nix-provided packages; otherwise `skills.enable = [ … ]` is acceptable. Reserve `skills.enableAll = [ "source" ]` for tightly trusted private sources.
+- **Allowlist public sources.** Use `skills.enable = [ … ]` for selected public skills, and switch a skill to `skills.explicit.<name>` only when it needs Nix-provided packages, metadata, or renaming. Reserve `enableAll` for tightly trusted private sources.
 - **Disambiguate name collisions.** If two sources expose the same skill name, set `idPrefix` on one and enable the prefixed IDs (e.g. `openai/pdf`, `anthropic/pdf`).
 - **Recursive discovery by default.** Keep `filter.maxDepth = null`. Use `filter.maxDepth = 1` only for known-flat roots (e.g. the curated dotfiles folders).
 - **Bundle Nix-provided tools.** Use `skills.explicit.<name>.packages` and `transform` when a skill needs Nix-provided binaries; this avoids assuming globally installed tools.
@@ -288,7 +276,7 @@ Default policy: **pure Nix first.**
 - **CLI / dev tools** → `modules/home/packages.nix`.
 - **Mac GUI apps Martin owns or vendors** → custom derivations in `pkgs/`, exposed as `pkgs.martin.<name>`, declared on the Darwin host where appropriate.
 - **System-level Mac apps currently in scope** — Dropbox, Google Drive, Raycast — declared on the Darwin host via `pkgs.martin.*`. Anything not yet packaged as a derivation is tracked as an explicit gap until it has one; brew is **not** a fallback.
-- **Agent / dev tooling** — Gemini preview, Amp, Pi, Oh My Pi — packaged in `pkgs/` as custom derivations.
+- **Agent / dev tooling** — Gemini preview, Amp, Factory Droid, OpenCode, Pi, and Oh My Pi — packaged in `pkgs/` as custom derivations and exposed through `pkgs.martin.*`.
 
 A tool should never be installed simultaneously through Nix and a brew variant unless it is a temporary migration step; record the migration intent in the same commit if so.
 
@@ -325,7 +313,8 @@ These are dimensions every reviewer asks about. State the position even when the
 | Secrets management   | **None today.** No `sops-nix` / `agenix`. Secrets live outside the flake; revisit before adding any service that reads them. |
 | Formatter            | Wired through `flake.nix` (`formatter.<system>`). Run via `nix fmt`.                           |
 | Linting              | `nix flake check` runs `nixpkgs-fmt --check`, `statix`, and `deadnix --fail` via `tests/default.nix`. Run locally and in CI. |
-| CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin plus x86_64 NixOS scaffolds (`wsl`, `x230`) on macOS / Ubuntu runners and runs `nix flake check` in parallel. The `vm-aarch64-utm` host requires an aarch64-linux builder and is built manually until one is wired in. Magic Nix Cache for cross-run reuse. |
+| CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin, x86_64 NixOS scaffolds (`wsl`, `x230`), and the aarch64-linux UTM VM scaffold on macOS / Ubuntu runners; runs `nix flake check` for all supported systems where a native runner exists. Magic Nix Cache for cross-run reuse. |
+| Auto-update          | `.github/workflows/auto-update.yml` opens one daily combined PR for agent/dev tool bumps, tolerates individual updater failures, and enables auto-merge only after `build.yml` is green. Roll back with `PANIC.md`. |
 | Dev shells / direnv  | Not currently exposed. If `devShells.<system>` is added later, document the `.envrc` pattern. |
 
 When any row changes, update this table in the same PR.
@@ -358,10 +347,11 @@ sudo darwin-rebuild --switch-generation <N>
 ### Roll back a single prompt setting
 
 `martin.prompt.starship` is composed of independently-toggleable
-`mkEnableOption`s — disable any one without affecting the rest:
+`mkEnableOption`s. If a host opts into the Starship module, disable any one
+setting without affecting the rest:
 
 ```bash
-# Edit hosts/darwin/default.nix, e.g.:
+# Edit the host/module where martin.prompt.starship is enabled, e.g.:
 #   martin.prompt.starship.segments.rPromptTime.enable = false;
 
 sudo darwin-rebuild switch --flake .#Martins-Mac-mini
@@ -426,7 +416,7 @@ Do not add that output until these are settled:
 - username and home path,
 - whether Nix is single-user or multi-user,
 - which packages are shared with the Mac,
-- which config files remain intentionally unmanaged.
+- which config files remain intentionally chezmoi-owned.
 
 Until then, Omakub is a design target documented here only.
 
@@ -465,7 +455,7 @@ Borrow patterns selectively. Do not copy Linux-specific NixOS concepts into nix-
 - Mac is the active target; optimize for it first.
 - Keep the flake root thin — inputs, overlays, system outputs, formatter, nothing else.
 - Keep shared modules parameterized by `currentSystemUser` and `currentSystemUserHome`; the home path is computed once in `lib/mkSystem.nix`, never re-derived in host or Home Manager modules.
-- Keep Home Manager from clobbering unmanaged config files without explicit migration intent (each new `programs.*` module must ship the activation-guard pattern from `modules/home/prompt.nix`).
+- Keep Home Manager from clobbering chezmoi-owned config files without explicit migration intent (each new `programs.*` module must ship the activation-guard pattern from `modules/home/prompt.nix`).
 - Keep brew variants disabled unless explicitly testing an escape hatch.
 - Treat sample repos as references, never as active configuration.
 - Adding an agent-skills target enables rsync-with-delete on that directory; enable deliberately.

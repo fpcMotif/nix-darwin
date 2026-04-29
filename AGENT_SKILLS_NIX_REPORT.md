@@ -38,32 +38,20 @@ programs.agent-skills = {
     dotfiles-claude = filteredSource "dotfiles" "dot_claude/skills"
       "^(lazygit)$";
 
-    grill-me = rootSkillSource "mattpocock-skills" "grill-me";
+    grill-me = rootSkillSource "mattpocock-skills" "skills/productivity/grill-me";
   };
 
   skills = {
-    enable = [ ];
+    enable = [
+      "git-workflow"
+      "grill-me"
+      "lazygit"
+      "ralph-loop"
+      "review"
+      "web-browser"
+    ];
     enableAll = false;
-    explicit = {
-      git-workflow = {
-        from = "dotfiles-pi";
-        path = "git-workflow";
-        packages = [ pkgs.git pkgs.gh pkgs.jq ];
-      };
-      review = {
-        from = "dotfiles-pi";
-        path = "review";
-        packages = [ pkgs.git pkgs.gh pkgs.jq ];
-      };
-      lazygit = {
-        from = "dotfiles-claude";
-        path = "lazygit";
-        packages = [ pkgs.git pkgs.lazygit ];
-      };
-      ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
-      web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
-      grill-me = { from = "grill-me"; path = "."; packages = [ ]; };
-    };
+    explicit = { };
   };
 
   targets = {
@@ -170,7 +158,7 @@ When revising this setup:
 
 1. Add new skill sources as flake inputs.
 2. Register the source under `programs.agent-skills.sources`.
-3. Prefer `skills.explicit.<name>` when a skill needs Nix-provided packages/metadata/renaming; otherwise `skills.enable = [ ... ]` is acceptable. Avoid `enableAll` for public third-party sources.
+3. Prefer `skills.enable = [ ... ]` for public third-party allowlists, and use `skills.explicit.<name>` only when a skill needs Nix-provided packages/metadata/renaming. Avoid `enableAll` for public third-party sources.
 4. Use `idPrefix` before enabling two sources with overlapping skill IDs.
 5. Keep `filter.maxDepth = 1` only for intentionally flat curated source roots; otherwise prefer recursive discovery.
 6. Enable only targets that correspond to tools actually used.
@@ -221,13 +209,15 @@ Verified in this environment:
 
 - `modules/home/skills.nix` now uses the upstream Home Manager DSL.
 - No old `home.activation.agentSkills*`, direct `mkSyncScript`, or direct `inputs.agent-skills.lib.agent-skills` code remains in the live skills module.
+- `nix fmt` passed.
+- `nix flake check --show-trace --print-build-logs` passed on the local Darwin system.
+- `nix eval --raw .#checks.aarch64-linux.integration-configurations-eval.drvPath` passed.
+- `darwinConfigurations.Martins-Mac-mini.system` built successfully.
 - `git diff --check` passed after the implementation change.
 
 Not verified here:
 
-- `nix fmt ./`
-- `nix eval`
-- agent-skills bundle build/activation, including generated dependency tables and package symlinks from `skills.explicit.<name>.packages`
-- `darwin-rebuild build --flake .#Martins-Mac-mini`
+- Live Home Manager activation/switch of the generated skill targets.
+- Native Linux builds for `wsl`, `x230`, or `vm-aarch64-utm`.
 
-Reason: this Windows environment does not have `nix`, `nixpkgs-fmt`, or `nixfmt` available, and WSL is unavailable/misconfigured.
+Reason: this pass validated build/evaluation paths from an Apple Silicon Mac. The Linux toplevel builds require Linux runners or builders; CI covers those paths natively.
