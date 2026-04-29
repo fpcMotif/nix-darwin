@@ -43,9 +43,13 @@ let
       (hasPackage "mgrep" homeConfig.home.packages)
       "${prefix} Home Manager package list should include mgrep")
 
-    (helpers.assertTest "${prefix}-has-jj-starship-package"
-      (hasPackage "jj-starship" homeConfig.home.packages)
-      "${prefix} Home Manager package list should include jj-starship")
+    (helpers.assertTest "${prefix}-has-starship-package"
+      (hasPackage "starship" homeConfig.home.packages)
+      "${prefix} Home Manager package list should include starship")
+
+    (helpers.assertTest "${prefix}-excludes-jj-starship-package"
+      (!(hasPackage "jj-starship" homeConfig.home.packages))
+      "${prefix} Home Manager package list should not include jj-starship")
 
     (helpers.assertTest "${prefix}-home-zsh-enabled"
       (homeConfig.programs.zsh.enable == true)
@@ -128,24 +132,43 @@ let
       (darwinHome.programs.starship.enable == true)
       "Darwin Home Manager should enable the migrated Starship prompt")
 
-    (helpers.assertTest "darwin-starship-jj-starship-jj-custom"
+    (helpers.assertTest "darwin-starship-glass-chip-layout"
       (
         let
-          jj = darwinHome.programs.starship.settings.custom.jj;
-          shell = jj.shell;
+          settings = darwinHome.programs.starship.settings;
         in
-        lib.hasInfix "jj-starship" jj.when
-          && lib.hasInfix "$output" jj.format
-          && builtins.elem "--no-color" shell
-          && builtins.elem "--jj-symbol" shell
-          && builtins.elem "--no-git-id" shell
-          && builtins.elem "--no-git-status" shell
+        lib.hasPrefix "$directory" settings.format
+          && !(lib.hasInfix "\${custom.shell_name}" settings.format)
+          && lib.hasInfix "$directory\${custom.directory_end}\${custom.git_branch}$git_status\${custom.git_end}" settings.format
+          && lib.hasInfix "\${custom.jj}" settings.format
+          && lib.hasInfix "$line_break$character" settings.format
+          && lib.hasInfix "" settings.directory.format
       )
-      "Darwin Starship config should expose a powerline jj-starship VCS module")
+      "Darwin Starship config should expose the compact transparent chip layout")
 
-    (helpers.assertTest "darwin-starship-disables-built-in-git-branch"
-      (darwinHome.programs.starship.settings.git_branch.disabled == true)
-      "jj-starship should replace Starship's built-in git_branch module")
+    (helpers.assertTest "darwin-starship-jj-direct-custom"
+      (
+        let jj = darwinHome.programs.starship.settings.custom.jj;
+        in
+        jj.when == "jj root >/dev/null 2>&1"
+          && lib.hasInfix "jj log" jj.command
+          && !(lib.hasInfix "jj-starship" jj.command)
+          && !(lib.hasInfix "jj-starship" jj.when)
+      )
+      "Darwin Starship Jujutsu prompt should call jj directly, not jj-starship")
+
+    (helpers.assertTest "darwin-starship-git-branch-hidden-in-jj"
+      (
+        let
+          settings = darwinHome.programs.starship.settings;
+          git = settings.custom.git_branch;
+        in
+        settings.git_branch.disabled == true
+          && lib.hasInfix "$all_status$ahead_behind" settings.git_status.format
+          && git.when == "! jj root >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1"
+          && lib.hasInfix "git symbolic-ref" git.command
+      )
+      "Darwin Starship Git branch chip should be hidden inside Jujutsu repos")
 
     (helpers.assertTest "darwin-brew-default-disabled"
       (darwinConfig.martin.brew.homebrew.enable == false)

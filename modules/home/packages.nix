@@ -27,7 +27,6 @@ let
     lazygit
     delta
     jujutsu
-    jj-starship
 
     # Shell UX and terminal tools.
     starship

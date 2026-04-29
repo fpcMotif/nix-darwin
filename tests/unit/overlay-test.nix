@@ -25,8 +25,6 @@ let
     "oh-my-pi"
     "pi-coding-agent"
     "sourcegraph-amp"
-    "jj-starship"
-    "jj-starship-no-git"
   ];
 
   expectedMainPrograms = {
@@ -34,8 +32,6 @@ let
     oh-my-pi = "omp";
     pi-coding-agent = "pi";
     sourcegraph-amp = "amp";
-    jj-starship = "jj-starship";
-    jj-starship-no-git = "jj-starship";
   };
 
   hasAttr = a: builtins.hasAttr a (overlaid.martin or { });

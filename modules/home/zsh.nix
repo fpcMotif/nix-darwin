@@ -447,7 +447,7 @@
         local index=$(( RANDOM % ''${#tips[@]} + 1 ))
         print -P "\n%F{cyan}''${tips[$index]}%f"
       }
-      _show_terminal_tip
+      [[ "''${MARTIN_SHOW_TERMINAL_TIPS:-0}" == "1" ]] && _show_terminal_tip
 
       if [ -e /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
         . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh

@@ -1,99 +1,154 @@
-{ config, lib, pkgs, ... }:
+{ config, lib, ... }:
 
 let
   cfg = config.martin.prompt.starship;
-  vcsEnable = cfg.segments.jj.enable || cfg.segments.git.enable;
-  jjStarshipBin = lib.getExe cfg.segments.jj.package;
-  jjStarshipShell = [
-    jjStarshipBin
-    "--no-color"
-    "--jj-symbol"
-    "󱗆 "
-    "--git-symbol"
-    "${gitIcon} "
-    "--no-git-id"
-    "--no-git-status"
-  ];
-  vcsWhen =
-    if cfg.segments.jj.enable && cfg.segments.git.enable then
-      "${jjStarshipBin} detect"
-    else if cfg.segments.jj.enable then
-      "jj root >/dev/null 2>&1"
-    else
-      "! jj root >/dev/null 2>&1 && ${jjStarshipBin} detect";
 
   palette = {
-    grey = "#454758";
-    lavender = "#AE8FE7";
-    white = "#FFFFFF";
-    text = "#494D64";
-    yellow = "#FFEE58";
-    red = "#ff8080";
+    blue = "#31748F";
+    cyan = "#9CCFD8";
+    orange = "#EA9A97";
+    yellow = "#F6C177";
+    lavender = "#C4A7E7";
+    green = "#A3BE8C";
+    red = "#EB6F92";
+    dark = "#232136";
+    light = "#E0DEF4";
   };
 
-  pwSep = "";
-  xMark = "";
-  bolt = "⚡";
-  gitIcon = "";
-
-  pathStyle =
-    if cfg.palette.enable then "fg:${palette.white} bg:${palette.grey}" else "bold";
-  pathTrail =
-    if cfg.powerline.enable && cfg.palette.enable then
-      "[${pwSep}](fg:${palette.grey})"
+  pill = { bg, fg ? palette.dark, content }:
+    if cfg.palette.enable && cfg.powerline.enable then
+      "[](fg:${bg})[${content}](fg:${fg} bg:${bg})[](fg:${bg}) "
+    else if cfg.palette.enable then
+      "[${content}](fg:${fg} bg:${bg}) "
     else
-      "";
+      "[${content}](bold) ";
 
-  vcsStyle =
-    if cfg.palette.enable then "fg:${palette.text} bg:${palette.lavender}" else "bold";
-  vcsTrail =
-    if cfg.powerline.enable && cfg.palette.enable then
-      "[${pwSep}](fg:${palette.lavender})"
-    else
-      "";
+  plainStyle = color:
+    if cfg.palette.enable then "fg:${color}" else "bold";
 
-  rootStyle = if cfg.palette.enable then "fg:${palette.yellow}" else "bold yellow";
+  gitWhen = "! jj root >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1";
+  noVcsWhen = "! jj root >/dev/null 2>&1 && ! git rev-parse --is-inside-work-tree >/dev/null 2>&1";
 
-  statusFg = if cfg.palette.enable then "fg:${palette.white}" else "fg:white";
-  statusBg = if cfg.palette.enable then "bg:${palette.red}" else "bg:red";
-  statusTrail =
-    if cfg.powerline.enable && cfg.palette.enable then
-      "[${pwSep}](fg:${palette.red})"
-    else
-      "";
-  statusErrorSymbol = "[ ${xMark} ](${statusFg} ${statusBg})${statusTrail}";
+  pathBg = palette.orange;
+  vcsBg = palette.yellow;
+  jjBg = palette.lavender;
 
-  timeStyle = if cfg.palette.enable then "fg:${palette.lavender}" else "bold";
+  powerStart = bg: "[](fg:${bg})";
+  powerJoin = from: to: "[](fg:${from} bg:${to})";
+  powerEnd = bg: "[](fg:${bg}) ";
+  customShell = [ "sh" ];
+
+  promptSuccess = "[❯](fg:${palette.cyan}) ";
+
+  promptError = "[❯](fg:${palette.red}) ";
+
+  promptVim = "[❮](fg:${palette.blue}) ";
 
   rootIndicatorCustom = lib.optionalAttrs cfg.segments.rootIndicator.enable {
     root_indicator = {
-      description = "Lightning bolt when running as root (EUID=0).";
+      description = "Small warning chip when running as root (EUID=0).";
+      command = "printf ''";
       when = ''[ "$(id -u)" = "0" ]'';
-      format = "[ ${bolt} ](${rootStyle})";
-      shell = [
-        "sh"
-        "-c"
-      ];
+      shell = customShell;
+      format = pill {
+        bg = palette.red;
+        fg = palette.light;
+        content = " # ";
+      };
     };
   };
 
-  jjCustom = lib.optionalAttrs vcsEnable {
+  directoryEndCustom = lib.optionalAttrs cfg.segments.path.enable {
+    directory_end = {
+      description = "Close the connected directory bar outside VCS repos.";
+      command = "printf ''";
+      when = noVcsWhen;
+      shell = customShell;
+      format =
+        if cfg.palette.enable && cfg.powerline.enable then
+          powerEnd pathBg
+        else
+          "";
+    };
+  };
+
+  shellCustom = lib.optionalAttrs cfg.segments.shell.enable {
+    shell_name = {
+      description = "Compact current-shell chip.";
+      command = ''basename "''${SHELL:-sh}"'';
+      when = "true";
+      shell = customShell;
+      format = pill {
+        bg = palette.blue;
+        fg = palette.light;
+        content = "  $output ";
+      };
+    };
+  };
+
+  jjCustom = lib.optionalAttrs cfg.segments.jj.enable {
     jj = {
-      description = "Powerline VCS segment rendered by jj-starship.";
-      when = vcsWhen;
-      format = "[ $output ](${vcsStyle})${vcsTrail}";
-      shell = jjStarshipShell;
+      description = "Minimal Jujutsu segment rendered directly by jj.";
+      command = ''jj log --ignore-working-copy --no-graph -r @ -T 'separate(" ", bookmarks, change_id.shortest(4))' '';
+      when = "jj root >/dev/null 2>&1";
+      shell = customShell;
+      format =
+        if cfg.palette.enable && cfg.powerline.enable then
+          "${powerJoin pathBg jjBg}[ jj $output ](fg:${palette.light} bg:${jjBg})${powerEnd jjBg}"
+        else
+          pill {
+            bg = jjBg;
+            fg = palette.light;
+            content = " jj $output ";
+          };
     };
   };
 
-  customSegments = rootIndicatorCustom // jjCustom;
+  gitCustom = lib.optionalAttrs cfg.segments.git.enable {
+    git_branch = {
+      description = "Compact Git branch chip, hidden inside Jujutsu repos.";
+      command = ''
+        git symbolic-ref --quiet --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null
+      '';
+      when = gitWhen;
+      shell = customShell;
+      format =
+        if cfg.palette.enable && cfg.powerline.enable then
+          "${powerJoin pathBg vcsBg}[  $output ](fg:${palette.dark} bg:${vcsBg})"
+        else
+          pill {
+            bg = vcsBg;
+            fg = palette.dark;
+            content = "  $output ";
+          };
+    };
+
+    git_end = {
+      description = "Close the connected Git bar.";
+      command = "printf ''";
+      when = gitWhen;
+      shell = customShell;
+      format =
+        if cfg.palette.enable && cfg.powerline.enable then
+          powerEnd vcsBg
+        else
+          "";
+    };
+  };
+
+  customSegments = rootIndicatorCustom // directoryEndCustom // shellCustom // gitCustom // jjCustom;
 
   customAttrs = lib.optionalAttrs (customSegments != { }) { custom = customSegments; };
 
   formatString =
-    (lib.optionalString cfg.segments.rootIndicator.enable "\${custom.root_indicator}")
-    + "$directory"
-    + (lib.optionalString vcsEnable "\${custom.jj}")
+    "$directory"
+    + (lib.optionalString cfg.segments.path.enable "\${custom.directory_end}")
+    + (lib.optionalString cfg.segments.git.enable "\${custom.git_branch}$git_status\${custom.git_end}")
+    + (lib.optionalString cfg.segments.jj.enable "\${custom.jj}")
+    + (lib.optionalString cfg.segments.shell.enable "\${custom.shell_name}")
+    + (lib.optionalString cfg.segments.rootIndicator.enable "\${custom.root_indicator}")
+    + "$cmd_duration"
+    + "$line_break"
     + "$character";
 in
 {
@@ -101,25 +156,18 @@ in
     enable = lib.mkEnableOption "Starship prompt under Nix (replaces unmanaged ~/.config/starship.toml)";
 
     palette.enable =
-      lib.mkEnableOption "Mitchell-style lavender/grey/white/text/yellow/red palette";
+      lib.mkEnableOption "Small glassy prompt palette designed for transparent terminals";
 
-    powerline.enable = lib.mkEnableOption "Powerline U+E0B0 chevron separators between segments";
+    powerline.enable = lib.mkEnableOption "Rounded prompt chips and subtle two-line prompt guides";
 
     segments = {
-      rootIndicator.enable = lib.mkEnableOption "Yellow lightning-bolt when EUID=0";
-      path.enable = lib.mkEnableOption "Powerline path block (fish-style abbreviation)";
-      git.enable = lib.mkEnableOption "Git support in the unified jj-starship powerline segment";
-      jj = {
-        enable = lib.mkEnableOption "Jujutsu support in the unified jj-starship powerline segment";
-        package = lib.mkOption {
-          type = lib.types.package;
-          default = pkgs.jj-starship;
-          defaultText = lib.literalExpression "pkgs.jj-starship";
-          description = "jj-starship package used by the Git and Jujutsu Starship custom segments.";
-        };
-      };
+      shell.enable = lib.mkEnableOption "Compact current-shell chip";
+      rootIndicator.enable = lib.mkEnableOption "Root warning chip when EUID=0";
+      path.enable = lib.mkEnableOption "Compact path chip (fish-style abbreviation)";
+      git.enable = lib.mkEnableOption "Git branch/status chips, with the branch hidden inside Jujutsu repos";
+      jj.enable = lib.mkEnableOption "Jujutsu chip rendered directly by jj";
       status.enable = lib.mkEnableOption "Red X-mark on non-zero exit via [character] error_symbol";
-      rPromptTime.enable = lib.mkEnableOption "Right-prompt time in lavender (zsh; bash needs ble.sh)";
+      rPromptTime.enable = lib.mkEnableOption "Right-prompt tool/runtime chips and compact time";
     };
   };
 
@@ -133,10 +181,17 @@ in
         add_newline = false;
         command_timeout = 2000;
         format = formatString;
-        right_format = "$time";
+        right_format = "$nodejs$python$golang$rust$nix_shell$time";
 
-        git_branch.disabled = true;
-        git_status.disabled = true;
+        cmd_duration = {
+          min_time = 1000;
+          show_milliseconds = false;
+          format = pill {
+            bg = palette.lavender;
+            fg = palette.light;
+            content = " 󰔚 $duration ";
+          };
+        };
 
         directory =
           if cfg.segments.path.enable then
@@ -144,8 +199,19 @@ in
               fish_style_pwd_dir_length = 1;
               truncation_length = 3;
               truncate_to_repo = false;
-              style = pathStyle;
-              format = "[ $path ]($style)${pathTrail}";
+              home_symbol = "~";
+              read_only = " ";
+              read_only_style = plainStyle palette.red;
+              style = plainStyle palette.dark;
+              format =
+                if cfg.palette.enable && cfg.powerline.enable then
+                  "${powerStart pathBg}[  $path$read_only ](fg:${palette.dark} bg:${pathBg})"
+                else
+                  pill {
+                    bg = pathBg;
+                    fg = palette.dark;
+                    content = "  $path$read_only ";
+                  };
             }
           else
             { disabled = true; };
@@ -153,14 +219,42 @@ in
         character =
           if cfg.segments.status.enable then
             {
-              error_symbol = statusErrorSymbol;
-              success_symbol = "";
+              error_symbol = promptError;
+              success_symbol = promptSuccess;
+              vimcmd_symbol = promptVim;
             }
           else
             {
-              error_symbol = "[󰘧](bold red)";
-              success_symbol = "[󰘧](bold green)";
+              error_symbol = "[❯](bold red) ";
+              success_symbol = "[❯](bold green) ";
             };
+
+        git_branch.disabled = true;
+        git_status =
+          if cfg.segments.git.enable then
+            {
+              style = plainStyle palette.dark;
+              format =
+                if cfg.palette.enable && cfg.powerline.enable then
+                  "([ $all_status$ahead_behind ](fg:${palette.dark} bg:${vcsBg}))"
+                else if cfg.palette.enable then
+                  "([ $all_status$ahead_behind ](fg:${palette.dark} bg:${vcsBg}) )"
+                else
+                  "([$all_status$ahead_behind](bold) )";
+              conflicted = "=\${count}";
+              ahead = "⇡\${count}";
+              behind = "⇣\${count}";
+              diverged = "⇕⇡\${ahead_count}⇣\${behind_count}";
+              up_to_date = "";
+              untracked = "?\${count}";
+              stashed = "\\$\${count}";
+              modified = "!\${count}";
+              staged = "+\${count}";
+              renamed = "»\${count}";
+              deleted = "✘\${count}";
+            }
+          else
+            { disabled = true; };
 
         dotnet = {
           detect_files = [
@@ -171,11 +265,27 @@ in
           ];
         };
 
-        golang.symbol = " ";
+        golang = {
+          symbol = " ";
+          format = pill {
+            bg = palette.cyan;
+            fg = palette.dark;
+            content = " $symbol$version ";
+          };
+        };
+
         lua.symbol = " ";
-        nix_shell.symbol = " ";
+        nix_shell = {
+          symbol = " ";
+          format = pill {
+            bg = palette.cyan;
+            fg = palette.dark;
+            content = " $symbol$state ";
+          };
+        };
 
         nodejs = {
+          symbol = " ";
           detect_extensions = [ ];
           detect_files = [
             "package.json"
@@ -186,6 +296,29 @@ in
           detect_folders = [
             "node_modules"
           ];
+          format = pill {
+            bg = palette.green;
+            fg = palette.dark;
+            content = " $symbol$version ";
+          };
+        };
+
+        python = {
+          symbol = " ";
+          format = pill {
+            bg = palette.blue;
+            fg = palette.light;
+            content = " $symbol$version$virtualenv ";
+          };
+        };
+
+        rust = {
+          symbol = " ";
+          format = pill {
+            bg = palette.orange;
+            fg = palette.dark;
+            content = " $symbol$version ";
+          };
         };
 
         package.disabled = true;
@@ -195,8 +328,13 @@ in
           if cfg.segments.rPromptTime.enable then
             {
               disabled = false;
-              time_format = "%a %b %e %H:%M:%S %Z";
-              style = timeStyle;
+              time_format = "%d %H:%M";
+              format = pill {
+                bg = palette.cyan;
+                fg = palette.light;
+                content = "  $time ";
+              };
+              style = plainStyle palette.light;
             }
           else
             { disabled = true; };

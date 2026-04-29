@@ -21,7 +21,8 @@
       powerline.enable = true;
 
       segments = {
-        rootIndicator.enable = true;
+        shell.enable = false;
+        rootIndicator.enable = false;
         path.enable = true;
         git.enable = true;
         jj.enable = true;

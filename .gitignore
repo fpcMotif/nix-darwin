@@ -1,5 +1,12 @@
-result
-result-*
-.claude/worktrees/
-.pi/todos/
-progress.md
+# Nix build symlinks.
+/result
+/result-*
+
+# Local agent/app state.
+/.claude/worktrees/
+/.crush/
+/.pi/todos/
+/progress.md
+
+# macOS metadata.
+.DS_Store

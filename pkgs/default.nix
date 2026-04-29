@@ -23,9 +23,6 @@ final: _prev:
     ];
   });
 
-  jj-starship = final.callPackage ./jj-starship.nix { };
-  jj-starship-no-git = final.callPackage ./jj-starship.nix { withGit = false; };
-
   martin = {
     dropbox = final.callPackage ./dropbox.nix { };
     google-drive = final.callPackage ./google-drive.nix { };
@@ -38,7 +35,5 @@ final: _prev:
     droid = final.callPackage ./droid.nix { };
     opencode = final.callPackage ./opencode.nix { };
     opencode-electron = final.callPackage ./opencode-electron.nix { };
-    jj-starship = final.jj-starship;
-    jj-starship-no-git = final.jj-starship-no-git;
   };
 }

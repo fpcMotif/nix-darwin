@@ -122,7 +122,7 @@ rm ~/.config/starship.toml
 #    martin.prompt.starship.enable = true;
 #    martin.prompt.starship.palette.enable = true;
 #    martin.prompt.starship.powerline.enable = true;
-#    martin.prompt.starship.segments.{rootIndicator,path,git,jj,status,rPromptTime}.enable = true;
+#    martin.prompt.starship.segments.{path,git,jj,status,rPromptTime}.enable = true;
 
 # 4. Activate.
 sudo darwin-rebuild switch --flake .#Martins-Mac-mini
@@ -131,10 +131,12 @@ sudo darwin-rebuild switch --flake .#Martins-Mac-mini
 ls -la ~/.config/starship.toml      # → symlink into /nix/store/...
 ```
 
-`modules/home/prompt.nix` uses the vendored `pkgs.jj-starship` package for
-low-latency Git/Jujutsu detection. The prompt disables Starship's built-in
-`git_branch`/`git_status` modules and renders one `custom.jj` module that
-passes through `jj-starship`'s native colored output.
+`modules/home/prompt.nix` generates a transparent-terminal-friendly Starship
+theme: compact colored chips that start with the directory, a slim right prompt
+for runtime/time context, and no terminal-wide background. The Git branch chip
+is a small Starship custom module hidden inside Jujutsu repos, Git status stays
+on Starship's fast native module, and Jujutsu uses a tiny `custom.jj` segment
+that calls `jj` directly.
 
 ## Where things belong: hosts vs modules vs pkgs
 
@@ -374,7 +376,7 @@ The toggle ladder, finest → coarsest:
 |----------------------------------------------------------------|-----------------------------------------|
 | `martin.prompt.starship.segments.<name>.enable = false`        | Drops one segment; others unchanged.    |
 | `martin.prompt.starship.palette.enable = false`                | Falls back to bold styles, no colors.   |
-| `martin.prompt.starship.powerline.enable = false`              | Drops chevrons; backgrounds remain.     |
+| `martin.prompt.starship.powerline.enable = false`              | Drops rounded chips and prompt guides.  |
 | `martin.prompt.starship.enable = false`                        | Disables Starship; `~/.config/starship.toml` becomes unmanaged again. |
 
 If a prompt regression makes the shell unusable mid-session, the larger blast
