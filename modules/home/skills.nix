@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ inputs, pkgs, ... }:
 
 let
   filteredSource = input: subdir: nameRegex: {
@@ -13,14 +13,9 @@ let
     inherit input subdir;
   };
 
-  enabledSkillIds = [
-    "git-workflow"
-    "grill-me"
-    "lazygit"
-    "ralph-loop"
-    "review"
-    "web-browser"
-  ];
+  mkSkill = from: path: packages: {
+    inherit from path packages;
+  };
 in
 {
   imports = [
@@ -44,9 +39,30 @@ in
     };
 
     skills = {
-      enable = enabledSkillIds;
+      # Keep every skill allowlisted explicitly. This lets Nix attach runtime
+      # CLI dependencies to skills whose instructions call local tools, while
+      # still avoiding `enableAll` drift from third-party sources.
+      enable = [ ];
       enableAll = false;
-      explicit = { };
+      explicit = {
+        git-workflow = mkSkill "dotfiles-pi" "git-workflow" [
+          pkgs.git
+          pkgs.gh
+          pkgs.jq
+        ];
+        review = mkSkill "dotfiles-pi" "review" [
+          pkgs.git
+          pkgs.gh
+          pkgs.jq
+        ];
+        lazygit = mkSkill "dotfiles-claude" "lazygit" [
+          pkgs.git
+          pkgs.lazygit
+        ];
+        ralph-loop = mkSkill "dotfiles-pi" "ralph-loop" [ ];
+        web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];
+        grill-me = mkSkill "grill-me" "." [ ];
+      };
     };
 
     targets = {

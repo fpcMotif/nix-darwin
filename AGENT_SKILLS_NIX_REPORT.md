@@ -41,14 +41,30 @@ programs.agent-skills = {
     grill-me = rootSkillSource "mattpocock-skills" "grill-me";
   };
 
-  skills.enable = [
-    "git-workflow"
-    "grill-me"
-    "lazygit"
-    "ralph-loop"
-    "review"
-    "web-browser"
-  ];
+  skills = {
+    enable = [ ];
+    enableAll = false;
+    explicit = {
+      git-workflow = {
+        from = "dotfiles-pi";
+        path = "git-workflow";
+        packages = [ pkgs.git pkgs.gh pkgs.jq ];
+      };
+      review = {
+        from = "dotfiles-pi";
+        path = "review";
+        packages = [ pkgs.git pkgs.gh pkgs.jq ];
+      };
+      lazygit = {
+        from = "dotfiles-claude";
+        path = "lazygit";
+        packages = [ pkgs.git pkgs.lazygit ];
+      };
+      ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
+      web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
+      grill-me = { from = "grill-me"; path = "."; packages = [ ]; };
+    };
+  };
 
   targets = {
     agents.enable = true;
@@ -154,7 +170,7 @@ When revising this setup:
 
 1. Add new skill sources as flake inputs.
 2. Register the source under `programs.agent-skills.sources`.
-3. Prefer `skills.enable = [ ... ]` over `enableAll` for public third-party sources.
+3. Prefer `skills.explicit.<name>` when a skill needs Nix-provided packages/metadata/renaming; otherwise `skills.enable = [ ... ]` is acceptable. Avoid `enableAll` for public third-party sources.
 4. Use `idPrefix` before enabling two sources with overlapping skill IDs.
 5. Keep `filter.maxDepth = 1` only for intentionally flat curated source roots; otherwise prefer recursive discovery.
 6. Enable only targets that correspond to tools actually used.

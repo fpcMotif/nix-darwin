@@ -1,7 +1,7 @@
 # Nix Architecture — Martin's cross-platform config
 
 > **Active target:** `darwinConfigurations.Martins-Mac-mini` (Apple Silicon, nix-darwin).
-> **Last reviewed:** 2026-04-28.
+> **Last reviewed:** 2026-04-29.
 
 This repository is Martin's cross-platform Nix configuration. The Mac is the active target; Linux/Omakub and NixOS targets are deliberately staged behind it.
 
@@ -20,7 +20,7 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 - [Secrets, formatting, CI](#secrets-formatting-ci)
 - [Workflows](#workflows)
 - [Linux / Omakub plan](#linux--omakub-plan)
-- [WSL and X230 scaffolds](#wsl-and-x230-scaffolds)
+- [WSL, X230, and VM scaffolds](#wsl-x230-and-vm-scaffolds)
 - [Reference repositories](#reference-repositories)
 - [Guardrails](#guardrails)
 - [Maintaining this document](#maintaining-this-document)
@@ -30,7 +30,7 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 
 1. **Active — `darwinConfigurations.Martins-Mac-mini`.** Apple Silicon (`aarch64-darwin`), nix-darwin. Primary place to make this repo excellent. Intel Macs are out of scope.
 2. **Future — `homeConfigurations.martinfan-omakub`.** Planned Home Manager profile for Ubuntu/Omakub (<https://omakub.org/>). Documentation/design target only; no flake output yet.
-3. **Inactive scaffolds — `nixosConfigurations.wsl`, `nixosConfigurations.x230`.** Kept for future NixOS/WSL experimentation. Not production until evaluated on real Nix systems.
+3. **Inactive scaffolds — `nixosConfigurations.wsl`, `nixosConfigurations.x230`, `nixosConfigurations.vm-aarch64-utm`.** Kept for future NixOS/WSL/VM experimentation. Not production until evaluated on real Nix systems.
 
 ## Repository layout
 
@@ -41,7 +41,8 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 ├── hosts/
 │   ├── darwin/default.nix    # Martins-Mac-mini host layer (active)
 │   ├── wsl/default.nix       # NixOS-WSL scaffold (inactive)
-│   └── x230/default.nix      # ThinkPad scaffold (inactive)
+│   ├── x230/default.nix      # ThinkPad scaffold (inactive)
+│   └── vm-aarch64-utm/       # UTM/QEMU aarch64 VM scaffold (inactive)
 ├── modules/
 │   ├── darwin/               # nix-darwin shared modules
 │   ├── nixos/                # shared NixOS module — staged for future hosts
@@ -211,21 +212,37 @@ programs.agent-skills = {
     grill-me        = { input = "mattpocock-skills"; subdir = "grill-me"; };
   };
 
-  skills.enable = [
-    "git-workflow"
-    "grill-me"
-    "lazygit"
-    "ralph-loop"
-    "review"
-    "web-browser"
-  ];
+  skills = {
+    enable = [ ];
+    enableAll = false;
+    explicit = {
+      git-workflow = {
+        from = "dotfiles-pi";
+        path = "git-workflow";
+        packages = [ pkgs.git pkgs.gh pkgs.jq ];
+      };
+      review = {
+        from = "dotfiles-pi";
+        path = "review";
+        packages = [ pkgs.git pkgs.gh pkgs.jq ];
+      };
+      lazygit = {
+        from = "dotfiles-claude";
+        path = "lazygit";
+        packages = [ pkgs.git pkgs.lazygit ];
+      };
+      ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
+      web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
+      grill-me = { from = "grill-me"; path = "."; packages = [ ]; };
+    };
+  };
 };
 ```
 
 ### Policy
 
 - **Publish once, mirror deliberately.** Build one Nix-managed bundle, then mirror only to agent-native directories whose discovery behavior is documented or consciously accepted.
-- **Allowlist public sources.** Use `skills.enable = [ … ]` for third-party sources. Reserve `skills.enableAll = [ "source" ]` for tightly trusted private sources.
+- **Allowlist public sources.** Use explicit skill entries for selected third-party skills when they need Nix-provided packages; otherwise `skills.enable = [ … ]` is acceptable. Reserve `skills.enableAll = [ "source" ]` for tightly trusted private sources.
 - **Disambiguate name collisions.** If two sources expose the same skill name, set `idPrefix` on one and enable the prefixed IDs (e.g. `openai/pdf`, `anthropic/pdf`).
 - **Recursive discovery by default.** Keep `filter.maxDepth = null`. Use `filter.maxDepth = 1` only for known-flat roots (e.g. the curated dotfiles folders).
 - **Bundle Nix-provided tools.** Use `skills.explicit.<name>.packages` and `transform` when a skill needs Nix-provided binaries; this avoids assuming globally installed tools.
@@ -296,7 +313,7 @@ These are dimensions every reviewer asks about. State the position even when the
 | Secrets management   | **None today.** No `sops-nix` / `agenix`. Secrets live outside the flake; revisit before adding any service that reads them. |
 | Formatter            | Wired through `flake.nix` (`formatter.<system>`). Run via `nix fmt`.                           |
 | Linting              | Manual `nix flake check`.                                                                      |
-| CI                   | **None today.** Pre-merge verification is local `darwin-rebuild build`.                        |
+| CI                   | GitHub Actions builds active Darwin plus x86_64 NixOS scaffolds (`wsl`, `x230`); `vm-aarch64-utm` is manual until an aarch64-linux builder is available. |
 | Dev shells / direnv  | Not currently exposed. If `devShells.<system>` is added later, document the `.envrc` pattern. |
 
 When any row changes, update this table in the same PR.
@@ -366,7 +383,7 @@ radius is generation rollback (above): `sudo darwin-rebuild --rollback`.
 
 1. Add the upstream source as a flake `input` (allowlist preferred for public sources).
 2. Add a `programs.agent-skills.sources.<name>` entry.
-3. Add specific IDs to `skills.enable` (or use `idPrefix` on collision).
+3. Add specific IDs to `skills.enable`, or prefer `skills.explicit.<name>` when you need to attach packages/metadata/renames.
 4. Build, switch, and verify the bundle in `$HOME/.agents/skills` before checking other mirrors.
 
 ### Update inputs
@@ -401,9 +418,21 @@ Do not add that output until these are settled:
 
 Until then, Omakub is a design target documented here only.
 
-## WSL and X230 scaffolds
+## WSL, X230, and VM scaffolds
 
-`wsl` and `x230` remain in the flake as inactive NixOS scaffolds. They are useful for future experimentation — Windows-app testing, NixOS-on-laptop experiments — but they are lower priority than Mac and future Omakub.
+`wsl`, `x230`, and `vm-aarch64-utm` remain in the flake as inactive NixOS scaffolds. They are useful for future experimentation — Windows-app testing, NixOS-on-laptop experiments, and a UTM/QEMU guest path — but they are lower priority than Mac and future Omakub.
+
+The VM scaffold is intentionally adapted from `references/nixos-config-mitchellh/`, which is the primary reference for VM-machine shape in this repo. Local comparison trees may be reviewed for ideas, but VM-machine defaults should prefer the senior/reference implementation unless a local requirement overrides it. The current VM assumes an Apple Silicon host with an ARM64 UTM/QEMU guest, UEFI boot, and labelled `nixos`/`boot` filesystems.
+
+Build checks:
+
+```bash
+nix build .#nixosConfigurations.wsl.config.system.build.toplevel
+nix build .#nixosConfigurations.x230.config.system.build.toplevel
+nix build .#nixosConfigurations.vm-aarch64-utm.config.system.build.toplevel
+```
+
+The `vm-aarch64-utm` build may require an aarch64-linux-capable builder or substituter; do not assume a macOS workstation can locally build the full Linux closure.
 
 Do not assume they are production-ready until they have been evaluated on real Nix systems.
 

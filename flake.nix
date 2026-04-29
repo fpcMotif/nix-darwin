@@ -65,7 +65,16 @@
         hostModule = ./hosts/x230;
       };
 
-      formatter = nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-linux" ]
-        (s: nixpkgs.legacyPackages.${s}.nixpkgs-fmt);
+      nixosConfigurations.vm-aarch64-utm = mkSystem {
+        system = "aarch64-linux";
+        user = "martinfan";
+        hostModule = ./hosts/vm-aarch64-utm;
+      };
+
+      formatter = nixpkgs.lib.genAttrs [
+        "aarch64-darwin"
+        "x86_64-linux"
+        "aarch64-linux"
+      ] (s: nixpkgs.legacyPackages.${s}.nixpkgs-fmt);
     };
 }
