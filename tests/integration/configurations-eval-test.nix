@@ -1,16 +1,17 @@
 # Integration test: every flake configuration evaluates and exposes the
 # attributes the active architecture commits to.
 #
-# Per ARCHITECTURE.md, Home Manager intentionally does NOT enable
-# `programs.<tool>` modules (chezmoi owns those config files), so we don't
-# assert on programs.<tool>.enable for user-facing CLI tools here. The asserts
-# below cover what the current architecture actually commits to:
+# Per ARCHITECTURE.md, Home Manager now owns selected shell/editor-adjacent
+# config text (zsh, git, tmux, Ghostty, Starship) while still leaving mutable
+# auth/runtime app state outside the store. The asserts below cover what the
+# current architecture commits to:
 #   * each flake configuration evaluates end-to-end (drvPath computable)
 #   * currentSystemUser flows into home-manager + system user options
 #   * agent-skills DSL is wired with the documented sources and targets
 #   * common packages (git, mgrep) are present in home.packages
+#   * migrated Home Manager program modules are enabled
 #   * darwin-only agent packages are gated to darwin
-#   * system-level zsh stays on (this IS owned by Nix, not chezmoi)
+#   * system-level zsh stays on (this IS owned by Nix, not unmanaged dotfiles)
 { pkgs, lib, self, ... }:
 
 let
@@ -41,6 +42,22 @@ let
     (helpers.assertTest "${prefix}-has-mgrep-package"
       (hasPackage "mgrep" homeConfig.home.packages)
       "${prefix} Home Manager package list should include mgrep")
+
+    (helpers.assertTest "${prefix}-home-zsh-enabled"
+      (homeConfig.programs.zsh.enable == true)
+      "${prefix} Home Manager should own zsh config")
+
+    (helpers.assertTest "${prefix}-home-git-enabled"
+      (homeConfig.programs.git.enable == true)
+      "${prefix} Home Manager should own git config")
+
+    (helpers.assertTest "${prefix}-home-tmux-enabled"
+      (homeConfig.programs.tmux.enable == true)
+      "${prefix} Home Manager should own tmux config")
+
+    (helpers.assertTest "${prefix}-home-ghostty-config"
+      (builtins.hasAttr "ghostty/config" homeConfig.xdg.configFile)
+      "${prefix} Home Manager should own Ghostty config text")
 
     (helpers.assertTest "${prefix}-agent-skills-enabled"
       (homeConfig.programs.agent-skills.enable == true)
@@ -91,6 +108,10 @@ let
       (darwinConfig.programs.zsh.enable == true)
       "Darwin should enable zsh at the system level")
 
+    (helpers.assertTest "darwin-starship-enabled"
+      (darwinHome.programs.starship.enable == true)
+      "Darwin Home Manager should enable the migrated Starship prompt")
+
     (helpers.assertTest "darwin-brew-default-disabled"
       (darwinConfig.martin.brew.homebrew.enable == false)
       "Homebrew emergency scaffold should remain disabled by default")
@@ -106,8 +127,10 @@ let
 
   wslConfig = self.nixosConfigurations.wsl.config;
   x230Config = self.nixosConfigurations.x230.config;
+  vmConfig = self.nixosConfigurations.vm-aarch64-utm.config;
   wslHome = wslConfig.home-manager.users.${user};
   x230Home = x230Config.home-manager.users.${user};
+  vmHome = vmConfig.home-manager.users.${user};
 
   nixosChecks = [
     (helpers.assertTest "nixos-wsl-evaluates"
@@ -117,6 +140,10 @@ let
     (helpers.assertTest "nixos-x230-evaluates"
       (evalsOk self.nixosConfigurations.x230.config.system.build.toplevel)
       "nixosConfigurations.x230.toplevel should evaluate")
+
+    (helpers.assertTest "nixos-vm-aarch64-utm-evaluates"
+      (evalsOk self.nixosConfigurations.vm-aarch64-utm.config.system.build.toplevel)
+      "nixosConfigurations.vm-aarch64-utm.toplevel should evaluate")
 
     (helpers.assertTest "wsl-host-name"
       (wslConfig.networking.hostName == "wsl")
@@ -138,12 +165,21 @@ let
       (x230Config.programs.zsh.enable == true)
       "x230/NixOS should enable zsh at the system level")
 
+    (helpers.assertTest "vm-aarch64-utm-host-name"
+      (vmConfig.networking.hostName == "vm-aarch64-utm")
+      "aarch64 UTM VM host name should remain vm-aarch64-utm")
+
+    (helpers.assertTest "vm-aarch64-utm-zsh-enabled"
+      (vmConfig.programs.zsh.enable == true)
+      "aarch64 UTM VM should enable zsh at the system level")
+
     (helpers.assertTest "linux-excludes-darwin-only-agent-packages"
       (!(hasPackage "sourcegraph-amp" wslHome.home.packages))
       "Linux Home Manager packages should not include Darwin-only agent packages")
   ]
   ++ (homeChecks "wsl" wslHome "/home/${user}")
-  ++ (homeChecks "x230" x230Home "/home/${user}");
+  ++ (homeChecks "x230" x230Home "/home/${user}")
+  ++ (homeChecks "vm-aarch64-utm" vmHome "/home/${user}");
 
 in
 helpers.testSuite "configurations-eval" (darwinChecks ++ nixosChecks)

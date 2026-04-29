@@ -215,7 +215,7 @@ programs.agent-skills = {
   sources = {
     dotfiles-pi     = { input = "dotfiles";          subdir = "dot_pi/agent/skills"; };
     dotfiles-claude = { input = "dotfiles";          subdir = "dot_claude/skills"; };
-    grill-me        = { input = "mattpocock-skills"; subdir = "grill-me"; };
+    grill-me        = { input = "mattpocock-skills"; subdir = "skills/productivity/grill-me"; };
   };
 
   skills = {
@@ -325,7 +325,7 @@ These are dimensions every reviewer asks about. State the position even when the
 | Secrets management   | **None today.** No `sops-nix` / `agenix`. Secrets live outside the flake; revisit before adding any service that reads them. |
 | Formatter            | Wired through `flake.nix` (`formatter.<system>`). Run via `nix fmt`.                           |
 | Linting              | `nix flake check` runs `nixpkgs-fmt --check`, `statix`, and `deadnix --fail` via `tests/default.nix`. Run locally and in CI. |
-| CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin plus x86_64 NixOS scaffolds (`wsl`, `x230`) on macOS / Ubuntu runners and runs `nix flake check` in parallel. The `vm-aarch64-utm` host requires an aarch64-linux builder and is built manually until one is wired in. Magic Nix Cache for cross-run reuse. |
+| CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin, x86_64 NixOS scaffolds (`wsl`, `x230`), and `vm-aarch64-utm` on macOS / Ubuntu runners, with `nix flake check` as the gate before config builds. |
 | Dev shells / direnv  | Not currently exposed. If `devShells.<system>` is added later, document the `.envrc` pattern. |
 
 When any row changes, update this table in the same PR.
@@ -444,7 +444,7 @@ nix build .#nixosConfigurations.x230.config.system.build.toplevel
 nix build .#nixosConfigurations.vm-aarch64-utm.config.system.build.toplevel
 ```
 
-The `vm-aarch64-utm` build may require an aarch64-linux-capable builder or substituter; do not assume a macOS workstation can locally build the full Linux closure.
+The `vm-aarch64-utm` build requires an aarch64-linux-capable builder or substituter; GitHub Actions uses an ARM Ubuntu runner for CI, but do not assume a macOS workstation can locally build the full Linux closure.
 
 Do not assume they are production-ready until they have been evaluated on real Nix systems.
 
