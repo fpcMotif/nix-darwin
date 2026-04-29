@@ -5,14 +5,14 @@
 ,
 }:
 
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   pname = "raycast";
-  version = "latest";
+  version = "1.104.13";
 
   src = fetchurl {
-    url = "https://api.raycast.app/v2/download";
+    url = "https://releases.raycast.com/releases/${version}/download?build=universal";
     name = "Raycast.dmg";
-    hash = "sha256-3oAPhRK9pU/Ipq0S9jGEQDlso201n8xFvfPuOtjG5n0=";
+    hash = "sha256-27kvr1ilsjmYYiZnffJO8U5GFwpM82hc/DoBcgE+Lrc=";
   };
 
   nativeBuildInputs = [ undmg ];
