@@ -2,12 +2,25 @@
 
 let
   cfg = config.martin.prompt.starship;
+  vcsEnable = cfg.segments.jj.enable || cfg.segments.git.enable;
   jjStarshipBin = lib.getExe cfg.segments.jj.package;
   jjStarshipShell = [
     jjStarshipBin
+    "--no-color"
     "--jj-symbol"
     "󱗆 "
+    "--git-symbol"
+    "${gitIcon} "
+    "--no-git-id"
+    "--no-git-status"
   ];
+  vcsWhen =
+    if cfg.segments.jj.enable && cfg.segments.git.enable then
+      "${jjStarshipBin} detect"
+    else if cfg.segments.jj.enable then
+      "jj root >/dev/null 2>&1"
+    else
+      "! jj root >/dev/null 2>&1 && ${jjStarshipBin} detect";
 
   palette = {
     grey = "#454758";
@@ -31,9 +44,9 @@ let
     else
       "";
 
-  gitStyle =
+  vcsStyle =
     if cfg.palette.enable then "fg:${palette.text} bg:${palette.lavender}" else "bold";
-  gitTrail =
+  vcsTrail =
     if cfg.powerline.enable && cfg.palette.enable then
       "[${pwSep}](fg:${palette.lavender})"
     else
@@ -64,11 +77,11 @@ let
     };
   };
 
-  jjCustom = lib.optionalAttrs cfg.segments.jj.enable {
+  jjCustom = lib.optionalAttrs vcsEnable {
     jj = {
-      description = "Jujutsu prompt segment via jj-starship.";
-      when = "jj root >/dev/null 2>&1";
-      format = "$output ";
+      description = "Powerline VCS segment rendered by jj-starship.";
+      when = vcsWhen;
+      format = "[ $output ](${vcsStyle})${vcsTrail}";
       shell = jjStarshipShell;
     };
   };
@@ -80,8 +93,7 @@ let
   formatString =
     (lib.optionalString cfg.segments.rootIndicator.enable "\${custom.root_indicator}")
     + "$directory"
-    + (lib.optionalString cfg.segments.jj.enable "\${custom.jj}")
-    + (lib.optionalString cfg.segments.git.enable "$git_branch")
+    + (lib.optionalString vcsEnable "\${custom.jj}")
     + "$character";
 in
 {
@@ -96,9 +108,9 @@ in
     segments = {
       rootIndicator.enable = lib.mkEnableOption "Yellow lightning-bolt when EUID=0";
       path.enable = lib.mkEnableOption "Powerline path block (fish-style abbreviation)";
-      git.enable = lib.mkEnableOption "Lavender git_branch block; git_status disabled to match omp fetch_status:false";
+      git.enable = lib.mkEnableOption "Git support in the unified jj-starship powerline segment";
       jj = {
-        enable = lib.mkEnableOption "Jujutsu prompt segment rendered by jj-starship";
+        enable = lib.mkEnableOption "Jujutsu support in the unified jj-starship powerline segment";
         package = lib.mkOption {
           type = lib.types.package;
           default = pkgs.jj-starship;
@@ -123,6 +135,7 @@ in
         format = formatString;
         right_format = "$time";
 
+        git_branch.disabled = true;
         git_status.disabled = true;
 
         directory =
@@ -133,17 +146,6 @@ in
               truncate_to_repo = false;
               style = pathStyle;
               format = "[ $path ]($style)${pathTrail}";
-            }
-          else
-            { disabled = true; };
-
-        git_branch =
-          if cfg.segments.git.enable then
-            {
-              symbol = "${gitIcon} ";
-              style = gitStyle;
-              format = "[ $symbol$branch ]($style)${gitTrail}";
-              truncation_length = 18;
             }
           else
             { disabled = true; };

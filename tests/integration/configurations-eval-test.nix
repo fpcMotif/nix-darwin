@@ -134,16 +134,18 @@ let
           jj = darwinHome.programs.starship.settings.custom.jj;
           shell = jj.shell;
         in
-        jj.when == "jj root >/dev/null 2>&1"
-          && jj.format == "$output "
+        lib.hasInfix "jj-starship" jj.when
+          && lib.hasInfix "$output" jj.format
+          && builtins.elem "--no-color" shell
           && builtins.elem "--jj-symbol" shell
-          && !(builtins.elem "--no-color" shell)
+          && builtins.elem "--no-git-id" shell
+          && builtins.elem "--no-git-status" shell
       )
-      "Darwin Starship config should pass through jj-starship's native prompt output")
+      "Darwin Starship config should expose a powerline jj-starship VCS module")
 
-    (helpers.assertTest "darwin-starship-keeps-built-in-git-branch"
-      (darwinHome.programs.starship.settings.git_branch.symbol == " ")
-      "Git repos should keep the built-in Starship git_branch module")
+    (helpers.assertTest "darwin-starship-disables-built-in-git-branch"
+      (darwinHome.programs.starship.settings.git_branch.disabled == true)
+      "jj-starship should replace Starship's built-in git_branch module")
 
     (helpers.assertTest "darwin-brew-default-disabled"
       (darwinConfig.martin.brew.homebrew.enable == false)
