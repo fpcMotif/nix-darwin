@@ -1,0 +1,21 @@
+{ ... }:
+
+{
+  programs.yazi = {
+    enable = true;
+    enableZshIntegration = true;
+    shellWrapperName = "y";
+
+    settings = {
+      mgr = {
+        show_hidden = true;
+        sort_by = "natural";
+        sort_dir_first = true;
+      };
+      preview = {
+        max_width = 1000;
+        max_height = 1000;
+      };
+    };
+  };
+}
