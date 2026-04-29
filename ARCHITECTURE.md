@@ -20,7 +20,7 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 - [Secrets, formatting, CI](#secrets-formatting-ci)
 - [Workflows](#workflows)
 - [Linux / Omakub plan](#linux--omakub-plan)
-- [WSL and X230 scaffolds](#wsl-and-x230-scaffolds)
+- [WSL, X230, and VM scaffolds](#wsl-x230-and-vm-scaffolds)
 - [Reference repositories](#reference-repositories)
 - [Guardrails](#guardrails)
 - [Maintaining this document](#maintaining-this-document)
@@ -30,7 +30,7 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 
 1. **Active — `darwinConfigurations.Martins-Mac-mini`.** Apple Silicon (`aarch64-darwin`), nix-darwin. Primary place to make this repo excellent. Intel Macs are out of scope.
 2. **Future — `homeConfigurations.martinfan-omakub`.** Planned Home Manager profile for Ubuntu/Omakub (<https://omakub.org/>). Documentation/design target only; no flake output yet.
-3. **Inactive scaffolds — `nixosConfigurations.wsl`, `nixosConfigurations.x230`.** Kept for future NixOS/WSL experimentation. Not production until evaluated on real Nix systems.
+3. **Inactive scaffolds — `nixosConfigurations.wsl`, `nixosConfigurations.x230`, `nixosConfigurations.vm-aarch64-utm`.** Kept for future NixOS/WSL/VM experimentation. Not production until evaluated on real Nix systems.
 
 ## Repository layout
 
@@ -41,7 +41,8 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 ├── hosts/
 │   ├── darwin/default.nix    # Martins-Mac-mini host layer (active)
 │   ├── wsl/default.nix       # NixOS-WSL scaffold (inactive)
-│   └── x230/default.nix      # ThinkPad scaffold (inactive)
+│   ├── x230/default.nix      # ThinkPad scaffold (inactive)
+│   └── vm-aarch64-utm/       # UTM/QEMU aarch64 VM scaffold (inactive)
 ├── modules/
 │   ├── darwin/               # nix-darwin shared modules
 │   ├── nixos/                # shared NixOS module — staged for future hosts
@@ -98,24 +99,23 @@ Three layers, one writer per concern:
 |----------------|---------------------|---------------------------------------------------------------|
 | System         | nix-darwin / NixOS  | OS settings, users, shells, services, system apps             |
 | User packages  | Home Manager        | per-user CLI/dev packages, activation scripts                 |
-| Config text    | chezmoi / dotfiles  | zsh, git, starship, editor, terminal, agent config files      |
+| Config text    | Home Manager        | zsh, git, starship, tmux, Ghostty, shell/terminal preferences |
 
-Home Manager intentionally installs binaries (`starship`, `sheldon`, `git`, `bat`, `fd`, `rg`, …) **without** enabling the matching `programs.<tool>` modules, because those config files are managed by chezmoi. This keeps Nix from clobbering chezmoi-owned files.
+Home Manager now owns the selected shell, prompt, terminal, and git config text in Nix, including generated files like `~/.zshrc`, `~/.config/starship.toml`, `~/.config/tmux/tmux.conf`, `~/.config/ghostty/config`, and `~/.config/git/config`. Legacy Stow/Homebrew dotfiles are inventory only; they are not an active writer for migrated concerns.
 
-### Migrating a config file from chezmoi to Nix
+### Migrating a config file into Nix ownership
 
 Do this one file at a time:
 
-1. Stop tracking the file in chezmoi.
-2. Remove the live unmanaged file from `$HOME`.
-3. Enable the relevant Home Manager `programs.*` module.
+1. Decide that the file should become Nix-owned configuration.
+2. Move or remove the live unmanaged file from `$HOME`.
+3. Enable the relevant Home Manager `programs.*` or `xdg.configFile` module.
 4. Rebuild and verify ownership.
 
 #### Worked example: `~/.config/starship.toml`
 
 ```bash
-# 1-2. Hand off the file from chezmoi.
-chezmoi forget --force ~/.config/starship.toml
+# 1-2. Hand off the file from manual management.
 rm ~/.config/starship.toml
 
 # 3. Enable on the active host (in hosts/darwin/default.nix):
@@ -153,6 +153,7 @@ When a change fits two slots, prefer the more specific one and lift it later whe
 ```text
 modules/darwin/
 ├── default.nix         # imports the Darwin module set + base nixpkgs config
+├── defaults.nix        # selected macOS defaults (keyboard, Finder, Dock, trackpad, screenshots)
 ├── nix.nix             # flakes / nix-command / trusted users
 ├── shell.nix           # zsh shell registration
 ├── security.nix        # Touch ID sudo
@@ -176,7 +177,11 @@ The platform-specific home path is computed once in `lib/mkSystem.nix` and expos
 modules/home/
 ├── default.nix         # username, homeDirectory, stateVersion, imports
 ├── packages.nix        # common + Darwin-only packages
-├── prompt.nix          # option-gated Starship config (dormant by default; replaces chezmoi-owned starship.toml when enabled)
+├── zsh.nix             # zsh, fzf, direnv, aliases/functions, editor env
+├── prompt.nix          # option-gated Starship config (enabled on active Mac)
+├── tmux.nix            # tmux behavior from legacy dotfiles, without TPM bootstrap
+├── ghostty.nix         # Ghostty config managed as XDG text
+├── git.nix             # Git behavior without copied identity/signing keys
 └── skills.nix          # agent skill bundle activation
 ```
 
@@ -213,21 +218,37 @@ programs.agent-skills = {
     grill-me        = { input = "mattpocock-skills"; subdir = "grill-me"; };
   };
 
-  skills.enable = [
-    "git-workflow"
-    "grill-me"
-    "lazygit"
-    "ralph-loop"
-    "review"
-    "web-browser"
-  ];
+  skills = {
+    enable = [ ];
+    enableAll = false;
+    explicit = {
+      git-workflow = {
+        from = "dotfiles-pi";
+        path = "git-workflow";
+        packages = [ pkgs.git pkgs.gh pkgs.jq ];
+      };
+      review = {
+        from = "dotfiles-pi";
+        path = "review";
+        packages = [ pkgs.git pkgs.gh pkgs.jq ];
+      };
+      lazygit = {
+        from = "dotfiles-claude";
+        path = "lazygit";
+        packages = [ pkgs.git pkgs.lazygit ];
+      };
+      ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
+      web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
+      grill-me = { from = "grill-me"; path = "."; packages = [ ]; };
+    };
+  };
 };
 ```
 
 ### Policy
 
 - **Publish once, mirror deliberately.** Build one Nix-managed bundle, then mirror only to agent-native directories whose discovery behavior is documented or consciously accepted.
-- **Allowlist public sources.** Use `skills.enable = [ … ]` for third-party sources. Reserve `skills.enableAll = [ "source" ]` for tightly trusted private sources.
+- **Allowlist public sources.** Use explicit skill entries for selected third-party skills when they need Nix-provided packages; otherwise `skills.enable = [ … ]` is acceptable. Reserve `skills.enableAll = [ "source" ]` for tightly trusted private sources.
 - **Disambiguate name collisions.** If two sources expose the same skill name, set `idPrefix` on one and enable the prefixed IDs (e.g. `openai/pdf`, `anthropic/pdf`).
 - **Recursive discovery by default.** Keep `filter.maxDepth = null`. Use `filter.maxDepth = 1` only for known-flat roots (e.g. the curated dotfiles folders).
 - **Bundle Nix-provided tools.** Use `skills.explicit.<name>.packages` and `transform` when a skill needs Nix-provided binaries; this avoids assuming globally installed tools.
@@ -304,7 +325,7 @@ These are dimensions every reviewer asks about. State the position even when the
 | Secrets management   | **None today.** No `sops-nix` / `agenix`. Secrets live outside the flake; revisit before adding any service that reads them. |
 | Formatter            | Wired through `flake.nix` (`formatter.<system>`). Run via `nix fmt`.                           |
 | Linting              | `nix flake check` runs `nixpkgs-fmt --check`, `statix`, and `deadnix --fail` via `tests/default.nix`. Run locally and in CI. |
-| CI                   | GitHub Actions (`.github/workflows/build.yml`): builds the three configs on macOS / Ubuntu runners and runs `nix flake check` in parallel. Magic Nix Cache for cross-run reuse. |
+| CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin plus x86_64 NixOS scaffolds (`wsl`, `x230`) on macOS / Ubuntu runners and runs `nix flake check` in parallel. The `vm-aarch64-utm` host requires an aarch64-linux builder and is built manually until one is wired in. Magic Nix Cache for cross-run reuse. |
 | Dev shells / direnv  | Not currently exposed. If `devShells.<system>` is added later, document the `.envrc` pattern. |
 
 When any row changes, update this table in the same PR.
@@ -353,7 +374,7 @@ The toggle ladder, finest → coarsest:
 | `martin.prompt.starship.segments.<name>.enable = false`        | Drops one segment; others unchanged.    |
 | `martin.prompt.starship.palette.enable = false`                | Falls back to bold styles, no colors.   |
 | `martin.prompt.starship.powerline.enable = false`              | Drops chevrons; backgrounds remain.     |
-| `martin.prompt.starship.enable = false`                        | Disables Starship; `~/.config/starship.toml` becomes unmanaged again (chezmoi can re-claim it). |
+| `martin.prompt.starship.enable = false`                        | Disables Starship; `~/.config/starship.toml` becomes unmanaged again. |
 
 If a prompt regression makes the shell unusable mid-session, the larger blast
 radius is generation rollback (above): `sudo darwin-rebuild --rollback`.
@@ -374,7 +395,7 @@ radius is generation rollback (above): `sudo darwin-rebuild --rollback`.
 
 1. Add the upstream source as a flake `input` (allowlist preferred for public sources).
 2. Add a `programs.agent-skills.sources.<name>` entry.
-3. Add specific IDs to `skills.enable` (or use `idPrefix` on collision).
+3. Add specific IDs to `skills.enable`, or prefer `skills.explicit.<name>` when you need to attach packages/metadata/renames.
 4. Build, switch, and verify the bundle in `$HOME/.agents/skills` before checking other mirrors.
 
 ### Update inputs
@@ -405,13 +426,25 @@ Do not add that output until these are settled:
 - username and home path,
 - whether Nix is single-user or multi-user,
 - which packages are shared with the Mac,
-- which dotfiles remain chezmoi-owned.
+- which config files remain intentionally unmanaged.
 
 Until then, Omakub is a design target documented here only.
 
-## WSL and X230 scaffolds
+## WSL, X230, and VM scaffolds
 
-`wsl` and `x230` remain in the flake as inactive NixOS scaffolds. They are useful for future experimentation — Windows-app testing, NixOS-on-laptop experiments — but they are lower priority than Mac and future Omakub.
+`wsl`, `x230`, and `vm-aarch64-utm` remain in the flake as inactive NixOS scaffolds. They are useful for future experimentation — Windows-app testing, NixOS-on-laptop experiments, and a UTM/QEMU guest path — but they are lower priority than Mac and future Omakub.
+
+The VM scaffold is intentionally adapted from `references/nixos-config-mitchellh/`, which is the primary reference for VM-machine shape in this repo. Local comparison trees may be reviewed for ideas, but VM-machine defaults should prefer the senior/reference implementation unless a local requirement overrides it. The current VM assumes an Apple Silicon host with an ARM64 UTM/QEMU guest, UEFI boot, and labelled `nixos`/`boot` filesystems.
+
+Build checks:
+
+```bash
+nix build .#nixosConfigurations.wsl.config.system.build.toplevel
+nix build .#nixosConfigurations.x230.config.system.build.toplevel
+nix build .#nixosConfigurations.vm-aarch64-utm.config.system.build.toplevel
+```
+
+The `vm-aarch64-utm` build may require an aarch64-linux-capable builder or substituter; do not assume a macOS workstation can locally build the full Linux closure.
 
 Do not assume they are production-ready until they have been evaluated on real Nix systems.
 
@@ -432,7 +465,7 @@ Borrow patterns selectively. Do not copy Linux-specific NixOS concepts into nix-
 - Mac is the active target; optimize for it first.
 - Keep the flake root thin — inputs, overlays, system outputs, formatter, nothing else.
 - Keep shared modules parameterized by `currentSystemUser` and `currentSystemUserHome`; the home path is computed once in `lib/mkSystem.nix`, never re-derived in host or Home Manager modules.
-- Keep Home Manager from clobbering chezmoi-owned config files.
+- Keep Home Manager from clobbering unmanaged config files without explicit migration intent (each new `programs.*` module must ship the activation-guard pattern from `modules/home/prompt.nix`).
 - Keep brew variants disabled unless explicitly testing an escape hatch.
 - Treat sample repos as references, never as active configuration.
 - Adding an agent-skills target enables rsync-with-delete on that directory; enable deliberately.

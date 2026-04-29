@@ -13,7 +13,7 @@ This directory contains full external sample repositories kept for study and com
 Use these references to extract patterns, not as source of truth:
 
 1. Live config stays in the repository root (`flake.nix`, `hosts/`, `modules/`, `pkgs/`, `lib/`).
-2. Any borrowed idea must be rewritten for Martin's target order: Mac first, future Omakub Home Manager second, WSL/X230 scaffolds last.
+2. Any borrowed idea must be rewritten for Martin's target order: Mac first, future Omakub Home Manager second, WSL/X230/VM scaffolds last.
 3. Linux/NixOS-specific settings must not leak into nix-darwin modules.
 4. Homebrew/MAS examples are reference material only; this repo defaults to pure Nix/custom derivations.
-5. Agent Skills examples are reference material until `modules/home/skills.nix` is intentionally migrated to the upstream Home Manager DSL.
+5. Agent Skills examples remain reference material for future adjustments; live ownership is `modules/home/skills.nix` using the upstream Home Manager DSL.

@@ -3,6 +3,10 @@
 {
   imports = [
     ./packages.nix
+    ./zsh.nix
+    ./tmux.nix
+    ./git.nix
+    ./ghostty.nix
     ./prompt.nix
     ./skills.nix
     ./claude-code.nix

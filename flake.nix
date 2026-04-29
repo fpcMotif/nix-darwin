@@ -43,6 +43,17 @@
 
   outputs = inputs@{ self, nixpkgs, ... }:
     let
+      supportedSystems = [
+        "aarch64-darwin"
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+
+      checkSystems = [
+        "aarch64-darwin"
+        "x86_64-linux"
+      ];
+
       overlays = [
         (import ./pkgs)
         inputs.claude-code.overlays.default
@@ -51,6 +62,19 @@
       mkSystem = import ./lib/mkSystem.nix {
         inherit inputs overlays;
       };
+
+      legacyPackagesFor = s:
+        let
+          pkgs = import nixpkgs {
+            system = s;
+            inherit overlays;
+            config.allowUnfree = true;
+          };
+        in
+        {
+          inherit (pkgs) crush;
+          martin = pkgs.martin;
+        };
     in
     {
       darwinConfigurations."Martins-Mac-mini" = mkSystem {
@@ -71,10 +95,18 @@
         hostModule = ./hosts/x230;
       };
 
-      formatter = nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-linux" ]
+      nixosConfigurations.vm-aarch64-utm = mkSystem {
+        system = "aarch64-linux";
+        user = "martinfan";
+        hostModule = ./hosts/vm-aarch64-utm;
+      };
+
+      legacyPackages = nixpkgs.lib.genAttrs supportedSystems legacyPackagesFor;
+
+      formatter = nixpkgs.lib.genAttrs supportedSystems
         (s: nixpkgs.legacyPackages.${s}.nixpkgs-fmt);
 
-      checks = nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-linux" ] (s:
+      checks = nixpkgs.lib.genAttrs checkSystems (s:
         import ./tests {
           inherit inputs self;
           system = s;
