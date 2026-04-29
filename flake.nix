@@ -19,6 +19,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    claude-code = {
+      url = "github:sadjow/claude-code-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     agent-skills = {
       url = "git+https://github.com/Kyure-A/agent-skills-nix.git?ref=master";
       inputs.home-manager.follows = "home-manager";
@@ -40,6 +45,7 @@
     let
       overlays = [
         (import ./pkgs)
+        inputs.claude-code.overlays.default
       ];
 
       mkSystem = import ./lib/mkSystem.nix {
@@ -67,5 +73,12 @@
 
       formatter = nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-linux" ]
         (s: nixpkgs.legacyPackages.${s}.nixpkgs-fmt);
+
+      checks = nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-linux" ] (s:
+        import ./tests {
+          inherit inputs self;
+          system = s;
+        }
+      );
     };
 }

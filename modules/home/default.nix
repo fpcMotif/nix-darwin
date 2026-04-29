@@ -12,6 +12,7 @@ in
     ./packages.nix
     ./prompt.nix
     ./skills.nix
+    ./claude-code.nix
   ];
 
   home = {
