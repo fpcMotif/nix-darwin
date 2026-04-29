@@ -5,12 +5,12 @@
 ,
 }:
 
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   pname = "dropbox";
-  version = "latest";
+  version = "248.4.3576";
 
   src = fetchurl {
-    url = "https://www.dropbox.com/download?plat=mac&full=1";
+    url = "https://edge.dropboxstatic.com/dbx-releng/client/Dropbox%20${version}.dmg";
     name = "Dropbox.dmg";
     hash = "sha256-pIKS73MwH9SBXg39zqevGxcHXbK0jFjz+onWhG4/E3g=";
   };
