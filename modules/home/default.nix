@@ -7,6 +7,8 @@
     ./tmux.nix
     ./git.nix
     ./ghostty.nix
+    ./kitty.nix
+    ./yazi.nix
     ./prompt.nix
     ./skills.nix
     ./claude-code.nix
