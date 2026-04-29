@@ -15,8 +15,10 @@ let
       inputs.nixpkgs.lib.nixosSystem;
   homeManagerModule =
     inputs.home-manager.${if isDarwin then "darwinModules" else "nixosModules"}.home-manager;
+  currentSystemUserHome =
+    if isDarwin then "/Users/${user}" else "/home/${user}";
   sharedArgs = {
-    inherit inputs;
+    inherit inputs currentSystemUserHome;
     currentSystemUser = user;
   };
 in

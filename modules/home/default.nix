@@ -1,12 +1,5 @@
-{ pkgs, currentSystemUser, ... }:
+{ currentSystemUser, currentSystemUserHome, ... }:
 
-let
-  homeDirectory =
-    if pkgs.stdenv.isDarwin then
-      "/Users/${currentSystemUser}"
-    else
-      "/home/${currentSystemUser}";
-in
 {
   imports = [
     ./packages.nix
@@ -16,7 +9,7 @@ in
 
   home = {
     username = currentSystemUser;
-    inherit homeDirectory;
+    homeDirectory = currentSystemUserHome;
     stateVersion = "24.05";
   };
 }

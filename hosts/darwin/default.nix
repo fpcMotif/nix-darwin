@@ -1,7 +1,7 @@
-{ pkgs, currentSystemUser, ... }:
+{ pkgs, currentSystemUser, currentSystemUserHome, ... }:
 
 {
-  users.users.${currentSystemUser}.home = "/Users/${currentSystemUser}";
+  users.users.${currentSystemUser}.home = currentSystemUserHome;
 
   system = {
     primaryUser = currentSystemUser;

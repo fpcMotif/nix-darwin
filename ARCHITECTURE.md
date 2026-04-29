@@ -72,7 +72,7 @@ The constructor:
 2. Applies the shared overlay from `pkgs/default.nix`.
 3. Imports shared platform modules.
 4. Wires Home Manager as a system module.
-5. Passes `inputs` and `currentSystemUser` through `specialArgs`.
+5. Passes `inputs`, `currentSystemUser`, and `currentSystemUserHome` through `specialArgs`.
 
 Shared modules consume `currentSystemUser` instead of hard-coding `martinfan`. The profile is still Martin-specific; this is not a generic multi-user framework.
 
@@ -161,10 +161,12 @@ modules/darwin/
 
 The active Darwin host (`hosts/darwin/default.nix`) sets:
 
-- the current user's macOS home directory,
+- the current user's macOS home directory (from `currentSystemUserHome`),
 - `system.primaryUser`,
 - `system.stateVersion`,
 - system-level GUI packages from `pkgs.martin`.
+
+The platform-specific home path is computed once in `lib/mkSystem.nix` and exposed as `currentSystemUserHome`, so the system layer (`users.users.<user>.home`) and the Home Manager profile (`home.homeDirectory`) both read the same value.
 
 `system.stateVersion` is set once per host and is **not** bumped casually — bumping it opts into nix-darwin's newer defaults, which is independent of upgrading nixpkgs.
 
@@ -423,7 +425,7 @@ Borrow patterns selectively. Do not copy Linux-specific NixOS concepts into nix-
 
 - Mac is the active target; optimize for it first.
 - Keep the flake root thin — inputs, overlays, system outputs, formatter, nothing else.
-- Keep shared modules parameterized by `currentSystemUser`.
+- Keep shared modules parameterized by `currentSystemUser` and `currentSystemUserHome`; the home path is computed once in `lib/mkSystem.nix`, never re-derived in host or Home Manager modules.
 - Keep Home Manager from clobbering chezmoi-owned config files.
 - Keep brew variants disabled unless explicitly testing an escape hatch.
 - Treat sample repos as references, never as active configuration.
