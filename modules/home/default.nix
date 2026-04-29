@@ -2,10 +2,14 @@
 
 {
   imports = [
+    ./cleanup.nix
     ./packages.nix
     ./zsh.nix
+    ./ai-cli.nix
+    ./obsidian.nix
     ./tmux.nix
     ./git.nix
+    ./jujutsu.nix
     ./ghostty.nix
     ./kitty.nix
     ./yazi.nix
@@ -15,6 +19,10 @@
     ./droid.nix
     ./opencode.nix
     ./zed.nix
+    ./crush.nix
+    ./amp.nix
+    ./ssh.nix
+    ./cursor.nix
   ];
 
   home = {

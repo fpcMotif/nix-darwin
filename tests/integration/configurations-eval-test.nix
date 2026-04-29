@@ -43,13 +43,29 @@ let
       (hasPackage "mgrep" homeConfig.home.packages)
       "${prefix} Home Manager package list should include mgrep")
 
+    (helpers.assertTest "${prefix}-has-jj-starship-package"
+      (hasPackage "jj-starship" homeConfig.home.packages)
+      "${prefix} Home Manager package list should include jj-starship")
+
     (helpers.assertTest "${prefix}-home-zsh-enabled"
       (homeConfig.programs.zsh.enable == true)
       "${prefix} Home Manager should own zsh config")
 
+    (helpers.assertTest "${prefix}-home-zsh-history-substring-enabled"
+      (homeConfig.programs.zsh.historySubstringSearch.enable == true)
+      "${prefix} Home Manager should enable declarative history substring search")
+
+    (helpers.assertTest "${prefix}-home-zoxide-enabled"
+      (homeConfig.programs.zoxide.enable == true)
+      "${prefix} Home Manager should enable zoxide integration")
+
     (helpers.assertTest "${prefix}-home-git-enabled"
       (homeConfig.programs.git.enable == true)
       "${prefix} Home Manager should own git config")
+
+    (helpers.assertTest "${prefix}-home-jujutsu-enabled"
+      (homeConfig.programs.jujutsu.enable == true)
+      "${prefix} Home Manager should own jj config")
 
     (helpers.assertTest "${prefix}-home-tmux-enabled"
       (homeConfig.programs.tmux.enable == true)
@@ -111,6 +127,23 @@ let
     (helpers.assertTest "darwin-starship-enabled"
       (darwinHome.programs.starship.enable == true)
       "Darwin Home Manager should enable the migrated Starship prompt")
+
+    (helpers.assertTest "darwin-starship-jj-starship-jj-custom"
+      (
+        let
+          jj = darwinHome.programs.starship.settings.custom.jj;
+          shell = jj.shell;
+        in
+        jj.when == "jj root >/dev/null 2>&1"
+          && jj.format == "$output "
+          && builtins.elem "--jj-symbol" shell
+          && !(builtins.elem "--no-color" shell)
+      )
+      "Darwin Starship config should pass through jj-starship's native prompt output")
+
+    (helpers.assertTest "darwin-starship-keeps-built-in-git-branch"
+      (darwinHome.programs.starship.settings.git_branch.symbol == " ")
+      "Git repos should keep the built-in Starship git_branch module")
 
     (helpers.assertTest "darwin-brew-default-disabled"
       (darwinConfig.martin.brew.homebrew.enable == false)

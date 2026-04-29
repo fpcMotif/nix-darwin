@@ -42,8 +42,8 @@
       };
 
       transparency = {
-        opacity = 0.85;
-        blur = 20;
+        opacity = 0.0;
+        blur = "macos-glass-clear";
       };
 
       font = {

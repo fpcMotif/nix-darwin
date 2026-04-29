@@ -1,7 +1,13 @@
-{ config, lib, ... }:
+{ config, lib, pkgs, ... }:
 
 let
   cfg = config.martin.prompt.starship;
+  jjStarshipBin = lib.getExe cfg.segments.jj.package;
+  jjStarshipShell = [
+    jjStarshipBin
+    "--jj-symbol"
+    "󱗆 "
+  ];
 
   palette = {
     grey = "#454758";
@@ -10,14 +16,12 @@ let
     text = "#494D64";
     yellow = "#FFEE58";
     red = "#ff8080";
-    teal = "#80E7C9";
   };
 
   pwSep = "";
   xMark = "";
   bolt = "⚡";
   gitIcon = "";
-  jjIcon = "";
 
   pathStyle =
     if cfg.palette.enable then "fg:${palette.white} bg:${palette.grey}" else "bold";
@@ -32,14 +36,6 @@ let
   gitTrail =
     if cfg.powerline.enable && cfg.palette.enable then
       "[${pwSep}](fg:${palette.lavender})"
-    else
-      "";
-
-  jjStyle =
-    if cfg.palette.enable then "fg:${palette.text} bg:${palette.teal}" else "bold";
-  jjTrail =
-    if cfg.powerline.enable && cfg.palette.enable then
-      "[${pwSep}](fg:${palette.teal})"
     else
       "";
 
@@ -70,14 +66,10 @@ let
 
   jjCustom = lib.optionalAttrs cfg.segments.jj.enable {
     jj = {
-      description = "Jujutsu change-id (and bookmarks if any) inside a jj repo.";
-      when = "jj root";
-      command = "jj --ignore-working-copy log -r @ -n 1 --no-graph --no-pager --color=never -T 'change_id.shortest(8) ++ if(bookmarks, \" \" ++ bookmarks.map(|b| b.name()).join(\",\"), \"\")' 2>/dev/null";
-      format = "[ ${jjIcon} $output ](${jjStyle})${jjTrail}";
-      shell = [
-        "sh"
-        "-c"
-      ];
+      description = "Jujutsu prompt segment via jj-starship.";
+      when = "jj root >/dev/null 2>&1";
+      format = "$output ";
+      shell = jjStarshipShell;
     };
   };
 
@@ -86,10 +78,10 @@ let
   customAttrs = lib.optionalAttrs (customSegments != { }) { custom = customSegments; };
 
   formatString =
-    (lib.optionalString cfg.segments.rootIndicator.enable "$custom.root_indicator")
+    (lib.optionalString cfg.segments.rootIndicator.enable "\${custom.root_indicator}")
     + "$directory"
-    + (lib.optionalString cfg.segments.jj.enable "$custom.jj")
-    + "$git_branch"
+    + (lib.optionalString cfg.segments.jj.enable "\${custom.jj}")
+    + (lib.optionalString cfg.segments.git.enable "$git_branch")
     + "$character";
 in
 {
@@ -105,21 +97,21 @@ in
       rootIndicator.enable = lib.mkEnableOption "Yellow lightning-bolt when EUID=0";
       path.enable = lib.mkEnableOption "Powerline path block (fish-style abbreviation)";
       git.enable = lib.mkEnableOption "Lavender git_branch block; git_status disabled to match omp fetch_status:false";
-      jj.enable = lib.mkEnableOption "Teal jj block (change-id + bookmarks) inside a jj repo via 'jj log' custom segment";
+      jj = {
+        enable = lib.mkEnableOption "Jujutsu prompt segment rendered by jj-starship";
+        package = lib.mkOption {
+          type = lib.types.package;
+          default = pkgs.jj-starship;
+          defaultText = lib.literalExpression "pkgs.jj-starship";
+          description = "jj-starship package used by the Git and Jujutsu Starship custom segments.";
+        };
+      };
       status.enable = lib.mkEnableOption "Red X-mark on non-zero exit via [character] error_symbol";
       rPromptTime.enable = lib.mkEnableOption "Right-prompt time in lavender (zsh; bash needs ble.sh)";
     };
   };
 
   config = lib.mkIf cfg.enable {
-    home.activation.checkNixManagedStarship = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-      if [ -e "$HOME/.config/starship.toml" ] && ! [ -L "$HOME/.config/starship.toml" ]; then
-        echo "ERROR: ~/.config/starship.toml is still unmanaged." >&2
-        echo "Please archive/remove it so Home Manager can manage Starship settings." >&2
-        exit 1
-      fi
-    '';
-
     programs.starship = {
       enable = true;
       enableZshIntegration = true;

@@ -4,21 +4,10 @@ let
   cursorExtensions = [
     "esbenp.prettier-vscode"
     "ms-python.python"
-    "github.copilot"
   ];
 in
 {
   home.file = {
-    ".config/zsh/rc.d/99-bun-first.zsh" = {
-      text = ''
-        # Bun-first command aliases.
-        alias npm='bun'
-        alias npx='bunx'
-        alias p='bun'
-        alias pnpm='bun'
-      '';
-    };
-
     ".local/bin/npm" = {
       text = ''
         #! /bin/sh
@@ -78,7 +67,9 @@ in
       fi
 
       for ext in ${extensionArgs}; do
-        "$cursor_cmd" --install-extension "$ext" --force
+        if ! "$cursor_cmd" --install-extension "$ext" --force; then
+          echo "Cursor extension '$ext' could not be installed; continuing." >&2
+        fi
       done
     '';
 }

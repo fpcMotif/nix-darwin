@@ -27,6 +27,7 @@ let
     lazygit
     delta
     jujutsu
+    jj-starship
 
     # Shell UX and terminal tools.
     starship
@@ -36,7 +37,6 @@ let
     # Utilities.
     jq
     gh
-    chezmoi
     just
     bun
     nodejs_24

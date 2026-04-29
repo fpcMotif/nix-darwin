@@ -62,18 +62,50 @@
       "basedpyright"
     ];
 
-    mutableUserSettings = true;
-    mutableUserKeymaps = true;
+    mutableUserSettings = false;
+    mutableUserKeymaps = false;
 
     userSettings = {
-      theme = "Catppuccin Mocha";
-      vim_mode = false;
-      ui_font_size = 14;
-      buffer_font_size = 14;
+      theme = {
+        mode = "system";
+        light = "One Light";
+        dark = "One Dark";
+      };
+      vim_mode = true;
+      ui_font_size = 16;
+      buffer_font_size = 15;
       buffer_font_family = "JetBrains Mono";
       autosave = "on_focus_change";
       format_on_save = "on";
       tab_size = 2;
+
+      agent_servers = {
+        pi-acp = {
+          favorite_models = [
+            "openai-codex/gpt-5.5"
+            "openai-codex/gpt-5.3-codex-spark"
+          ];
+          type = "registry";
+        };
+        opencode.type = "registry";
+        gemini = {
+          favorite_models = [ "gemini-3.1-pro-preview" ];
+          type = "registry";
+        };
+        codex-acp.type = "registry";
+        claude-acp.type = "registry";
+        amp-acp.type = "registry";
+      };
+
+      project_panel.dock = "left";
+      outline_panel.dock = "left";
+      collaboration_panel.dock = "left";
+      git_panel.dock = "left";
+      agent = {
+        dock = "right";
+        favorite_models = [ ];
+        model_parameters = [ ];
+      };
 
       terminal = {
         font_family = "JetBrains Mono";

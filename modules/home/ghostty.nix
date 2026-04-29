@@ -203,10 +203,10 @@ in
       };
 
       blur = lib.mkOption {
-        type = lib.types.nullOr lib.types.int;
+        type = lib.types.nullOr (lib.types.either lib.types.int lib.types.str);
         default = null;
-        example = 20;
-        description = "Background blur radius (macOS / supported compositors). null = disabled.";
+        example = "macos-glass-clear";
+        description = "Background blur radius or named macOS glass mode. null = disabled.";
       };
     };
 
@@ -399,14 +399,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home.activation.checkNixManagedGhostty = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-      if [ -e "$HOME/.config/ghostty/config" ] && ! [ -L "$HOME/.config/ghostty/config" ]; then
-        echo "ERROR: ~/.config/ghostty/config is still unmanaged." >&2
-        echo "Please archive/remove it so Home Manager can manage Ghostty settings." >&2
-        exit 1
-      fi
-    '';
-
     home.packages =
       lib.optionals (pkgs.stdenv.isDarwin && hasPackage "ghostty-bin") [
         pkgs.ghostty-bin

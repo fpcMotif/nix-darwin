@@ -122,7 +122,7 @@ rm ~/.config/starship.toml
 #    martin.prompt.starship.enable = true;
 #    martin.prompt.starship.palette.enable = true;
 #    martin.prompt.starship.powerline.enable = true;
-#    martin.prompt.starship.segments.{rootIndicator,path,git,status,rPromptTime}.enable = true;
+#    martin.prompt.starship.segments.{rootIndicator,path,git,jj,status,rPromptTime}.enable = true;
 
 # 4. Activate.
 sudo darwin-rebuild switch --flake .#Martins-Mac-mini
@@ -131,9 +131,10 @@ sudo darwin-rebuild switch --flake .#Martins-Mac-mini
 ls -la ~/.config/starship.toml      # → symlink into /nix/store/...
 ```
 
-`modules/home/prompt.nix` adds an activation-time guard that aborts the rebuild
-with a specific remediation message if steps 1–2 are skipped, instead of Home
-Manager's generic "file in the way" error.
+`modules/home/prompt.nix` uses the vendored `pkgs.jj-starship` package for
+low-latency Git/Jujutsu detection. The prompt disables Starship's built-in
+`git_branch`/`git_status` modules and renders one `custom.jj` module that
+passes through `jj-starship`'s native colored output.
 
 ## Where things belong: hosts vs modules vs pkgs
 

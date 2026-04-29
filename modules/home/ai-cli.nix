@@ -1,0 +1,104 @@
+{ lib, ... }:
+
+{
+  home.sessionVariables = {
+    CLIPROXY_BASE_URL = "http://127.0.0.1:8317";
+    CLIPROXY_CONFIG = "$HOME/CLIProxyAPI/config.yaml";
+  };
+
+  programs.zsh.initContent = lib.mkAfter ''
+    _unset_ai_env() {
+      unset ANTHROPIC_API_KEY ANTHROPIC_API_URL ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN \
+            OPENAI_API_KEY OPENAI_API_KEY_ID OPENAI_BASE_URL OPENAI_API_BASE OPENAI_ENDPOINT \
+            CODEX_API_KEY CODEX_BASE_URL GEMINI_API_KEY GEMINI_BASE_URL GOOGLE_API_KEY \
+            AMP_API_KEY AMP_URL AMP_API_BASE_URL
+    }
+
+    cofficial() {
+      (
+        _unset_ai_env
+        "$HOME/.local/bin/claude" --dangerously-skip-permissions "$@"
+      )
+    }
+
+    claude() {
+      (
+        _unset_ai_env
+        command "$HOME/.local/bin/claude" "$@"
+      )
+    }
+
+    cc() { cofficial "$@" }
+
+    _codex_cli() {
+      if (( $+commands[codex-safe] )); then
+        command codex-safe "$@"
+      else
+        command codex "$@"
+      fi
+    }
+    codex() { _codex_cli "$@" }
+
+    _climode_get() {
+      if [[ -f "$HOME/.config/climode.json" ]]; then
+        if (( $+commands[jq] )); then
+          jq -r --arg key "$1" '.[$key] // "proxy"' "$HOME/.config/climode.json" 2>/dev/null
+        else
+          python3 -c "import json, sys; print(json.load(open(sys.argv[1])).get(sys.argv[2], 'proxy'))" "$HOME/.config/climode.json" "$1" 2>/dev/null
+        fi
+      else
+        printf -- "proxy\n"
+      fi
+    }
+
+    _ai_proxy_available() {
+      (( $+commands[with-cliproxy] || $+functions[with-cliproxy] ))
+    }
+
+    _ai_run_with_optional_proxy() {
+      local tool="$1"
+      local direct_env="''${2:-keep-env}"
+      shift 2
+
+      if [[ "$(_climode_get "$tool")" == "direct" ]] || ! _ai_proxy_available; then
+        if [[ "$direct_env" == "clear-env" ]]; then
+          (_unset_ai_env; command "$tool" "$@")
+        else
+          command "$tool" "$@"
+        fi
+      else
+        with-cliproxy "$tool" "$@"
+      fi
+    }
+
+    opencode() {
+      case "''${1:-}" in
+        auth) (_unset_ai_env; command opencode "$@") ;;
+        *) _ai_run_with_optional_proxy opencode keep-env "$@" ;;
+      esac
+    }
+
+    amp() {
+      case "''${1:-}" in
+        login|logout|whoami|auth) (_unset_ai_env; command amp "$@") ;;
+        *) _ai_run_with_optional_proxy amp keep-env "$@" ;;
+      esac
+    }
+
+    crush() { _ai_run_with_optional_proxy crush keep-env "$@" }
+
+    droid() {
+      case "''${1:-}" in
+        login|logout|whoami|auth) (_unset_ai_env; command droid "$@") ;;
+        *) _ai_run_with_optional_proxy droid keep-env "$@" ;;
+      esac
+    }
+
+    pi() {
+      case "''${1:-}" in
+        login|logout|whoami|auth) (_unset_ai_env; command pi "$@") ;;
+        *) _ai_run_with_optional_proxy pi clear-env "$@" ;;
+      esac
+    }
+  '';
+}

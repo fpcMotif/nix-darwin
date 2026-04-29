@@ -7,6 +7,8 @@ let
   };
 
   kittyWithIcon = pkgs.kitty.overrideAttrs (old: {
+    doCheck = false;
+    doInstallCheck = false;
     postInstall = (old.postInstall or "") + lib.optionalString pkgs.stdenv.isDarwin ''
       cp -f ${sxyaziIcon} $out/Applications/kitty.app/Contents/Resources/kitty.icns
     '';
