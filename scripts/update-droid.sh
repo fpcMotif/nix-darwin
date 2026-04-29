@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # Bump Factory AI's droid CLI by polling the npm registry for the
 # @factory/cli-darwin-arm64 package version, then refreshing per-platform
-# hashes in pkgs/droid.nix via the fake-hash dance.
+# tarball hashes in pkgs/droid.nix.
 #
 # Why npm: Factory's downloads CDN (downloads.factory.ai) is reachable but
 # not stable across CI; the npm registry mirrors every release as
 # @factory/cli-${PLATFORM} tarballs with a single Bun-compiled binary at
 # package/bin/droid.
 set -euo pipefail
+IFS=$'\n\t'
+
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
@@ -20,47 +22,65 @@ latest=$(curl -fsSL https://registry.npmjs.org/@factory/cli-darwin-arm64/latest 
 
 current=$(grep -oE 'version = "[^"]+"' "$FILE" | head -1 | cut -d'"' -f2)
 if [ "$current" = "$latest" ]; then
-  echo "droid already at $latest"; exit 0
+  echo "droid already at $latest"
+  exit 0
 fi
 
 echo "droid: $current -> $latest"
 
-# Bump the version literal and stub every per-platform hash with FAKE.
 sed -i.bak \
   -e "s|version = \"[^\"]*\"|version = \"${latest}\"|" \
   -e "s|hash = \"sha256-[^\"]*\"|hash = \"${FAKE}\"|g" \
   "$FILE"
 
-# For each platform listed in droid.nix, do a single nix build pass and
-# extract the reported hash from the failure trace, then patch one line.
-plats=$(grep -oE '"(aarch64-darwin|x86_64-darwin|aarch64-linux|x86_64-linux)" = ' "$FILE" \
+platforms=$(grep -oE '"(aarch64-darwin|x86_64-darwin|aarch64-linux|x86_64-linux)" = ' "$FILE" \
   | grep -oE '"[^"]+"' | tr -d '"' | sort -u)
 
-for plat in $plats; do
-  set +e
-  log=$(nix build --impure \
-    --expr "(builtins.getFlake (toString ./.)).inputs.nixpkgs.legacyPackages.${plat}.callPackage ./pkgs/droid.nix {}" \
-    --no-link 2>&1)
-  set -e
-  got=$(printf '%s\n' "$log" | grep -oE 'got:[[:space:]]+sha256-[A-Za-z0-9+/=]+' \
-    | head -1 | sed -E 's/got:[[:space:]]+//')
-  if [ -z "$got" ]; then
-    echo "no hash for $plat (build may have succeeded; skipping):"
-    printf '%s\n' "$log" | tail -5
-    continue
-  fi
-  # Replace the FIRST remaining FAKE under this platform's block.
-  awk -v plat="$plat" -v fake="$FAKE" -v real="$got" '
-    $0 ~ "\"" plat "\" = " { in_block = 1 }
+platform_url() {
+  local platform="$1"
+  awk -v plat="$platform" '
+    $0 ~ "\\\"" plat "\\\" = " { in_block = 1 }
+    in_block && match($0, /url = "[^"]+";/) {
+      line = substr($0, RSTART, RLENGTH)
+      sub(/^url = "/, "", line)
+      sub(/";$/, "", line)
+      print line
+      exit
+    }
+  ' "$FILE"
+}
+
+replace_platform_hash() {
+  local platform="$1"
+  local hash="$2"
+  local tmp
+
+  tmp=$(mktemp "${FILE}.XXXXXX")
+  awk -v plat="$platform" -v fake="$FAKE" -v real="$hash" '
+    $0 ~ "\\\"" plat "\\\" = " { in_block = 1 }
     in_block && index($0, fake) {
       sub(fake, real)
       in_block = 0
     }
     { print }
-  ' "$FILE" > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
+  ' "$FILE" > "$tmp"
+  mv "$tmp" "$FILE"
+}
+
+for platform in $platforms; do
+  url=$(platform_url "$platform")
+  [ -n "$url" ] || { echo "no URL found for droid $platform" >&2; exit 1; }
+  url="${url//\$\{version\}/$latest}"
+  hash=$(nix store prefetch-file --json "$url" | jq -r '.hash // ""')
+  [ -n "$hash" ] || { echo "no hash discovered for droid $platform" >&2; exit 1; }
+  replace_platform_hash "$platform" "$hash"
 done
 
-# Final native-platform validation.
+if grep -q "$FAKE" "$FILE"; then
+  echo "one or more droid hashes are still fake" >&2
+  exit 1
+fi
+
 nix build .#martin.droid --no-link
 rm -f "$FILE.bak"
 echo "droid bumped to $latest"

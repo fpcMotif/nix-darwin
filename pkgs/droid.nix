@@ -12,19 +12,19 @@ let
   # for each platform this flake supports.
   sources = {
     "aarch64-darwin" = {
-      url = "https://registry.npmjs.org/@factory/cli-darwin-arm64/-/cli-darwin-arm64-0.112.0.tgz";
+      url = "https://registry.npmjs.org/@factory/cli-darwin-arm64/-/cli-darwin-arm64-${version}.tgz";
       hash = "sha256-SOlbM2DsX6hM3Fo0+7kjxNQqWHNLwjb5nd3bRXSkAGY=";
     };
     "x86_64-darwin" = {
-      url = "https://registry.npmjs.org/@factory/cli-darwin-x64-baseline/-/cli-darwin-x64-baseline-0.112.0.tgz";
+      url = "https://registry.npmjs.org/@factory/cli-darwin-x64-baseline/-/cli-darwin-x64-baseline-${version}.tgz";
       hash = "sha256-FAX6ttlL+nmx6aCmUa6Aublsm3bVnSZ9nmgQX/8YWys=";
     };
     "aarch64-linux" = {
-      url = "https://registry.npmjs.org/@factory/cli-linux-arm64/-/cli-linux-arm64-0.112.0.tgz";
+      url = "https://registry.npmjs.org/@factory/cli-linux-arm64/-/cli-linux-arm64-${version}.tgz";
       hash = "sha256-jh7iAegh2bSUFaIXiJytpbzkFNe75eEdf503hg5itiA=";
     };
     "x86_64-linux" = {
-      url = "https://registry.npmjs.org/@factory/cli-linux-x64-baseline/-/cli-linux-x64-baseline-0.112.0.tgz";
+      url = "https://registry.npmjs.org/@factory/cli-linux-x64-baseline/-/cli-linux-x64-baseline-${version}.tgz";
       hash = "sha256-EVMxiYCrbwDrqgg6hGms8SmkHwy4KB8VtPlTrh3xvms=";
     };
   };

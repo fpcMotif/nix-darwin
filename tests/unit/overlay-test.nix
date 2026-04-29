@@ -25,6 +25,9 @@ let
     "oh-my-pi"
     "pi-coding-agent"
     "sourcegraph-amp"
+    "droid"
+    "opencode"
+    "opencode-electron"
   ];
 
   expectedMainPrograms = {
@@ -32,6 +35,9 @@ let
     oh-my-pi = "omp";
     pi-coding-agent = "pi";
     sourcegraph-amp = "amp";
+    droid = "droid";
+    opencode = "opencode";
+    opencode-electron = "opencode-electron";
   };
 
   hasAttr = a: builtins.hasAttr a (overlaid.martin or { });
@@ -47,6 +53,7 @@ let
     "pi-coding-agent"
     "raycast"
     "sourcegraph-amp"
+    "opencode-electron"
   ];
 in
 helpers.testSuite "overlay" (
