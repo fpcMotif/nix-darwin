@@ -6,6 +6,9 @@
     trusted-users = [ "root" "@wheel" ];
   };
 
+  # 🛡️ Sentinel: Restrict sudo execution to wheel group for defense in depth
+  security.sudo.execWheelOnly = true;
+
   programs.zsh.enable = true;
   time.timeZone = lib.mkDefault "Australia/Perth";
 
