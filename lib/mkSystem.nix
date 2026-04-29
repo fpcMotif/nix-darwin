@@ -1,9 +1,9 @@
 { inputs, overlays }:
 
-{
-  system,
-  user,
-  hostModule,
+{ system
+, user
+, hostModule
+,
 }:
 
 let

@@ -1,7 +1,7 @@
-{
-  bun,
-  nodejs_24,
-  writeShellScriptBin,
+{ bun
+, nodejs_24
+, writeShellScriptBin
+,
 }:
 
 writeShellScriptBin "pi-npm-bun" ''
