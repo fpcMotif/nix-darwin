@@ -29,6 +29,7 @@ in
     homebrew = lib.mkIf cfg.homebrew.enable {
       enable = true;
       onActivation.cleanup = "none";
+      casks = [ ];
     };
   };
 }

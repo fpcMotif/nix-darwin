@@ -1,7 +1,7 @@
 { lib, pkgs, ... }:
 
 let
-  isDarwin = pkgs.stdenv.isDarwin;
+  inherit (pkgs.stdenv) isDarwin;
 
   commonPackages = with pkgs; [
     # File ops and viewing.
@@ -43,10 +43,14 @@ let
   darwinPackages = with pkgs; [
     martin.gemini-cli-preview
     martin.sourcegraph-amp
+    martin.droid
+    martin.opencode
+    martin.opencode-electron
     codex
     crush
     martin.pi-coding-agent
     martin.oh-my-pi
+    # zed-editor itself is installed by programs.zed-editor.enable in zed.nix.
   ];
 in
 {

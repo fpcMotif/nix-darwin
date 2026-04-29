@@ -1,7 +1,7 @@
 # Nix Architecture — Martin's cross-platform config
 
 > **Active target:** `darwinConfigurations.Martins-Mac-mini` (Apple Silicon, nix-darwin).
-> **Last reviewed:** 2026-04-28.
+> **Last reviewed:** 2026-04-29.
 
 This repository is Martin's cross-platform Nix configuration. The Mac is the active target; Linux/Omakub and NixOS targets are deliberately staged behind it.
 
@@ -297,8 +297,8 @@ These are dimensions every reviewer asks about. State the position even when the
 |----------------------|------------------------------------------------------------------------------------------------|
 | Secrets management   | **None today.** No `sops-nix` / `agenix`. Secrets live outside the flake; revisit before adding any service that reads them. |
 | Formatter            | Wired through `flake.nix` (`formatter.<system>`). Run via `nix fmt`.                           |
-| Linting              | Manual `nix flake check`.                                                                      |
-| CI                   | **None today.** Pre-merge verification is local `darwin-rebuild build`.                        |
+| Linting              | `nix flake check` runs `nixpkgs-fmt --check`, `statix`, and `deadnix --fail` via `tests/default.nix`. Run locally and in CI. |
+| CI                   | GitHub Actions (`.github/workflows/build.yml`): builds the three configs on macOS / Ubuntu runners and runs `nix flake check` in parallel. Magic Nix Cache for cross-run reuse. |
 | Dev shells / direnv  | Not currently exposed. If `devShells.<system>` is added later, document the `.envrc` pattern. |
 
 When any row changes, update this table in the same PR.

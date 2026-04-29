@@ -5,6 +5,10 @@
     ./packages.nix
     ./prompt.nix
     ./skills.nix
+    ./claude-code.nix
+    ./droid.nix
+    ./opencode.nix
+    ./zed.nix
   ];
 
   home = {

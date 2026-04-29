@@ -40,7 +40,7 @@ in
       dotfiles-claude = filteredSource "dotfiles" "dot_claude/skills"
         "^(lazygit)$";
 
-      grill-me = rootSkillSource "mattpocock-skills" "grill-me";
+      grill-me = rootSkillSource "mattpocock-skills" "skills/productivity/grill-me";
     };
 
     skills = {
