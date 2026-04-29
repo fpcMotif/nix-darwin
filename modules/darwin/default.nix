@@ -1,6 +1,9 @@
 { lib, ... }:
 
 {
+  # Homebrew is kept as an emergency, opt-in scaffold.
+  martin.brew.homebrew.enable = false;
+
   imports = [
     ./brew-variants.nix
     ./nix.nix
