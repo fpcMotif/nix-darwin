@@ -53,12 +53,12 @@
         "rev": "794472a428b42d4c45b387dade52030e3623ab5f",
         "revCount": 26,
         "type": "git",
-        "url": "ssh://git@github.com/fpcMotif/dotfiles.git"
+        "url": "https://github.com/fpcMotif/dotfiles.git"
       },
       "original": {
         "ref": "main",
         "type": "git",
-        "url": "ssh://git@github.com/fpcMotif/dotfiles.git"
+        "url": "https://github.com/fpcMotif/dotfiles.git"
       }
     },
     "flake-compat": {

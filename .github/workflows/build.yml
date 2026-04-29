@@ -1,24 +1,11 @@
 # Build the three flake configurations on real macOS / Linux runners.
 #
-# One-time setup before this workflow can succeed:
-#
-#   1. Generate a CI-only SSH key pair (no passphrase):
-#        ssh-keygen -t ed25519 -f dotfiles-ci -N ""
-#
-#   2. Add the PUBLIC key (`dotfiles-ci.pub`) to the dotfiles repo
-#      (fpcMotif/dotfiles) as a Deploy Key with READ-ONLY access:
-#        Settings -> Deploy keys -> Add deploy key
-#
-#   3. Add the PRIVATE key (`dotfiles-ci`) to THIS repo
-#      (fpcMotif/nix-darwin) as an Actions secret named
-#      `DOTFILES_DEPLOY_KEY`:
-#        Settings -> Secrets and variables -> Actions -> New repository secret
-#
-#   4. Delete `dotfiles-ci` and `dotfiles-ci.pub` from your laptop.
-#
-# If the dotfiles repo is public, you can replace the SSH steps with
-# `flake.nix` switching the `dotfiles` input to a `github:` URL and drop
-# `webfactory/ssh-agent` from each job.
+# The `dotfiles` flake input is fetched over HTTPS from a public GitHub repo,
+# so CI does not need any deploy keys or secrets. If you ever flip
+# `fpcMotif/dotfiles` back to private, switch the input in `flake.nix` to
+# `git+ssh://git@github.com/fpcMotif/dotfiles.git?ref=main`, configure a
+# read-only deploy key as a `DOTFILES_DEPLOY_KEY` Actions secret, and re-add
+# the `webfactory/ssh-agent` + `ssh-keyscan` steps to each job below.
 
 name: build
 
@@ -37,13 +24,6 @@ jobs:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DOTFILES_DEPLOY_KEY }}
-
-      - name: Trust github.com host key
-        run: ssh-keyscan github.com >> ~/.ssh/known_hosts
 
       - uses: cachix/install-nix-action@v27
         with:
@@ -66,13 +46,6 @@ jobs:
         config: [wsl, x230]
     steps:
       - uses: actions/checkout@v4
-
-      - uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DOTFILES_DEPLOY_KEY }}
-
-      - name: Trust github.com host key
-        run: ssh-keyscan github.com >> ~/.ssh/known_hosts
 
       - uses: cachix/install-nix-action@v27
         with:

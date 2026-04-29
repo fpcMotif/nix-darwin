@@ -25,8 +25,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Public repo, fetched over HTTPS so CI doesn't need an SSH deploy key.
+    # If you ever make this private again, switch back to
+    # `git+ssh://git@github.com/fpcMotif/dotfiles.git?ref=main` and re-enable
+    # the `webfactory/ssh-agent` steps in `.github/workflows/build.yml`.
     dotfiles = {
-      url = "git+ssh://git@github.com/fpcMotif/dotfiles.git?ref=main";
+      url = "git+https://github.com/fpcMotif/dotfiles.git?ref=main";
       flake = false;
     };
 
