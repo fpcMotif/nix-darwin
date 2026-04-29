@@ -1,4 +1,5 @@
-# Build the three flake configurations on real macOS / Linux runners.
+# Build the CI-covered flake configurations on real macOS / Linux runners.
+# The aarch64-linux UTM VM scaffold is kept manual until an ARM Linux builder is available.
 #
 # `fpcMotif/dotfiles` is public, so the `dotfiles` flake input uses the
 # `github:` URL form and the workflow needs no SSH key. If the dotfiles repo

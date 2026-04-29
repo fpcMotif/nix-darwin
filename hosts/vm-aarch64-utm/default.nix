@@ -11,7 +11,14 @@
   networking = {
     hostName = "vm-aarch64-utm";
     useDHCP = lib.mkDefault false;
-    interfaces.enp0s10.useDHCP = true;
+    useNetworkd = lib.mkDefault true;
+  };
+
+  # Avoid baking in the reference VM's single NIC name (`enp0s10`).
+  # UTM/QEMU interface names can vary; match common Ethernet prefixes instead.
+  systemd.network.networks."10-dhcp-ethernet" = {
+    matchConfig.Name = "en* eth*";
+    networkConfig.DHCP = "yes";
   };
 
   boot = {
@@ -52,7 +59,4 @@
 
   # UTM/QEMU aarch64 guests can lack working graphics acceleration.
   environment.variables.LIBGL_ALWAYS_SOFTWARE = "1";
-
-  # Reference VM permits aarch64 packages that advertise incomplete support.
-  nixpkgs.config.allowUnsupportedSystem = true;
 }

@@ -227,6 +227,7 @@ Not verified here:
 
 - `nix fmt ./`
 - `nix eval`
+- agent-skills bundle build/activation, including generated dependency tables and package symlinks from `skills.explicit.<name>.packages`
 - `darwin-rebuild build --flake .#Martins-Mac-mini`
 
 Reason: this Windows environment does not have `nix`, `nixpkgs-fmt`, or `nixfmt` available, and WSL is unavailable/misconfigured.
