@@ -20,6 +20,7 @@ let
   darwinConfig = self.darwinConfigurations."Martins-Mac-mini".config;
   wslConfig = self.nixosConfigurations.wsl.config;
   x230Config = self.nixosConfigurations.x230.config;
+  vmConfig = self.nixosConfigurations.vm-aarch64-utm.config;
 
   homeConfig =
     if isDarwin then darwinConfig.home-manager.users.${user}
@@ -55,9 +56,9 @@ let
       (homeConfig.programs.agent-skills.enable == true)
       "agent-skills Home Manager module should be enabled")
 
-    (helpers.assertTest "grill-me-skill-enabled"
-      (builtins.elem "grill-me" homeConfig.programs.agent-skills.skills.enable)
-      "grill-me should remain in the enabled skill allowlist")
+    (helpers.assertTest "grill-me-skill-explicit"
+      (builtins.hasAttr "grill-me" homeConfig.programs.agent-skills.skills.explicit)
+      "grill-me should remain explicitly allowlisted")
 
     (helpers.assertTest "pi-skill-target-configured"
       (homeConfig.programs.agent-skills.targets.pi.dest == "$HOME/.pi/agent/skills")
@@ -102,6 +103,10 @@ let
     (helpers.assertTest "x230-grub-enabled"
       (x230Config.boot.loader.grub.enable == true)
       "x230 configuration should keep GRUB enabled")
+
+    (helpers.assertTest "vm-aarch64-utm-host-name"
+      (vmConfig.networking.hostName == "vm-aarch64-utm")
+      "aarch64 UTM VM configuration should keep its hostname")
 
     (helpers.assertTest "linux-user-home"
       (x230Config.users.users.${user}.home == "/home/${user}")
