@@ -47,7 +47,6 @@ let
     crush
     martin.pi-coding-agent
     martin.oh-my-pi
-    martin.pi-npm-bun
   ];
 in
 {

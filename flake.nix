@@ -67,5 +67,8 @@
 
       formatter = nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-linux" ]
         (s: nixpkgs.legacyPackages.${s}.nixpkgs-fmt);
+
+      checks = nixpkgs.lib.genAttrs [ "aarch64-darwin" "x86_64-linux" ] (system:
+        import ./tests { inherit inputs system self; });
     };
 }

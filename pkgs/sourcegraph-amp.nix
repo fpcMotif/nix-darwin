@@ -11,10 +11,10 @@
 #        (cd ~/.config/nix-darwin/pkgs/sourcegraph-amp && npm install --package-lock-only)
 #   4. temporarily set npmDepsHash = lib.fakeHash, build, and copy the reported hash.
 
-{
-  lib,
-  buildNpmPackage,
-  nodejs_24,
+{ lib
+, buildNpmPackage
+, nodejs_24
+,
 }:
 
 buildNpmPackage {
@@ -27,24 +27,24 @@ buildNpmPackage {
   dontNpmBuild = true;
 
   installPhase = ''
-    runHook preInstall
+        runHook preInstall
 
-    mkdir -p $out/libexec/sourcegraph-amp $out/bin
-    cp -R node_modules $out/libexec/sourcegraph-amp/
+        mkdir -p $out/libexec/sourcegraph-amp $out/bin
+        cp -R node_modules $out/libexec/sourcegraph-amp/
 
-    cat > $out/bin/amp <<EOF
-#!/bin/sh
-if [ "\$1" = update ] || [ "\$1" = up ]; then
-  printf '%s\n' "amp is installed through Nix on this machine."
-  printf '%s\n' "Update ~/.config/nix-darwin/pkgs/sourcegraph-amp/package.json, then run darwin-rebuild switch --flake ~/.config/nix-darwin."
-  exit 0
-fi
-export NODE_PATH="$out/libexec/sourcegraph-amp/node_modules"
-exec ${nodejs_24}/bin/node --no-warnings "$out/libexec/sourcegraph-amp/node_modules/@sourcegraph/amp/dist/main.js" "\$@"
-EOF
-    chmod 755 $out/bin/amp
+        cat > $out/bin/amp <<EOF
+    #!/bin/sh
+    if [ "\$1" = update ] || [ "\$1" = up ]; then
+      printf '%s\n' "amp is installed through Nix on this machine."
+      printf '%s\n' "Update ~/.config/nix-darwin/pkgs/sourcegraph-amp/package.json, then run darwin-rebuild switch --flake ~/.config/nix-darwin."
+      exit 0
+    fi
+    export NODE_PATH="$out/libexec/sourcegraph-amp/node_modules"
+    exec ${nodejs_24}/bin/node --no-warnings "$out/libexec/sourcegraph-amp/node_modules/@sourcegraph/amp/dist/main.js" "\$@"
+    EOF
+        chmod 755 $out/bin/amp
 
-    runHook postInstall
+        runHook postInstall
   '';
 
   meta = {
