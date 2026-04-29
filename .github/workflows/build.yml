@@ -1,4 +1,4 @@
-# Build the CI-covered flake configurations on real macOS / Linux runners.
+# Build and check the flake configurations on real macOS / Linux runners.
 #
 # `fpcMotif/dotfiles` is public, so the `dotfiles` flake input uses the
 # `github:` URL form and the workflow needs no SSH key. If the dotfiles repo
@@ -90,6 +90,9 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run nix flake check (aarch64-linux)
+        run: nix flake check --show-trace --print-build-logs
 
       - name: Build nixosConfigurations.vm-aarch64-utm
         run: |

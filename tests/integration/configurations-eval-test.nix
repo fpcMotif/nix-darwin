@@ -10,6 +10,7 @@
 #   * agent-skills DSL is wired with the documented sources and targets
 #   * common packages (git, mgrep) are present in home.packages
 #   * darwin-only agent packages are gated to darwin
+#   * inactive NixOS/WSL/VM scaffolds still evaluate in CI
 #   * system-level zsh stays on (this IS owned by Nix, not chezmoi)
 { pkgs, lib, self, ... }:
 
@@ -102,12 +103,26 @@ let
     (helpers.assertTest "darwin-has-oh-my-pi"
       (hasPackage "oh-my-pi" darwinHome.home.packages)
       "Darwin Home Manager packages should include oh-my-pi")
+
+    (helpers.assertTest "darwin-has-droid"
+      (hasPackage "droid" darwinHome.home.packages)
+      "Darwin Home Manager packages should include droid")
+
+    (helpers.assertTest "darwin-has-opencode"
+      (hasPackage "opencode" darwinHome.home.packages)
+      "Darwin Home Manager packages should include opencode")
+
+    (helpers.assertTest "darwin-has-opencode-electron"
+      (hasPackage "opencode-electron" darwinHome.home.packages)
+      "Darwin Home Manager packages should include opencode-electron")
   ] ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
   wslConfig = self.nixosConfigurations.wsl.config;
   x230Config = self.nixosConfigurations.x230.config;
   wslHome = wslConfig.home-manager.users.${user};
   x230Home = x230Config.home-manager.users.${user};
+  vmAarch64Config = self.nixosConfigurations.vm-aarch64-utm.config;
+  vmAarch64Home = vmAarch64Config.home-manager.users.${user};
 
   nixosChecks = [
     (helpers.assertTest "nixos-wsl-evaluates"
@@ -117,6 +132,10 @@ let
     (helpers.assertTest "nixos-x230-evaluates"
       (evalsOk self.nixosConfigurations.x230.config.system.build.toplevel)
       "nixosConfigurations.x230.toplevel should evaluate")
+
+    (helpers.assertTest "nixos-vm-aarch64-utm-evaluates"
+      (evalsOk self.nixosConfigurations.vm-aarch64-utm.config.system.build.toplevel)
+      "nixosConfigurations.vm-aarch64-utm.toplevel should evaluate")
 
     (helpers.assertTest "wsl-host-name"
       (wslConfig.networking.hostName == "wsl")
@@ -138,12 +157,33 @@ let
       (x230Config.programs.zsh.enable == true)
       "x230/NixOS should enable zsh at the system level")
 
+    (helpers.assertTest "vm-aarch64-utm-host-name"
+      (vmAarch64Config.networking.hostName == "vm-aarch64-utm")
+      "VM host name should remain vm-aarch64-utm")
+
+    (helpers.assertTest "vm-aarch64-utm-zsh-enabled"
+      (vmAarch64Config.programs.zsh.enable == true)
+      "VM/NixOS should enable zsh at the system level")
+
     (helpers.assertTest "linux-excludes-darwin-only-agent-packages"
       (!(hasPackage "sourcegraph-amp" wslHome.home.packages))
       "Linux Home Manager packages should not include Darwin-only agent packages")
+
+    (helpers.assertTest "linux-excludes-darwin-gated-droid"
+      (!(hasPackage "droid" wslHome.home.packages))
+      "Linux Home Manager packages should not include droid from Darwin package set")
+
+    (helpers.assertTest "linux-excludes-darwin-gated-opencode"
+      (!(hasPackage "opencode" wslHome.home.packages))
+      "Linux Home Manager packages should not include opencode from Darwin package set")
+
+    (helpers.assertTest "linux-excludes-darwin-gated-opencode-electron"
+      (!(hasPackage "opencode-electron" wslHome.home.packages))
+      "Linux Home Manager packages should not include opencode-electron from Darwin package set")
   ]
   ++ (homeChecks "wsl" wslHome "/home/${user}")
-  ++ (homeChecks "x230" x230Home "/home/${user}");
+  ++ (homeChecks "x230" x230Home "/home/${user}")
+  ++ (homeChecks "vm-aarch64-utm" vmAarch64Home "/home/${user}");
 
 in
 helpers.testSuite "configurations-eval" (darwinChecks ++ nixosChecks)

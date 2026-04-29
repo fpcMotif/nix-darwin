@@ -49,11 +49,6 @@
         "aarch64-linux"
       ];
 
-      checkSystems = [
-        "aarch64-darwin"
-        "x86_64-linux"
-      ];
-
       overlays = [
         (import ./pkgs)
         inputs.claude-code.overlays.default
@@ -106,7 +101,7 @@
       formatter = nixpkgs.lib.genAttrs supportedSystems
         (s: nixpkgs.legacyPackages.${s}.nixpkgs-fmt);
 
-      checks = nixpkgs.lib.genAttrs checkSystems (s:
+      checks = nixpkgs.lib.genAttrs supportedSystems (s:
         import ./tests {
           inherit inputs self;
           system = s;
