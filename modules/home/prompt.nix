@@ -60,7 +60,7 @@ let
 in
 {
   options.martin.prompt.starship = {
-    enable = lib.mkEnableOption "Starship prompt under Nix (replaces chezmoi-owned starship.toml)";
+    enable = lib.mkEnableOption "Starship prompt under Nix (replaces unmanaged ~/.config/starship.toml)";
 
     palette.enable =
       lib.mkEnableOption "Mitchell-style lavender/grey/white/text/yellow/red palette";
@@ -77,12 +77,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    home.activation.checkChezmoiStarship = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+    home.activation.checkNixManagedStarship = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
       if [ -e "$HOME/.config/starship.toml" ] && ! [ -L "$HOME/.config/starship.toml" ]; then
-        echo "ERROR: chezmoi still owns ~/.config/starship.toml. To migrate:" >&2
-        echo "  chezmoi forget --force ~/.config/starship.toml" >&2
-        echo "  rm ~/.config/starship.toml" >&2
-        echo "Then re-run darwin-rebuild." >&2
+        echo "ERROR: ~/.config/starship.toml is still unmanaged." >&2
+        echo "Please archive/remove it so Home Manager can manage Starship settings." >&2
         exit 1
       fi
     '';
@@ -94,7 +92,7 @@ in
 
       settings = {
         add_newline = false;
-        command_timeout = 1000;
+        command_timeout = 2000;
         format = "$custom$directory$git_branch$character";
         right_format = "$time";
 
@@ -105,7 +103,7 @@ in
             {
               fish_style_pwd_dir_length = 1;
               truncation_length = 3;
-              truncate_to_repo = true;
+              truncate_to_repo = false;
               style = pathStyle;
               format = "[ $path ]($style)${pathTrail}";
             }
@@ -118,6 +116,7 @@ in
               symbol = "${gitIcon} ";
               style = gitStyle;
               format = "[ $symbol$branch ]($style)${gitTrail}";
+              truncation_length = 18;
             }
           else
             { disabled = true; };
@@ -129,7 +128,39 @@ in
               success_symbol = "";
             }
           else
-            { };
+            {
+              error_symbol = "[󰘧](bold red)";
+              success_symbol = "[󰘧](bold green)";
+            };
+
+        dotnet = {
+          detect_files = [
+            "global.json"
+            "Directory.Build.props"
+            "Directory.Build.targets"
+            "Packages.props"
+          ];
+        };
+
+        golang.symbol = " ";
+        lua.symbol = " ";
+        nix_shell.symbol = " ";
+
+        nodejs = {
+          detect_extensions = [ ];
+          detect_files = [
+            "package.json"
+            ".node-version"
+            ".nvmrc"
+            ".tool-versions"
+          ];
+          detect_folders = [
+            "node_modules"
+          ];
+        };
+
+        package.disabled = true;
+        buf.disabled = true;
 
         time =
           if cfg.segments.rPromptTime.enable then
@@ -139,7 +170,7 @@ in
               style = timeStyle;
             }
           else
-            { };
+            { disabled = true; };
       } // rootIndicatorAttrs;
     };
   };

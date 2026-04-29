@@ -22,14 +22,16 @@ let
     ast-grep
     mgrep
 
-    # Git.
+    # Git and version control.
     git
     lazygit
     delta
+    jujutsu
 
-    # Shell UX. Config files remain chezmoi-owned.
+    # Shell UX and terminal tools.
     starship
-    sheldon
+    tmux
+    zsh
 
     # Utilities.
     jq
@@ -38,6 +40,15 @@ let
     just
     bun
     nodejs_24
+    neovim
+    gnupg
+    gnused
+    shellcheck
+    stylua
+    cmake
+    tree-sitter
+    wget
+    zig
   ];
 
   darwinPackages = with pkgs; [

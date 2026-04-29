@@ -3,6 +3,7 @@
 {
   imports = [
     ./brew-variants.nix
+    ./defaults.nix
     ./nix.nix
     ./security.nix
     ./shell.nix

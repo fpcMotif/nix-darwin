@@ -99,24 +99,23 @@ Three layers, one writer per concern:
 |----------------|---------------------|---------------------------------------------------------------|
 | System         | nix-darwin / NixOS  | OS settings, users, shells, services, system apps             |
 | User packages  | Home Manager        | per-user CLI/dev packages, activation scripts                 |
-| Config text    | chezmoi / dotfiles  | zsh, git, starship, editor, terminal, agent config files      |
+| Config text    | Home Manager        | zsh, git, starship, tmux, Ghostty, shell/terminal preferences |
 
-Home Manager intentionally installs binaries (`starship`, `sheldon`, `git`, `bat`, `fd`, `rg`, …) **without** enabling the matching `programs.<tool>` modules, because those config files are managed by chezmoi. This keeps Nix from clobbering chezmoi-owned files.
+Home Manager now owns the selected shell, prompt, terminal, and git config text in Nix, including generated files like `~/.zshrc`, `~/.config/starship.toml`, `~/.config/tmux/tmux.conf`, `~/.config/ghostty/config`, and `~/.config/git/config`. Legacy Stow/Homebrew dotfiles are inventory only; they are not an active writer for migrated concerns.
 
-### Migrating a config file from chezmoi to Nix
+### Migrating a config file into Nix ownership
 
 Do this one file at a time:
 
-1. Stop tracking the file in chezmoi.
-2. Remove the live unmanaged file from `$HOME`.
-3. Enable the relevant Home Manager `programs.*` module.
+1. Decide that the file should become Nix-owned configuration.
+2. Move or remove the live unmanaged file from `$HOME`.
+3. Enable the relevant Home Manager `programs.*` or `xdg.configFile` module.
 4. Rebuild and verify ownership.
 
 #### Worked example: `~/.config/starship.toml`
 
 ```bash
-# 1-2. Hand off the file from chezmoi.
-chezmoi forget --force ~/.config/starship.toml
+# 1-2. Hand off the file from manual management.
 rm ~/.config/starship.toml
 
 # 3. Enable on the active host (in hosts/darwin/default.nix):
@@ -154,6 +153,7 @@ When a change fits two slots, prefer the more specific one and lift it later whe
 ```text
 modules/darwin/
 ├── default.nix         # imports the Darwin module set + base nixpkgs config
+├── defaults.nix        # selected macOS defaults (keyboard, Finder, Dock, trackpad, screenshots)
 ├── nix.nix             # flakes / nix-command / trusted users
 ├── shell.nix           # zsh shell registration
 ├── security.nix        # Touch ID sudo
@@ -175,7 +175,11 @@ The active Darwin host (`hosts/darwin/default.nix`) sets:
 modules/home/
 ├── default.nix         # username, homeDirectory, stateVersion, imports
 ├── packages.nix        # common + Darwin-only packages
-├── prompt.nix          # option-gated Starship config (dormant by default; replaces chezmoi-owned starship.toml when enabled)
+├── zsh.nix             # zsh, fzf, direnv, aliases/functions, editor env
+├── prompt.nix          # option-gated Starship config (enabled on active Mac)
+├── tmux.nix            # tmux behavior from legacy dotfiles, without TPM bootstrap
+├── ghostty.nix         # Ghostty config managed as XDG text
+├── git.nix             # Git behavior without copied identity/signing keys
 └── skills.nix          # agent skill bundle activation
 ```
 
@@ -362,7 +366,7 @@ The toggle ladder, finest → coarsest:
 | `martin.prompt.starship.segments.<name>.enable = false`        | Drops one segment; others unchanged.    |
 | `martin.prompt.starship.palette.enable = false`                | Falls back to bold styles, no colors.   |
 | `martin.prompt.starship.powerline.enable = false`              | Drops chevrons; backgrounds remain.     |
-| `martin.prompt.starship.enable = false`                        | Disables Starship; `~/.config/starship.toml` becomes unmanaged again (chezmoi can re-claim it). |
+| `martin.prompt.starship.enable = false`                        | Disables Starship; `~/.config/starship.toml` becomes unmanaged again. |
 
 If a prompt regression makes the shell unusable mid-session, the larger blast
 radius is generation rollback (above): `sudo darwin-rebuild --rollback`.
@@ -414,7 +418,7 @@ Do not add that output until these are settled:
 - username and home path,
 - whether Nix is single-user or multi-user,
 - which packages are shared with the Mac,
-- which dotfiles remain chezmoi-owned.
+- which config files remain intentionally unmanaged.
 
 Until then, Omakub is a design target documented here only.
 
@@ -453,7 +457,7 @@ Borrow patterns selectively. Do not copy Linux-specific NixOS concepts into nix-
 - Mac is the active target; optimize for it first.
 - Keep the flake root thin — inputs, overlays, system outputs, formatter, nothing else.
 - Keep shared modules parameterized by `currentSystemUser`.
-- Keep Home Manager from clobbering chezmoi-owned config files.
+- Keep Home Manager from clobbering unmanaged config files without explicit migration intent.
 - Keep brew variants disabled unless explicitly testing an escape hatch.
 - Treat sample repos as references, never as active configuration.
 - Adding an agent-skills target enables rsync-with-delete on that directory; enable deliberately.
