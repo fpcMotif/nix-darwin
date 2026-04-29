@@ -13,18 +13,4 @@
     google-drive
     raycast
   ];
-
-  home-manager.users.${currentSystemUser}.martin.prompt.starship = {
-    enable = true;
-    palette.enable = true;
-    powerline.enable = true;
-
-    segments = {
-      rootIndicator.enable = true;
-      path.enable = true;
-      git.enable = true;
-      status.enable = true;
-      rPromptTime.enable = true;
-    };
-  };
 }
