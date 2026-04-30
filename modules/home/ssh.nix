@@ -25,7 +25,8 @@
       compression = false;
       serverAliveInterval = 0;
       serverAliveCountMax = 3;
-      hashKnownHosts = false;
+      # 🛡️ Sentinel: Hash known_hosts to prevent enumeration of infrastructure during post-exploitation
+      hashKnownHosts = true;
       userKnownHostsFile = "~/.ssh/known_hosts";
       controlMaster = "no";
       controlPath = "~/.ssh/master-%r@%n:%p";
