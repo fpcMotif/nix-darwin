@@ -151,6 +151,7 @@
       tree = "eza --tree --icons --git-ignore --hyperlink --no-quotes";
       cat = "bat --paging=never";
       preview = "bat --style=numbers --color=always";
+      md = "glow -p";
       find = "fd";
       du = "dust";
       ps = "procs";
@@ -406,6 +407,9 @@
         fi
         if (( $+commands[bat] )); then
           tips+=("[bat] Your %F{green}cat%f is aliased to bat -- syntax highlighting, line numbers, and git change markers included.")
+        fi
+        if (( $+commands[glow] )); then
+          tips+=("[glow] Run %F{green}md README.md%f for a polished Markdown reader in the terminal and %F{green}/glow README.md%f inside Pi.")
         fi
         if (( $+commands[lazygit] )); then
           tips+=("[lazygit] Run %F{green}lg%f for a powerful git TUI. Press %F{yellow}c%f for AI commit messages.")

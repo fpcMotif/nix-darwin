@@ -18,6 +18,7 @@
     ./claude-code.nix
     ./droid.nix
     ./opencode.nix
+    ./pi.nix
     ./zed.nix
     ./crush.nix
     ./amp.nix

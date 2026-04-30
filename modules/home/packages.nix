@@ -6,6 +6,7 @@ let
   commonPackages = with pkgs; [
     # File ops and viewing.
     bat
+    glow
     fd
     ripgrep
     eza

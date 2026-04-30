@@ -43,6 +43,10 @@ let
       (hasPackage "mgrep" homeConfig.home.packages)
       "${prefix} Home Manager package list should include mgrep")
 
+    (helpers.assertTest "${prefix}-has-glow-package"
+      (hasPackage "glow" homeConfig.home.packages)
+      "${prefix} Home Manager package list should include glow")
+
     (helpers.assertTest "${prefix}-has-starship-package"
       (hasPackage "starship" homeConfig.home.packages)
       "${prefix} Home Manager package list should include starship")
@@ -110,6 +114,10 @@ let
     (helpers.assertTest "${prefix}-agent-skills-pi-target"
       (homeConfig.programs.agent-skills.targets.pi.dest == "$HOME/.pi/agent/skills")
       "${prefix} should configure the Oh My Pi skill target")
+
+    (helpers.assertTest "${prefix}-pi-glow-extension"
+      (builtins.hasAttr ".pi/agent/extensions/glow.ts" homeConfig.home.file)
+      "${prefix} should install the Pi Glow Markdown extension")
   ];
 
   darwinConfig = self.darwinConfigurations."Martins-Mac-mini".config;

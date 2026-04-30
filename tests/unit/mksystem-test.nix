@@ -52,6 +52,10 @@ let
       (hasPackage "git" homeConfig.home.packages)
       "common Home Manager packages should include git")
 
+    (helpers.assertTest "common-home-packages-include-glow"
+      (hasPackage "glow" homeConfig.home.packages)
+      "common Home Manager packages should include glow")
+
     (helpers.assertTest "agent-skills-enabled"
       (homeConfig.programs.agent-skills.enable == true)
       "agent-skills Home Manager module should be enabled")
@@ -63,6 +67,10 @@ let
     (helpers.assertTest "pi-skill-target-configured"
       (homeConfig.programs.agent-skills.targets.pi.dest == "$HOME/.pi/agent/skills")
       "Oh My Pi skill target should be configured explicitly")
+
+    (helpers.assertTest "pi-glow-extension-configured"
+      (builtins.hasAttr ".pi/agent/extensions/glow.ts" homeConfig.home.file)
+      "Pi should get the Glow Markdown extension")
   ];
 
   darwinChecks = lib.optionals isDarwin [
