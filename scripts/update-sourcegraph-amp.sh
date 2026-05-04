@@ -1,44 +1,34 @@
 #!/usr/bin/env bash
 # Bump @sourcegraph/amp in pkgs/sourcegraph-amp.nix and pkgs/sourcegraph-amp/.
-set -euo pipefail
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$REPO_ROOT"
+#
+# Strategy: bump package.json, regenerate package-lock.json, then compute
+# npmDepsHash directly from the lock via `prefetch-npm-deps` — no fake-hash
+# dance.
+. "$(dirname "$0")/lib/auto-update.sh"
+cd "$(au_repo_root)"
 
 FILE="pkgs/sourcegraph-amp.nix"
 PKG_DIR="pkgs/sourcegraph-amp"
-FAKE='sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
 
-latest=$(curl -fsSL 'https://registry.npmjs.org/@sourcegraph%2famp/latest' \
-  | jq -r '.version // ""')
-[ -n "$latest" ] || { echo "could not fetch @sourcegraph/amp version" >&2; exit 1; }
-
-current=$(grep -oE 'version = "[^"]+"' "$FILE" | head -1 | cut -d'"' -f2)
+latest=$(au_latest_npm "@sourcegraph/amp")
+current=$(au_current_version "$FILE")
 if [ "$current" = "$latest" ]; then
   echo "sourcegraph-amp already at $latest"; exit 0
 fi
+echo "sourcegraph-amp: $current -> $latest"
 
-# Update the dependency pin in package.json.
+# Update the package.json pin and regenerate the lockfile (offline-friendly).
 tmp=$(mktemp)
-jq --arg v "$latest" '.dependencies."@sourcegraph/amp" = $v' "$PKG_DIR/package.json" > "$tmp"
+jq --arg v "$latest" '.dependencies."@sourcegraph/amp" = $v' \
+  "$PKG_DIR/package.json" > "$tmp"
 mv "$tmp" "$PKG_DIR/package.json"
+(cd "$PKG_DIR" && rm -f package-lock.json \
+   && npm install --package-lock-only --omit=peer >/dev/null)
 
-# Regenerate package-lock.json (offline-friendly, no install).
-(cd "$PKG_DIR" && rm -f package-lock.json && npm install --package-lock-only --omit=peer)
+npm_hash=$(au_prefetch_npm_deps "$PKG_DIR")
 
-# Patch nix file: version + fake npmDepsHash.
-sed -i.bak \
-  -e "s|version = \"[^\"]*\"|version = \"${latest}\"|" \
-  -e "s|npmDepsHash = \"sha256-[^\"]*\"|npmDepsHash = \"${FAKE}\"|" \
-  "$FILE"
+au_set_version "$FILE" "$latest"
+au_set_npm_deps_hash "$FILE" "$npm_hash"
 
-set +e
-log=$(nix build .#martin.sourcegraph-amp --no-link 2>&1)
-set -e
-npm_hash=$(echo "$log" | grep -oE 'got:[[:space:]]+sha256-[A-Za-z0-9+/=]+' \
-  | head -1 | sed -E 's/got:[[:space:]]+//')
-[ -n "$npm_hash" ] || { echo "no npmDepsHash extracted" >&2; echo "$log" >&2; exit 1; }
-sed -i.bak2 "s|npmDepsHash = \"${FAKE}\"|npmDepsHash = \"${npm_hash}\"|" "$FILE"
-
-nix build .#martin.sourcegraph-amp --no-link
-rm -f "$FILE.bak" "$FILE.bak2"
+au_build .#martin.sourcegraph-amp
 echo "sourcegraph-amp bumped to $latest"
