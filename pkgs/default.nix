@@ -6,16 +6,16 @@ final: _prev:
   });
 
   crush = _prev.crush.overrideAttrs (_old: rec {
-    version = "0.63.0";
+    version = "0.65.2";
 
     src = final.fetchFromGitHub {
       owner = "charmbracelet";
       repo = "crush";
       tag = "v${version}";
-      hash = "sha256-OAFdmBt7IHFym/anNs3Fu5RD3e/BtraPmanhTjowwFU=";
+      hash = "sha256-ASDzXUAIb6rc8S1/e62tvsEAAjevEdibZcMEvpQjsQ4=";
     };
 
-    vendorHash = "sha256-7J2sQBRlPNNDewuNVETg8yDWe97v2TtUIUIj8yeDCuM=";
+    vendorHash = "sha256-eRLWNBSUMgrsFq0AeNzEb18Z68xOnASY9MwXZzONJqg=";
 
     ldflags = [
       "-s"
