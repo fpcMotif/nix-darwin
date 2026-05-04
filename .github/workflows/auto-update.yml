@@ -1,8 +1,14 @@
 name: auto-update
 
 # Hourly combined-PR strategy. Each scripts/update-*.sh runs in turn; failures
-# are tolerated so a broken upstream parser does not block the rest. The PR
-# auto-merges once build.yml's required checks turn green.
+# are tolerated PER-SCRIPT so a broken upstream parser doesn't block the rest.
+# After the loop, two HARD GUARDS run:
+#   1. au_assert_clean — fails if any FAKE placeholder hash or stray *.bak
+#      artifact survived. Prevents broken state from ever reaching a PR.
+#   2. nix flake check (eval-only) — fails if the lockfile diverged from the
+#      vendored derivations.
+#
+# The PR auto-merges once build.yml's required checks turn green.
 #
 # Cadence rationale: amp / opencode / droid / codex each ship multiple builds
 # per day. A daily cron leaves the active system 24h behind upstream, which
@@ -44,11 +50,32 @@ jobs:
       - name: Run updaters (each tolerated to fail)
         run: |
           shopt -s nullglob
+          fail_count=0
           for s in scripts/update-*.sh; do
             echo "::group::$s"
-            bash "$s" || echo "::warning::$s failed; continuing"
+            if ! bash "$s"; then
+              fail_count=$((fail_count + 1))
+              echo "::warning::$s failed; continuing"
+            fi
             echo "::endgroup::"
           done
+          echo "::notice::$fail_count updater(s) failed (tolerated)"
+
+      - name: Clean stray sed/sed-bak artifacts (defence-in-depth)
+        run: |
+          # `.gitignore` already excludes these, but failed runs of the OLD
+          # `sed -i.bak` pattern can still leave them in the working tree.
+          find pkgs -type f \( -name '*.bak' -o -name '*.bak[0-9]*' \) -print -delete \
+            2>/dev/null || true
+
+      - name: Guard — no FAKE hashes, no .bak files
+        run: bash scripts/lib/auto-update.sh assert-clean
+
+      - name: Guard — flake still evaluates
+        run: |
+          # eval-only: fast, no builds, catches version/URL/hash divergence
+          # introduced by the bumps. Builds happen on the PR via build.yml.
+          nix flake check --no-build --show-trace
 
       - name: Open or update PR
         id: cpr
@@ -64,14 +91,16 @@ jobs:
             Bumps any of:
             - all flake inputs via `scripts/update-flake-inputs.sh`
               (nixpkgs → codex / zed-editor / node toolchain, darwin,
-              home-manager, agent-skills, claude-code, dotfiles, …)
-            - vendored derivations: codex, droid, sourcegraph-amp (amp),
-              gemini-cli-preview, opencode, pi-coding-agent,
-              oh-my-pi, starship-claude.
-            - Charm NUR-backed Crush via `scripts/update-crush.sh`.
+              home-manager, agent-skills, claude-code, NUR/crush, dotfiles, …)
+            - vendored derivations under `pkgs/`: codex, droid, sourcegraph-amp
+              (amp), gemini-cli-preview, opencode (cli + electron),
+              pi-coding-agent, oh-my-pi.
 
             Each updater is allowed to fail individually; partial bumps still
-            land in this PR.
+            land in this PR. Two hard guards prevent broken state from being
+            committed:
+              1. `au_assert_clean` (no FAKE hashes / .bak artifacts)
+              2. `nix flake check --no-build`
 
             Auto-merges on green CI. See `PANIC.md` for rollback.
           labels: auto-update

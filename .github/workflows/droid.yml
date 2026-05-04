@@ -1,5 +1,8 @@
 name: Droid Tag
 
+# Runs Factory AI on `@droid` mentions in issues, PRs, and review comments.
+# Skips cleanly when `FACTORY_API_KEY` is unset so it never blocks PRs.
+
 on:
   issue_comment:
     types: [created]
@@ -28,11 +31,24 @@ jobs:
       id-token: write
       actions: read
     steps:
-      - name: Checkout repository
+      - name: Check FACTORY_API_KEY availability
+        id: gate
+        env:
+          HAS_KEY: ${{ secrets.FACTORY_API_KEY != '' }}
+        run: |
+          if [ "$HAS_KEY" = "true" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::FACTORY_API_KEY not configured — skipping @droid handler."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.gate.outputs.ok == 'true'
+        name: Checkout repository
         uses: actions/checkout@v5
         with:
           fetch-depth: 1
-      - name: Run Droid Exec
+      - if: steps.gate.outputs.ok == 'true'
+        name: Run Droid Exec
         uses: Factory-AI/droid-action@main
         with:
           factory_api_key: ${{ secrets.FACTORY_API_KEY }}
