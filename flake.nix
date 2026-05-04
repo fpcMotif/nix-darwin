@@ -14,6 +14,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nur = {
+      url = "github:nix-community/NUR";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nixos-wsl = {
       url = "git+https://github.com/nix-community/NixOS-WSL.git?ref=main";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -55,6 +60,7 @@
       ];
 
       overlays = [
+        inputs.nur.overlays.default
         (import ./pkgs)
         inputs.claude-code.overlays.default
       ];
@@ -72,7 +78,7 @@
           };
         in
         {
-          inherit (pkgs) crush;
+          crush = pkgs.nur.repos.charmbracelet.crush;
           martin = pkgs.martin;
         };
     in

@@ -108,12 +108,13 @@ let
       "${prefix} should enable the Codex skill target")
 
     (helpers.assertTest "${prefix}-agent-skills-pi-target"
-      (homeConfig.programs.agent-skills.targets.pi.dest == "$HOME/.pi/agent/skills")
+      (homeConfig.programs.agent-skills.targets.pi.dest == ".pi/agent/skills")
       "${prefix} should configure the Oh My Pi skill target")
   ];
 
   darwinConfig = self.darwinConfigurations."Martins-Mac-mini".config;
   darwinHome = darwinConfig.home-manager.users.${user};
+  darwinSkhdConfig = darwinConfig.services.skhd.skhdConfig;
 
   darwinChecks = [
     (helpers.assertTest "darwin-Martins-Mac-mini-evaluates"
@@ -170,6 +171,44 @@ let
       )
       "Darwin Starship Git branch chip should be hidden inside Jujutsu repos")
 
+    (helpers.assertTest "darwin-skhd-enabled"
+      (darwinConfig.services.skhd.enable == true)
+      "Darwin should enable skhd for managed global hotkeys")
+
+    (helpers.assertTest "darwin-skhd-finder-cut-mode"
+      (
+        lib.hasInfix ":: finder_cut" darwinSkhdConfig
+          && lib.hasInfix ''cmd - x ['' darwinSkhdConfig
+          && lib.hasInfix ''"finder" :'' darwinSkhdConfig
+          && lib.hasInfix ''-k "cmd - c"'' darwinSkhdConfig
+          && lib.hasInfix ''* ~'' darwinSkhdConfig
+      )
+      "Darwin skhd config should intercept Cmd-X only in Finder and copy the selected items")
+
+    (helpers.assertTest "darwin-skhd-finder-native-move"
+      (
+        lib.hasInfix ''finder_cut < cmd - v ['' darwinSkhdConfig
+          && lib.hasInfix ''-k "cmd + alt - v"'' darwinSkhdConfig
+          && lib.hasInfix "finder_cut < escape ; default" darwinSkhdConfig
+          && lib.hasInfix "finder_cut < f19 ; default" darwinSkhdConfig
+      )
+      "Darwin skhd config should map pending Finder paste to Finder's native move")
+
+    (helpers.assertTest "darwin-hammerspoon-installed"
+      (
+        darwinConfig.martin.hammerspoon.enable == true
+          && hasPackage "hammerspoon" darwinConfig.environment.systemPackages
+      )
+      "Darwin system packages should include Hammerspoon for rich macOS automation")
+
+    (helpers.assertTest "darwin-hammerspoon-config"
+      (
+        builtins.hasAttr ".hammerspoon/init.lua" darwinHome.home.file
+          && lib.hasInfix "hs.pathwatcher.new" darwinHome.home.file.".hammerspoon/init.lua".text
+          && lib.hasInfix "_G.martin" darwinHome.home.file.".hammerspoon/init.lua".text
+      )
+      "Darwin Home Manager should own the Hammerspoon init.lua")
+
     (helpers.assertTest "darwin-brew-default-disabled"
       (darwinConfig.martin.brew.homebrew.enable == false)
       "Homebrew emergency scaffold should remain disabled by default")
@@ -177,6 +216,10 @@ let
     (helpers.assertTest "darwin-has-sourcegraph-amp"
       (hasPackage "sourcegraph-amp" darwinHome.home.packages)
       "Darwin Home Manager packages should include sourcegraph-amp")
+
+    (helpers.assertTest "darwin-has-crush"
+      (hasPackage "crush" darwinHome.home.packages)
+      "Darwin Home Manager packages should include Crush from Charm NUR")
 
     (helpers.assertTest "darwin-has-oh-my-pi"
       (hasPackage "oh-my-pi" darwinHome.home.packages)

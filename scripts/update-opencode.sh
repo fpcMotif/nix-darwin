@@ -2,13 +2,16 @@
 # Bump opencode CLI + Electron desktop by polling sst/opencode GitHub
 # releases. Both pkgs/opencode.nix and pkgs/opencode-electron.nix share the
 # same upstream version; we update them in lockstep.
+#
+# Hashes are computed via `nix-prefetch-url` for every platform (works
+# regardless of host OS), so the lockfile is never left with stub hashes
+# after a partial update.
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 FILE_CLI="pkgs/opencode.nix"
 FILE_ELECTRON="pkgs/opencode-electron.nix"
-FAKE='sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
 
 latest=$(curl -fsSL https://api.github.com/repos/sst/opencode/releases/latest \
   | jq -r '.tag_name // ""' | sed 's/^v//')
@@ -20,38 +23,52 @@ if [ "$current" = "$latest" ]; then
 fi
 echo "opencode: $current -> $latest"
 
-# Stage both files with FAKE hashes + new version literal.
-for f in "$FILE_CLI" "$FILE_ELECTRON"; do
-  sed -i.bak \
-    -e "s|version = \"[^\"]*\"|version = \"${latest}\"|" \
-    -e "s|hash = \"sha256-[^\"]*\"|hash = \"${FAKE}\"|g" \
-    "$f"
-done
-
-discover() {
-  local pkgname="$1"
-  set +e
-  log=$(nix build ".#martin.${pkgname}" --no-link 2>&1)
-  set -e
-  printf '%s\n' "$log" | grep -oE 'got:[[:space:]]+sha256-[A-Za-z0-9+/=]+' \
-    | head -1 | sed -E 's/got:[[:space:]]+//'
+prefetch_sri() {
+  local url=$1
+  local nar
+  nar=$(nix-prefetch-url "$url")
+  nix hash convert --to sri --hash-algo sha256 "$nar"
 }
 
-# CLI: native platform only — daily CI runs on linux, dev runs on darwin;
-# both will see "their" platform's hash filled in. The remaining FAKE entries
-# get bumped on subsequent runs from other platforms or via a manual sweep.
-got=$(discover opencode)
-[ -n "$got" ] || { echo "no hash extracted for opencode CLI" >&2; exit 1; }
-sed -i.bak2 "0,/${FAKE}/{s|${FAKE}|${got}|}" "$FILE_CLI"
+# Replace the hash whose enclosing source block matches the given asset
+# basename. Each block is guarded by its `url = "...<asset>"` line so we never
+# overwrite the wrong platform's hash.
+replace_hash() {
+  local file=$1
+  local asset=$2
+  local hash=$3
+  perl -0pi -e 's|(/'"$asset"'";\s+hash = ")[^"]+(")|$1'"$hash"'$2|s' "$file"
+}
+
+# Bump the version literal in each file once.
+for f in "$FILE_CLI" "$FILE_ELECTRON"; do
+  perl -0pi -e 's|version = "[^"]+"|version = "'"$latest"'"|' "$f"
+done
+
+declare -A cli_assets=(
+  ["opencode-darwin-arm64.zip"]="aarch64-darwin"
+  ["opencode-linux-x64.tar.gz"]="x86_64-linux"
+  ["opencode-linux-arm64.tar.gz"]="aarch64-linux"
+)
+
+declare -A electron_assets=(
+  ["opencode-electron-mac-arm64.zip"]="aarch64-darwin"
+)
+
+for asset in "${!cli_assets[@]}"; do
+  url="https://github.com/sst/opencode/releases/download/v${latest}/${asset}"
+  echo "  cli: $asset"
+  replace_hash "$FILE_CLI" "$asset" "$(prefetch_sri "$url")"
+done
+
+for asset in "${!electron_assets[@]}"; do
+  url="https://github.com/sst/opencode/releases/download/v${latest}/${asset}"
+  echo "  electron: $asset"
+  replace_hash "$FILE_ELECTRON" "$asset" "$(prefetch_sri "$url")"
+done
+
+# Verify the native platform builds end-to-end.
 nix build .#martin.opencode --no-link
+nix build .#martin.opencode-electron --no-link
 
-got=$(discover opencode-electron)
-if [ -n "$got" ]; then
-  sed -i.bak2 "0,/${FAKE}/{s|${FAKE}|${got}|}" "$FILE_ELECTRON"
-  nix build .#martin.opencode-electron --no-link
-else
-  echo "opencode-electron: no hash discovered (probably not built on this platform); leaving FAKE for next platform's CI run"
-fi
-
-rm -f "$FILE_CLI".bak* "$FILE_ELECTRON".bak*
 echo "opencode bumped to $latest"

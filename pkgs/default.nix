@@ -5,28 +5,21 @@ final: _prev:
     doCheck = false;
   });
 
-  crush = _prev.crush.overrideAttrs (_old: rec {
-    version = "0.63.0";
-
-    src = final.fetchFromGitHub {
-      owner = "charmbracelet";
-      repo = "crush";
-      tag = "v${version}";
-      hash = "sha256-OAFdmBt7IHFym/anNs3Fu5RD3e/BtraPmanhTjowwFU=";
-    };
-
-    vendorHash = "sha256-7J2sQBRlPNNDewuNVETg8yDWe97v2TtUIUIj8yeDCuM=";
-
-    ldflags = [
-      "-s"
-      "-X=github.com/charmbracelet/crush/internal/version.Version=${version}"
-    ];
-  });
+  codex = final.callPackage ./codex.nix { };
 
   martin = {
+    mkAppFromZip = final.callPackage ./lib/mk-app-from-zip.nix { };
+
     dropbox = final.callPackage ./dropbox.nix { };
     google-drive = final.callPackage ./google-drive.nix { };
+    hammerspoon = final.callPackage ./hammerspoon.nix { };
     raycast = final.callPackage ./raycast.nix { };
+
+    bettermouse = final.callPackage ./bettermouse.nix { };
+    mole = final.callPackage ./mole.nix { };
+    sf-mono = final.callPackage ./sf-mono.nix { };
+    sf-symbols = final.callPackage ./sf-symbols.nix { };
+    squirrel = final.callPackage ./squirrel.nix { };
 
     gemini-cli-preview = final.callPackage ./gemini-cli-preview.nix { };
     oh-my-pi = final.callPackage ./oh-my-pi.nix { };

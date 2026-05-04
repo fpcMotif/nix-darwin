@@ -20,6 +20,7 @@ let
   expected = [
     "dropbox"
     "google-drive"
+    "hammerspoon"
     "raycast"
     "gemini-cli-preview"
     "oh-my-pi"
@@ -43,6 +44,7 @@ let
   darwinOnly = [
     "dropbox"
     "google-drive"
+    "hammerspoon"
     "oh-my-pi"
     "pi-coding-agent"
     "raycast"

@@ -61,7 +61,7 @@ let
       "grill-me should remain explicitly allowlisted")
 
     (helpers.assertTest "pi-skill-target-configured"
-      (homeConfig.programs.agent-skills.targets.pi.dest == "$HOME/.pi/agent/skills")
+      (homeConfig.programs.agent-skills.targets.pi.dest == ".pi/agent/skills")
       "Oh My Pi skill target should be configured explicitly")
   ];
 

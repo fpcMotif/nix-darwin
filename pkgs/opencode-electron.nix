@@ -17,12 +17,12 @@
 }:
 
 let
-  version = "1.14.29";
+  version = "1.14.31";
 
   sources = {
     "aarch64-darwin" = {
       url = "https://github.com/sst/opencode/releases/download/v${version}/opencode-electron-mac-arm64.zip";
-      hash = "sha256-y77/nDRrC+HRMxhNmxpZNFCIMiLB0GGiNSWy99NwtrQ=";
+      hash = "sha256-x88PsES6J49cAzT/bH/H1y5TpBRmZEXnRoha+8qKSjQ=";
     };
   };
 

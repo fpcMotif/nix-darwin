@@ -51,13 +51,17 @@ let
   ];
 
   darwinPackages = with pkgs; [
+    # GUI apps
+    martin.raycast
+
     martin.gemini-cli-preview
     martin.sourcegraph-amp
     martin.droid
     martin.opencode
     martin.opencode-electron
+    martin.mole
     codex
-    crush
+    nur.repos.charmbracelet.crush
     martin.pi-coding-agent
     martin.oh-my-pi
     # zed-editor itself is installed by programs.zed-editor.enable in zed.nix.

@@ -7,9 +7,14 @@
   imports = [
     ./brew-variants.nix
     ./defaults.nix
+    ./fonts.nix
+    ./hammerspoon.nix
+    ./mouse-display.nix
     ./nix.nix
+    ./rime.nix
     ./security.nix
     ./shell.nix
+    ./skhd.nix
   ];
 
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-darwin";

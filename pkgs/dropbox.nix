@@ -7,12 +7,12 @@
 
 stdenv.mkDerivation rec {
   pname = "dropbox";
-  version = "248.4.3576";
+  version = "250.4.3245";
 
   src = fetchurl {
     url = "https://edge.dropboxstatic.com/dbx-releng/client/Dropbox%20${version}.dmg";
     name = "Dropbox.dmg";
-    hash = "sha256-pIKS73MwH9SBXg39zqevGxcHXbK0jFjz+onWhG4/E3g=";
+    hash = "sha256-dG5GYtZiGz8f9QeYRocpINt6F3p6itI00eAUzcq+4yI=";
   };
 
   nativeBuildInputs = [ undmg ];

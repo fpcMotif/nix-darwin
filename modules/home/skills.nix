@@ -16,6 +16,23 @@ let
   mkSkill = from: path: packages: {
     inherit from path packages;
   };
+
+  # `link` makes every target a tree of `home.file` symlinks pointing at the
+  # same `/nix/store/...-agent-skills-bundle/<skill>/SKILL.md`. Pi's loader
+  # de-duplicates discovered skills by `realpath`, so identical store paths
+  # collapse silently — no more "skill conflict" warnings between
+  # ~/.claude/skills, ~/.pi/agent/skills, and ~/.agents/skills.
+  #
+  # Trade-off: targets become read-only nix-store-backed trees. That is the
+  # explicit policy here — every skill is declared in this file. If an agent
+  # wants to write `/.system` or interactive `/skills` output into its skills
+  # root, switch its target back to `symlink-tree`.
+  linkTarget = dest: {
+    enable = true;
+    inherit dest;
+    structure = "link";
+    systems = [ ];
+  };
 in
 {
   imports = [
@@ -65,25 +82,28 @@ in
       };
     };
 
+    # All targets use `structure = "link"` with static $HOME-relative paths so
+    # the upstream module routes through `home.file` instead of an rsync'd
+    # symlink-tree. That guarantees every agent's skill files share a single
+    # nix-store realpath and pi's loader dedupes them silently.
     targets = {
-      # Shared Open Agent Skills registry. This is the primary Codex path and
-      # is also supported by Cursor.
-      agents.enable = true;
+      # Shared Open Agent Skills registry. Primary path for Codex; also
+      # discovered natively by Pi and Cursor.
+      agents = linkTarget ".agents/skills";
 
-      # Tool-specific mirrors keep discovery predictable in clients that prefer
-      # or require their own config root.
-      claude.enable = true;
-      cursor.enable = true;
-      codex.enable = true;
+      # Tool-specific mirrors for clients that prefer their own config root.
+      claude = linkTarget ".claude/skills";
+      cursor = linkTarget ".cursor/skills";
+      codex = linkTarget ".codex/skills";
 
-      # Oh My Pi / Pi harness target is not an upstream default target, so keep
-      # it explicit while sharing the same declarative bundle and sync logic.
-      pi = {
-        enable = true;
-        dest = "$HOME/.pi/agent/skills";
-        structure = "symlink-tree";
-        systems = [ ];
-      };
+      # Oh My Pi / Pi harness target (custom, not in upstream defaults).
+      pi = linkTarget ".pi/agent/skills";
     };
+
+    # `link` populates targets through `home.file`, which never deletes paths
+    # outside the declared set, so the upstream rsync exclude has no effect
+    # here. Leaving this empty documents the intent: every file under each
+    # target is owned by Nix.
+    excludePatterns = [ ];
   };
 }

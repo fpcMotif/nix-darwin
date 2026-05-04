@@ -20,22 +20,22 @@
 }:
 
 let
-  version = "1.14.29";
+  version = "1.14.31";
 
   sources = {
     "aarch64-darwin" = {
       url = "https://github.com/sst/opencode/releases/download/v${version}/opencode-darwin-arm64.zip";
-      hash = "sha256-OcSD/hLP/ge/wFDVnfU0yhtdKdkjLaI3WG8bai7xx+E=";
+      hash = "sha256-86I4ajzNsehzOvdmYAoOLDWgAa2qoNMUKf+BwNzTIYA=";
       isZip = true;
     };
     "x86_64-linux" = {
       url = "https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-x64.tar.gz";
-      hash = "sha256-2YXpnX4iRGt4/HijXPoO+LD+/wW+UojEoOHGg3t6Kfg=";
+      hash = "sha256-XThT4pyB16E0kVaQYlAJ9XNsqEBwUp5peWz2LhIjLJ4=";
       isZip = false;
     };
     "aarch64-linux" = {
       url = "https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-arm64.tar.gz";
-      hash = "sha256-+u3JVKtUkjWjLxvxDLkiBtusWDJ6hVMFVOXgL+soBg4=";
+      hash = "sha256-2IZ+d7kB3QTnB/RZ9Es+KPI6bwwtdA8buK9vS2SsGfc=";
       isZip = false;
     };
   };
@@ -64,7 +64,7 @@ stdenvNoCC.mkDerivation {
 
     mkdir -p "$out/bin"
     cd "$out/bin"
-    ${if source.isZip then "unzip -j" else "tar --strip-components=0 -xzf"} "$src"
+    ${if source.isZip then "unzip -j" else "tar -xzf"} "$src"
     chmod 0755 opencode
     test -x opencode || (echo "opencode binary missing after extract" >&2; ls -la; exit 1)
 

@@ -8,11 +8,36 @@
     stateVersion = 5;
   };
 
-  environment.systemPackages = with pkgs.martin; [
-    dropbox
-    google-drive
-    raycast
+  environment.systemPackages = [
+    pkgs.duti
+    pkgs.martin.dropbox
+    pkgs.martin.google-drive
+    pkgs.martin.raycast
   ];
+
+  martin = {
+    fonts.enable = true;
+    hammerspoon.enable = true;
+
+    mouseDisplay = {
+      enable = true;
+      bettermouse.profile = "${currentSystemUserHome}/nix-config/personal-settings-main/better_mouse_setting_bm_cfg_4958.plist";
+    };
+
+    rime = {
+      enable = true;
+      config = "${currentSystemUserHome}/MyRime-main";
+    };
+
+    skhd = {
+      enable = true;
+      # Add personal bindings here. skhd syntax: `mod - key : command`.
+      # Global prefix `ctrl + alt + shift` is reserved by the defaults.
+      extraConfig = ''
+        # ctrl + alt + shift - o : open -a "Notes"
+      '';
+    };
+  };
 
   home-manager.users.${currentSystemUser}.martin = {
     prompt.starship = {

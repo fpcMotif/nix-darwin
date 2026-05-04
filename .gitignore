@@ -2,11 +2,25 @@
 /result
 /result-*
 
+# Stray sed/sed-bak artifacts left by scripts/update-*.sh (e.g. *.bak, *.bak2)
+# when an updater fails mid-flight. Not source of truth.
+*.bak
+*.bak[0-9]*
+
 # Local agent/app state.
 /.claude/worktrees/
 /.crush/
+/.factory/
 /.pi/todos/
 /progress.md
 
 # macOS metadata.
 .DS_Store
+
+# Rime user state and rebuildable artifacts. The reusable schemas can live
+# under MyRime-main/, but per-user runtime state stays out of git.
+/MyRime-main/build/
+/MyRime-main/*.userdb/
+/MyRime-main/*.userdb.txt
+/MyRime-main/sync/
+/MyRime-main/installation.yaml

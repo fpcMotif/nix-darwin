@@ -5,7 +5,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
 before=$(jq -r '.nodes."claude-code".locked.rev // ""' flake.lock)
-nix flake update claude-code --commit-lock-file=false
+nix flake update claude-code
 after=$(jq -r '.nodes."claude-code".locked.rev // ""' flake.lock)
 
 if [ "$before" = "$after" ]; then

@@ -15,9 +15,15 @@
 #   photon_rs_bg.wasm — required at runtime
 #   theme/, assets/, docs/, examples/, export-html/, package.json, ...
 #
-# The Bun runtime resolves siblings via process.execPath. Symlinking
-# $out/bin/pi -> $out/libexec/pi-coding-agent/pi keeps the binary next to
-# its assets while still putting `pi` on PATH.
+# Why we wrap with NPM_CLIENT=bun:
+#   pi 0.71.0 spawns an npm client at startup to discover globally-installed
+#   pi extensions. By default it looks for a `pi-npm-bun` binary, which the
+#   release tarball does NOT ship — so plain `pi` crashes before the prompt
+#   renders. pi exposes an `NPM_CLIENT` env var ("Absolute path to the npm
+#   client executable") that overrides this lookup, so we wrap `pi` to point
+#   directly at the nix-managed `bun` binary. No fake `pi-npm-bun` shim,
+#   no PATH manipulation, no $HOME-relative hardcoding — pi uses its own
+#   declared override mechanism.
 #
 # Bumping:
 #   1. find current version:  curl -s https://api.github.com/repos/badlogic/pi-mono/releases/latest | jq -r .tag_name
@@ -29,19 +35,23 @@
 { lib
 , stdenvNoCC
 , fetchurl
+, makeWrapper
+, bun
 ,
 }:
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "pi-coding-agent";
-  version = "0.70.6";
+  version = "0.71.0";
 
   src = fetchurl {
     url = "https://github.com/badlogic/pi-mono/releases/download/v${finalAttrs.version}/pi-darwin-arm64.tar.gz";
-    hash = "sha256-grGelWpG5cC5eS6xOFtbYYvzGPXYrSLiZDnUo2q4lAI=";
+    hash = "sha256-Ll/JiyUOyywGR2Lg51IYMaIJVs944VQq2lw3x4/2CAc=";
   };
 
   sourceRoot = "pi";
+
+  nativeBuildInputs = [ makeWrapper ];
 
   dontConfigure = true;
   dontBuild = true;
@@ -54,7 +64,12 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     mkdir -p $out/libexec/pi-coding-agent $out/bin
     cp -R . $out/libexec/pi-coding-agent/
     chmod +x $out/libexec/pi-coding-agent/pi
-    ln -s $out/libexec/pi-coding-agent/pi $out/bin/pi
+
+    # Wrap with NPM_CLIENT pointing at bun so pi 0.71.0's startup
+    # `getGlobalNpmRoot` lookup resolves cleanly. --set-default lets the
+    # user still override at runtime if they want a different client.
+    makeWrapper $out/libexec/pi-coding-agent/pi $out/bin/pi \
+      --set-default NPM_CLIENT ${bun}/bin/bun
 
     runHook postInstall
   '';
