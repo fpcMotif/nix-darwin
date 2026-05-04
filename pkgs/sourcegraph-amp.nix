@@ -19,11 +19,11 @@
 
 buildNpmPackage {
   pname = "sourcegraph-amp";
-  version = "0.0.1777612348-gc5f0c3";
+  version = "0.0.1777856516-g66d841";
 
   src = ./sourcegraph-amp;
 
-  npmDepsHash = "sha256-8nSRXq25rc3NBPyA4kKQBRItDJNu3FSCUSTRYyVytj0=";
+  npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
   dontNpmBuild = true;
 
   installPhase = ''
