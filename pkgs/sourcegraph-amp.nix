@@ -19,7 +19,7 @@
 
 buildNpmPackage {
   pname = "sourcegraph-amp";
-  version = "0.0.1777871121-gba0d68";
+  version = "0.0.1777879744-g2d678a";
 
   src = ./sourcegraph-amp;
 
