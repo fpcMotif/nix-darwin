@@ -10,11 +10,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1777396723,
-        "narHash": "sha256-WYbpNf5HYm05+23fpKEFd4RibJobITgtyYXtVOP+S/g=",
+        "lastModified": 1777875835,
+        "narHash": "sha256-+ghBYIh477YxDPd0sKeD4AwnKJSOXKT0nHuAAGHL1cQ=",
         "ref": "master",
-        "rev": "3dadf974c87fd5b02a6d73bd67e354c02abb2c9f",
-        "revCount": 74,
+        "rev": "c6cb03f84cda0dc3f5daa05bf4d49f56c182f690",
+        "revCount": 75,
         "type": "git",
         "url": "https://github.com/Kyure-A/agent-skills-nix.git"
       },
@@ -219,11 +219,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1777862275,
-        "narHash": "sha256-/NezgRa/LMQiI57p2Hyeuk7suvBURl9/vaT0jn5X/SI=",
+        "lastModified": 1777880043,
+        "narHash": "sha256-rc4fts+8AFLeJ/XK2qts13Zc+YLFrt/sPDGslIvd/kk=",
         "owner": "nix-community",
         "repo": "NUR",
-        "rev": "cfe6d659306f8b1e6abd649b30b775f308c78293",
+        "rev": "87f5f03b7dcef0440820b0d6d1da1964177cb830",
         "type": "github"
       },
       "original": {
