@@ -13,19 +13,19 @@ let
   sources = {
     "aarch64-darwin" = {
       url = "https://registry.npmjs.org/@factory/cli-darwin-arm64/-/cli-darwin-arm64-${version}.tgz";
-      hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      hash = "sha256-NWeNfpe2Pjyrp1pOc3M7meIFFSUtmAUOchKFFVyssP8=";
     };
     "x86_64-darwin" = {
       url = "https://registry.npmjs.org/@factory/cli-darwin-x64-baseline/-/cli-darwin-x64-baseline-${version}.tgz";
-      hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      hash = "sha256-Q3EY2lU4MHNx0GF1mCI7F32PkHRrxxebLiW8I+t/KAI=";
     };
     "aarch64-linux" = {
       url = "https://registry.npmjs.org/@factory/cli-linux-arm64/-/cli-linux-arm64-${version}.tgz";
-      hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      hash = "sha256-sHpLa5Ii7+xMf4RE3R6GPAikcXs4rpY9kTB07rxGHic=";
     };
     "x86_64-linux" = {
       url = "https://registry.npmjs.org/@factory/cli-linux-x64-baseline/-/cli-linux-x64-baseline-${version}.tgz";
-      hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+      hash = "sha256-pRq1FhRPi/y681FRvy25hETfMRvlsLaAkSNVR9T0qo4=";
     };
   };
 

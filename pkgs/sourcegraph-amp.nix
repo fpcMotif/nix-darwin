@@ -23,7 +23,7 @@ buildNpmPackage {
 
   src = ./sourcegraph-amp;
 
-  npmDepsHash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  npmDepsHash = "sha256-O2BUasKc/9P+9alwvAY+bAHcTN7tbIJJJyB4KfscNhA=";
   dontNpmBuild = true;
 
   installPhase = ''
