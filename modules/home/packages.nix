@@ -38,7 +38,7 @@ let
     gh
     just
     bun
-    nodejs_24
+    nodejs_25
     neovim
     gnupg
     gnused

@@ -4,15 +4,16 @@
 # amp.rs text editor. Sourcegraph publishes Amp as the npm package
 # @sourcegraph/amp, with one native keyring dependency.
 #
-# Bumping:
+# Bumping (no hash dance — `importNpmLock` derives deps from the lockfile):
 #   1. find current version: npm view @sourcegraph/amp version
 #   2. update ./sourcegraph-amp/package.json and `version` below.
 #   3. regenerate the lock:
 #        (cd ~/.config/nix-darwin/pkgs/sourcegraph-amp && npm install --package-lock-only)
-#   4. temporarily set npmDepsHash = lib.fakeHash, build, and copy the reported hash.
+#   4. nix build .#martin.sourcegraph-amp
 
 { lib
 , buildNpmPackage
+, importNpmLock
 , nodejs_24
 ,
 }:
@@ -23,7 +24,12 @@ buildNpmPackage {
 
   src = ./sourcegraph-amp;
 
-  npmDepsHash = "sha256-CNaAjVBmUpf+mCQKPuUPBuLoOg657FzSeB3Gv4Pg+54=";
+  npmDeps = importNpmLock {
+    npmRoot = ./sourcegraph-amp;
+  };
+
+  npmConfigHook = importNpmLock.npmConfigHook;
+
   dontNpmBuild = true;
 
   installPhase = ''
