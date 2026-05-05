@@ -29,6 +29,8 @@
       KeyRepeat = 1;
       InitialKeyRepeat = 10;
       "com.apple.swipescrolldirection" = false;
+      # Prefer overlay scrollbars: slim while scrolling, hidden at rest.
+      AppleShowScrollBars = "WhenScrolling";
     };
 
     CustomUserPreferences = {
