@@ -14,8 +14,7 @@
     ./kitty.nix
     ./yazi.nix
     ./prompt.nix
-    ./skills.nix
-    ./claude-code.nix
+    ./claude.nix
     ./droid.nix
     ./opencode.nix
     ./zed.nix

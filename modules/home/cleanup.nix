@@ -28,6 +28,19 @@
 
     remove_legacy_path "$HOME/.local/bin/claude"
     remove_legacy_path "$HOME/.local/bin/droid"
+
+    # Pre-Nix imperative drift in ~/.claude/ (chezmoi-rendered or hand-placed).
+    # Nix now owns these as read-only symlinks; remove the stale flat files
+    # so home.file activation can claim the paths without conflict.
+    # NOTE: settings.json is intentionally NOT cleared — Claude mutates it
+    # at runtime; the seed activation in claude.nix only writes if absent.
+    remove_legacy_path "$HOME/.claude/CLAUDE.md"
+    remove_legacy_path "$HOME/.claude/claude.md"
+    remove_legacy_path "$HOME/.claude/RTK.md"
+    remove_legacy_path "$HOME/.claude/statusline-command.sh"
+    remove_legacy_path "$HOME/.claude/hooks/rtk-rewrite.sh"
+    remove_legacy_path "$HOME/.claude/hooks/.rtk-hook.sha256"
+
     remove_legacy_path "$HOME/.local/bin/opencode"
     remove_legacy_path "$HOME/.local/bin/opencode-electron"
     remove_legacy_path "$HOME/.local/bin/npm"
