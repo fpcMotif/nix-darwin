@@ -50,6 +50,12 @@ let
     name = "mp-${b}";
     value = mkSource "mattpocock-skills" "skills/${b}" null;
   }) mattpocockBuckets);
+
+  # Effect-TS/skills. Upstream publishes flat under `skills/<name>/SKILL.md`
+  # (currently just `effect-ts`); any sibling added later auto-loads on
+  # `nix flake update effect-ts-skills`. Replaces `bunx skills add Effect-TS/skills`
+  # so Nix stays the single source of truth — no runtime mutation of ~/.claude/skills.
+  effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 in
 {
   imports = [ inputs.agent-skills.homeManagerModules.default ];
@@ -94,11 +100,11 @@ in
         "^(git-workflow|review|ralph-loop|web-browser)$";
       dotfiles-claude = mkSource "dotfiles" "dot_claude/skills"
         "^(lazygit)$";
-    } // mpSources;
+    } // mpSources // effectSources;
 
     skills = {
       enable = [ ];
-      enableAll = builtins.attrNames mpSources;
+      enableAll = builtins.attrNames mpSources ++ builtins.attrNames effectSources;
       explicit = {
         # Skills that need CLI deps symlinked into the bundle dir.
         # mattpocock skills inherit from user PATH (git/gh/jq/bun globally).

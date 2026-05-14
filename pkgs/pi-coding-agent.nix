@@ -2,28 +2,27 @@
 #
 # Why prebuilt binary, not buildNpmPackage:
 #   The npm package `@mariozechner/pi-coding-agent` lives inside the pi-mono
-#   monorepo (badlogic/pi-mono). buildNpmPackage from a workspace-root would
-#   need the full monorepo's package-lock.json plus a workspace-aware build
-#   step, and the published npm tarball has no lock file. Upstream already
-#   ships a `bun build --compile`'d single-file Mach-O binary in their GitHub
-#   release. Fetching that and wrapping it is more reliable than reproducing
-#   the bun bundle ourselves and matches how nixpkgs handles `bun`, `deno`,
-#   etc.
+#   monorepo (badlogic/pi-mono, now mirrored at earendil-works/pi-mono).
+#   buildNpmPackage from a workspace-root would need the full monorepo's
+#   package-lock.json plus a workspace-aware build step, and the published
+#   npm tarball has no lock file. Upstream already ships a `bun build
+#   --compile`'d single-file Mach-O binary in their GitHub release. Fetching
+#   that and wrapping it is more reliable than reproducing the bun bundle
+#   ourselves and matches how nixpkgs handles `bun`, `deno`, etc.
 #
 # Layout inside the tarball (sourceRoot = "pi"):
-#   pi               — 70MB arm64 Mach-O (Bun standalone)
+#   pi               — arm64 Mach-O (Bun standalone)
 #   photon_rs_bg.wasm — required at runtime
 #   theme/, assets/, docs/, examples/, export-html/, package.json, ...
 #
-# Why we wrap with NPM_CLIENT=bun:
-#   pi 0.71.0 spawns an npm client at startup to discover globally-installed
-#   pi extensions. By default it looks for a `pi-npm-bun` binary, which the
-#   release tarball does NOT ship — so plain `pi` crashes before the prompt
-#   renders. pi exposes an `NPM_CLIENT` env var ("Absolute path to the npm
-#   client executable") that overrides this lookup, so we wrap `pi` to point
-#   directly at the nix-managed `bun` binary. No fake `pi-npm-bun` shim,
-#   no PATH manipulation, no $HOME-relative hardcoding — pi uses its own
-#   declared override mechanism.
+# npm client resolution (pi 0.72+):
+#   pi reads `npmCommand` from `~/.pi/agent/settings.json` (argv-style array)
+#   to locate globally-installed pi extensions at startup. The default is
+#   `npm`, which nixpkgs provides via `nodejs-slim`, so an unconfigured user
+#   gets a working `pi` out of the box. To use bun's global cache instead,
+#   set `"npmCommand": ["bun"]` in settings.json — pi special-cases the
+#   string `"bun"` and runs `bun pm bin -g`. The pre-0.72 `NPM_CLIENT` env
+#   var override no longer applies; do not reintroduce a wrapper for it.
 #
 # Bumping:
 #   1. find current version:  curl -s https://api.github.com/repos/badlogic/pi-mono/releases/latest | jq -r .tag_name
@@ -35,23 +34,19 @@
 { lib
 , stdenvNoCC
 , fetchurl
-, makeWrapper
-, bun
 ,
 }:
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "pi-coding-agent";
-  version = "0.72.1";
+  version = "0.74.0";
 
   src = fetchurl {
     url = "https://github.com/badlogic/pi-mono/releases/download/v${finalAttrs.version}/pi-darwin-arm64.tar.gz";
-    hash = "sha256-QLLwJ/wPWBMXBykhvy593+yHHDpOlLc8Odc/wqvF5Rc=";
+    hash = "sha256-MGMXmCPGqYVjQxIkDFcBUCQxb3/mZh7dQfFMd9ixXhA=";
   };
 
   sourceRoot = "pi";
-
-  nativeBuildInputs = [ makeWrapper ];
 
   dontConfigure = true;
   dontBuild = true;
@@ -64,12 +59,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     mkdir -p $out/libexec/pi-coding-agent $out/bin
     cp -R . $out/libexec/pi-coding-agent/
     chmod +x $out/libexec/pi-coding-agent/pi
-
-    # Wrap with NPM_CLIENT pointing at bun so pi 0.71.0's startup
-    # `getGlobalNpmRoot` lookup resolves cleanly. --set-default lets the
-    # user still override at runtime if they want a different client.
-    makeWrapper $out/libexec/pi-coding-agent/pi $out/bin/pi \
-      --set-default NPM_CLIENT ${bun}/bin/bun
+    ln -s $out/libexec/pi-coding-agent/pi $out/bin/pi
 
     runHook postInstall
   '';

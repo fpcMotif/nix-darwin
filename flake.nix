@@ -44,6 +44,11 @@
       url = "git+https://github.com/mattpocock/skills.git?ref=main";
       flake = false;
     };
+
+    effect-ts-skills = {
+      url = "git+https://github.com/Effect-TS/skills.git?ref=main";
+      flake = false;
+    };
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:
