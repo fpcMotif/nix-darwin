@@ -44,11 +44,21 @@ let
 
   # mattpocock/skills promoted buckets. `personal/` and `deprecated/` are
   # excluded per upstream CONTEXT.md. New upstream skills under any bucket
-  # auto-load on the next `nix flake update mattpocock-skills`.
+  # auto-load on the next `nix flake update mattpocock-skills`, except where
+  # `mpBucketRegex` constrains discovery below.
   mattpocockBuckets = [ "engineering" "productivity" "misc" ];
+
+  # Per-bucket nameRegex. `null` = include every SKILL.md sibling.
+  # productivity is pinned to an explicit allowlist to keep `grill-me` from
+  # auto-triggering on plan-mode work; update the alternation when new
+  # productivity siblings land upstream.
+  mpBucketRegex = b:
+    if b == "productivity" then "^(caveman|write-a-skill)$"
+    else null;
+
   mpSources = listToAttrs (map (b: {
     name = "mp-${b}";
-    value = mkSource "mattpocock-skills" "skills/${b}" null;
+    value = mkSource "mattpocock-skills" "skills/${b}" (mpBucketRegex b);
   }) mattpocockBuckets);
 
   # Effect-TS/skills. Upstream publishes flat under `skills/<name>/SKILL.md`
