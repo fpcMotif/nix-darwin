@@ -46,10 +46,12 @@ let
   # excluded per upstream CONTEXT.md. New upstream skills under any bucket
   # auto-load on the next `nix flake update mattpocock-skills`.
   mattpocockBuckets = [ "engineering" "productivity" "misc" ];
-  mpSources = listToAttrs (map (b: {
-    name = "mp-${b}";
-    value = mkSource "mattpocock-skills" "skills/${b}" null;
-  }) mattpocockBuckets);
+  mpSources = listToAttrs (map
+    (b: {
+      name = "mp-${b}";
+      value = mkSource "mattpocock-skills" "skills/${b}" null;
+    })
+    mattpocockBuckets);
 
   # Effect-TS/skills. Upstream publishes flat under `skills/<name>/SKILL.md`
   # (currently just `effect-ts`); any sibling added later auto-loads on
