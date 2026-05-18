@@ -49,6 +49,8 @@
       url = "git+https://github.com/Effect-TS/skills.git?ref=main";
       flake = false;
     };
+
+    zed-upstream.url = "github:zed-industries/zed";
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:

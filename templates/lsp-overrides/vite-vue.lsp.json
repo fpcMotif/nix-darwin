@@ -1,0 +1,53 @@
+{
+  "$comment": "Vite + Vue 3 project. Stack: tsgo for TS files, vue-language-server for .vue SFCs, oxlint for lint across both, tailwindcss-language-server for utility-class intellisense. Drop at project root as .lsp.json.",
+  "lspServers": {
+    "tsgo": {
+      "command": "tsgo",
+      "args": ["--lsp", "--stdio"],
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".mts": "typescript",
+        ".cts": "typescript",
+        ".js": "javascript",
+        ".jsx": "javascriptreact",
+        ".mjs": "javascript",
+        ".cjs": "javascript"
+      }
+    },
+    "vue": {
+      "command": "vue-language-server",
+      "args": ["--stdio"],
+      "extensionToLanguage": { ".vue": "vue" },
+      "initializationOptions": {
+        "typescript": { "tsdk": "node_modules/typescript/lib" },
+        "vue": { "hybridMode": false }
+      }
+    },
+    "oxlint": {
+      "command": "oxlint",
+      "args": ["--lsp"],
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".js": "javascript",
+        ".jsx": "javascriptreact",
+        ".vue": "vue"
+      },
+      "isLinter": true
+    },
+    "tailwindcss": {
+      "command": "tailwindcss-language-server",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".js": "javascript",
+        ".jsx": "javascriptreact",
+        ".vue": "vue",
+        ".html": "html",
+        ".css": "css"
+      }
+    }
+  }
+}

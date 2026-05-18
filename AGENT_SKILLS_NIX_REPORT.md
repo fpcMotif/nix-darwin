@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-This repo now uses `agent-skills-nix` through its upstream Home Manager module in `modules/home/skills.nix`. That is the right long-term direction: Nix builds one selected skill bundle, while Home Manager activates that bundle into the directories that Codex, Claude Code, Cursor, and Oh My Pi actually scan.
+This repo now uses `agent-skills-nix` through its upstream Home Manager module in `modules/home/claude.nix`. That is the right long-term direction: Nix builds one selected skill bundle, while Home Manager activates that bundle into the directories that Codex, Claude Code, Cursor, and Oh My Pi actually scan.
 
 The remaining target mapping is intentional. AI agents are not Nix-aware; they discover skills by reading specific filesystem locations such as `$HOME/.agents/skills`, `~/.claude/skills`, or `~/.cursor/skills`. Nix can build the skill tree in `/nix/store`, but some bridge still has to expose that immutable store tree at those runtime paths.
 
@@ -17,7 +17,7 @@ Recommendation: keep `programs.agent-skills` plus `symlink-tree` global targets.
 
 ## Current implementation
 
-Live file: `modules/home/skills.nix`.
+Live file: `modules/home/claude.nix`.
 
 The module imports:
 
@@ -38,12 +38,15 @@ programs.agent-skills = {
     dotfiles-claude = filteredSource "dotfiles" "dot_claude/skills"
       "^(lazygit)$";
 
-    grill-me = rootSkillSource "mattpocock-skills" "grill-me";
+    mp-engineering = bucketSource "mattpocock-skills" "engineering";
+    mp-productivity = bucketSource "mattpocock-skills" "productivity";
+    mp-misc = bucketSource "mattpocock-skills" "misc";
+    effect-ts = filteredSource "effect-ts-skills" "skills" null;
   };
 
   skills = {
-    enable = [ ];
-    enableAll = false;
+    enable = enabledMattpocockSkills;
+    enableAll = [ "effect-ts" ];
     explicit = {
       git-workflow = {
         from = "dotfiles-pi";
@@ -62,7 +65,6 @@ programs.agent-skills = {
       };
       ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
       web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
-      grill-me = { from = "grill-me"; path = "."; packages = [ ]; };
     };
   };
 

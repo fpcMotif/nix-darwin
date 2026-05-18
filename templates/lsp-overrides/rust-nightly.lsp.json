@@ -1,0 +1,34 @@
+{
+  "$comment": "Drop at project root as .lsp.json. Pin rust-analyzer to a specific toolchain via a per-project devShell (see devshell.flake.nix). This block enables proc-macro support, cargo features, and inlay hints suited for Effect-TS-style code.",
+  "lspServers": {
+    "rust-analyzer": {
+      "command": "rust-analyzer",
+      "extensionToLanguage": {
+        ".rs": "rust"
+      },
+      "settings": {
+        "rust-analyzer": {
+          "cargo": {
+            "buildScripts": { "enable": true },
+            "features": "all"
+          },
+          "procMacro": { "enable": true },
+          "checkOnSave": true,
+          "check": { "command": "clippy" },
+          "inlayHints": {
+            "bindingModeHints": { "enable": false },
+            "chainingHints": { "enable": true },
+            "closingBraceHints": { "minLines": 25 },
+            "closureReturnTypeHints": { "enable": "with_block" },
+            "lifetimeElisionHints": { "enable": "skip_trivial" },
+            "typeHints": { "hideClosureInitialization": false }
+          },
+          "imports": {
+            "granularity": { "group": "module" },
+            "prefix": "crate"
+          }
+        }
+      }
+    }
+  }
+}

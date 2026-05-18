@@ -1,0 +1,37 @@
+{
+  "$comment": "Drop at project root as .lsp.json. Multi-module Go workspace with gopls settings tuned for AI use — full diagnostics, hints, and analyses enabled.",
+  "lspServers": {
+    "gopls": {
+      "command": "gopls",
+      "extensionToLanguage": {
+        ".go": "go"
+      },
+      "settings": {
+        "gopls": {
+          "experimentalPostfixCompletions": true,
+          "completeUnimported": true,
+          "usePlaceholders": true,
+          "staticcheck": true,
+          "gofumpt": true,
+          "hints": {
+            "assignVariableTypes": true,
+            "compositeLiteralFields": true,
+            "compositeLiteralTypes": true,
+            "constantValues": true,
+            "functionTypeParameters": true,
+            "parameterNames": true,
+            "rangeVariableTypes": true
+          },
+          "analyses": {
+            "unusedparams": true,
+            "shadow": true,
+            "fieldalignment": false,
+            "nilness": true,
+            "unusedwrite": true,
+            "useany": true
+          }
+        }
+      }
+    }
+  }
+}

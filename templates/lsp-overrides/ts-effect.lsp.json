@@ -1,0 +1,45 @@
+{
+  "$comment": "TypeScript + Effect-TS project. Stack: tsgo (TS 7 native, 10-30x faster than tsserver) for types, oxlint for diagnostics. Effect-TS's @effect/language-service plugin loads via tsconfig.json compilerOptions.plugins — tsgo --lsp respects plugins in interactive mode. Drop at project root as .lsp.json.",
+  "lspServers": {
+    "tsgo": {
+      "command": "tsgo",
+      "args": ["--lsp", "--stdio"],
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".mts": "typescript",
+        ".cts": "typescript",
+        ".js": "javascript",
+        ".jsx": "javascriptreact",
+        ".mjs": "javascript",
+        ".cjs": "javascript"
+      },
+      "initializationOptions": {
+        "preferences": {
+          "includeInlayParameterNameHints": "all",
+          "includeInlayFunctionLikeReturnTypeHints": true,
+          "includeInlayVariableTypeHints": true,
+          "includeInlayPropertyDeclarationTypeHints": true,
+          "importModuleSpecifierPreference": "non-relative",
+          "quotePreference": "double"
+        }
+      }
+    },
+    "oxlint": {
+      "command": "oxlint",
+      "args": ["--lsp"],
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".mts": "typescript",
+        ".cts": "typescript",
+        ".js": "javascript",
+        ".jsx": "javascriptreact",
+        ".mjs": "javascript",
+        ".cjs": "javascript"
+      },
+      "isLinter": true
+    }
+  },
+  "$tsconfig_reminder": "tsconfig.json must include: { \"compilerOptions\": { \"plugins\": [{ \"name\": \"@effect/language-service\" }] } }"
+}

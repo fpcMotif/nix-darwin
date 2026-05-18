@@ -218,12 +218,15 @@ programs.agent-skills = {
   sources = {
     dotfiles-pi     = { input = "dotfiles";          subdir = "dot_pi/agent/skills"; };
     dotfiles-claude = { input = "dotfiles";          subdir = "dot_claude/skills"; };
-    grill-me        = { input = "mattpocock-skills"; subdir = "skills/productivity/grill-me"; };
+    mp-engineering  = { input = "mattpocock-skills"; subdir = "skills/engineering"; };
+    mp-productivity = { input = "mattpocock-skills"; subdir = "skills/productivity"; };
+    mp-misc         = { input = "mattpocock-skills"; subdir = "skills/misc"; };
+    effect-ts       = { input = "effect-ts-skills";  subdir = "skills"; };
   };
 
   skills = {
-    enable = [ ];
-    enableAll = false;
+    enable = enabledMattpocockSkills; # all promoted Matt Pocock skills except disabledMattpocockSkills.
+    enableAll = [ "effect-ts" ];
     explicit = {
       git-workflow = {
         from = "dotfiles-pi";
@@ -242,7 +245,6 @@ programs.agent-skills = {
       };
       ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
       web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
-      grill-me = { from = "grill-me"; path = "."; packages = [ ]; };
     };
   };
 };

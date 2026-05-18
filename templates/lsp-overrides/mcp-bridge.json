@@ -1,0 +1,49 @@
+{
+  "$comment": "MCP bridge entries for Claude Desktop (~/Library/Application Support/Claude/claude_desktop_config.json under `mcpServers`) and Codex App (~/.codex/config.toml under `[mcp_servers]`). One entry per workspace × language. mcp-language-server is installed globally by ~/nix-config/modules/home/lsp.nix.",
+
+  "$paste_into_claude_desktop_mcpServers": {
+    "lsp-nix-config-ts": {
+      "command": "mcp-language-server",
+      "args": [
+        "--workspace", "/Users/martinfan/nix-config",
+        "--lsp", "typescript-language-server",
+        "--",
+        "--stdio"
+      ]
+    },
+    "lsp-pi-rust": {
+      "command": "mcp-language-server",
+      "args": [
+        "--workspace", "/Users/martinfan/pi",
+        "--lsp", "rust-analyzer"
+      ]
+    },
+    "lsp-some-go-project": {
+      "command": "mcp-language-server",
+      "args": [
+        "--workspace", "/Users/martinfan/some-go-project",
+        "--lsp", "gopls"
+      ]
+    },
+    "lsp-some-python-project": {
+      "command": "mcp-language-server",
+      "args": [
+        "--workspace", "/Users/martinfan/some-python-project",
+        "--lsp", "basedpyright-langserver",
+        "--",
+        "--stdio"
+      ]
+    },
+    "$comment_gopls_native_mcp": "Go-only workspaces can skip mcp-language-server and use gopls's built-in MCP mode (gopls >= 0.20): { \"command\": \"gopls\", \"args\": [\"mcp\"] }"
+  },
+
+  "$paste_into_codex_config_toml_as": [
+    "[mcp_servers.lsp-nix-config-ts]",
+    "command = \"mcp-language-server\"",
+    "args = [\"--workspace\", \"/Users/martinfan/nix-config\", \"--lsp\", \"typescript-language-server\", \"--\", \"--stdio\"]",
+    "",
+    "[mcp_servers.lsp-pi-rust]",
+    "command = \"mcp-language-server\"",
+    "args = [\"--workspace\", \"/Users/martinfan/pi\", \"--lsp\", \"rust-analyzer\"]"
+  ]
+}

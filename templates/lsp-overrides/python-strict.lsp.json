@@ -1,0 +1,51 @@
+{
+  "$comment": "Drop at project root as .lsp.json. basedpyright in strict mode + ruff as linter. Both run on the same .py/.pyi files. basedpyright handles types/hover/definitions; ruff handles diagnostics for lint rules.",
+  "lspServers": {
+    "pyright": {
+      "command": "basedpyright-langserver",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".py": "python",
+        ".pyi": "python"
+      },
+      "settings": {
+        "basedpyright": {
+          "analysis": {
+            "typeCheckingMode": "strict",
+            "diagnosticMode": "workspace",
+            "autoSearchPaths": true,
+            "useLibraryCodeForTypes": true,
+            "inlayHints": {
+              "callArgumentNames": true,
+              "functionReturnTypes": true,
+              "variableTypes": true,
+              "genericTypes": false
+            }
+          }
+        },
+        "python": {
+          "analysis": { "typeCheckingMode": "strict" }
+        }
+      }
+    },
+    "ruff": {
+      "command": "ruff",
+      "args": ["server"],
+      "extensionToLanguage": {
+        ".py": "python",
+        ".pyi": "python"
+      },
+      "isLinter": true,
+      "initializationOptions": {
+        "settings": {
+          "lineLength": 100,
+          "lint": {
+            "preview": true,
+            "select": ["E", "F", "I", "N", "UP", "B", "A", "C4", "RET", "SIM"]
+          },
+          "format": { "preview": true }
+        }
+      }
+    }
+  }
+}

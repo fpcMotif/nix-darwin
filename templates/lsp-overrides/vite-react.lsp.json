@@ -1,0 +1,49 @@
+{
+  "$comment": "Vite + React project. Stack: tsgo for TS/TSX, oxlint for fast lint (react-specific rules), tailwindcss-language-server for utility classes. Drop at project root as .lsp.json.",
+  "lspServers": {
+    "tsgo": {
+      "command": "tsgo",
+      "args": ["--lsp", "--stdio"],
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".mts": "typescript",
+        ".cts": "typescript",
+        ".js": "javascript",
+        ".jsx": "javascriptreact",
+        ".mjs": "javascript",
+        ".cjs": "javascript"
+      },
+      "initializationOptions": {
+        "preferences": {
+          "jsxAttributeCompletionStyle": "auto",
+          "includeInlayParameterNameHints": "literals",
+          "includeInlayFunctionLikeReturnTypeHints": true,
+          "importModuleSpecifierPreference": "non-relative"
+        }
+      }
+    },
+    "oxlint": {
+      "command": "oxlint",
+      "args": ["--lsp"],
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".js": "javascript",
+        ".jsx": "javascriptreact"
+      },
+      "isLinter": true
+    },
+    "tailwindcss": {
+      "command": "tailwindcss-language-server",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".tsx": "typescriptreact",
+        ".jsx": "javascriptreact",
+        ".html": "html",
+        ".css": "css"
+      }
+    }
+  },
+  "$oxlintrc_reminder": "Create .oxlintrc.json with `{ \"plugins\": [\"react\", \"react-perf\", \"jsx-a11y\"] }` to enable React-specific rules."
+}

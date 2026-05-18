@@ -37,6 +37,7 @@ let
     jq
     gh
     just
+    rtk
     bun
     nodejs_25
     neovim
@@ -44,6 +45,10 @@ let
     gnused
     shellcheck
     stylua
+    # All language servers live in ./lsp.nix — including typescript-go
+    # (it's both compiler and `tsgo --lsp` server), oxlint, vtsls,
+    # vue/astro/svelte/tailwind/emmet servers, gopls, rust-analyzer,
+    # basedpyright, ruff, lua-language-server, mcp-language-server.
     cmake
     tree-sitter
     wget

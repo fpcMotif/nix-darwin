@@ -12,7 +12,7 @@
 # this flake. Nix just installs them as read-only store symlinks.
 
 let
-  inherit (lib) optionalAttrs listToAttrs;
+  inherit (lib) getExe optionalAttrs listToAttrs;
 
   dotClaude = inputs.dotfiles + "/dot_claude";
   homeDir = config.home.homeDirectory;
@@ -34,6 +34,51 @@ let
   };
 
   mkSkill = from: path: packages: { inherit from path packages; };
+  rtkRewriteHook = pkgs.writeShellScript "rtk-rewrite.sh" ''
+    JQ=${getExe pkgs.jq}
+    RTK=${getExe pkgs.rtk}
+
+    INPUT=$(cat)
+    CMD=$(printf '%s' "$INPUT" | "$JQ" -r '.tool_input.command // empty')
+
+    if [ -z "$CMD" ]; then
+      exit 0
+    fi
+
+    REWRITTEN=$("$RTK" rewrite "$CMD" 2>/dev/null)
+    RTK_EXIT=$?
+    case "$RTK_EXIT" in
+      0 | 3) ;;
+      *) exit 0 ;;
+    esac
+
+    if [ "$CMD" = "$REWRITTEN" ]; then
+      exit 0
+    fi
+
+    # Codex PreToolUse payloads carry turn_id and currently reject updatedInput.
+    if printf '%s' "$INPUT" | "$JQ" -e 'has("turn_id")' >/dev/null 2>&1; then
+      exit 0
+    fi
+
+    ORIGINAL_INPUT=$(printf '%s' "$INPUT" | "$JQ" -c '.tool_input')
+    UPDATED_INPUT=$(printf '%s' "$ORIGINAL_INPUT" | "$JQ" --arg cmd "$REWRITTEN" '.command = $cmd')
+
+    "$JQ" -n \
+      --argjson updated "$UPDATED_INPUT" \
+      '{
+        "hookSpecificOutput": {
+          "hookEventName": "PreToolUse",
+          "permissionDecision": "allow",
+          "permissionDecisionReason": "RTK auto-rewrite",
+          "updatedInput": $updated
+        }
+      }'
+  '';
+  rtkHookChecksum = pkgs.runCommand "rtk-hook.sha256" { } ''
+    ${pkgs.coreutils}/bin/sha256sum ${rtkRewriteHook} \
+      | ${pkgs.gnused}/bin/sed 's|  .*|  rtk-rewrite.sh|' > $out
+  '';
 
   # `link` makes every target a tree of `home.file` symlinks pointing at
   # the same /nix/store/...-agent-skills-bundle/<skill>/SKILL.md. Pi's
@@ -46,10 +91,82 @@ let
   # excluded per upstream CONTEXT.md. New upstream skills under any bucket
   # auto-load on the next `nix flake update mattpocock-skills`.
   mattpocockBuckets = [ "engineering" "productivity" "misc" ];
-  mpSources = listToAttrs (map (b: {
-    name = "mp-${b}";
-    value = mkSource "mattpocock-skills" "skills/${b}" null;
-  }) mattpocockBuckets);
+  disabledMattpocockSkills = [ "grill-me" "grill-with-docs" ];
+  mpSources = listToAttrs (map
+    (b: {
+      name = "mp-${b}";
+      value = mkSource "mattpocock-skills" "skills/${b}" null;
+    })
+    mattpocockBuckets);
+  enabledMattpocockSkills =
+    let
+      bucketSkillNames = b:
+        let
+          root = inputs.mattpocock-skills + "/skills/${b}";
+          entries = builtins.readDir root;
+        in
+        builtins.attrNames (lib.filterAttrs
+          (name: type:
+            type == "directory"
+            && builtins.pathExists (root + "/${name}/SKILL.md")
+            && !(builtins.elem name disabledMattpocockSkills)
+          )
+          entries);
+    in
+    lib.unique (lib.concatMap bucketSkillNames mattpocockBuckets);
+
+  # Diagnostic wrapper for Claude Code Stop hooks. Intercepts a plugin's
+  # Stop hook invocation, captures stdin/stdout/stderr/exit-code/duration
+  # to ~/.claude/debug-logs/stop-hooks.log, then forwards everything
+  # transparently so plugin behaviour is unchanged.
+  #
+  # Used to diagnose "Stop hook error: Failed with non-blocking status
+  # code: No stderr output" — pinpoints which plugin hook silently exits
+  # non-zero. Activated by claudeStopHookDebug below, which rewrites the
+  # 3 installed plugin Stop hook configs to dispatch through this script.
+  stopHookDebug = pkgs.writeShellScript "stop-hook-debug" ''
+    set -uo pipefail
+
+    LOG_DIR="''${CLAUDE_STOP_HOOK_LOG_DIR:-$HOME/.claude/debug-logs}"
+    mkdir -p "$LOG_DIR"
+    LOG_FILE="$LOG_DIR/stop-hooks.log"
+
+    HOOK_ID="''${1:-unknown}"
+    shift || true
+
+    STDIN_FILE=$(mktemp -t claude-stop-stdin.XXXXXX)
+    STDOUT_FILE=$(mktemp -t claude-stop-stdout.XXXXXX)
+    STDERR_FILE=$(mktemp -t claude-stop-stderr.XXXXXX)
+    trap 'rm -f "$STDIN_FILE" "$STDOUT_FILE" "$STDERR_FILE"' EXIT
+
+    cat > "$STDIN_FILE"
+
+    START_NS=$(${pkgs.coreutils}/bin/date +%s%N)
+    "$@" < "$STDIN_FILE" > "$STDOUT_FILE" 2> "$STDERR_FILE"
+    EXIT_CODE=$?
+    END_NS=$(${pkgs.coreutils}/bin/date +%s%N)
+    DURATION_MS=$(( (END_NS - START_NS) / 1000000 ))
+
+    {
+      printf '===== %s hook=%s exit=%d duration=%dms\n' \
+        "$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        "$HOOK_ID" "$EXIT_CODE" "$DURATION_MS"
+      printf -- '--- CWD: %s\n' "$PWD"
+      printf -- '--- COMMAND: %s\n' "$*"
+      printf -- '--- STDIN (%d bytes):\n' "$(${pkgs.coreutils}/bin/wc -c < "$STDIN_FILE")"
+      ${pkgs.coreutils}/bin/head -c 8192 "$STDIN_FILE"; printf '\n'
+      printf -- '--- STDOUT (%d bytes):\n' "$(${pkgs.coreutils}/bin/wc -c < "$STDOUT_FILE")"
+      ${pkgs.coreutils}/bin/head -c 8192 "$STDOUT_FILE"; printf '\n'
+      printf -- '--- STDERR (%d bytes):\n' "$(${pkgs.coreutils}/bin/wc -c < "$STDERR_FILE")"
+      ${pkgs.coreutils}/bin/head -c 8192 "$STDERR_FILE"; printf '\n'
+      printf '===== end\n\n'
+    } >> "$LOG_FILE"
+
+    ${pkgs.coreutils}/bin/cat "$STDOUT_FILE"
+    ${pkgs.coreutils}/bin/cat "$STDERR_FILE" >&2
+
+    exit "$EXIT_CODE"
+  '';
 
   # Effect-TS/skills. Upstream publishes flat under `skills/<name>/SKILL.md`
   # (currently just `effect-ts`); any sibling added later auto-loads on
@@ -69,16 +186,103 @@ in
   home.file = {
     ".claude/CLAUDE.md".source = renderChezmoi (dotClaude + "/claude.md.tmpl");
     ".claude/RTK.md".source = dotClaude + "/RTK.md";
+    ".codex/RTK.md".source = dotClaude + "/RTK.md";
+    "RTK.md".source = dotClaude + "/RTK.md";
     ".claude/statusline-command.sh" = {
       source = dotClaude + "/executable_statusline-command.sh";
       executable = true;
     };
     ".claude/hooks/rtk-rewrite.sh" = {
-      source = dotClaude + "/hooks/executable_rtk-rewrite.sh";
+      source = rtkRewriteHook;
       executable = true;
     };
-    ".claude/hooks/.rtk-hook.sha256".source = dotClaude + "/hooks/dot_rtk-hook.sha256";
+    ".claude/hooks/.rtk-hook.sha256".source = rtkHookChecksum;
+    ".codex/hooks/rtk-rewrite.sh" = {
+      source = rtkRewriteHook;
+      executable = true;
+    };
+    ".codex/hooks/.rtk-hook.sha256".source = rtkHookChecksum;
+    ".claude/hooks/stop-hook-debug.sh" = {
+      source = stopHookDebug;
+      executable = true;
+    };
   };
+
+  # === Stop hook diagnostic instrumentation ===
+  # Idempotently rewrites the 3 installed plugin Stop hook configs to
+  # dispatch through stop-hook-debug.sh, which logs stdin/stdout/stderr/
+  # exit-code to ~/.claude/debug-logs/stop-hooks.log. Original commands
+  # are preserved in a sibling `.orig` file the first time we touch them
+  # so they can be restored (`mv hooks.json.orig hooks.json`) when
+  # diagnosis is done and this block is removed.
+  #
+  # Re-runs on every `darwin-rebuild switch`. Plugin updates that
+  # refresh the cached hooks.json will revert the wrapping; next switch
+  # re-applies it.
+  home.activation.claudeStopHookDebug = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    wrap_stop_hook() {
+      local hook_id="$1" file="$2"
+      [ -f "$file" ] || { echo "stop-hook-debug: missing $file, skipping" >&2; return 0; }
+
+      # Already wrapped? Compare against the wrapper marker.
+      if ${pkgs.jq}/bin/jq -e --arg w "stop-hook-debug.sh" \
+          '.hooks.Stop[0].hooks[0].command | contains($w)' "$file" >/dev/null 2>&1; then
+        return 0
+      fi
+
+      [ -f "$file.orig" ] || cp "$file" "$file.orig"
+
+      local tmp
+      tmp=$(mktemp)
+      ${pkgs.jq}/bin/jq \
+        --arg wrapper "${homeDir}/.claude/hooks/stop-hook-debug.sh" \
+        --arg hookid "$hook_id" \
+        '.hooks.Stop |= map(.hooks |= map(.command = ($wrapper + " " + $hookid + " " + .command)))' \
+        "$file" > "$tmp" && mv "$tmp" "$file"
+      echo "stop-hook-debug: wrapped $hook_id ($file)" >&2
+    }
+
+    base="${homeDir}/.claude/plugins/cache"
+    wrap_stop_hook superpowers "$base/frad-dotclaude/superpowers/2.1.0/.claude-plugin/plugin.json"
+    wrap_stop_hook ralph-loop  "$base/claude-plugins-official/ralph-loop/1.0.0/hooks/hooks.json"
+    wrap_stop_hook codex       "$base/openai-codex/codex/1.0.4/hooks/hooks.json"
+  '';
+
+  # Claude can cache Anthropic-provided skills outside the Nix-managed skill
+  # targets. Keep the grill skills out of both picker sources.
+  home.activation.claudeDisableGrillSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    for dir in \
+      "${homeDir}/.agents/skills" \
+      "${homeDir}/.claude/skills" \
+      "${homeDir}/.cursor/skills" \
+      "${homeDir}/.codex/skills" \
+      "${homeDir}/.pi/agent/skills"
+    do
+      rm -rf -- "$dir/grill-me" "$dir/grill-with-docs"
+    done
+
+    sessions="${homeDir}/Library/Application Support/Claude/local-agent-mode-sessions"
+    if [ -d "$sessions" ]; then
+      while IFS= read -r -d "" file; do
+        tmp=$(mktemp)
+        ${pkgs.jq}/bin/jq '
+          if (.slashCommands? | type) == "array" then
+            .slashCommands = (.slashCommands - ["anthropic-skills:grill-me"])
+          else
+            .
+          end
+        ' "$file" > "$tmp" && mv "$tmp" "$file"
+      done < <(${pkgs.findutils}/bin/find "$sessions" -type f -name "local_*.json" -print0)
+
+      while IFS= read -r -d "" dir; do
+        parent="$(${pkgs.coreutils}/bin/dirname "$dir")"
+        disabled="$parent/../skills-disabled"
+        mkdir -p "$disabled"
+        rm -rf -- "$disabled/grill-me"
+        mv "$dir" "$disabled/grill-me"
+      done < <(${pkgs.findutils}/bin/find "$sessions/skills-plugin" -type d -path "*/skills/grill-me" -print0 2>/dev/null || true)
+    fi
+  '';
 
   # === settings.json: declarative seed, mutable thereafter ===
   # Claude rewrites theme, env vars, and plugin state into this file at
@@ -103,8 +307,8 @@ in
     } // mpSources // effectSources;
 
     skills = {
-      enable = [ ];
-      enableAll = builtins.attrNames mpSources ++ builtins.attrNames effectSources;
+      enable = enabledMattpocockSkills;
+      enableAll = builtins.attrNames effectSources;
       explicit = {
         # Skills that need CLI deps symlinked into the bundle dir.
         # mattpocock skills inherit from user PATH (git/gh/jq/bun globally).
