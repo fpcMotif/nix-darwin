@@ -7,12 +7,12 @@
 
 stdenv.mkDerivation rec {
   pname = "raycast";
-  version = "1.104.15";
+  version = "1.104.17";
 
   src = fetchurl {
     url = "https://releases.raycast.com/releases/${version}/download?build=universal";
     name = "Raycast.dmg";
-    hash = "sha256-QoXs2OltLCIHhOdaPi45s3iHLvO56ImlaP5shWYJPPA=";
+    hash = "sha256-vX1LYxiZ48H5fuFXKA+EJ62on3Fcb+e7obpabSQqOqE=";
   };
 
   nativeBuildInputs = [ undmg ];
