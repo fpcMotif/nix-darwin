@@ -20,6 +20,7 @@ final: _prev:
     sf-mono = final.callPackage ./sf-mono.nix { };
     sf-symbols = final.callPackage ./sf-symbols.nix { };
     squirrel = final.callPackage ./squirrel.nix { };
+    zed-preview = final.callPackage ./zed-preview.nix { };
 
     gemini-cli-preview = final.callPackage ./gemini-cli-preview.nix { };
     oh-my-pi = final.callPackage ./oh-my-pi.nix { };

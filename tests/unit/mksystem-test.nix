@@ -56,9 +56,9 @@ let
       (homeConfig.programs.agent-skills.enable == true)
       "agent-skills Home Manager module should be enabled")
 
-    (helpers.assertTest "grill-me-skill-explicit"
-      (builtins.hasAttr "grill-me" homeConfig.programs.agent-skills.skills.explicit)
-      "grill-me should remain explicitly allowlisted")
+    (helpers.assertTest "mattpocock-productivity-bucket-enabled"
+      (builtins.elem "mp-productivity" homeConfig.programs.agent-skills.skills.enableAll)
+      "mattpocock-skills productivity bucket (incl. grill-me) should be auto-enabled")
 
     (helpers.assertTest "pi-skill-target-configured"
       (homeConfig.programs.agent-skills.targets.pi.dest == ".pi/agent/skills")

@@ -68,6 +68,14 @@
         inputs.nur.overlays.default
         (import ./pkgs)
         inputs.claude-code.overlays.default
+        # On Darwin, install Zed Preview from the upstream-prebuilt DMG
+        # instead of compiling Rust from source. The local `pkgs` overlay
+        # exposes the DMG package as `martin.zed-preview`; this overlay
+        # makes home-manager's `programs.zed-editor` pick it up
+        # automatically.
+        (final: prev: prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+          zed-editor = final.martin.zed-preview;
+        })
       ];
 
       mkSystem = import ./lib/mkSystem.nix {
