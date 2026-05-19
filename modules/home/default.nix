@@ -3,6 +3,7 @@
 {
   imports = [
     ./cleanup.nix
+    ./stable-path.nix
     ./packages.nix
     ./zsh.nix
     ./ai-cli.nix

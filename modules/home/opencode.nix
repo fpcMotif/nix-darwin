@@ -1,10 +1,10 @@
 { pkgs, lib, config, ... }:
 
-# opencode CLI + Electron desktop. Both are Nix-installed; we expose stable
-# user-PATH symlinks so macOS TCC and editor integrations stay anchored across
-# store-path churn. Config lives at `~/.config/opencode/opencode.json` —
-# managed declaratively here, but kept mutable so opencode itself can write
-# transient runtime state (auth tokens, cached models) without fighting Nix.
+# opencode CLI + Electron desktop. Both are Nix-installed; stable user-PATH
+# symlinks come from martin.stablePath (see modules/home/stable-path.nix).
+# Config lives at `~/.config/opencode/opencode.json` — managed declaratively
+# here, but kept mutable so opencode itself can write transient runtime state
+# (auth tokens, cached models) without fighting Nix.
 
 let
   cfg = {
@@ -15,11 +15,10 @@ let
   };
 in
 {
-  home.file.".local/bin/opencode".source =
-    pkgs.martin.opencode + "/bin/opencode";
-
-  home.file.".local/bin/opencode-electron" = lib.mkIf pkgs.stdenv.isDarwin {
-    source = pkgs.martin.opencode-electron + "/bin/opencode-electron";
+  martin.stablePath.binaries = {
+    opencode = pkgs.martin.opencode;
+  } // lib.optionalAttrs pkgs.stdenv.isDarwin {
+    opencode-electron = pkgs.martin.opencode-electron;
   };
 
   # Initial config — only written if absent, so opencode can mutate it.

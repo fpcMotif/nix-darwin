@@ -231,6 +231,31 @@ let
     (helpers.assertTest "darwin-has-oh-my-pi"
       (hasPackage "oh-my-pi" darwinHome.home.packages)
       "Darwin Home Manager packages should include oh-my-pi")
+
+    (helpers.assertTest "darwin-stable-path-claude"
+      (
+        builtins.hasAttr ".local/bin/claude" darwinHome.home.file
+          && lib.hasInfix "claude-code" darwinHome.home.file.".local/bin/claude".source
+      )
+      "Darwin Home Manager should expose ~/.local/bin/claude via martin.stablePath")
+
+    (helpers.assertTest "darwin-stable-path-droid"
+      (
+        builtins.hasAttr ".local/bin/droid" darwinHome.home.file
+          && lib.hasInfix "droid" darwinHome.home.file.".local/bin/droid".source
+      )
+      "Darwin Home Manager should expose ~/.local/bin/droid via martin.stablePath")
+
+    (helpers.assertTest "darwin-stable-path-opencode"
+      (
+        builtins.hasAttr ".local/bin/opencode" darwinHome.home.file
+          && builtins.hasAttr ".local/bin/opencode-electron" darwinHome.home.file
+      )
+      "Darwin Home Manager should expose opencode + opencode-electron via martin.stablePath")
+
+    (helpers.assertTest "darwin-stable-path-takeover-defined"
+      (builtins.hasAttr "stablePathTakeover" darwinHome.home.activation)
+      "martin.stablePath should register a pre-checkLinkTargets takeover activation")
   ] ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
   wslConfig = self.nixosConfigurations.wsl.config;

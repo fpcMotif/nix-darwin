@@ -185,9 +185,11 @@ in
 {
   imports = [ inputs.agent-skills.homeManagerModules.default ];
 
+  # === Stable user-PATH binary ===
+  # See modules/home/stable-path.nix for the TCC-stability rationale.
+  martin.stablePath.binaries.claude = pkgs.claude-code;
+
   # === Reproducible files (read-only, dotfiles-sourced) ===
-  # `.local/bin/claude` is a stable user-PATH binary that survives store-path
-  # churn so macOS TCC and editor integrations don't re-prompt every switch.
   home.file =
     let
       mkRtkFiles = root: {
@@ -200,7 +202,6 @@ in
       };
     in
     {
-      ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
       ".claude/CLAUDE.md".source = renderChezmoi (dotClaude + "/claude.md.tmpl");
       "RTK.md".source = dotClaude + "/RTK.md";
       ".claude/statusline-command.sh" = {

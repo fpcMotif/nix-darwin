@@ -179,6 +179,7 @@ The platform-specific home path is computed once in `lib/mkSystem.nix` and expos
 ```text
 modules/home/
 ├── default.nix         # username, homeDirectory, stateVersion, imports
+├── stable-path.nix     # martin.stablePath.binaries — TCC-stable ~/.local/bin/<n> symlinks
 ├── packages.nix        # common + Darwin-only packages
 ├── zsh.nix             # zsh, fzf, direnv, aliases/functions, editor env
 ├── prompt.nix          # option-gated Starship config (enabled on active Mac)
@@ -187,6 +188,28 @@ modules/home/
 ├── git.nix             # Git behavior without copied identity/signing keys
 └── skills.nix          # agent skill bundle activation
 ```
+
+### `martin.stablePath` — TCC-stable user-PATH binaries
+
+Per-tool home modules declare each binary they want anchored at a stable
+user-PATH location:
+
+```nix
+martin.stablePath.binaries = {
+  claude = pkgs.claude-code;
+  droid = pkgs.martin.droid;
+} // lib.optionalAttrs pkgs.stdenv.isDarwin {
+  opencode-electron = pkgs.martin.opencode-electron;
+};
+```
+
+The helper emits `home.file.".local/bin/<n>".source = <pkg>/bin/<n>` and a
+single `entryBefore [ "checkLinkTargets" ]` takeover that removes any
+pre-Nix file at the target path. That replaces the per-path
+`remove_legacy_path "$HOME/.local/bin/<n>"` mirrors that previously lived
+in `cleanup.nix`. When a binary is removed from `binaries`, the orphan
+symlink stays harmless until the next `nix-collect-garbage` reclaims the
+store path.
 
 Common packages should be portable across Mac, future Omakub Home Manager, and NixOS where practical. Darwin-only packages live behind `pkgs.stdenv.isDarwin` checks.
 

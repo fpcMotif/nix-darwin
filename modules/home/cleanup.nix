@@ -26,8 +26,8 @@
     remove_legacy_path "$HOME/.config/git/ignore"
     remove_legacy_path "$HOME/.config/jj/config.toml"
 
-    remove_legacy_path "$HOME/.local/bin/claude"
-    remove_legacy_path "$HOME/.local/bin/droid"
+    # ~/.local/bin/{claude,droid,opencode,opencode-electron} takeover is
+    # owned by martin.stablePath (modules/home/stable-path.nix).
 
     # Pre-Nix imperative drift in ~/.claude/ (chezmoi-rendered or hand-placed).
     # Nix now owns these as read-only symlinks; remove the stale flat files
@@ -45,8 +45,6 @@
     remove_legacy_path "$HOME/.codex/hooks/.rtk-hook.sha256"
     remove_legacy_path "$HOME/RTK.md"
 
-    remove_legacy_path "$HOME/.local/bin/opencode"
-    remove_legacy_path "$HOME/.local/bin/opencode-electron"
     remove_legacy_path "$HOME/.local/bin/npm"
     remove_legacy_path "$HOME/.local/bin/npx"
     remove_legacy_path "$HOME/.local/bin/pnpm"
