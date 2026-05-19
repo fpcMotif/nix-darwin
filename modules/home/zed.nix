@@ -1,10 +1,23 @@
-{ inputs, pkgs, lib, ... }:
+{ lib, pkgs, ... }:
 
-# Zed editor — fully Nix-managed via the upstream `programs.zed-editor`
-# home-manager module. Zed itself comes from the upstream Zed flake, so it can
-# move with upstream when `zed-upstream` is updated while remaining Nix-owned.
+# Zed editor — fully Nix-managed via Home Manager's `programs.zed-editor`
+# module. The editor binary comes from `pkgs.martin.zed-nightly-bin`, which
+# fetches the prebuilt nightly `.dmg` from
+# `zed-nightly-host.nyc3.digitaloceanspaces.com` — Nix never compiles Zed.
+# `scripts/update-zed-nightly.sh` (run hourly by .github/workflows/auto-update.yml)
+# follows the `nightly/latest` redirect chain to keep the pin fresh.
+# Never put `inputs.zed-upstream` (raw source flake) on the rebuild path: that
+# triggers a 3000+ cargo-crate compile with zero cache hits.
 # Extensions install in-app on first launch from the strings declared below;
 # LSPs are wired to nixpkgs derivations so nothing reaches outside the Nix store.
+#
+# Platform: `zed-nightly-bin` only ships aarch64-darwin .dmg artifacts (Zed's
+# nightly host has no Linux build, and the flake's supportedSystems list
+# intentionally drops x86_64-darwin), so this module is gated to Darwin via
+# `lib.mkIf`. On Linux (WSL / x230 / vm-aarch64-utm) the config collapses to
+# `{}` and Home Manager never reaches for a derivation that would throw on
+# `home.packages` materialization. Re-enable per-host with a Linux-capable
+# package (e.g. `pkgs.zed-editor` from nixpkgs) if a Linux Zed becomes useful.
 #
 # Toolchain choices:
 #   TypeScript / JS  — tsgo (typescript-go, the Go rewrite from the TS team)
@@ -23,9 +36,9 @@
 # single source of truth for that file.
 
 {
-  programs.zed-editor = {
+  programs.zed-editor = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     enable = true;
-    package = inputs.zed-upstream.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    package = pkgs.martin.zed-nightly-bin;
 
     extraPackages = with pkgs; [
       # Nix

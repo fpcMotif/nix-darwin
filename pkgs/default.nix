@@ -28,5 +28,6 @@ final: _prev:
     droid = final.callPackage ./droid.nix { };
     opencode = final.callPackage ./opencode.nix { };
     opencode-electron = final.callPackage ./opencode-electron.nix { };
+    zed-nightly-bin = final.callPackage ./zed-nightly-bin.nix { };
   };
 }

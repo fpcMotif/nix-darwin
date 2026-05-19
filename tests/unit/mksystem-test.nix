@@ -56,9 +56,9 @@ let
       (homeConfig.programs.agent-skills.enable == true)
       "agent-skills Home Manager module should be enabled")
 
-    (helpers.assertTest "grill-with-docs-skill-disabled"
-      (!(builtins.elem "grill-with-docs" homeConfig.programs.agent-skills.skills.enable))
-      "grill-with-docs should stay disabled in the Matt Pocock skill allowlist")
+    (helpers.assertTest "grill-with-docs-skill-enabled"
+      (builtins.elem "grill-with-docs" homeConfig.programs.agent-skills.skills.enable)
+      "grill-with-docs should stay discoverable from the Matt Pocock skill allowlist")
 
     (helpers.assertTest "grill-me-skill-disabled"
       (!(builtins.elem "grill-me" homeConfig.programs.agent-skills.skills.enable))

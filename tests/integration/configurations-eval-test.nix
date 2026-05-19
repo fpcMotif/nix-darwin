@@ -95,12 +95,12 @@ let
       (homeConfig.programs.agent-skills.sources ? mp-productivity)
       "${prefix} should configure the Matt Pocock productivity skill source")
 
-    (helpers.assertTest "${prefix}-agent-skills-disables-grill-skills"
+    (helpers.assertTest "${prefix}-agent-skills-prefers-grill-with-docs"
       (
-        !(builtins.elem "grill-with-docs" homeConfig.programs.agent-skills.skills.enable)
+        builtins.elem "grill-with-docs" homeConfig.programs.agent-skills.skills.enable
         && !(builtins.elem "grill-me" homeConfig.programs.agent-skills.skills.enable)
       )
-      "${prefix} should disable grill-me and grill-with-docs skills")
+      "${prefix} should expose grill-with-docs but not the older grill-me skill")
 
     (helpers.assertTest "${prefix}-agent-skills-agents-target"
       (homeConfig.programs.agent-skills.targets.agents.enable == true)
@@ -231,6 +231,13 @@ let
     (helpers.assertTest "darwin-has-oh-my-pi"
       (hasPackage "oh-my-pi" darwinHome.home.packages)
       "Darwin Home Manager packages should include oh-my-pi")
+
+    (helpers.assertTest "darwin-zed-uses-zed-nightly-bin"
+      (
+        darwinHome.programs.zed-editor.enable == true
+          && lib.getName darwinHome.programs.zed-editor.package == "zed-nightly-bin"
+      )
+      "Darwin Home Manager should pin Zed to the prebuilt nightly binary")
   ] ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
   wslConfig = self.nixosConfigurations.wsl.config;
@@ -284,6 +291,22 @@ let
     (helpers.assertTest "linux-excludes-darwin-only-agent-packages"
       (!(hasPackage "sourcegraph-amp" wslHome.home.packages))
       "Linux Home Manager packages should not include Darwin-only agent packages")
+
+    (helpers.assertTest "linux-zed-editor-disabled"
+      (
+        wslHome.programs.zed-editor.enable == false
+          && x230Home.programs.zed-editor.enable == false
+          && vmHome.programs.zed-editor.enable == false
+      )
+      "Linux Home Manager should leave programs.zed-editor off — zed-nightly-bin is Darwin-only")
+
+    (helpers.assertTest "linux-excludes-zed-nightly-bin-package"
+      (
+        !(hasPackage "zed-nightly-bin" wslHome.home.packages)
+          && !(hasPackage "zed-nightly-bin" x230Home.home.packages)
+          && !(hasPackage "zed-nightly-bin" vmHome.home.packages)
+      )
+      "Linux Home Manager package lists must never include the Darwin-only zed-nightly-bin")
   ]
   ++ (homeChecks "wsl" wslHome "/home/${user}")
   ++ (homeChecks "x230" x230Home "/home/${user}")

@@ -10,7 +10,7 @@ name: auto-update
 #
 # The PR auto-merges once build.yml's required checks turn green.
 #
-# Cadence rationale: amp / opencode / droid / codex each ship multiple builds
+# Cadence rationale: amp / opencode / codex each ship multiple builds
 # per day. A daily cron leaves the active system 24h behind upstream, which
 # triggers in-CLI "newer version available" banners on tools that self-check.
 # Hourly keeps drift under ~1h while still amortising into a single nightly-
@@ -92,7 +92,7 @@ jobs:
             - all flake inputs via `scripts/update-flake-inputs.sh`
               (nixpkgs → codex / zed-editor / node toolchain, darwin,
               home-manager, agent-skills, claude-code, NUR/crush, dotfiles, …)
-            - vendored derivations under `pkgs/`: codex, droid, sourcegraph-amp
+            - vendored derivations under `pkgs/`: codex, sourcegraph-amp
               (amp), gemini-cli-preview, opencode (cli + electron),
               pi-coding-agent, oh-my-pi.
 

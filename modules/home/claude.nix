@@ -99,7 +99,7 @@ let
   # excluded per upstream CONTEXT.md. New upstream skills under any bucket
   # auto-load on the next `nix flake update mattpocock-skills`.
   mattpocockBuckets = [ "engineering" "productivity" "misc" ];
-  disabledMattpocockSkills = [ "grill-me" "grill-with-docs" ];
+  disabledMattpocockSkills = [ "grill-me" ];
   mpSources = listToAttrs (map
     (b: {
       name = "mp-${b}";
@@ -255,7 +255,8 @@ in
   '';
 
   # Claude can cache Anthropic-provided skills outside the Nix-managed skill
-  # targets. Keep the disabled skills out of every picker source plus
+  # targets. Keep the disabled skills (currently grill-me — grill-with-docs is
+  # preserved as the preferred planning skill) out of every picker source plus
   # active Claude Desktop sessions and the skills-plugin cache.
   home.activation.claudeDisableGrillSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     for dir in ${lib.concatMapStringsSep " " (d: ''"${homeDir}/${d}"'') (lib.attrValues skillTargetDirs)}; do
