@@ -64,4 +64,29 @@ in
     ${lib.getExe pkgs.ruff} --version
     touch $out
   '';
+
+  # mkAppFromDmg helper: assert each caller lands a .app under
+  # $out/Applications. Catches "helper assembled but $out is empty" —
+  # the failure mode `nix flake check` alone wouldn't see.
+  smoke-build-dropbox = pkgs.runCommand "smoke-build-dropbox" { } (
+    if pkgs.stdenv.isDarwin then ''
+      echo "Building dropbox as a Darwin smoke test..."
+      test -d ${pkgs.martin.dropbox}/Applications/Dropbox.app
+      touch $out
+    '' else ''
+      echo "Skipping Darwin-only smoke test on this platform"
+      touch $out
+    ''
+  );
+
+  smoke-build-raycast = pkgs.runCommand "smoke-build-raycast" { } (
+    if pkgs.stdenv.isDarwin then ''
+      echo "Building raycast as a Darwin smoke test..."
+      test -d ${pkgs.martin.raycast}/Applications/Raycast.app
+      touch $out
+    '' else ''
+      echo "Skipping Darwin-only smoke test on this platform"
+      touch $out
+    ''
+  );
 }

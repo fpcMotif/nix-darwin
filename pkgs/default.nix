@@ -9,6 +9,7 @@ final: _prev:
 
   martin = {
     mkAppFromZip = final.callPackage ./lib/mk-app-from-zip.nix { };
+    mkAppFromDmg = final.callPackage ./lib/mk-app-from-dmg.nix { };
 
     dropbox = final.callPackage ./dropbox.nix { };
     google-drive = final.callPackage ./google-drive.nix { };

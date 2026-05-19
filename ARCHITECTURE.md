@@ -291,7 +291,7 @@ For these editors, keep shared instructions in `AGENTS.md` and add editor-native
 Default policy: **pure Nix first.**
 
 - **CLI / dev tools** → `modules/home/packages.nix`.
-- **Mac GUI apps Martin owns or vendors** → custom derivations in `pkgs/`, exposed as `pkgs.martin.<name>`, declared on the Darwin host where appropriate.
+- **Mac GUI apps Martin owns or vendors** → custom derivations in `pkgs/`, exposed as `pkgs.martin.<name>`, declared on the Darwin host where appropriate. Common shapes are factored into helpers in `pkgs/lib/`: `mkAppFromZip` for `.zip`-distributed apps (BetterMouse, Hammerspoon) and `mkAppFromDmg` for `.dmg`-distributed apps with the `.app` at the dmg root (Dropbox, Raycast). Bare-pkg installers (Squirrel) and dmg-containing-pkg installers (Google Drive) stay hand-rolled as one-off quirks until a second caller appears.
 - **System-level Mac apps currently in scope** — Dropbox, Google Drive, Raycast — declared on the Darwin host via `pkgs.martin.*`. Anything not yet packaged as a derivation is tracked as an explicit gap until it has one; brew is **not** a fallback.
 - **Agent / dev tooling** — Gemini preview, Amp, Pi, Oh My Pi — packaged in `pkgs/` as custom derivations.
 

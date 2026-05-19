@@ -1,32 +1,22 @@
 { lib
-, stdenv
 , fetchurl
-, undmg
+, martin
 ,
 }:
 
-stdenv.mkDerivation rec {
-  pname = "raycast";
+let
   version = "1.104.17";
+in
+martin.mkAppFromDmg {
+  pname = "raycast";
+  inherit version;
+  appName = "Raycast.app";
 
   src = fetchurl {
     url = "https://releases.raycast.com/releases/${version}/download?build=universal";
     name = "Raycast.dmg";
     hash = "sha256-vX1LYxiZ48H5fuFXKA+EJ62on3Fcb+e7obpabSQqOqE=";
   };
-
-  nativeBuildInputs = [ undmg ];
-  sourceRoot = ".";
-  phases = [ "unpackPhase" "installPhase" ];
-
-  installPhase = ''
-    runHook preInstall
-
-    mkdir -p "$out/Applications"
-    cp -R "Raycast.app" "$out/Applications/"
-
-    runHook postInstall
-  '';
 
   meta = {
     description = "Raycast launcher";
