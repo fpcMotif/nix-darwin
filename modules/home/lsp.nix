@@ -92,6 +92,18 @@ let
     ".svelte" = "svelte";
   };
 
+  # Render an attrset's keys as a TOML string array. Lets the Codex
+  # config below stay in sync with the Nix-side extension maps without
+  # hand-listing extensions twice.
+  tomlExts = attrs: lib.concatMapStringsSep ", " (e: ''"${e}"'') (builtins.attrNames attrs);
+
+  jsExtsToml = tomlExts jsExtensions;
+  jsAndVueExtsToml = tomlExts (jsExtensions // oxlintExtraExtensions);
+  tailwindExtsToml = tomlExts (jsExtensions // oxlintExtraExtensions // {
+    ".html" = "html";
+    ".css"  = "css";
+  });
+
   # ~/.claude/lsp.json — user-global LSP config for Claude Code's
   # built-in LSP tool. Project-root `.lsp.json` overrides this.
   #
@@ -181,7 +193,8 @@ let
   });
 
   # Codex CLI ~/.codex/config.toml [lsp] block — same server set.
-  # Activation merges idempotently — only writes if `[lsp]` is absent.
+  # Activation merges idempotently — re-appends only if our managed
+  # marker is missing.
   codexLspToml = pkgs.writeText "codex-lsp.toml" ''
 
     # --- managed by ~/nix-config/modules/home/lsp.nix (do not hand-edit) ---
@@ -195,13 +208,13 @@ let
     [lsp.servers.tsgo]
     command = "tsgo"
     args = ["--lsp", "--stdio"]
-    extensions = [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs"]
+    extensions = [${jsExtsToml}]
 
     # oxc-based linter (Vite ecosystem).
     [lsp.servers.oxlint]
     command = "oxlint"
     args = ["--lsp"]
-    extensions = [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts", ".mjs", ".cjs", ".vue", ".astro", ".svelte"]
+    extensions = [${jsAndVueExtsToml}]
     is_linter = true
 
     [lsp.servers.vue]
@@ -222,7 +235,7 @@ let
     [lsp.servers.tailwindcss]
     command = "tailwindcss-language-server"
     args = ["--stdio"]
-    extensions = [".ts", ".tsx", ".js", ".jsx", ".vue", ".astro", ".svelte", ".html", ".css"]
+    extensions = [${tailwindExtsToml}]
 
     [lsp.servers.gopls]
     command = "gopls"
@@ -259,19 +272,20 @@ in
 
   # === Codex CLI: idempotent [lsp] merge ===
   # Codex config.toml is fully user-managed (auth tokens, profiles,
-  # marketplaces). We append our LSP block only if no `[lsp]` section
-  # exists. Re-runs on every darwin-rebuild switch.
+  # marketplaces). We append our LSP block only if our managed marker
+  # is absent — that way a user-authored `[lsp]` section coexists with
+  # ours on next switch if they ever delete our block. Re-runs every
+  # darwin-rebuild switch.
   home.activation.codexLspConfig = hm.dag.entryAfter [ "writeBoundary" ] ''
     target="${homeDir}/.codex/config.toml"
     [ -f "$target" ] || { echo "codex-lsp: $target missing, skipping" >&2; exit 0; }
 
-    if ${pkgs.gnugrep}/bin/grep -qE '^\[lsp(\.|\])' "$target"; then
-      # Already has [lsp] or [lsp.*] — leave it alone.
+    if ${pkgs.gnugrep}/bin/grep -qF 'managed by ~/nix-config/modules/home/lsp.nix' "$target"; then
       exit 0
     fi
 
     ${pkgs.coreutils}/bin/cat ${codexLspToml} >> "$target"
-    echo "codex-lsp: appended [lsp] block to $target" >&2
+    echo "codex-lsp: appended managed [lsp] block to $target" >&2
   '';
 
   # === Claude Desktop / Codex App: ensure mcpServers key exists ===

@@ -56,24 +56,21 @@ let
       exit 0
     fi
 
-    # Codex PreToolUse payloads carry turn_id and currently reject updatedInput.
-    if printf '%s' "$INPUT" | "$JQ" -e 'has("turn_id")' >/dev/null 2>&1; then
-      exit 0
-    fi
-
-    ORIGINAL_INPUT=$(printf '%s' "$INPUT" | "$JQ" -c '.tool_input')
-    UPDATED_INPUT=$(printf '%s' "$ORIGINAL_INPUT" | "$JQ" --arg cmd "$REWRITTEN" '.command = $cmd')
-
-    "$JQ" -n \
-      --argjson updated "$UPDATED_INPUT" \
-      '{
-        "hookSpecificOutput": {
-          "hookEventName": "PreToolUse",
-          "permissionDecision": "allow",
-          "permissionDecisionReason": "RTK auto-rewrite",
-          "updatedInput": $updated
+    # Codex PreToolUse payloads carry turn_id and reject updatedInput;
+    # short-circuit to `empty` in that branch. One jq pass folds the
+    # turn_id check, tool_input patch, and hookSpecificOutput wrap.
+    printf '%s' "$INPUT" | "$JQ" --arg cmd "$REWRITTEN" '
+      if has("turn_id") then empty
+      else {
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse",
+          permissionDecision: "allow",
+          permissionDecisionReason: "RTK auto-rewrite",
+          updatedInput: (.tool_input + { command: $cmd })
         }
-      }'
+      }
+      end
+    '
   '';
   rtkHookChecksum = pkgs.runCommand "rtk-hook.sha256" { } ''
     ${pkgs.coreutils}/bin/sha256sum ${rtkRewriteHook} \
@@ -86,6 +83,17 @@ let
   # store paths collapse silently across ~/.claude/skills,
   # ~/.pi/agent/skills, ~/.cursor/skills, ~/.codex/skills, ~/.agents/skills.
   linkTarget = dest: { enable = true; inherit dest; structure = "link"; systems = [ ]; };
+
+  # Skill picker target dirs. Used both by `programs.agent-skills.targets`
+  # below and by claudeDisableGrillSkills' rm-loop — keeping one list
+  # means a new target is auto-covered by the disable sweep.
+  skillTargetDirs = {
+    agents = ".agents/skills";
+    claude = ".claude/skills";
+    cursor = ".cursor/skills";
+    codex = ".codex/skills";
+    pi = ".pi/agent/skills";
+  };
 
   # mattpocock/skills promoted buckets. `personal/` and `deprecated/` are
   # excluded per upstream CONTEXT.md. New upstream skills under any bucket
@@ -177,36 +185,33 @@ in
 {
   imports = [ inputs.agent-skills.homeManagerModules.default ];
 
-  # === Stable user-PATH binary ===
-  # Survives store-path churn so macOS TCC and editor integrations don't
-  # re-prompt every darwin-rebuild switch.
-  home.file.".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
-
   # === Reproducible files (read-only, dotfiles-sourced) ===
-  home.file = {
-    ".claude/CLAUDE.md".source = renderChezmoi (dotClaude + "/claude.md.tmpl");
-    ".claude/RTK.md".source = dotClaude + "/RTK.md";
-    ".codex/RTK.md".source = dotClaude + "/RTK.md";
-    "RTK.md".source = dotClaude + "/RTK.md";
-    ".claude/statusline-command.sh" = {
-      source = dotClaude + "/executable_statusline-command.sh";
-      executable = true;
-    };
-    ".claude/hooks/rtk-rewrite.sh" = {
-      source = rtkRewriteHook;
-      executable = true;
-    };
-    ".claude/hooks/.rtk-hook.sha256".source = rtkHookChecksum;
-    ".codex/hooks/rtk-rewrite.sh" = {
-      source = rtkRewriteHook;
-      executable = true;
-    };
-    ".codex/hooks/.rtk-hook.sha256".source = rtkHookChecksum;
-    ".claude/hooks/stop-hook-debug.sh" = {
-      source = stopHookDebug;
-      executable = true;
-    };
-  };
+  # `.local/bin/claude` is a stable user-PATH binary that survives store-path
+  # churn so macOS TCC and editor integrations don't re-prompt every switch.
+  home.file =
+    let
+      mkRtkFiles = root: {
+        "${root}/RTK.md".source = dotClaude + "/RTK.md";
+        "${root}/hooks/rtk-rewrite.sh" = {
+          source = rtkRewriteHook;
+          executable = true;
+        };
+        "${root}/hooks/.rtk-hook.sha256".source = rtkHookChecksum;
+      };
+    in
+    {
+      ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
+      ".claude/CLAUDE.md".source = renderChezmoi (dotClaude + "/claude.md.tmpl");
+      "RTK.md".source = dotClaude + "/RTK.md";
+      ".claude/statusline-command.sh" = {
+        source = dotClaude + "/executable_statusline-command.sh";
+        executable = true;
+      };
+      ".claude/hooks/stop-hook-debug.sh" = {
+        source = stopHookDebug;
+        executable = true;
+      };
+    } // mkRtkFiles ".claude" // mkRtkFiles ".codex";
 
   # === Stop hook diagnostic instrumentation ===
   # Idempotently rewrites the 3 installed plugin Stop hook configs to
@@ -224,9 +229,10 @@ in
       local hook_id="$1" file="$2"
       [ -f "$file" ] || { echo "stop-hook-debug: missing $file, skipping" >&2; return 0; }
 
-      # Already wrapped? Compare against the wrapper marker.
+      # Already wrapped? `any` over all entries (not just [0]) avoids
+      # re-wrap stacking if a plugin update reorders Stop hook entries.
       if ${pkgs.jq}/bin/jq -e --arg w "stop-hook-debug.sh" \
-          '.hooks.Stop[0].hooks[0].command | contains($w)' "$file" >/dev/null 2>&1; then
+          '[.hooks.Stop[]?.hooks[]?.command | contains($w)] | any' "$file" >/dev/null 2>&1; then
         return 0
       fi
 
@@ -249,20 +255,20 @@ in
   '';
 
   # Claude can cache Anthropic-provided skills outside the Nix-managed skill
-  # targets. Keep the grill skills out of both picker sources.
+  # targets. Keep the disabled skills out of every picker source plus
+  # active Claude Desktop sessions and the skills-plugin cache.
   home.activation.claudeDisableGrillSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    for dir in \
-      "${homeDir}/.agents/skills" \
-      "${homeDir}/.claude/skills" \
-      "${homeDir}/.cursor/skills" \
-      "${homeDir}/.codex/skills" \
-      "${homeDir}/.pi/agent/skills"
-    do
-      rm -rf -- "$dir/grill-me" "$dir/grill-with-docs"
+    for dir in ${lib.concatMapStringsSep " " (d: ''"${homeDir}/${d}"'') (lib.attrValues skillTargetDirs)}; do
+      for skill in ${lib.escapeShellArgs disabledMattpocockSkills}; do
+        rm -rf -- "$dir/$skill"
+      done
     done
 
     sessions="${homeDir}/Library/Application Support/Claude/local-agent-mode-sessions"
     if [ -d "$sessions" ]; then
+      # grep -lZ pre-filter: skip jq+mv on the 99% of session files
+      # that don't mention the skill. Cuts a per-switch O(sessions)
+      # spawn storm down to O(matches).
       while IFS= read -r -d "" file; do
         tmp=$(mktemp)
         ${pkgs.jq}/bin/jq '
@@ -272,7 +278,8 @@ in
             .
           end
         ' "$file" > "$tmp" && mv "$tmp" "$file"
-      done < <(${pkgs.findutils}/bin/find "$sessions" -type f -name "local_*.json" -print0)
+      done < <(${pkgs.findutils}/bin/find "$sessions" -type f -name "local_*.json" \
+                 -exec ${pkgs.gnugrep}/bin/grep -lZ "anthropic-skills:grill-me" {} +)
 
       while IFS= read -r -d "" dir; do
         parent="$(${pkgs.coreutils}/bin/dirname "$dir")"
@@ -320,13 +327,7 @@ in
       };
     };
 
-    targets = {
-      agents = linkTarget ".agents/skills";
-      claude = linkTarget ".claude/skills";
-      cursor = linkTarget ".cursor/skills";
-      codex = linkTarget ".codex/skills";
-      pi = linkTarget ".pi/agent/skills";
-    };
+    targets = lib.mapAttrs (_: linkTarget) skillTargetDirs;
 
     excludePatterns = [ ];
   };
