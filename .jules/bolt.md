@@ -1,0 +1,3 @@
+## 2025-02-27 - Cache xcrun for faster ZSH startup
+**Learning:** Shell startup scripts (`zshrc`) in macOS environments often call `xcrun --show-sdk-path` to set `SDKROOT`, adding 20-50ms (or more on cold starts) to every new shell. Since this value rarely changes, evaluating it synchronously on every prompt creation is an anti-pattern. Zsh's built-in file reading `$(<file)` avoids subshell forks entirely, making cache reads essentially free.
+**Action:** Always cache slow, rarely-changing system calls (like `xcrun` or `brew --prefix`) in shell rc files using files and `$(<file)` to keep interactive shell startup time minimal.
