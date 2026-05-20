@@ -28,7 +28,8 @@ declare -A cli_assets=(
   [opencode-linux-arm64.tar.gz]=aarch64-linux
 )
 declare -A electron_assets=(
-  [opencode-electron-mac-arm64.zip]=aarch64-darwin
+  # Upstream renamed `opencode-electron-*` → `opencode-desktop-*` in v1.15.x.
+  [opencode-desktop-mac-arm64.zip]=aarch64-darwin
 )
 
 for asset in "${!cli_assets[@]}"; do
