@@ -34,6 +34,70 @@ let
   };
 
   mkSkill = from: path: packages: { inherit from path packages; };
+
+  # Append-only `transform`s for two planning skills (wired in
+  # skills.explicit below). Each names the Karpathy principle the skill
+  # already embodies — so the skills compose instead of restating one
+  # another — and adds the one principle both under-emphasise:
+  # Goal-Driven Execution (close with a verifiable loop). `transform`
+  # receives the whole SKILL.md including frontmatter; we append after
+  # `original` so the YAML stays at the top (never prepend). Footer bodies
+  # sit at column 0 inside the '' blocks so Nix de-indentation can't
+  # silently reflow the embedded markdown.
+  appendKarpathy = body: { original, ... }: original + "\n\n" + body;
+
+  grillKarpathyFooter = ''
+## Karpathy alignment
+
+This grilling *is* **Think Before Coding** — don't assume, surface confusion, present interpretations instead of silently picking one. Two reinforcements while you run it:
+
+- When you give a question's recommended answer, also show the interpretations you chose between and why. Don't collapse to one silently.
+- The confusion to surface is yours too. If the code contradicts what the user just told you, name the contradiction and stop — don't paper over it.
+
+## Close with verifiable goals
+
+A session that ends in "shared understanding" but no checkable plan isn't finished — that's **Goal-Driven Execution**, the principle grilling alone skips. Before you stop, turn the agreed plan into success criteria the next agent can loop against:
+
+```
+1. [step] -> verify: [check]
+2. [step] -> verify: [check]
+```
+
+Hand that block to the implementation skill (tdd, executing-plans). Strong criteria let it loop without you; "make it work" forces it back to ask.
+
+## Observable signals
+
+You'll know this skill is working when:
+- The user changes their mind mid-grilling — the questions found something they hadn't articulated.
+- CONTEXT.md terms surface unchanged in later sessions; the vocabulary stuck.
+- Implementation plans downstream contain fewer wrong assumptions that need walking back.
+'';
+
+  deepenKarpathyFooter = ''
+## Karpathy alignment
+
+The architecture vocabulary already encodes two Karpathy principles — name them so this skill composes with the others instead of restating them:
+
+- **Simplicity First** is the seam rule. "One adapter = hypothetical seam, two = real" is just "no abstraction for single-use" — don't add a port until a second adapter earns it.
+- **Surgical Changes** governs *execution*, not proposal. Propose freely; once the user approves a candidate, every changed line traces to that candidate. No drive-by refactors of adjacent code, no reopening what an ADR already settled.
+
+## Close with verifiable goals
+
+"Deepen module X" becomes "tests green before and after" — **Goal-Driven Execution**. DEEPENING.md already says the interface is the test surface and old shallow-module tests become waste; state that as a loop before any edit:
+
+```
+1. Characterise current behaviour with tests at the target interface -> verify: green on today's code
+2. Deepen the module behind that interface                           -> verify: same tests stay green
+3. Delete the superseded shallow-module tests                        -> verify: suite green, behaviour still covered
+```
+
+## Observable signals
+
+You'll know this skill is working when:
+- Every proposed candidate passes the deletion test — removing it makes the codebase clearly worse.
+- No proposed seam ships with only one adapter; the second adapter earned it.
+- Tests at the deepened interface survive subsequent internal refactors (they describe behaviour, not implementation).
+'';
   rtkRewriteHook = pkgs.writeShellScript "rtk-rewrite.sh" ''
     JQ=${getExe pkgs.jq}
     RTK=${getExe pkgs.rtk}
@@ -99,7 +163,13 @@ let
   # excluded per upstream CONTEXT.md. New upstream skills under any bucket
   # auto-load on the next `nix flake update mattpocock-skills`.
   mattpocockBuckets = [ "engineering" "productivity" "misc" ];
+  # Skills genuinely turned off — kept out of every picker.
   disabledMattpocockSkills = [ "grill-me" ];
+  # NOT disabled — still enabled, just sourced via skills.explicit below so a
+  # Karpathy `transform` can be attached. They only leave bucket auto-discovery
+  # because a skill present in both the allowlist and `explicit` makes
+  # selectSkills throw on a duplicate id.
+  transformedMattpocockSkills = [ "grill-with-docs" "improve-codebase-architecture" ];
   mpSources = listToAttrs (map
     (b: {
       name = "mp-${b}";
@@ -117,7 +187,7 @@ let
           (name: type:
             type == "directory"
             && builtins.pathExists (root + "/${name}/SKILL.md")
-            && !(builtins.elem name disabledMattpocockSkills)
+            && !(builtins.elem name (disabledMattpocockSkills ++ transformedMattpocockSkills))
           )
           entries);
     in
@@ -325,6 +395,15 @@ in
         lazygit = mkSkill "dotfiles-claude" "lazygit" [ pkgs.git pkgs.lazygit ];
         ralph-loop = mkSkill "dotfiles-pi" "ralph-loop" [ ];
         web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];
+
+        # Re-added from the engineering bucket (see disabledMattpocockSkills)
+        # so `transform` can append the Karpathy-alignment footer to each.
+        grill-with-docs = mkSkill "mp-engineering" "grill-with-docs" [ ] // {
+          transform = appendKarpathy grillKarpathyFooter;
+        };
+        improve-codebase-architecture = mkSkill "mp-engineering" "improve-codebase-architecture" [ ] // {
+          transform = appendKarpathy deepenKarpathyFooter;
+        };
       };
     };
 
