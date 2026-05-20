@@ -1,10 +1,10 @@
-{ pkgs, lib, ... }:
+{ inputs, pkgs, lib, ... }:
 
 # Zed editor — fully Nix-managed via the upstream `programs.zed-editor`
-# home-manager module. zed-editor itself comes from nixpkgs (auto-upgraded
-# nightly via `nix flake update nixpkgs`); extensions install in-app on first
-# launch from the strings declared below; LSPs are wired to nixpkgs
-# derivations so nothing reaches outside the Nix store.
+# home-manager module. Zed itself comes from the upstream Zed flake, so it can
+# move with upstream when `zed-upstream` is updated while remaining Nix-owned.
+# Extensions install in-app on first launch from the strings declared below;
+# LSPs are wired to nixpkgs derivations so nothing reaches outside the Nix store.
 #
 # Toolchain choices:
 #   TypeScript / JS  — tsgo (typescript-go, the Go rewrite from the TS team)
@@ -25,6 +25,7 @@
 {
   programs.zed-editor = {
     enable = true;
+    package = inputs.zed-upstream.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
     extraPackages = with pkgs; [
       # Nix

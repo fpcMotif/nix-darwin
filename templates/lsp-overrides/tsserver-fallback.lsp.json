@@ -1,0 +1,38 @@
+{
+  "$comment": "Fallback for projects that need full tsserver plugin support not yet covered by tsgo --lsp (e.g., legacy ts-plugin patterns). Uses vtsls — a faster drop-in tsserver wrapper. Drop at project root as .lsp.json. Disables tsgo for this project; oxlint still runs.",
+  "lspServers": {
+    "typescript": {
+      "command": "vtsls",
+      "args": ["--stdio"],
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".mts": "typescript",
+        ".cts": "typescript",
+        ".js": "javascript",
+        ".jsx": "javascriptreact",
+        ".mjs": "javascript",
+        ".cjs": "javascript"
+      },
+      "initializationOptions": {
+        "typescript": {
+          "tsserver": {
+            "useSyntaxServer": "never",
+            "experimental": { "enableProjectDiagnostics": true }
+          }
+        }
+      }
+    },
+    "oxlint": {
+      "command": "oxlint",
+      "args": ["--lsp"],
+      "extensionToLanguage": {
+        ".ts": "typescript",
+        ".tsx": "typescriptreact",
+        ".js": "javascript",
+        ".jsx": "javascriptreact"
+      },
+      "isLinter": true
+    }
+  }
+}

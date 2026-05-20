@@ -16,6 +16,7 @@
     ./yazi.nix
     ./prompt.nix
     ./claude.nix
+    ./lsp.nix
     ./droid.nix
     ./opencode.nix
     ./zed.nix

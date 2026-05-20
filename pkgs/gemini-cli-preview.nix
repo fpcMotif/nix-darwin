@@ -80,6 +80,15 @@ buildNpmPackage (finalAttrs: {
     substituteInPlace packages/core/src/tools/ripGrep.ts \
       --replace-fail "await ensureRgPath();" "'${lib.getExe ripgrep}';"
 
+    # getRipgrepPath() only probes a bundled vendor/ripgrep dir that the Nix
+    # build does NOT ship, so canUseRipgrep() returns false and the registry
+    # falls back to GrepTool ("Ripgrep is not available."). Make the lookup
+    # return the Nix ripgrep directly so RipGrepTool gets registered.
+    substituteInPlace packages/core/src/tools/ripGrep.ts \
+      --replace-fail \
+        "for (const candidate of candidatePaths) {" \
+        "return '${lib.getExe ripgrep}'; for (const candidate of candidatePaths) {"
+
     # Disable auto-update at compile time (Nix manages versions).
     sed -i '/enableAutoUpdate:/,/default: true/ s/default: true/default: false/' packages/cli/src/config/settingsSchema.ts
     sed -i '/enableAutoUpdateNotification:/,/default: true/ s/default: true/default: false/' packages/cli/src/config/settingsSchema.ts

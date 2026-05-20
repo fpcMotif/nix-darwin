@@ -40,6 +40,10 @@
     remove_legacy_path "$HOME/.claude/statusline-command.sh"
     remove_legacy_path "$HOME/.claude/hooks/rtk-rewrite.sh"
     remove_legacy_path "$HOME/.claude/hooks/.rtk-hook.sha256"
+    remove_legacy_path "$HOME/.codex/RTK.md"
+    remove_legacy_path "$HOME/.codex/hooks/rtk-rewrite.sh"
+    remove_legacy_path "$HOME/.codex/hooks/.rtk-hook.sha256"
+    remove_legacy_path "$HOME/RTK.md"
 
     remove_legacy_path "$HOME/.local/bin/opencode"
     remove_legacy_path "$HOME/.local/bin/opencode-electron"

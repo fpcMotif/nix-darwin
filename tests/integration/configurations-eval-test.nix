@@ -91,9 +91,16 @@ let
       (homeConfig.programs.agent-skills.sources ? dotfiles-claude)
       "${prefix} should configure dotfiles-claude skill source")
 
-    (helpers.assertTest "${prefix}-agent-skills-source-grill-me"
-      (homeConfig.programs.agent-skills.sources ? grill-me)
-      "${prefix} should configure grill-me skill source")
+    (helpers.assertTest "${prefix}-agent-skills-source-mp-productivity"
+      (homeConfig.programs.agent-skills.sources ? mp-productivity)
+      "${prefix} should configure the Matt Pocock productivity skill source")
+
+    (helpers.assertTest "${prefix}-agent-skills-disables-grill-skills"
+      (
+        !(builtins.elem "grill-with-docs" homeConfig.programs.agent-skills.skills.enable)
+        && !(builtins.elem "grill-me" homeConfig.programs.agent-skills.skills.enable)
+      )
+      "${prefix} should disable grill-me and grill-with-docs skills")
 
     (helpers.assertTest "${prefix}-agent-skills-agents-target"
       (homeConfig.programs.agent-skills.targets.agents.enable == true)
