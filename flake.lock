@@ -176,11 +176,11 @@
     "mattpocock-skills": {
       "flake": false,
       "locked": {
-        "lastModified": 1779106888,
-        "narHash": "sha256-jyTajdFYJKoU2XBHi8rM/gsf/mg6s4oOvANVkh3jLU8=",
+        "lastModified": 1779266813,
+        "narHash": "sha256-Qwuu27f95xgAJ4hdv/4TNahHhprCMIxl1H9f9ymEsno=",
         "ref": "main",
-        "rev": "67bce91c80cd1020a4f068ced32d0281656842ad",
-        "revCount": 79,
+        "rev": "b8be62ffacb0118fa3eaa29a0923c87c8c11985c",
+        "revCount": 85,
         "type": "git",
         "url": "https://github.com/mattpocock/skills.git"
       },
@@ -260,7 +260,25 @@
         "mattpocock-skills": "mattpocock-skills",
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": "nixpkgs",
-        "nur": "nur"
+        "nur": "nur",
+        "superpowers": "superpowers"
+      }
+    },
+    "superpowers": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1777932301,
+        "narHash": "sha256-3E3rO6hR87JUfS3XV1Eaoz6SDWOftleWvN9UPNFEMjw=",
+        "ref": "main",
+        "rev": "f2cbfbefebbfef77321e4c9abc9e949826bea9d7",
+        "revCount": 440,
+        "type": "git",
+        "url": "https://github.com/obra/superpowers.git"
+      },
+      "original": {
+        "ref": "main",
+        "type": "git",
+        "url": "https://github.com/obra/superpowers.git"
       }
     },
     "systems": {

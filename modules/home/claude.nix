@@ -47,57 +47,57 @@ let
   appendKarpathy = body: { original, ... }: original + "\n\n" + body;
 
   grillKarpathyFooter = ''
-## Karpathy alignment
+    ## Karpathy alignment
 
-This grilling *is* **Think Before Coding** — don't assume, surface confusion, present interpretations instead of silently picking one. Two reinforcements while you run it:
+    This grilling *is* **Think Before Coding** — don't assume, surface confusion, present interpretations instead of silently picking one. Two reinforcements while you run it:
 
-- When you give a question's recommended answer, also show the interpretations you chose between and why. Don't collapse to one silently.
-- The confusion to surface is yours too. If the code contradicts what the user just told you, name the contradiction and stop — don't paper over it.
+    - When you give a question's recommended answer, also show the interpretations you chose between and why. Don't collapse to one silently.
+    - The confusion to surface is yours too. If the code contradicts what the user just told you, name the contradiction and stop — don't paper over it.
 
-## Close with verifiable goals
+    ## Close with verifiable goals
 
-A session that ends in "shared understanding" but no checkable plan isn't finished — that's **Goal-Driven Execution**, the principle grilling alone skips. Before you stop, turn the agreed plan into success criteria the next agent can loop against:
+    A session that ends in "shared understanding" but no checkable plan isn't finished — that's **Goal-Driven Execution**, the principle grilling alone skips. Before you stop, turn the agreed plan into success criteria the next agent can loop against:
 
-```
-1. [step] -> verify: [check]
-2. [step] -> verify: [check]
-```
+    ```
+    1. [step] -> verify: [check]
+    2. [step] -> verify: [check]
+    ```
 
-Hand that block to the implementation skill (tdd, executing-plans). Strong criteria let it loop without you; "make it work" forces it back to ask.
+    Hand that block to the implementation skill (tdd, executing-plans). Strong criteria let it loop without you; "make it work" forces it back to ask.
 
-## Observable signals
+    ## Observable signals
 
-You'll know this skill is working when:
-- The user changes their mind mid-grilling — the questions found something they hadn't articulated.
-- CONTEXT.md terms surface unchanged in later sessions; the vocabulary stuck.
-- Implementation plans downstream contain fewer wrong assumptions that need walking back.
-'';
+    You'll know this skill is working when:
+    - The user changes their mind mid-grilling — the questions found something they hadn't articulated.
+    - CONTEXT.md terms surface unchanged in later sessions; the vocabulary stuck.
+    - Implementation plans downstream contain fewer wrong assumptions that need walking back.
+  '';
 
   deepenKarpathyFooter = ''
-## Karpathy alignment
+    ## Karpathy alignment
 
-The architecture vocabulary already encodes two Karpathy principles — name them so this skill composes with the others instead of restating them:
+    The architecture vocabulary already encodes two Karpathy principles — name them so this skill composes with the others instead of restating them:
 
-- **Simplicity First** is the seam rule. "One adapter = hypothetical seam, two = real" is just "no abstraction for single-use" — don't add a port until a second adapter earns it.
-- **Surgical Changes** governs *execution*, not proposal. Propose freely; once the user approves a candidate, every changed line traces to that candidate. No drive-by refactors of adjacent code, no reopening what an ADR already settled.
+    - **Simplicity First** is the seam rule. "One adapter = hypothetical seam, two = real" is just "no abstraction for single-use" — don't add a port until a second adapter earns it.
+    - **Surgical Changes** governs *execution*, not proposal. Propose freely; once the user approves a candidate, every changed line traces to that candidate. No drive-by refactors of adjacent code, no reopening what an ADR already settled.
 
-## Close with verifiable goals
+    ## Close with verifiable goals
 
-"Deepen module X" becomes "tests green before and after" — **Goal-Driven Execution**. DEEPENING.md already says the interface is the test surface and old shallow-module tests become waste; state that as a loop before any edit:
+    "Deepen module X" becomes "tests green before and after" — **Goal-Driven Execution**. DEEPENING.md already says the interface is the test surface and old shallow-module tests become waste; state that as a loop before any edit:
 
-```
-1. Characterise current behaviour with tests at the target interface -> verify: green on today's code
-2. Deepen the module behind that interface                           -> verify: same tests stay green
-3. Delete the superseded shallow-module tests                        -> verify: suite green, behaviour still covered
-```
+    ```
+    1. Characterise current behaviour with tests at the target interface -> verify: green on today's code
+    2. Deepen the module behind that interface                           -> verify: same tests stay green
+    3. Delete the superseded shallow-module tests                        -> verify: suite green, behaviour still covered
+    ```
 
-## Observable signals
+    ## Observable signals
 
-You'll know this skill is working when:
-- Every proposed candidate passes the deletion test — removing it makes the codebase clearly worse.
-- No proposed seam ships with only one adapter; the second adapter earned it.
-- Tests at the deepened interface survive subsequent internal refactors (they describe behaviour, not implementation).
-'';
+    You'll know this skill is working when:
+    - Every proposed candidate passes the deletion test — removing it makes the codebase clearly worse.
+    - No proposed seam ships with only one adapter; the second adapter earned it.
+    - Tests at the deepened interface survive subsequent internal refactors (they describe behaviour, not implementation).
+  '';
   rtkRewriteHook = pkgs.writeShellScript "rtk-rewrite.sh" ''
     JQ=${getExe pkgs.jq}
     RTK=${getExe pkgs.rtk}
@@ -251,6 +251,17 @@ You'll know this skill is working when:
   # `nix flake update effect-ts-skills`. Replaces `bunx skills add Effect-TS/skills`
   # so Nix stays the single source of truth — no runtime mutation of ~/.claude/skills.
   effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
+
+  # obra/superpowers (the original; flat `skills/<name>/SKILL.md`). Auto-updates
+  # on `nix flake update superpowers`. Only `brainstorming` is enabled — every
+  # other upstream skill is still discovered into the catalog (so it tracks
+  # upstream) but left unbundled (disabled). New skills do NOT auto-enable; add
+  # the id here to turn one on. The frad-dotclaude/superpowers *plugin* ships its
+  # own brainstorming; claudeDisableSuperpowersPluginBrainstorming below parks
+  # just that one so exactly one brainstorming surfaces (the plugin's other
+  # skills stay live).
+  superpowersSources = { superpowers = mkSource "superpowers" "skills" null; };
+  enabledSuperpowersSkills = [ "brainstorming" ];
 in
 {
   imports = [ inputs.agent-skills.homeManagerModules.default ];
@@ -362,6 +373,26 @@ in
     fi
   '';
 
+  # obra/superpowers (Nix-managed) is the canonical `brainstorming` source. The
+  # frad-dotclaude/superpowers *plugin* ships its own `brainstorming`, so both
+  # would otherwise surface in the picker. Park ONLY the plugin's `brainstorming`
+  # into a sibling skills-disabled/ dir so exactly one survives (the obra one);
+  # every other plugin skill (writing-plans, executing-plans, systematic-debugging,
+  # behavior-driven-development, need-vet, agent-team-driven-development, ...) is
+  # left live on purpose. Non-destructive and version-agnostic (globs the version
+  # dir); re-runs each switch, so a plugin update that restores brainstorming/ is
+  # re-parked on the next rebuild. The plugin's hooks/commands framework is
+  # untouched (separate concern — see claudeStopHookDebug).
+  home.activation.claudeDisableSuperpowersPluginBrainstorming = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    for skills_dir in "${homeDir}"/.claude/plugins/cache/frad-dotclaude/superpowers/*/skills; do
+      [ -d "$skills_dir/brainstorming" ] || continue
+      disabled="$(${pkgs.coreutils}/bin/dirname "$skills_dir")/skills-disabled"
+      mkdir -p "$disabled"
+      rm -rf -- "$disabled/brainstorming"
+      mv -- "$skills_dir/brainstorming" "$disabled/brainstorming"
+    done
+  '';
+
   # === settings.json: declarative seed, mutable thereafter ===
   # Claude rewrites theme, env vars, and plugin state into this file at
   # runtime, so a hard symlink would fight the app. Seed once on first
@@ -382,10 +413,10 @@ in
         "^(git-workflow|review|ralph-loop|web-browser)$";
       dotfiles-claude = mkSource "dotfiles" "dot_claude/skills"
         "^(lazygit)$";
-    } // mpSources // effectSources;
+    } // mpSources // effectSources // superpowersSources;
 
     skills = {
-      enable = enabledMattpocockSkills;
+      enable = enabledMattpocockSkills ++ enabledSuperpowersSkills;
       enableAll = builtins.attrNames effectSources;
       explicit = {
         # Skills that need CLI deps symlinked into the bundle dir.

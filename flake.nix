@@ -49,6 +49,11 @@
       url = "git+https://github.com/Effect-TS/skills.git?ref=main";
       flake = false;
     };
+
+    superpowers = {
+      url = "git+https://github.com/obra/superpowers.git?ref=main";
+      flake = false;
+    };
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:
