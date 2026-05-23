@@ -5,8 +5,6 @@
     inputs.nixos-wsl.nixosModules.wsl
   ];
 
-  networking.hostName = "wsl";
-
   # Borrowed from the Mitchell Hashimoto WSL reference: retain derivation
   # outputs for faster local rebuild iteration and use the conventional /mnt
   # Windows drive mount root.

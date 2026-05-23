@@ -12,7 +12,7 @@ bumps that landed in the same PR.
 
 ```bash
 sudo nix run nix-darwin -- switch \
-  --flake "$HOME/nix-config#Martins-Mac-mini" \
+  --flake "$HOME/nix-config#f" \
   --override-input claude-code github:sadjow/claude-code-nix?ref=v2.1.121
 ```
 
@@ -57,7 +57,7 @@ substituter for one rebuild:
 
 ```bash
 sudo nix run nix-darwin -- switch \
-  --flake "$HOME/nix-config#Martins-Mac-mini" \
+  --flake "$HOME/nix-config#f" \
   --option substituters https://cache.nixos.org \
   --option trusted-public-keys 'cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY='
 ```

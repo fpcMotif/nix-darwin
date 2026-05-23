@@ -34,7 +34,7 @@ jobs:
         run: nix flake check --show-trace --print-build-logs
 
   darwin:
-    name: Martins-Mac-mini (aarch64-darwin)
+    name: f (aarch64-darwin)
     runs-on: macos-14
     needs: flake-check
     steps:
@@ -49,10 +49,10 @@ jobs:
       - name: Run nix flake check (aarch64-darwin)
         run: nix flake check --show-trace --print-build-logs
 
-      - name: Build darwinConfigurations.Martins-Mac-mini
+      - name: Build darwinConfigurations.f
         run: |
           nix build \
-            .#darwinConfigurations.Martins-Mac-mini.system \
+            .#darwinConfigurations.f.system \
             --no-link --print-out-paths --show-trace
 
   nixos:

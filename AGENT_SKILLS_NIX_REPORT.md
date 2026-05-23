@@ -178,7 +178,7 @@ When revising this setup:
 6. Enable only targets that correspond to tools actually used.
 7. Before enabling a new target, check whether that directory already contains unmanaged files. Activation can delete or overwrite files depending on the selected structure.
 8. If a skill needs tools such as `jq`, `curl`, or language runtimes, use `skills.explicit.<name>.packages` and/or `transform` so the dependency is declared in Nix and visible from the skill directory.
-9. Run `nix fmt ./` and `darwin-rebuild build --flake .#Martins-Mac-mini` on a Nix-capable machine.
+9. Run `nix fmt ./` and `darwin-rebuild build --flake .#f` on a Nix-capable machine.
 
 ## Grill-me review
 
@@ -230,6 +230,6 @@ Not verified here:
 - `nix fmt ./`
 - `nix eval`
 - agent-skills bundle build/activation, including generated dependency tables and package symlinks from `skills.explicit.<name>.packages`
-- `darwin-rebuild build --flake .#Martins-Mac-mini`
+- `darwin-rebuild build --flake .#f`
 
 Reason: this Windows environment does not have `nix`, `nixpkgs-fmt`, or `nixfmt` available, and WSL is unavailable/misconfigured.

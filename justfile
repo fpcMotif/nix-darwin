@@ -48,7 +48,7 @@ drift:
 # Run the full check suite (unit + integration + system eval).
 check:
     nix build --no-link \
-        '.#darwinConfigurations.Martins-Mac-mini.system' \
+        '.#darwinConfigurations.f.system' \
         '.#checks.aarch64-darwin.unit-overlay' \
         '.#checks.aarch64-darwin.integration-configurations-eval'
 

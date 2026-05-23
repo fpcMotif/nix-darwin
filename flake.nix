@@ -88,27 +88,31 @@
         };
     in
     {
-      darwinConfigurations."Martins-Mac-mini" = mkSystem {
+      darwinConfigurations.f = mkSystem {
         system = "aarch64-darwin";
         user = "martinfan";
+        hostname = "f";
         hostModule = ./hosts/darwin;
       };
 
       nixosConfigurations.wsl = mkSystem {
         system = "x86_64-linux";
         user = "martinfan";
+        hostname = "wsl";
         hostModule = ./hosts/wsl;
       };
 
       nixosConfigurations.x230 = mkSystem {
         system = "x86_64-linux";
         user = "martinfan";
+        hostname = "x230";
         hostModule = ./hosts/x230;
       };
 
       nixosConfigurations.vm-aarch64-utm = mkSystem {
         system = "aarch64-linux";
         user = "martinfan";
+        hostname = "vm-aarch64-utm";
         hostModule = ./hosts/vm-aarch64-utm;
       };
 

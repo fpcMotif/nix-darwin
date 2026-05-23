@@ -1,6 +1,6 @@
 # Nix Architecture — Martin's cross-platform config
 
-> **Active target:** `darwinConfigurations.Martins-Mac-mini` (Apple Silicon, nix-darwin).
+> **Active target:** `darwinConfigurations.f` (Apple Silicon, nix-darwin).
 > **Last reviewed:** 2026-04-29.
 
 This repository is Martin's cross-platform Nix configuration. The Mac is the active target; Linux/Omakub and NixOS targets are deliberately staged behind it.
@@ -28,7 +28,7 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 
 ## Target priority
 
-1. **Active — `darwinConfigurations.Martins-Mac-mini`.** Apple Silicon (`aarch64-darwin`), nix-darwin. Primary place to make this repo excellent. Intel Macs are out of scope.
+1. **Active — `darwinConfigurations.f`.** Apple Silicon (`aarch64-darwin`), nix-darwin. Primary place to make this repo excellent. Intel Macs are out of scope.
 2. **Future — `homeConfigurations.martinfan-omakub`.** Planned Home Manager profile for Ubuntu/Omakub (<https://omakub.org/>). Documentation/design target only; no flake output yet.
 3. **Inactive scaffolds — `nixosConfigurations.wsl`, `nixosConfigurations.x230`, `nixosConfigurations.vm-aarch64-utm`.** Kept for future NixOS/WSL/VM experimentation. Not production until evaluated on real Nix systems.
 
@@ -39,7 +39,7 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 ├── flake.nix                 # thin flake entry point
 ├── lib/mkSystem.nix          # shared Darwin/NixOS system constructor
 ├── hosts/
-│   ├── darwin/default.nix    # Martins-Mac-mini host layer (active)
+│   ├── darwin/default.nix    # f host layer (active)
 │   ├── wsl/default.nix       # NixOS-WSL scaffold (inactive)
 │   ├── x230/default.nix      # ThinkPad scaffold (inactive)
 │   └── vm-aarch64-utm/       # UTM/QEMU aarch64 VM scaffold (inactive)
@@ -125,7 +125,7 @@ rm ~/.config/starship.toml
 #    martin.prompt.starship.segments.{path,git,jj,status,rPromptTime}.enable = true;
 
 # 4. Activate.
-sudo darwin-rebuild switch --flake .#Martins-Mac-mini
+sudo darwin-rebuild switch --flake .#f
 
 # Verify Nix ownership.
 ls -la ~/.config/starship.toml      # → symlink into /nix/store/...
@@ -341,10 +341,10 @@ When any row changes, update this table in the same PR.
 
 ```bash
 # Dry-run / build without activating
-darwin-rebuild build --flake .#Martins-Mac-mini
+darwin-rebuild build --flake .#f
 
 # Activate
-sudo darwin-rebuild switch --flake .#Martins-Mac-mini
+sudo darwin-rebuild switch --flake .#f
 ```
 
 ### Roll back a bad activation
@@ -369,7 +369,7 @@ sudo darwin-rebuild --switch-generation <N>
 # Edit hosts/darwin/default.nix, e.g.:
 #   martin.prompt.starship.segments.rPromptTime.enable = false;
 
-sudo darwin-rebuild switch --flake .#Martins-Mac-mini
+sudo darwin-rebuild switch --flake .#f
 ```
 
 The toggle ladder, finest → coarsest:
@@ -413,8 +413,8 @@ nix flake update
 nix flake update <input-name>
 
 # Verify before activating
-darwin-rebuild build --flake .#Martins-Mac-mini
-sudo darwin-rebuild switch --flake .#Martins-Mac-mini
+darwin-rebuild build --flake .#f
+sudo darwin-rebuild switch --flake .#f
 ```
 
 ## Linux / Omakub plan

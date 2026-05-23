@@ -1,7 +1,7 @@
 # Unit tests for lib/mkSystem.nix and the current host contract.
 #
 # mkSystem is a curried factory:
-#   ({ inputs, overlays }) -> ({ system, user, hostModule }) -> systemConfig
+#   ({ inputs, overlays }) -> ({ system, user, hostname, hostModule }) -> systemConfig
 #
 # These tests evaluate the first-party configurations far enough to prove the
 # current user, Home Manager profile, and host modules are wired through the
@@ -17,7 +17,7 @@ let
   isDarwin = lib.hasSuffix "darwin" system;
   user = "martinfan";
 
-  darwinConfig = self.darwinConfigurations."Martins-Mac-mini".config;
+  darwinConfig = self.darwinConfigurations."f".config;
   wslConfig = self.nixosConfigurations.wsl.config;
   x230Config = self.nixosConfigurations.x230.config;
   vmConfig = self.nixosConfigurations.vm-aarch64-utm.config;
@@ -57,11 +57,14 @@ let
       "agent-skills Home Manager module should be enabled")
 
     (helpers.assertTest "grill-with-docs-skill-enabled"
-      (builtins.elem "grill-with-docs" homeConfig.programs.agent-skills.skills.enable)
-      "grill-with-docs should stay discoverable from the Matt Pocock skill allowlist")
+      (builtins.hasAttr "grill-with-docs" homeConfig.programs.agent-skills.skills.explicit)
+      "grill-with-docs should stay exposed as an explicit transformed Matt Pocock skill")
 
     (helpers.assertTest "grill-me-skill-disabled"
-      (!(builtins.elem "grill-me" homeConfig.programs.agent-skills.skills.enable))
+      (
+        !(builtins.elem "grill-me" homeConfig.programs.agent-skills.skills.enable)
+        && !(builtins.hasAttr "grill-me" homeConfig.programs.agent-skills.skills.explicit)
+      )
       "grill-me should stay disabled in the Matt Pocock skill allowlist")
 
     (helpers.assertTest "pi-skill-target-configured"
@@ -82,6 +85,11 @@ let
       (darwinConfig.nixpkgs.hostPlatform.system == "aarch64-darwin")
       "Active Darwin host should target Apple Silicon")
 
+    (helpers.assertTest "darwin-host-name-matches-flake-attr"
+      (darwinConfig.networking.localHostName == "f"
+        && darwinConfig.networking.hostName == "f")
+      "Darwin localHostName/hostName must equal the flake attribute name (f) so `darwin-rebuild --flake` resolves without an explicit #name")
+
     (helpers.assertTest "darwin-nix-flakes-enabled"
       (builtins.elem "flakes" darwinConfig.nix.settings.experimental-features)
       "Darwin nix settings should enable flakes")
@@ -92,25 +100,25 @@ let
   ];
 
   linuxChecks = lib.optionals (!isDarwin) [
-    (helpers.assertTest "wsl-host-name"
+    (helpers.assertTest "wsl-host-name-matches-flake-attr"
       (wslConfig.networking.hostName == "wsl")
-      "WSL configuration should keep the wsl hostname")
+      "wsl networking.hostName must equal its flake attribute name (driven by mkSystem's hostname arg, not the host module)")
 
     (helpers.assertTest "wsl-default-user"
       (wslConfig.wsl.defaultUser == user)
       "WSL default user should come from currentSystemUser")
 
-    (helpers.assertTest "x230-host-name"
+    (helpers.assertTest "x230-host-name-matches-flake-attr"
       (x230Config.networking.hostName == "x230")
-      "x230 configuration should keep the x230 hostname")
+      "x230 networking.hostName must equal its flake attribute name (driven by mkSystem's hostname arg, not the host module)")
 
     (helpers.assertTest "x230-grub-enabled"
       (x230Config.boot.loader.grub.enable == true)
       "x230 configuration should keep GRUB enabled")
 
-    (helpers.assertTest "vm-aarch64-utm-host-name"
+    (helpers.assertTest "vm-aarch64-utm-host-name-matches-flake-attr"
       (vmConfig.networking.hostName == "vm-aarch64-utm")
-      "aarch64 UTM VM configuration should keep its hostname")
+      "vm-aarch64-utm networking.hostName must equal its flake attribute name (driven by mkSystem's hostname arg, not the host module)")
 
     (helpers.assertTest "linux-user-home"
       (x230Config.users.users.${user}.home == "/home/${user}")

@@ -97,10 +97,15 @@ let
 
     (helpers.assertTest "${prefix}-agent-skills-prefers-grill-with-docs"
       (
-        builtins.elem "grill-with-docs" homeConfig.programs.agent-skills.skills.enable
-        && !(builtins.elem "grill-me" homeConfig.programs.agent-skills.skills.enable)
+        let
+          enabled = homeConfig.programs.agent-skills.skills.enable;
+          explicit = homeConfig.programs.agent-skills.skills.explicit;
+        in
+        builtins.hasAttr "grill-with-docs" explicit
+        && !(builtins.elem "grill-me" enabled)
+        && !(builtins.hasAttr "grill-me" explicit)
       )
-      "${prefix} should expose grill-with-docs but not the older grill-me skill")
+      "${prefix} should expose grill-with-docs explicitly but not the older grill-me skill")
 
     (helpers.assertTest "${prefix}-agent-skills-agents-target"
       (homeConfig.programs.agent-skills.targets.agents.enable == true)
@@ -119,14 +124,14 @@ let
       "${prefix} should configure the Oh My Pi skill target")
   ];
 
-  darwinConfig = self.darwinConfigurations."Martins-Mac-mini".config;
+  darwinConfig = self.darwinConfigurations."f".config;
   darwinHome = darwinConfig.home-manager.users.${user};
   darwinSkhdConfig = darwinConfig.services.skhd.skhdConfig;
 
   darwinChecks = [
-    (helpers.assertTest "darwin-Martins-Mac-mini-evaluates"
-      (evalsOk self.darwinConfigurations."Martins-Mac-mini".system)
-      "darwinConfigurations.Martins-Mac-mini.system should evaluate")
+    (helpers.assertTest "darwin-f-evaluates"
+      (evalsOk self.darwinConfigurations."f".system)
+      "darwinConfigurations.f.system should evaluate")
 
     (helpers.assertTest "darwin-primary-user"
       (darwinConfig.system.primaryUser == user)

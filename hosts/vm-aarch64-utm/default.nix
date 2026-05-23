@@ -9,7 +9,6 @@
   # references/nixos-config-mitchellh. This is intentionally a NixOS host,
   # not part of the active macOS path.
   networking = {
-    hostName = "vm-aarch64-utm";
     useDHCP = lib.mkDefault false;
     useNetworkd = lib.mkDefault true;
   };
