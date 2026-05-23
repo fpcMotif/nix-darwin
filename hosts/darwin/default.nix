@@ -21,7 +21,7 @@
 
     mouseDisplay = {
       enable = true;
-      bettermouse.profile = "${currentSystemUserHome}/nix-config/personal-settings-main/better_mouse_setting_bm_cfg_4958.plist";
+      bettermouse.profile = "${currentSystemUserHome}/MyRime-main/better_mouse_setting_bm_cfg_4958.plist";
     };
 
     rime = {

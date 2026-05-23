@@ -137,6 +137,15 @@ let
       (darwinConfig.system.primaryUser == user)
       "Darwin primary user should match ${user}")
 
+    (helpers.assertTest "darwin-bettermouse-profile-source"
+      (
+        let profile = toString darwinConfig.martin.mouseDisplay.bettermouse.profile;
+        in
+        profile == "/Users/${user}/MyRime-main/better_mouse_setting_bm_cfg_4958.plist"
+          && !(lib.hasInfix "/nix-config/personal-settings-main/" profile)
+      )
+      "Darwin BetterMouse profile should point at the live imported settings source, not the removed nix-config/personal-settings-main tree")
+
     (helpers.assertTest "darwin-zsh-enabled"
       (darwinConfig.programs.zsh.enable == true)
       "Darwin should enable zsh at the system level")
