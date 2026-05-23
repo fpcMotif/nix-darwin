@@ -21,15 +21,15 @@
         packages = with pkgs; [
           # === TypeScript / Vite stack ===
           nodejs_22
-          bun                          # primary package manager
-          typescript-go                # `tsgo --lsp` for TS 7 LSP
-          oxlint                       # `oxlint --lsp` for lint
-          vtsls                        # tsserver wrapper, plugin-capable
-          vue-language-server          # Vite + Vue
-          astro-language-server        # Vite + Astro
-          svelte-language-server       # Vite + Svelte
-          tailwindcss-language-server  # utility-class intellisense
-          emmet-language-server        # HTML emmet
+          bun # primary package manager
+          typescript-go # `tsgo --lsp` for TS 7 LSP
+          oxlint # `oxlint --lsp` for lint
+          vtsls # tsserver wrapper, plugin-capable
+          vue-language-server # Vite + Vue
+          astro-language-server # Vite + Astro
+          svelte-language-server # Vite + Svelte
+          tailwindcss-language-server # utility-class intellisense
+          emmet-language-server # HTML emmet
 
           # === Go ===
           go

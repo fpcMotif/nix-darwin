@@ -40,20 +40,20 @@ let
 
   lspServers = with pkgs; [
     # === TypeScript / JavaScript — modern Rust/Go stack ===
-    typescript-go               # `tsgo --lsp` — TS 7 native LSP
-    oxlint                      # `oxlint --lsp` — oxc lint LSP
-    vtsls                       # tsserver wrapper, opt-in fallback
+    typescript-go # `tsgo --lsp` — TS 7 native LSP
+    oxlint # `oxlint --lsp` — oxc lint LSP
+    vtsls # tsserver wrapper, opt-in fallback
     # Compat: `typescript-lsp@claude-plugins-official` plugin still
     # spawns `typescript-language-server`, and vtsls reads tsserver
     # from a `typescript` package. Keeping both here is cheap and
     # avoids breakage when a project pins to the legacy tsserver.
     typescript
     typescript-language-server
-    vue-language-server         # Vue SFCs (Vite + Vue)
-    astro-language-server       # Astro components (Vite-based)
-    svelte-language-server      # Svelte (Vite-based)
+    vue-language-server # Vue SFCs (Vite + Vue)
+    astro-language-server # Astro components (Vite-based)
+    svelte-language-server # Svelte (Vite-based)
     tailwindcss-language-server # Utility-class intellisense
-    emmet-language-server       # HTML/CSS emmet completion
+    emmet-language-server # HTML/CSS emmet completion
 
     # === Go ===
     gopls
@@ -62,24 +62,24 @@ let
     rust-analyzer
 
     # === Python ===
-    basedpyright                # types + hover + definitions
-    ruff                        # `ruff server` — lint + format
+    basedpyright # types + hover + definitions
+    ruff # `ruff server` — lint + format
 
     # === Lua ===
     lua-language-server
 
     # === MCP bridge for desktop apps ===
-    mcp-language-server         # wraps any LSP as an MCP server
+    mcp-language-server # wraps any LSP as an MCP server
   ];
 
   # Common JS/TS extension → language-id map used by tsgo, oxlint, and
   # vtsls. Kept as a Nix attrset so all servers share one definition.
   jsExtensions = {
-    ".ts"  = "typescript";
+    ".ts" = "typescript";
     ".tsx" = "typescriptreact";
     ".mts" = "typescript";
     ".cts" = "typescript";
-    ".js"  = "javascript";
+    ".js" = "javascript";
     ".jsx" = "javascriptreact";
     ".mjs" = "javascript";
     ".cjs" = "javascript";
@@ -87,7 +87,7 @@ let
 
   # Extra extensions oxlint handles natively that tsgo does not.
   oxlintExtraExtensions = {
-    ".vue"   = "vue";
+    ".vue" = "vue";
     ".astro" = "astro";
     ".svelte" = "svelte";
   };
@@ -101,7 +101,7 @@ let
   jsAndVueExtsToml = tomlExts (jsExtensions // oxlintExtraExtensions);
   tailwindExtsToml = tomlExts (jsExtensions // oxlintExtraExtensions // {
     ".html" = "html";
-    ".css"  = "css";
+    ".css" = "css";
   });
 
   # ~/.claude/lsp.json — user-global LSP config for Claude Code's
@@ -165,8 +165,8 @@ let
         command = "tailwindcss-language-server";
         args = [ "--stdio" ];
         extensionToLanguage = jsExtensions // oxlintExtraExtensions // {
-          ".html"   = "html";
-          ".css"    = "css";
+          ".html" = "html";
+          ".css" = "css";
         };
       };
 
@@ -175,7 +175,7 @@ let
         command = "basedpyright-langserver";
         args = [ "--stdio" ];
         extensionToLanguage = {
-          ".py"  = "python";
+          ".py" = "python";
           ".pyi" = "python";
         };
       };
@@ -184,7 +184,7 @@ let
         command = "ruff";
         args = [ "server" ];
         extensionToLanguage = {
-          ".py"  = "python";
+          ".py" = "python";
           ".pyi" = "python";
         };
         isLinter = true;
