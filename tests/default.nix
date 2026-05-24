@@ -13,7 +13,7 @@ let
     overlays = [ (import ../pkgs) ];
     config.allowUnfree = true;
   };
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
 
   callTest = path: import path {
     inherit inputs system pkgs lib self;
@@ -29,6 +29,7 @@ in
   unit-mksystem = callTest ./unit/mksystem-test.nix;
   unit-overlay = callTest ./unit/overlay-test.nix;
   unit-format = callTest ./unit/format-test.nix;
+  unit-static-lint = callTest ./unit/static-lint-test.nix;
 
   # Integration tests
   integration-configurations-eval = callTest ./integration/configurations-eval-test.nix;

@@ -6,9 +6,7 @@ let
   formatter = self.formatter.${system} or null;
   formatterName =
     if formatter == null then ""
-    else if formatter ? pname then formatter.pname
-    else if formatter ? name then formatter.name
-    else "";
+    else formatter.pname or (formatter.name or "");
   formatterChecks = helpers.testSuite "formatter-wiring" [
     (helpers.assertTest "formatter-is-configured"
       (formatter != null)

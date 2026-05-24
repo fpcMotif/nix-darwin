@@ -88,8 +88,8 @@
           };
         in
         {
+          inherit (pkgs) martin;
           crush = pkgs.nur.repos.charmbracelet.crush;
-          martin = pkgs.martin;
         };
     in
     {
@@ -100,25 +100,27 @@
         hostModule = ./hosts/darwin;
       };
 
-      nixosConfigurations.wsl = mkSystem {
-        system = "x86_64-linux";
-        user = "martinfan";
-        hostname = "wsl";
-        hostModule = ./hosts/wsl;
-      };
+      nixosConfigurations = {
+        wsl = mkSystem {
+          system = "x86_64-linux";
+          user = "martinfan";
+          hostname = "wsl";
+          hostModule = ./hosts/wsl;
+        };
 
-      nixosConfigurations.x230 = mkSystem {
-        system = "x86_64-linux";
-        user = "martinfan";
-        hostname = "x230";
-        hostModule = ./hosts/x230;
-      };
+        x230 = mkSystem {
+          system = "x86_64-linux";
+          user = "martinfan";
+          hostname = "x230";
+          hostModule = ./hosts/x230;
+        };
 
-      nixosConfigurations.vm-aarch64-utm = mkSystem {
-        system = "aarch64-linux";
-        user = "martinfan";
-        hostname = "vm-aarch64-utm";
-        hostModule = ./hosts/vm-aarch64-utm;
+        vm-aarch64-utm = mkSystem {
+          system = "aarch64-linux";
+          user = "martinfan";
+          hostname = "vm-aarch64-utm";
+          hostModule = ./hosts/vm-aarch64-utm;
+        };
       };
 
       legacyPackages = nixpkgs.lib.genAttrs supportedSystems legacyPackagesFor;

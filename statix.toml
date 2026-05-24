@@ -1,0 +1,10 @@
+# Project lint policy for `statix check`.
+#
+# Home Manager modules in this repo often keep related declarations as separate
+# dotted assignments (`home.file.*`, `home.activation.*`, `programs.*`) so each
+# block stays close to its guard comments and activation-order notes. Statix's
+# repeated_keys rule would force large nested attrsets that are harder to scan in
+# these modules, so keep the rest of statix enabled and opt out of that style
+# rule explicitly.
+disabled = ["repeated_keys"]
+ignore = [".direnv"]

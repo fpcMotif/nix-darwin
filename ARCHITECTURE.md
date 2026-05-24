@@ -349,7 +349,7 @@ These are dimensions every reviewer asks about. State the position even when the
 |----------------------|------------------------------------------------------------------------------------------------|
 | Secrets management   | **None today.** No `sops-nix` / `agenix`. Secrets live outside the flake; revisit before adding any service that reads them. |
 | Formatter            | Wired through `flake.nix` (`formatter.<system>`). Run via `nix fmt`.                           |
-| Linting              | `nix flake check` runs `nixpkgs-fmt --check`, `statix`, and `deadnix --fail` via `tests/default.nix`. Run locally and in CI. |
+| Linting              | `nix flake check` runs `nixpkgs-fmt --check`, `statix`, and `deadnix --fail` via `tests/default.nix`. `statix.toml` disables only `repeated_keys` so Home Manager dotted assignments can stay local. Run locally and in CI. |
 | CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin, x86_64 NixOS scaffolds (`wsl`, `x230`), and `vm-aarch64-utm` on macOS / Ubuntu runners, with `nix flake check` as the gate before config builds. |
 | Dev shells / direnv  | Not currently exposed. If `devShells.<system>` is added later, document the `.envrc` pattern. |
 

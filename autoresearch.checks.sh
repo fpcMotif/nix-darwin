@@ -5,6 +5,7 @@ set -euo pipefail
 # catch Nix module regressions from readability/documentation changes.
 nix build --no-link \
   '.#checks.aarch64-darwin.unit-format' \
+  '.#checks.aarch64-darwin.unit-static-lint' \
   '.#checks.aarch64-darwin.unit-mksystem' \
   '.#checks.aarch64-darwin.unit-overlay' \
   '.#checks.aarch64-darwin.integration-configurations-eval'

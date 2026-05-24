@@ -28,7 +28,7 @@ buildNpmPackage {
     npmRoot = ./sourcegraph-amp;
   };
 
-  npmConfigHook = importNpmLock.npmConfigHook;
+  inherit (importNpmLock) npmConfigHook;
 
   dontNpmBuild = true;
 

@@ -11,7 +11,6 @@
 
 { lib
 , stdenvNoCC
-, fetchzip
 , fetchurl
 , autoPatchelfHook
 , unzip

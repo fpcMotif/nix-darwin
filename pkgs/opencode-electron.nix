@@ -12,7 +12,6 @@
 , fetchurl
 , unzip
 , makeBinaryWrapper
-, undmg ? null
 ,
 }:
 

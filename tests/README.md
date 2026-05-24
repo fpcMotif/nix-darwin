@@ -13,7 +13,8 @@ tests/
 |-- unit/
 |   |-- mksystem-test.nix                    # lib/mkSystem.nix shape and current host contract
 |   |-- overlay-test.nix                     # pkgs/default.nix overlay, attrs, metadata
-|   `-- format-test.nix                      # formatter wiring and nixpkgs-fmt check
+|   |-- format-test.nix                      # formatter wiring and nixpkgs-fmt check
+|   `-- static-lint-test.nix                 # statix and deadnix check
 `-- integration/
     `-- configurations-eval-test.nix         # current darwin/nixos configs and module outputs
 ```
@@ -28,6 +29,7 @@ nix flake check --print-build-logs
 nix build .#checks.aarch64-darwin.unit-mksystem --no-link
 nix build .#checks.aarch64-darwin.unit-overlay --no-link
 nix build .#checks.aarch64-darwin.unit-format --no-link
+nix build .#checks.aarch64-darwin.unit-static-lint --no-link
 nix build .#checks.aarch64-darwin.integration-configurations-eval --no-link
 nix build .#checks.aarch64-darwin.smoke-build-common --no-link
 nix build .#checks.aarch64-darwin.smoke-build-gemini --no-link
@@ -50,6 +52,7 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `unit-mksystem`                     | `lib/mkSystem.nix` shape plus current user, Home Manager, host module, and skill-target wiring. |
 | `unit-overlay`                      | `pkgs/default.nix` is a valid overlay and exposes the expected `pkgs.martin.*` attributes, descriptions, and CLI main programs. Darwin-only package evaluation is skipped on Linux. |
 | `unit-format`                       | `formatter.<system>` is configured as `nixpkgs-fmt`, evaluates, and all flake Nix files are formatted. |
+| `unit-static-lint`                  | Repository Nix sources pass `statix` and `deadnix --fail`, excluding reference trees. |
 | `integration-configurations-eval`   | The flake's Darwin/NixOS configs evaluate and keep expected user, host, pure-Nix dotfile, required/forbidden toolchain, WSL, and agent-skills settings. |
 
 ## CI

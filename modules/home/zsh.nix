@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, ... }:
 
 let
   ezaBaseFlags = "--icons --git --group-directories-first --hyperlink --no-quotes";
