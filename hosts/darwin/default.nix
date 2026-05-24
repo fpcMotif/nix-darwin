@@ -10,14 +10,23 @@
 
   environment.systemPackages = [
     pkgs.duti
-    pkgs.martin.dropbox
     pkgs.martin.google-drive
     pkgs.martin.raycast
   ];
 
   martin = {
+    backgroundServices = {
+      cleanMyMacManualOnly = true;
+
+      dropbox = {
+        installClient = false;
+        disableBackgroundUpdaters = true;
+      };
+    };
+
     fonts.enable = true;
     hammerspoon.enable = true;
+    healthCheck.enable = true;
 
     mouseDisplay = {
       enable = true;
@@ -28,6 +37,8 @@
       enable = true;
       config = "${currentSystemUserHome}/MyRime-main";
     };
+
+    spotlight.enable = true;
 
     skhd = {
       enable = true;

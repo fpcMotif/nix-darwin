@@ -150,6 +150,70 @@ let
       (darwinConfig.programs.zsh.enable == true)
       "Darwin should enable zsh at the system level")
 
+    (helpers.assertTest "darwin-security-gatekeeper-not-disabled"
+      (
+        let
+          diskImages = darwinConfig.system.defaults.CustomUserPreferences."com.apple.frameworks.diskimages";
+        in
+        darwinConfig.system.defaults.LaunchServices.LSQuarantine == true
+          && diskImages."skip-verify" == false
+          && diskImages."skip-verify-locked" == false
+          && diskImages."skip-verify-remote" == false
+          && !(lib.hasInfix "spctl --master-disable" darwinConfig.system.activationScripts.postActivation.text)
+          && lib.hasInfix "spctl --master-enable" darwinConfig.system.activationScripts.postActivation.text
+      )
+      "Darwin activation should keep Gatekeeper/quarantine and disk image verification enabled")
+
+    (helpers.assertTest "darwin-application-firewall-hardened"
+      (
+        darwinConfig.networking.applicationFirewall.enable == true
+          && darwinConfig.networking.applicationFirewall.enableStealthMode == true
+          && darwinConfig.networking.applicationFirewall.blockAllIncoming == false
+      )
+      "Darwin application firewall should be enabled with stealth mode")
+
+    (helpers.assertTest "darwin-background-churn-reduced"
+      (
+        let activation = darwinConfig.system.activationScripts.postActivation.text;
+        in
+        darwinConfig.martin.backgroundServices.cleanMyMacManualOnly == true
+          && darwinConfig.martin.backgroundServices.dropbox.installClient == false
+          && darwinConfig.martin.backgroundServices.dropbox.disableBackgroundUpdaters == true
+          && !(hasPackage "dropbox" darwinConfig.environment.systemPackages)
+          && lib.hasInfix "/var/db/nix-config" activation
+          && lib.hasInfix "background-services-disabled" activation
+          && lib.hasInfix "com.macpaw.CleanMyMac5.HealthMonitor" activation
+          && lib.hasInfix "com.getdropbox.dropbox.UpdaterPrivilegedHelper" activation
+          && lib.hasInfix "launchctl enable" activation
+      )
+      "Darwin should keep CleanMyMac and Dropbox background churn out of the baseline with reversible launchd state")
+
+    (helpers.assertTest "darwin-spotlight-dev-tree-exclusions"
+      (
+        let activation = darwinConfig.system.activationScripts.postActivation.text;
+        in
+        darwinConfig.martin.spotlight.enable == true
+          && builtins.elem "/Users/${user}/gosh-my-pi" darwinConfig.martin.spotlight.excludedPaths
+          && builtins.elem "/Users/${user}/.codex" darwinConfig.martin.spotlight.excludedPaths
+          && builtins.elem ".metadata_never_index" darwinHome.programs.git.ignores
+          && lib.hasInfix "managed by nix-config martin.spotlight" activation
+          && lib.hasInfix "spotlight-exclusions" activation
+      )
+      "Darwin should mark dev/cache trees as reversible Spotlight exclusions without dirty git status")
+
+    (helpers.assertTest "darwin-health-check-launch-agent"
+      (
+        darwinConfig.martin.healthCheck.enable == true
+          && builtins.hasAttr "macos-health-report" darwinHome.launchd.agents
+          && darwinHome.launchd.agents.macos-health-report.config.RunAtLoad == true
+          && darwinHome.launchd.agents.macos-health-report.config.StartCalendarInterval.Hour == 9
+          && darwinHome.launchd.agents.macos-health-report.config.StartCalendarInterval.Minute == 15
+          && lib.hasSuffix "/Library/Logs/nix-managed-health/launchd.stdout.log" darwinHome.launchd.agents.macos-health-report.config.StandardOutPath
+          && lib.hasSuffix "/Library/Logs/nix-managed-health/launchd.stderr.log" darwinHome.launchd.agents.macos-health-report.config.StandardErrorPath
+          && lib.hasInfix "nix-managed-health" darwinConfig.system.activationScripts.postActivation.text
+      )
+      "Darwin should install the daily macOS health report LaunchAgent")
+
     (helpers.assertTest "darwin-starship-enabled"
       (darwinHome.programs.starship.enable == true)
       "Darwin Home Manager should enable the migrated Starship prompt")

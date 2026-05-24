@@ -58,9 +58,9 @@
       };
 
       "com.apple.frameworks.diskimages" = {
-        skip-verify = true;
-        skip-verify-locked = true;
-        skip-verify-remote = true;
+        skip-verify = false;
+        skip-verify-locked = false;
+        skip-verify-remote = false;
       };
 
       # Safari prefs live inside a sandboxed container; `defaults write
@@ -130,10 +130,6 @@
       SortDirection = 0;
     };
 
-    LaunchServices = {
-      LSQuarantine = false;
-    };
-
     menuExtraClock = {
       Show24Hour = true;
       ShowDate = 1;
@@ -146,13 +142,6 @@
   # executed. Everything custom goes into `postActivation` with `mkAfter` so
   # other modules can append their own block without clobbering ours.
   system.activationScripts.postActivation.text = lib.mkAfter ''
-    # Allow opening apps from any source (Gatekeeper). Skip when already
-    # disabled so we don't fork spctl every switch. macOS 15+ may ignore this
-    # flag entirely; the GUI toggle in Privacy & Security is the fallback.
-    if ! /usr/sbin/spctl --status 2>/dev/null | grep -q 'disabled'; then
-      /usr/sbin/spctl --master-disable || true
-    fi
-
     # pmset accepts multiple key/value pairs per invocation, so one fork
     # covers all -a settings; -b (battery) and -c (charger) keep their own.
     /usr/bin/pmset -a \

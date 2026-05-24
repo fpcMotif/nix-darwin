@@ -4,6 +4,24 @@ Martin's cross-platform Nix configuration (nix-darwin is the active target; Linu
 
 ## Language
 
+### Darwin baseline
+
+**Darwin baseline**:
+The Nix-managed shape of the active Mac (`f`): system packages, macOS defaults, launchd policy, and Home Manager handoff points that should be reproducible after `darwin-rebuild switch`.
+_Avoid_: using this term for mutable app data, auth state, caches, or personal files outside the Nix configuration.
+
+**Background churn**:
+Unwanted helper, updater, indexing, or diagnostic activity that keeps running without an explicit current task. The Darwin baseline suppresses background churn when the main app or development tree remains available by other deliberate workflows.
+_Avoid_: treating every background process as churn; only use this for optional activity that competes with the user's Nix-managed baseline.
+
+**Manual-only app**:
+An app that may be installed or launched manually while its background launchd helpers are kept out of the baseline. Manual-only means user-initiated use is preserved; always-on helper behavior is not.
+_Avoid_: disabled app, uninstalled app.
+
+**macOS health report**:
+A local diagnostic snapshot for the Mac's own maintenance loop, not telemetry and not a remote monitoring system. It exists to make drift, storage pressure, crashes, backups, and Nix garbage-collection state inspectable.
+_Avoid_: monitoring, analytics, metrics pipeline.
+
 ### Agent-skills curation
 
 **superpowers**:
@@ -42,3 +60,8 @@ The human-facing device name in macOS Sharing/Finder — "Martin's Mac mini". De
 > **Maintainer:** obra's `brainstorming` is enabled from the Nix source, and the superpowers plugin ships its own. We park the plugin's so only obra's surfaces.
 > **Dev:** What about the plugin's `writing-plans` and `executing-plans`?
 > **Maintainer:** Those stay live — we park only the plugin's `brainstorming`, not its whole skills dir. obra's `writing-plans` is merely discovered, not enabled, so there's no clash.
+
+> **Dev:** Dropbox is packaged, so should it be in the Darwin baseline?
+> **Maintainer:** Not unless we explicitly want the client and its helpers always running. Otherwise it is background churn; keep the app path opt-in and preserve a quiet baseline.
+> **Dev:** Is the macOS health report a monitoring stack?
+> **Maintainer:** No. It is a local snapshot for maintenance evidence, so it belongs in the baseline without adding remote telemetry.

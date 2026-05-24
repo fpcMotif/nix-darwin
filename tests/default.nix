@@ -51,6 +51,17 @@ in
     ''
   );
 
+  smoke-build-oh-my-pi = pkgs.runCommand "smoke-build-oh-my-pi" { } (
+    if pkgs.stdenv.isDarwin then ''
+      echo "Building oh-my-pi as a Darwin smoke test..."
+      test -x ${pkgs.martin.oh-my-pi}/bin/omp
+      touch $out
+    '' else ''
+      echo "Skipping Darwin-only smoke test on this platform"
+      touch $out
+    ''
+  );
+
   smoke-build-toolchain = pkgs.runCommand "smoke-build-toolchain" { } ''
     echo "Checking required Nix-only dotfiles toolchain commands..."
     ${lib.getExe pkgs.bun} --version

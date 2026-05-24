@@ -5,16 +5,19 @@
   martin.brew.homebrew.enable = false;
 
   imports = [
+    ./background-services.nix
     ./brew-variants.nix
     ./defaults.nix
     ./fonts.nix
     ./hammerspoon.nix
+    ./health-check.nix
     ./mouse-display.nix
     ./nix.nix
     ./rime.nix
     ./security.nix
     ./shell.nix
     ./skhd.nix
+    ./spotlight.nix
   ];
 
   nixpkgs.hostPlatform = lib.mkDefault "aarch64-darwin";

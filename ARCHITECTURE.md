@@ -1,7 +1,7 @@
 # Nix Architecture — Martin's cross-platform config
 
 > **Active target:** `darwinConfigurations.f` (Apple Silicon, nix-darwin).
-> **Last reviewed:** 2026-04-29.
+> **Last reviewed:** 2026-05-24.
 
 This repository is Martin's cross-platform Nix configuration. The Mac is the active target; Linux/Omakub and NixOS targets are deliberately staged behind it.
 
@@ -155,12 +155,20 @@ When a change fits two slots, prefer the more specific one and lift it later whe
 
 ```text
 modules/darwin/
-├── default.nix         # imports the Darwin module set + base nixpkgs config
-├── defaults.nix        # selected macOS defaults (keyboard, Finder, Dock, trackpad, screenshots)
-├── nix.nix             # flakes / nix-command / trusted users
-├── shell.nix           # zsh shell registration
-├── security.nix        # Touch ID sudo
-└── brew-variants.nix   # dormant brew-family scaffolds (see policy below)
+├── default.nix              # imports the Darwin module set + base nixpkgs config
+├── background-services.nix  # opt-in launchd suppression for noisy app helpers
+├── brew-variants.nix        # dormant brew-family scaffolds (see policy below)
+├── defaults.nix             # selected macOS defaults (keyboard, Finder, Dock, trackpad, screenshots)
+├── fonts.nix                # curated macOS font bundle
+├── hammerspoon.nix          # managed Hammerspoon init.lua
+├── health-check.nix         # best-effort daily macOS health report LaunchAgent
+├── mouse-display.nix        # BetterMouse + BetterDisplay apps and seed config
+├── nix.nix                  # flakes / nix-command / trusted users
+├── rime.nix                 # Squirrel app link + MyRime-main sync
+├── security.nix             # Touch ID sudo, firewall, Gatekeeper/quarantine posture
+├── shell.nix                # zsh shell registration
+├── skhd.nix                 # global hotkeys
+└── spotlight.nix            # Spotlight churn controls for dev/cache trees
 ```
 
 The active Darwin host (`hosts/darwin/default.nix`) sets:
@@ -329,7 +337,7 @@ These are dimensions every reviewer asks about. State the position even when the
 |----------------------|------------------------------------------------------------------------------------------------|
 | Secrets management   | **None today.** No `sops-nix` / `agenix`. Secrets live outside the flake; revisit before adding any service that reads them. |
 | Formatter            | Wired through `flake.nix` (`formatter.<system>`). Run via `nix fmt`.                           |
-| Linting              | `nix flake check` runs `nixpkgs-fmt --check`, `statix`, and `deadnix --fail` via `tests/default.nix`. Run locally and in CI. |
+| Linting              | `nix flake check` runs `nixpkgs-fmt --check` via `tests/default.nix`. Add `statix`/`deadnix` as explicit checks before treating them as enforced gates. |
 | CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin, x86_64 NixOS scaffolds (`wsl`, `x230`), and `vm-aarch64-utm` on macOS / Ubuntu runners, with `nix flake check` as the gate before config builds. |
 | Dev shells / direnv  | Not currently exposed. If `devShells.<system>` is added later, document the `.envrc` pattern. |
 
