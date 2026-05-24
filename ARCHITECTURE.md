@@ -156,6 +156,7 @@ When a change fits two slots, prefer the more specific one and lift it later whe
 ```text
 modules/darwin/
 ├── default.nix              # imports the Darwin module set + base nixpkgs config
+├── baseline-activation.nix  # Darwin baseline activation state: launchd ledgers + path markers
 ├── background-services.nix  # opt-in launchd suppression for noisy app helpers
 ├── brew-variants.nix        # dormant brew-family scaffolds (see policy below)
 ├── defaults.nix             # selected macOS defaults (keyboard, Finder, Dock, trackpad, screenshots)
@@ -170,6 +171,8 @@ modules/darwin/
 ├── skhd.nix                 # global hotkeys
 └── spotlight.nix            # Spotlight churn controls for dev/cache trees
 ```
+
+`modules/darwin/baseline-activation.nix` is the deep module for Darwin baseline activation state. Callers declare launchd domains or path markers; the implementation owns state ledgers, temp files, stale cleanup, and “only revert what Nix managed” rules.
 
 The active Darwin host (`hosts/darwin/default.nix`) sets:
 
