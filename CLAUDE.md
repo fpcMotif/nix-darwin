@@ -14,4 +14,4 @@ Uses the canonical five-role vocabulary unchanged (`needs-triage`, `needs-info`,
 
 ### Domain docs
 
-Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root (created lazily by `/grill-with-docs`). See [docs/agents/domain.md](docs/agents/domain.md).
+Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root. See [docs/agents/domain.md](docs/agents/domain.md).
