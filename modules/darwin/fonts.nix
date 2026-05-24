@@ -4,7 +4,10 @@ let
   cfg = config.martin.fonts;
 in
 {
-  options.martin.fonts.enable = lib.mkEnableOption "Martin's curated macOS font bundle (SF Mono, SF Symbols, Maple Mono NF, nerd-font symbols, Fira Code)";
+  options.martin.fonts.enable = lib.mkEnableOption (
+    "Martin's curated macOS font bundle "
+    + "(SF Mono, SF Symbols, Maple Mono NF, nerd-font symbols, Fira Code)"
+  );
 
   config = lib.mkIf cfg.enable {
     fonts.packages = with pkgs; [

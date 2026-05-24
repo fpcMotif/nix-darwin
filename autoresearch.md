@@ -5,7 +5,7 @@ Improve this Nix configuration's maintainability without changing user-visible b
 
 This session runs in the isolated worktree:
 
-`/Users/martinfan/nix-config/.claude/worktrees/autoresearch-nix-quality-2026-05-24`
+`/tmp/nix-config-autoresearch`
 
 The original checkout had unrelated uncommitted changes when this session started; do not touch or depend on them.
 
@@ -14,11 +14,12 @@ The original checkout had unrelated uncommitted changes when this session starte
 - **Secondary**:
   - `docs_missing_modules`: source modules under `modules/` not named in `ARCHITECTURE.md`.
   - `docs_missing_tests`: test files or test attributes not named in `tests/README.md`.
+  - `docs_stale_tests`: test names documented in `tests/README.md` that are not check attributes.
   - `lint_contract_gaps`: documented lint tools that are not actually wired into tests.
   - `long_nix_lines`: Nix source lines over 140 chars, excluding generated/reference/local worktree paths.
   - `nix_files`: count of measured Nix files.
 
-`quality_debt = docs_missing_modules * 10 + docs_missing_tests * 8 + lint_contract_gaps * 25 + long_nix_lines`.
+`quality_debt = docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines`.
 
 The metric is a guide, not permission to game the benchmark. Do not delete useful code or documentation solely to reduce counts. Improvements should make a human reviewer happier and should keep checks passing.
 
@@ -51,4 +52,8 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Be adversarial: after each kept change, inspect whether the metric could have improved while maintainability got worse; if yes, fix the metric or discard the idea.
 
 ## What's Been Tried
-- Session initialized. Baseline pending.
+- Baseline `quality_debt=308`: module/test documentation drift and lint-contract gaps dominated.
+- Kept: refreshed `ARCHITECTURE.md` module inventory so Darwin/Home module docs match current imports (`quality_debt=98`).
+- Kept: synchronized `tests/README.md` with actual `tests/default.nix` check attributes (`quality_debt=74`).
+- Tried and reverted: adding a real statix/deadnix check. It found real statix warnings; do not re-add the gate until those warnings are fixed or intentionally scoped.
+- Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.

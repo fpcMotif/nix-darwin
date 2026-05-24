@@ -1,5 +1,8 @@
 { lib, ... }:
 
+let
+  chromeCanaryDir = "$HOME/Library/Application Support/Google/Chrome Canary";
+in
 {
   home.sessionVariables = {
     CLIPROXY_BASE_URL = "http://127.0.0.1:8317";
@@ -9,9 +12,10 @@
     # paths on macOS. Point its check scripts at Chrome Canary instead so it can
     # detect the installed Codex extension + native messaging host there.
     # See ~/.codex/plugins/cache/openai-bundled/chrome/0.1.7/scripts/*.js
-    CODEX_CHROME_USER_DATA_DIR = "$HOME/Library/Application Support/Google/Chrome Canary";
-    CODEX_CHROME_PREFERENCES_PATH = "$HOME/Library/Application Support/Google/Chrome Canary/Default/Secure Preferences";
-    CODEX_CHROME_NATIVE_HOST_MANIFEST_PATH = "$HOME/Library/Application Support/Google/Chrome Canary/NativeMessagingHosts/com.openai.codexextension.json";
+    CODEX_CHROME_USER_DATA_DIR = chromeCanaryDir;
+    CODEX_CHROME_PREFERENCES_PATH = "${chromeCanaryDir}/Default/Secure Preferences";
+    CODEX_CHROME_NATIVE_HOST_MANIFEST_PATH =
+      "${chromeCanaryDir}/NativeMessagingHosts/com.openai.codexextension.json";
   };
 
   programs.zsh.initContent = lib.mkAfter ''
@@ -52,7 +56,8 @@
         if (( $+commands[jq] )); then
           jq -r --arg key "$1" '.[$key] // "proxy"' "$HOME/.config/climode.json" 2>/dev/null
         else
-          python3 -c "import json, sys; print(json.load(open(sys.argv[1])).get(sys.argv[2], 'proxy'))" "$HOME/.config/climode.json" "$1" 2>/dev/null
+          python3 -c "import json, sys; print(json.load(open(sys.argv[1])).get(sys.argv[2], 'proxy'))" \
+            "$HOME/.config/climode.json" "$1" 2>/dev/null
         fi
       else
         printf -- "proxy\n"

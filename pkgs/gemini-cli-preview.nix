@@ -73,7 +73,9 @@ buildNpmPackage (finalAttrs: {
   postPatch = ''
     # Remove node-pty dependency from package.json (top-level + core)
     ${jq}/bin/jq 'del(.optionalDependencies."node-pty")' package.json > package.json.tmp && mv package.json.tmp package.json
-    ${jq}/bin/jq 'del(.optionalDependencies."node-pty")' packages/core/package.json > packages/core/package.json.tmp && mv packages/core/package.json.tmp packages/core/package.json
+    ${jq}/bin/jq 'del(.optionalDependencies."node-pty")' packages/core/package.json \
+      > packages/core/package.json.tmp
+    mv packages/core/package.json.tmp packages/core/package.json
 
     # Pin the ripgrep path so SearchText doesn't fall back to a dynamically
     # linked rg without its required libraries.

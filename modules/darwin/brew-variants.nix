@@ -14,11 +14,15 @@ in
     assertions = [
       {
         assertion = !cfg.zerobrew.enable;
-        message = "martin.brew.zerobrew.enable is documentation-only for now. Keep zerobrew as a manual scratchpad, not a declarative source of truth.";
+        message =
+          "martin.brew.zerobrew.enable is documentation-only for now. "
+          + "Keep zerobrew as a manual scratchpad, not a declarative source of truth.";
       }
       {
         assertion = !cfg.zigbrew.enable;
-        message = "martin.brew.zigbrew.enable is documentation-only for now. Keep zigbrew as a manual scratchpad, not a declarative source of truth.";
+        message =
+          "martin.brew.zigbrew.enable is documentation-only for now. "
+          + "Keep zigbrew as a manual scratchpad, not a declarative source of truth.";
       }
     ];
 

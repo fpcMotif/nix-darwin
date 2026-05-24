@@ -1,5 +1,9 @@
 { config, pkgs, ... }:
 
+let
+  ezaBaseFlags = "--icons --git --group-directories-first --hyperlink --no-quotes";
+  ezaColorFlags = "--color-scale=size --color-scale-mode=gradient --smart-group";
+in
 {
   home.sessionVariables = {
     EDITOR = "nvim";
@@ -145,9 +149,9 @@
       lc = "localcode";
       reload = "source ~/.zshrc";
 
-      ls = "eza --icons --git --group-directories-first --hyperlink --no-quotes";
-      ll = "eza -lh --icons --git --group-directories-first --hyperlink --no-quotes --color-scale=size --color-scale-mode=gradient --smart-group";
-      la = "eza -la --icons --git --group-directories-first --hyperlink --no-quotes --color-scale=size --color-scale-mode=gradient --smart-group";
+      ls = "eza ${ezaBaseFlags}";
+      ll = "eza -lh ${ezaBaseFlags} ${ezaColorFlags}";
+      la = "eza -la ${ezaBaseFlags} ${ezaColorFlags}";
       lt = "eza -lT --level=2 --icons --hyperlink --no-quotes";
       tree = "eza --tree --icons --git-ignore --hyperlink --no-quotes";
       cat = "bat --paging=never";
@@ -330,10 +334,13 @@
       }
 
       fgb() {
-        local branches branch
+        local branches branch preview
         branches=$(git branch --all | grep -v 'HEAD') &&
+        preview="git log --oneline --graph --date=short --color=always " &&
+        preview+="--pretty='format:%C(auto)%h %C(magenta)%ad %C(cyan)%an %Creset%s' " &&
+        preview+="{1} | head -n 20" &&
         branch=$(echo "$branches" | fzf --prompt='󱔎 ' --height 50% --layout=reverse --border \
-          --preview "git log --oneline --graph --date=short --color=always --pretty='format:%C(auto)%h %C(magenta)%ad %C(cyan)%an %Creset%s' {1} | head -n 20") &&
+          --preview "$preview") &&
         git checkout "$(echo "$branch" | sed 's/.* //; s#remotes/[^/]*/##')"
       }
 

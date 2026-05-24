@@ -30,7 +30,12 @@ let
     }
     ''
       cd "$src"
-      if ! nixpkgs-fmt --check $(find . -type f -name '*.nix' -not -path './result*' -not -path './references/*' -not -path './.claude/*'); then
+      if ! nixpkgs-fmt --check $(find . \
+          -type f \
+          -name '*.nix' \
+          -not -path './result*' \
+          -not -path './references/*' \
+          -not -path './.claude/*'); then
         echo ""
         echo "FAIL Some Nix files are not formatted."
         echo "Run: nix fmt"

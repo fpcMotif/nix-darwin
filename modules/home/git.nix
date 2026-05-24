@@ -43,7 +43,10 @@
       };
 
       alias = {
-        fomo = "!branch=$(git remote show -n origin | awk '/HEAD branch:/ {print $NF}'); if [ -z \"$branch\" ]; then echo \"Could not resolve origin HEAD\" >&2; exit 1; fi; git fetch origin \"$branch\" && git rebase \"origin/$branch\" --autostash";
+        fomo =
+          "!branch=$(git remote show -n origin | awk '/HEAD branch:/ {print $NF}'); "
+          + "if [ -z \"$branch\" ]; then echo \"Could not resolve origin HEAD\" >&2; exit 1; fi; "
+          + "git fetch origin \"$branch\" && git rebase \"origin/$branch\" --autostash";
         lg = "log --graph --oneline --decorate --all";
         nuke = "!git add --all && git stash && git stash clear";
       };

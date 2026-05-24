@@ -1,7 +1,11 @@
 { lib, pkgs, ... }:
 
 let
-  copyPipe = ''sh -c 'b64=$(dd bs=1 count=100000 status=none | base64 | tr -d "\n"); printf "\033]52;c;%s\a" "$b64" > "$1"' sh #{client_tty}'';
+  copyPipe =
+    "sh -c '"
+    + "b64=$(dd bs=1 count=100000 status=none | base64 | tr -d \"\\n\"); "
+    + "printf \"\\033]52;c;%s\\a\" \"$b64\" > \"$1\""
+    + "' sh #{client_tty}";
 in
 {
   home.activation.checkNixManagedTmux = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''

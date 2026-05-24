@@ -88,7 +88,10 @@ let
     (helpers.assertTest "darwin-host-name-matches-flake-attr"
       (darwinConfig.networking.localHostName == "f"
         && darwinConfig.networking.hostName == "f")
-      "Darwin localHostName/hostName must equal the flake attribute name (f) so `darwin-rebuild --flake` resolves without an explicit #name")
+      (
+        "Darwin localHostName/hostName must equal the flake attribute name (f) "
+        + "so `darwin-rebuild --flake` resolves without an explicit #name"
+      ))
 
     (helpers.assertTest "darwin-nix-flakes-enabled"
       (builtins.elem "flakes" darwinConfig.nix.settings.experimental-features)

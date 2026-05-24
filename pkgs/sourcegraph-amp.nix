@@ -42,7 +42,8 @@ buildNpmPackage {
     #!/bin/sh
     if [ "\$1" = update ] || [ "\$1" = up ]; then
       printf '%s\n' "amp is installed through Nix on this machine."
-      printf '%s\n' "Update ~/.config/nix-darwin/pkgs/sourcegraph-amp/package.json, then run darwin-rebuild switch --flake ~/.config/nix-darwin."
+      update_hint="Update ~/.config/nix-darwin/pkgs/sourcegraph-amp/package.json, then run"
+      printf '%s %s\n' "\$update_hint" "darwin-rebuild switch --flake ~/.config/nix-darwin."
       exit 0
     fi
     export NODE_PATH="$out/libexec/sourcegraph-amp/node_modules"

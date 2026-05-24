@@ -49,21 +49,29 @@ let
   grillKarpathyFooter = ''
     ## Karpathy alignment
 
-    This grilling *is* **Think Before Coding** — don't assume, surface confusion, present interpretations instead of silently picking one. Two reinforcements while you run it:
+    This grilling *is* **Think Before Coding** — don't assume, surface confusion,
+    present interpretations instead of silently picking one. Two reinforcements
+    while you run it:
 
-    - When you give a question's recommended answer, also show the interpretations you chose between and why. Don't collapse to one silently.
-    - The confusion to surface is yours too. If the code contradicts what the user just told you, name the contradiction and stop — don't paper over it.
+    - When you give a question's recommended answer, also show the interpretations
+      you chose between and why. Don't collapse to one silently.
+    - The confusion to surface is yours too. If the code contradicts what the user
+      just told you, name the contradiction and stop — don't paper over it.
 
     ## Close with verifiable goals
 
-    A session that ends in "shared understanding" but no checkable plan isn't finished — that's **Goal-Driven Execution**, the principle grilling alone skips. Before you stop, turn the agreed plan into success criteria the next agent can loop against:
+    A session that ends in "shared understanding" but no checkable plan isn't
+    finished — that's **Goal-Driven Execution**, the principle grilling alone skips.
+    Before you stop, turn the agreed plan into success criteria the next agent can
+    loop against:
 
     ```
     1. [step] -> verify: [check]
     2. [step] -> verify: [check]
     ```
 
-    Hand that block to the implementation skill (tdd, executing-plans). Strong criteria let it loop without you; "make it work" forces it back to ask.
+    Hand that block to the implementation skill (tdd, executing-plans). Strong
+    criteria let it loop without you; "make it work" forces it back to ask.
 
     ## Observable signals
 
@@ -76,14 +84,21 @@ let
   deepenKarpathyFooter = ''
     ## Karpathy alignment
 
-    The architecture vocabulary already encodes two Karpathy principles — name them so this skill composes with the others instead of restating them:
+    The architecture vocabulary already encodes two Karpathy principles — name them
+    so this skill composes with the others instead of restating them:
 
-    - **Simplicity First** is the seam rule. "One adapter = hypothetical seam, two = real" is just "no abstraction for single-use" — don't add a port until a second adapter earns it.
-    - **Surgical Changes** governs *execution*, not proposal. Propose freely; once the user approves a candidate, every changed line traces to that candidate. No drive-by refactors of adjacent code, no reopening what an ADR already settled.
+    - **Simplicity First** is the seam rule. "One adapter = hypothetical seam,
+      two = real" is just "no abstraction for single-use" — don't add a port until
+      a second adapter earns it.
+    - **Surgical Changes** governs *execution*, not proposal. Propose freely; once
+      the user approves a candidate, every changed line traces to that candidate.
+      No drive-by refactors of adjacent code, no reopening what an ADR already settled.
 
     ## Close with verifiable goals
 
-    "Deepen module X" becomes "tests green before and after" — **Goal-Driven Execution**. DEEPENING.md already says the interface is the test surface and old shallow-module tests become waste; state that as a loop before any edit:
+    "Deepen module X" becomes "tests green before and after" — **Goal-Driven
+    Execution**. DEEPENING.md already says the interface is the test surface and
+    old shallow-module tests become waste; state that as a loop before any edit:
 
     ```
     1. Characterise current behaviour with tests at the target interface -> verify: green on today's code
