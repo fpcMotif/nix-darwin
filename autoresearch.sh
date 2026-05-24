@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Repository-local maintainability signals for the Nix config. This is not a
-# substitute for review; it catches documentation drift and check-contract gaps
-# that make the repo harder to navigate.
+# substitute for review; it catches documentation drift, check-contract gaps,
+# and stale source-of-truth docs that make the repo harder to navigate.
 
 count_missing_module_docs() {
   local count=0 file base
@@ -80,15 +80,44 @@ count_nix_files() {
     | tr -d '[:space:]'
 }
 
+count_stale_linting_policy() {
+  if grep -Fq 'Add `statix`/`deadnix` as explicit checks before treating them as enforced gates' ARCHITECTURE.md; then
+    printf '1\n'
+  else
+    printf '0\n'
+  fi
+}
+
+count_missing_statix_policy_doc() {
+  if [ -f statix.toml ] && ! grep -Fq 'statix.toml' ARCHITECTURE.md; then
+    printf '1\n'
+  else
+    printf '0\n'
+  fi
+}
+
+count_stale_review_date() {
+  if grep -Fq '> **Last reviewed:** 2026-05-24.' ARCHITECTURE.md; then
+    printf '0\n'
+  else
+    printf '1\n'
+  fi
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
 lint_contract_gaps=$(count_lint_contract_gaps)
 long_nix_lines=$(count_long_nix_lines)
 nix_files=$(count_nix_files)
+stale_linting_policy=$(count_stale_linting_policy)
+missing_statix_policy_doc=$(count_missing_statix_policy_doc)
+stale_review_date=$(count_stale_review_date)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
+doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
 
+printf 'METRIC doc_truth_debt=%s\n' "$doc_truth_debt"
 printf 'METRIC quality_debt=%s\n' "$quality_debt"
 printf 'METRIC docs_missing_modules=%s\n' "$docs_missing_modules"
 printf 'METRIC docs_missing_tests=%s\n' "$docs_missing_tests"
@@ -96,3 +125,6 @@ printf 'METRIC docs_stale_tests=%s\n' "$docs_stale_tests"
 printf 'METRIC lint_contract_gaps=%s\n' "$lint_contract_gaps"
 printf 'METRIC long_nix_lines=%s\n' "$long_nix_lines"
 printf 'METRIC nix_files=%s\n' "$nix_files"
+printf 'METRIC stale_linting_policy=%s\n' "$stale_linting_policy"
+printf 'METRIC missing_statix_policy_doc=%s\n' "$missing_statix_policy_doc"
+printf 'METRIC stale_review_date=%s\n' "$stale_review_date"

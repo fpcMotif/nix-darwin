@@ -10,23 +10,27 @@ This session runs in the isolated worktree:
 The original checkout had unrelated uncommitted changes when this session started; do not touch or depend on them.
 
 ## Metrics
-- **Primary**: `quality_debt` (points, lower is better) — objective maintainability debt from repository-local signals.
+- **Primary**: `doc_truth_debt` (points, lower is better) — documentation/check truthfulness debt from repository-local signals.
 - **Secondary**:
+  - `quality_debt`: the previous saturated module/test/lint/line-length metric.
   - `docs_missing_modules`: source modules under `modules/` not named in `ARCHITECTURE.md`.
   - `docs_missing_tests`: test files or test attributes not named in `tests/README.md`.
   - `docs_stale_tests`: test names documented in `tests/README.md` that are not check attributes.
   - `lint_contract_gaps`: documented lint tools that are not actually wired into tests.
   - `long_nix_lines`: Nix source lines over 140 chars, excluding generated/reference/local worktree paths.
+  - `stale_linting_policy`: `ARCHITECTURE.md` still says statix/deadnix are not enforced even though they are.
+  - `missing_statix_policy_doc`: `statix.toml` exists but `ARCHITECTURE.md` does not describe the local policy.
+  - `stale_review_date`: `ARCHITECTURE.md` Last reviewed date is not the current session date.
   - `nix_files`: count of measured Nix files.
 
-`quality_debt = docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines`.
+`doc_truth_debt = quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10`.
 
 The metric is a guide, not permission to game the benchmark. Do not delete useful code or documentation solely to reduce counts. Improvements should make a human reviewer happier and should keep checks passing.
 
 ## How to Run
 `./autoresearch.sh`
 
-It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs.
+It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `quality_debt` metric is still emitted as a secondary monitor.
 
 ## Files in Scope
 - `ARCHITECTURE.md` — architecture and module-layout documentation.
@@ -55,5 +59,8 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Baseline `quality_debt=308`: module/test documentation drift and lint-contract gaps dominated.
 - Kept: refreshed `ARCHITECTURE.md` module inventory so Darwin/Home module docs match current imports (`quality_debt=98`).
 - Kept: synchronized `tests/README.md` with actual `tests/default.nix` check attributes (`quality_debt=74`).
-- Tried and reverted: adding a real statix/deadnix check. It found real statix warnings; do not re-add the gate until those warnings are fixed or intentionally scoped.
+- Kept: wrapped long Nix source lines with named constants/string concatenation while preserving behavior (`quality_debt=51`).
+- Kept: added a real `unit-static-lint` gate for `statix` + `deadnix`, fixed actionable lint findings, and documented the narrow `repeated_keys` statix opt-out (`quality_debt=1`).
+- Kept: wrapped the final long BetterMouse assertion message (`quality_debt=0`).
+- Previous primary metric reached its lower bound (`quality_debt=0`). Reinitialized around `doc_truth_debt` to catch stale source-of-truth docs and policy drift without weakening checks.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.
