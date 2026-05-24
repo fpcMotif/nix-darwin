@@ -62,5 +62,5 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Kept: wrapped long Nix source lines with named constants/string concatenation while preserving behavior (`quality_debt=51`).
 - Kept: added a real `unit-static-lint` gate for `statix` + `deadnix`, fixed actionable lint findings, and documented the narrow `repeated_keys` statix opt-out (`quality_debt=1`).
 - Kept: wrapped the final long BetterMouse assertion message (`quality_debt=0`).
-- Previous primary metric reached its lower bound (`quality_debt=0`). Reinitialized around `doc_truth_debt` to catch stale source-of-truth docs and policy drift without weakening checks.
+- Previous primary metric reached its lower bound (`quality_debt=0`). Reinitialized around `doc_truth_debt` to catch stale source-of-truth docs and policy drift without weakening checks. Baseline `doc_truth_debt=10` showed only the `ARCHITECTURE.md` review date was stale after the doc was re-read.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.

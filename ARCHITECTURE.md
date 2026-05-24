@@ -1,7 +1,7 @@
 # Nix Architecture — Martin's cross-platform config
 
 > **Active target:** `darwinConfigurations.f` (Apple Silicon, nix-darwin).
-> **Last reviewed:** 2026-04-29.
+> **Last reviewed:** 2026-05-24.
 
 This repository is Martin's cross-platform Nix configuration. The Mac is the active target; Linux/Omakub and NixOS targets are deliberately staged behind it.
 
