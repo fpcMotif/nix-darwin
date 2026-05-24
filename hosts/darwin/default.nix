@@ -45,7 +45,50 @@
       # Add personal bindings here. skhd syntax: `mod - key : command`.
       # Global prefix `ctrl + alt + shift` is reserved by the defaults.
       extraConfig = ''
-        # ctrl + alt + shift - o : open -a "Notes"
+        # Ghostty split controls.
+        #
+        # These synthesize Ghostty's own keybinds instead of introducing a
+        # macOS window-manager daemon. Outside Ghostty they only focus Ghostty,
+        # so the split commands cannot become stray browser/editor shortcuts.
+        ctrl + alt + shift - e [
+          "ghostty" : ${pkgs.skhd}/bin/skhd -k "cmd - d"
+          * : open -a "Ghostty"
+        ]
+
+        ctrl + alt + shift - x [
+          "ghostty" : ${pkgs.skhd}/bin/skhd -k "cmd + shift - d"
+          * : open -a "Ghostty"
+        ]
+
+        ctrl + alt + shift - z [
+          "ghostty" : ${pkgs.skhd}/bin/skhd -k "cmd + shift - f"
+          * : open -a "Ghostty"
+        ]
+
+        ctrl + alt + shift - 0 [
+          "ghostty" : ${pkgs.skhd}/bin/skhd -k "cmd + shift - 0"
+          * : open -a "Ghostty"
+        ]
+
+        ctrl + alt + shift - left [
+          "ghostty" : ${pkgs.skhd}/bin/skhd -k "cmd + alt - left"
+          * : open -a "Ghostty"
+        ]
+
+        ctrl + alt + shift - right [
+          "ghostty" : ${pkgs.skhd}/bin/skhd -k "cmd + alt - right"
+          * : open -a "Ghostty"
+        ]
+
+        ctrl + alt + shift - up [
+          "ghostty" : ${pkgs.skhd}/bin/skhd -k "cmd + alt - up"
+          * : open -a "Ghostty"
+        ]
+
+        ctrl + alt + shift - down [
+          "ghostty" : ${pkgs.skhd}/bin/skhd -k "cmd + alt - down"
+          * : open -a "Ghostty"
+        ]
       '';
     };
   };

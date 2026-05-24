@@ -10,9 +10,22 @@ Martin's cross-platform Nix configuration (nix-darwin is the active target; Linu
 The Nix-managed shape of the active Mac (`f`): system packages, macOS defaults, launchd policy, and Home Manager handoff points that should be reproducible after `darwin-rebuild switch`.
 _Avoid_: using this term for mutable app data, auth state, caches, or personal files outside the Nix configuration.
 
+**Darwin baseline activation state**:
+The reversible local state the Darwin baseline owns during activation, such as launchd helper suppression ledgers and managed path markers. It records only changes made by Nix so disabling a baseline feature can clean up or restore its own effects without touching unmanaged app or user state.
+_Avoid_: using this term for arbitrary activation scripts, mutable app settings, or one-off filesystem setup with no reversible ownership record.
+
 **Background churn**:
 Unwanted helper, updater, indexing, or diagnostic activity that keeps running without an explicit current task. The Darwin baseline suppresses background churn when the main app or development tree remains available by other deliberate workflows.
 _Avoid_: treating every background process as churn; only use this for optional activity that competes with the user's Nix-managed baseline.
+
+**Hotkey plane**:
+The small, low-privilege global shortcut layer for launching apps or forwarding existing app-native shortcuts. It is not a macOS window-manager policy and should not own rich app/window state.
+_Avoid_: using this term for app-local keymaps, text-editor shortcuts, or launcher search.
+
+**Terminal-first split control**:
+The preferred coding-layout control path: split, move between, resize, and equalise terminal panes from terminal-native mechanisms before reaching for macOS-wide tiling.
+_Avoid_: treating every window split as a Finder/Dock/Spaces concern; most coding splits belong inside the terminal session.
+
 
 **Manual-only app**:
 An app that may be installed or launched manually while its background launchd helpers are kept out of the baseline. Manual-only means user-initiated use is preserved; always-on helper behavior is not.

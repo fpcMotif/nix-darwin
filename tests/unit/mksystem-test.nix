@@ -52,6 +52,19 @@ let
       (hasPackage "git" homeConfig.home.packages)
       "common Home Manager packages should include git")
 
+    (helpers.assertTest "common-home-packages-include-oxfmt"
+      (hasPackage "oxfmt" homeConfig.home.packages)
+      "common Home Manager packages should include OXC formatter tooling")
+
+    (helpers.assertTest "common-home-packages-include-go"
+      (hasPackage "go" homeConfig.home.packages)
+      "common Home Manager packages should include the Go toolchain")
+
+    (helpers.assertTest "common-home-packages-include-cargo"
+      (hasPackage "cargo" homeConfig.home.packages)
+      "common Home Manager packages should include the Rust Cargo toolchain")
+
+
     (helpers.assertTest "agent-skills-enabled"
       (homeConfig.programs.agent-skills.enable == true)
       "agent-skills Home Manager module should be enabled")
@@ -97,6 +110,10 @@ let
     (helpers.assertTest "darwin-system-packages-include-raycast"
       (hasPackage "raycast" darwinConfig.environment.systemPackages)
       "Darwin host should include the Raycast system package")
+
+    (helpers.assertTest "darwin-home-packages-include-swiftlint"
+      (hasPackage "swiftlint" homeConfig.home.packages)
+      "Darwin Home Manager packages should include Swift/iOS lint tooling")
   ];
 
   linuxChecks = lib.optionals (!isDarwin) [

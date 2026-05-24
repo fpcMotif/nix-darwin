@@ -192,6 +192,11 @@
       gstl = "git stash list";
 
       sg = "ast-grep";
+      oxl = "oxlint";
+      oxf = "oxfmt";
+      oxfix = "oxlint --fix";
+      gsp = "ghostty-split";
+      gpn = "ghostty-pane";
       claude-conductor = "\"$HOME/Library/Application Support/com.conductor.app/bin/claude\"";
       pymobiledevice3 = "source ~/.venv/bin/activate && python -m pymobiledevice3";
 
@@ -352,6 +357,46 @@
         local pid
         pid=$(ps -ef | sed 1d | fzf --prompt='󰆙 ' -m | awk '{print $2}')
         [[ -n "$pid" ]] && echo "$pid" | xargs -r kill "-''${1:-9}"
+      }
+
+      _ghostty_key() {
+        if ! (( $+commands[skhd] )); then
+          print -u2 "ghostty: skhd is not on PATH; run sync or use Ghostty's native keybinds"
+          return 127
+        fi
+        command skhd -k "$1"
+      }
+
+      ghostty-split() {
+        local action="''${1:-right}"
+        local chord
+        case "$action" in
+          right|r|east|e) chord="cmd - d" ;;
+          down|d|south|s) chord="cmd + shift - d" ;;
+          zoom|z) chord="cmd + shift - f" ;;
+          equal|eq|0) chord="cmd + shift - 0" ;;
+          *)
+            print -u2 "usage: ghostty-split {right|down|zoom|equal}"
+            return 2
+            ;;
+        esac
+        _ghostty_key "$chord"
+      }
+
+      ghostty-pane() {
+        local action="''${1:-left}"
+        local chord
+        case "$action" in
+          left|h|west|w) chord="cmd + alt - left" ;;
+          right|l|east|e) chord="cmd + alt - right" ;;
+          up|k|north|n) chord="cmd + alt - up" ;;
+          down|j|south|s) chord="cmd + alt - down" ;;
+          *)
+            print -u2 "usage: ghostty-pane {left|right|up|down}"
+            return 2
+            ;;
+        esac
+        _ghostty_key "$chord"
       }
 
       ab() {

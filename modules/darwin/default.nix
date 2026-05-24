@@ -5,6 +5,7 @@
   martin.brew.homebrew.enable = false;
 
   imports = [
+    ./baseline-activation.nix
     ./background-services.nix
     ./brew-variants.nix
     ./defaults.nix

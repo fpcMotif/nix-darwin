@@ -40,15 +40,48 @@ let
     rtk
     bun
     nodejs_25
+    # Frontend and SSO/OIDC helpers. OXC is the formatter/linter stack;
+    # oxlint lives in ./lsp.nix because it also runs as an LSP server.
+    oxfmt
+    # Keep Wrangler's vendored TypeScript below the first-party TypeScript
+    # package in the Home Manager buildEnv.
+    (lib.lowPrio wrangler)
+    mkcert
+    jwt-cli
+    step-cli
+    xh
+
     neovim
     gnupg
     gnused
     shellcheck
     stylua
+    # Rust.
+    rustc
+    cargo
+    rustfmt
+    clippy
+    cargo-nextest
+    cargo-watch
+    cargo-edit
+
+    # Go.
+    go
+    gofumpt
+    golangci-lint
+
+    # Haskell.
+    ghc
+    cabal-install
+    fourmolu
+    hlint
+    ghcid
+
     # All language servers live in ./lsp.nix — including typescript-go
     # (it's both compiler and `tsgo --lsp` server), oxlint, vtsls,
     # vue/astro/svelte/tailwind/emmet servers, gopls, rust-analyzer,
-    # basedpyright, ruff, lua-language-server, mcp-language-server.
+    # sourcekit-lsp, haskell-language-server, basedpyright, ruff,
+    # lua-language-server, mcp-language-server.
     cmake
     tree-sitter
     wget
@@ -56,8 +89,16 @@ let
   ];
 
   darwinPackages = with pkgs; [
-    # GUI apps
+    # Darwin-only GUI apps and Apple-platform CLIs.
     martin.raycast
+    # iOS / Apple platform CLIs. Xcode itself stays Apple-managed; these are
+    # the shell tools around project generation, signing flows, and CI logs.
+    cocoapods
+    fastlane
+    xcodes
+    xcbeautify
+    swiftformat
+    swiftlint
 
     martin.gemini-cli-preview
     martin.sourcegraph-amp

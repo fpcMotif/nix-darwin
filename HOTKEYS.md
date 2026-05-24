@@ -8,6 +8,8 @@ global automation small, memorable, and conflict-resistant.
 - Global automation: `skhd`, managed by nix-darwin in `modules/darwin/skhd.nix`.
 - Global prefix: `ctrl + alt + shift`.
 - App-local shortcuts: keep them inside each app config.
+- Terminal-first split control: prefer Ghostty/tmux panes for coding layouts;
+  use Raycast or richer automation only when the target is not terminal-native.
 - Rich macOS automation: `Hammerspoon`, configured at `~/.hammerspoon/init.lua`.
 - Input method shortcuts: leave `ctrl+space` and `ctrl+alt+space` alone.
 - Optional future upgrade: if a single-key launcher prefix is wanted, add
@@ -34,8 +36,27 @@ Source: `modules/darwin/skhd.nix`
 | `ctrl+alt+shift+l` | Sleep display / lock if password-on-wake is enabled |
 | `ctrl+alt+shift+r` | Reload skhd |
 
-Add personal one-offs in `hosts/darwin/default.nix` under
+Add host-specific global bindings in `hosts/darwin/default.nix` under
 `martin.skhd.extraConfig`.
+
+## Ghostty Global Split Hotkeys
+
+Source: `hosts/darwin/default.nix` (`martin.skhd.extraConfig`)
+
+These forward to Ghostty's app-local keybinds when Ghostty is focused. In any
+other app they only focus Ghostty, so the hotkey plane does not become a
+macOS-wide tiling/window-manager policy.
+
+| Hotkey | Action |
+| --- | --- |
+| `ctrl+alt+shift+e` | Ghostty split right |
+| `ctrl+alt+shift+x` | Ghostty split down |
+| `ctrl+alt+shift+z` | Toggle Ghostty split zoom |
+| `ctrl+alt+shift+0` | Equalize Ghostty splits |
+| `ctrl+alt+shift+left/right/up/down` | Move between Ghostty splits |
+
+Terminal equivalents from the shell: `gsp right`, `gsp down`, `gsp zoom`,
+`gsp equal`, and `gpn left/right/up/down`.
 
 ## Finder Cut And Move
 
@@ -114,6 +135,8 @@ Source: `modules/home/ghostty.nix`
 | `cmd+ctrl+arrow` | Resize splits |
 | `cmd+shift+0` | Equalize splits |
 | `cmd+shift+left/right` | Previous/next tab |
+
+Terminal commands: `gsp right/down/zoom/equal` and `gpn left/right/up/down`.
 
 ### Tmux
 

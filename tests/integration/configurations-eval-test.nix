@@ -174,32 +174,48 @@ let
 
     (helpers.assertTest "darwin-background-churn-reduced"
       (
-        let activation = darwinConfig.system.activationScripts.postActivation.text;
+        let
+          activation = darwinConfig.system.activationScripts.postActivation.text;
+          launchdEntries = darwinConfig.martin.darwinBaseline.activationState.launchdDisabledDomains;
+          hasLaunchdLabel = label: lib.any (entry: builtins.elem label entry.labels) launchdEntries;
         in
         darwinConfig.martin.backgroundServices.cleanMyMacManualOnly == true
           && darwinConfig.martin.backgroundServices.dropbox.installClient == false
           && darwinConfig.martin.backgroundServices.dropbox.disableBackgroundUpdaters == true
+          && hasLaunchdLabel "com.macpaw.CleanMyMac5.HealthMonitor"
+          && hasLaunchdLabel "com.getdropbox.dropbox.UpdaterPrivilegedHelper"
           && !(hasPackage "dropbox" darwinConfig.environment.systemPackages)
           && lib.hasInfix "/var/db/nix-config" activation
-          && lib.hasInfix "background-services-disabled" activation
+          && lib.hasInfix "background-services-disabled-by-nix" activation
           && lib.hasInfix "com.macpaw.CleanMyMac5.HealthMonitor" activation
           && lib.hasInfix "com.getdropbox.dropbox.UpdaterPrivilegedHelper" activation
+          && lib.hasInfix "launchctl print-disabled" activation
+          && lib.hasInfix "managed_before=1" activation
+          && lib.hasInfix "grep -Fxq \"$domain\" \"$state_file\"" activation
           && lib.hasInfix "launchctl enable" activation
       )
       "Darwin should keep CleanMyMac and Dropbox background churn out of the baseline with reversible launchd state")
 
     (helpers.assertTest "darwin-spotlight-dev-tree-exclusions"
       (
-        let activation = darwinConfig.system.activationScripts.postActivation.text;
+        let
+          activation = darwinHome.home.activation.spotlightExclusions.data;
+          markerEntries = darwinConfig.martin.darwinBaseline.activationState.pathMarkers;
+          spotlightMarker = lib.findFirst (marker: marker.name == "spotlightExclusions") null markerEntries;
         in
         darwinConfig.martin.spotlight.enable == true
+          && spotlightMarker != null
+          && spotlightMarker.enable == true
+          && builtins.elem "/Users/${user}/gosh-my-pi" spotlightMarker.paths
+          && builtins.elem "/Users/${user}/.codex" spotlightMarker.paths
           && builtins.elem "/Users/${user}/gosh-my-pi" darwinConfig.martin.spotlight.excludedPaths
           && builtins.elem "/Users/${user}/.codex" darwinConfig.martin.spotlight.excludedPaths
           && builtins.elem ".metadata_never_index" darwinHome.programs.git.ignores
           && lib.hasInfix "managed by nix-config martin.spotlight" activation
           && lib.hasInfix "spotlight-exclusions" activation
+          && lib.hasInfix "elif [ ! -e \"$marker\" ]" activation
       )
-      "Darwin should mark dev/cache trees as reversible Spotlight exclusions without dirty git status")
+      "Darwin should mark dev/cache trees as user-context reversible Spotlight exclusions without clobbering existing markers")
 
     (helpers.assertTest "darwin-health-check-launch-agent"
       (
