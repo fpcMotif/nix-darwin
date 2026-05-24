@@ -155,12 +155,17 @@ When a change fits two slots, prefer the more specific one and lift it later whe
 
 ```text
 modules/darwin/
-├── default.nix         # imports the Darwin module set + base nixpkgs config
-├── defaults.nix        # selected macOS defaults (keyboard, Finder, Dock, trackpad, screenshots)
-├── nix.nix             # flakes / nix-command / trusted users
-├── shell.nix           # zsh shell registration
-├── security.nix        # Touch ID sudo
-└── brew-variants.nix   # dormant brew-family scaffolds (see policy below)
+├── default.nix          # imports the Darwin module set + base nixpkgs config
+├── brew-variants.nix    # dormant brew-family scaffolds (see policy below)
+├── defaults.nix         # selected macOS keyboard, Finder, Dock, trackpad, screenshot defaults
+├── fonts.nix            # system font installation
+├── hammerspoon.nix      # Hammerspoon app/config integration
+├── mouse-display.nix    # BetterMouse and display-adjacent Mac preferences
+├── nix.nix              # flakes / nix-command / trusted users
+├── rime.nix             # Rime input-method state and data paths
+├── security.nix         # Touch ID sudo
+├── shell.nix            # zsh shell registration
+└── skhd.nix             # skhd hotkey daemon integration
 ```
 
 The active Darwin host (`hosts/darwin/default.nix`) sets:
@@ -178,14 +183,29 @@ The platform-specific home path is computed once in `lib/mkSystem.nix` and expos
 
 ```text
 modules/home/
-├── default.nix         # username, homeDirectory, stateVersion, imports
-├── packages.nix        # common + Darwin-only packages
-├── zsh.nix             # zsh, fzf, direnv, aliases/functions, editor env
-├── prompt.nix          # option-gated Starship config (enabled on active Mac)
-├── tmux.nix            # tmux behavior from legacy dotfiles, without TPM bootstrap
-├── ghostty.nix         # Ghostty config managed as XDG text
-├── git.nix             # Git behavior without copied identity/signing keys
-└── skills.nix          # agent skill bundle activation
+├── default.nix            # username, homeDirectory, stateVersion, imports
+├── ai-cli.nix             # shared AI CLI package/config glue
+├── ai-model-routing.nix   # model-router scripts and generated routing config
+├── amp.nix                # Amp CLI wrapper/state integration
+├── claude.nix             # Claude Code, agent-skills bundle, hooks, and managed Claude files
+├── cleanup.nix            # user-level cleanup jobs and activation maintenance
+├── crush.nix              # Crush CLI wrapper/config integration
+├── cursor.nix             # Cursor settings, extensions, and activation glue
+├── droid.nix              # Factory Droid package/config integration
+├── ghostty.nix            # Ghostty config managed as XDG text
+├── git.nix                # Git behavior without copied identity/signing keys
+├── jujutsu.nix            # Jujutsu config and Git coexistence defaults
+├── kitty.nix              # Kitty terminal config
+├── lsp.nix                # shared LSP/editor config artifacts
+├── obsidian.nix           # Obsidian app/config integration
+├── opencode.nix           # OpenCode CLI/Electron wrappers and config seed
+├── packages.nix           # common + Darwin-only packages
+├── prompt.nix             # option-gated Starship config (enabled on active Mac)
+├── ssh.nix                # SSH client config that avoids secrets in the flake
+├── tmux.nix               # tmux behavior from legacy dotfiles, without TPM bootstrap
+├── yazi.nix               # Yazi terminal file-manager config
+├── zed.nix                # Zed settings and agent rules files
+└── zsh.nix                # zsh, fzf, direnv, aliases/functions, editor env
 ```
 
 Common packages should be portable across Mac, future Omakub Home Manager, and NixOS where practical. Darwin-only packages live behind `pkgs.stdenv.isDarwin` checks.
@@ -196,7 +216,7 @@ This section is the largest because the moving parts (sources, targets, discover
 
 ### Mechanism
 
-`modules/home/skills.nix` imports `inputs.agent-skills.homeManagerModules.default` and uses the upstream `programs.agent-skills` DSL — no custom activation scripts. The module owns one declarative bundle of selected `SKILL.md` directories and syncs that bundle to enabled targets via rsync.
+`modules/home/claude.nix` imports `inputs.agent-skills.homeManagerModules.default` and uses the upstream `programs.agent-skills` DSL — no custom activation scripts. The module owns one declarative bundle of selected `SKILL.md` directories and syncs that bundle to enabled targets via rsync.
 
 ### Enabled targets
 
