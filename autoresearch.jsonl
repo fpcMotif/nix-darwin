@@ -1,0 +1,1 @@
+{"type":"config","name":"Nix code quality, readability, and docs","metricName":"quality_debt","metricUnit":"","bestDirection":"lower"}
