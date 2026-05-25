@@ -477,6 +477,30 @@ print(sum(1 for module_pattern, doc_token in required if module_pattern in tmux 
 PY
 }
 
+count_agent_report_link_policy_inconsistencies() {
+  python3 <<'PY'
+from pathlib import Path
+
+module = Path("modules/home/claude.nix").read_text()
+report_path = Path("AGENT_SKILLS_NIX_REPORT.md")
+if not report_path.exists() or 'structure = "link"' not in module:
+    print(0)
+    raise SystemExit
+
+report = report_path.read_text()
+patterns = [
+    "For these skill targets, `symlink-tree` is usually safer",
+    "`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills`",
+    "`${CODEX_HOME:-$HOME/.codex}/skills`",
+    "Handles `$HOME`, `${CLAUDE_CONFIG_DIR:-...}`, `${CODEX_HOME:-...}`, and custom paths.",
+    "| `symlink-tree` activation | Home Manager-native activation, not pure option-only linking | Yes | Yes, destination dir can be writable | Best global skills default. |",
+    "### Why keep `symlink-tree` if it still makes symlinks?",
+]
+
+print(sum(1 for pattern in patterns if pattern in report))
+PY
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -509,6 +533,7 @@ stale_root_fallback_claims=$(count_stale_root_fallback_claims)
 stale_architecture_agent_target_policy_claims=$(count_stale_architecture_agent_target_policy_claims)
 hotkeys_missing_repo_shortcut_files=$(count_hotkeys_missing_repo_shortcut_files)
 hotkeys_missing_tmux_copy_mode_bindings=$(count_hotkeys_missing_tmux_copy_mode_bindings)
+agent_report_link_policy_inconsistencies=$(count_agent_report_link_policy_inconsistencies)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
@@ -525,7 +550,9 @@ root_fallback_docs_debt=$((agent_report_truth_debt + stale_root_fallback_claims 
 architecture_agent_policy_debt=$((root_fallback_docs_debt + stale_architecture_agent_target_policy_claims * 8))
 hotkeys_repo_shortcut_docs_debt=$((architecture_agent_policy_debt + hotkeys_missing_repo_shortcut_files * 3))
 hotkeys_active_binding_docs_debt=$((hotkeys_repo_shortcut_docs_debt + hotkeys_missing_tmux_copy_mode_bindings * 2))
+agent_report_link_policy_debt=$((hotkeys_active_binding_docs_debt + agent_report_link_policy_inconsistencies * 4))
 
+printf 'METRIC agent_report_link_policy_debt=%s\n' "$agent_report_link_policy_debt"
 printf 'METRIC hotkeys_active_binding_docs_debt=%s\n' "$hotkeys_active_binding_docs_debt"
 printf 'METRIC hotkeys_repo_shortcut_docs_debt=%s\n' "$hotkeys_repo_shortcut_docs_debt"
 printf 'METRIC architecture_agent_policy_debt=%s\n' "$architecture_agent_policy_debt"
@@ -573,3 +600,4 @@ printf 'METRIC stale_root_fallback_claims=%s\n' "$stale_root_fallback_claims"
 printf 'METRIC stale_architecture_agent_target_policy_claims=%s\n' "$stale_architecture_agent_target_policy_claims"
 printf 'METRIC hotkeys_missing_repo_shortcut_files=%s\n' "$hotkeys_missing_repo_shortcut_files"
 printf 'METRIC hotkeys_missing_tmux_copy_mode_bindings=%s\n' "$hotkeys_missing_tmux_copy_mode_bindings"
+printf 'METRIC agent_report_link_policy_inconsistencies=%s\n' "$agent_report_link_policy_inconsistencies"
