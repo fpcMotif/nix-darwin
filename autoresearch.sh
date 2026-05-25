@@ -371,6 +371,28 @@ count_missing_claude_split_modules() {
   printf '%s\n' "$count"
 }
 
+count_stale_agent_skills_report_claims() {
+  python3 <<'PY'
+from pathlib import Path
+
+report = Path("AGENT_SKILLS_NIX_REPORT.md")
+if not report.exists():
+    print(0)
+    raise SystemExit
+
+text = report.read_text()
+stale_patterns = [
+    "Live file: `modules/home/claude.nix`.",
+    "modules/home/skills.nix` now uses the upstream Home Manager DSL",
+    "Recommendation: keep `programs.agent-skills` plus `symlink-tree` global targets.",
+    'structure = "symlink-tree"',
+    "Reason: this Windows environment does not have `nix`, `nixpkgs-fmt`, or `nixfmt` available",
+]
+
+print(sum(1 for pattern in stale_patterns if pattern in text))
+PY
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -398,6 +420,7 @@ required_claude_activation_assertions=5
 stale_agent_skills_activation_claim=$(count_stale_agent_skills_activation_claim)
 claude_main_activation_blocks=$(count_claude_main_activation_blocks)
 missing_claude_split_modules=$(count_missing_claude_split_modules)
+stale_agent_skills_report_claims=$(count_stale_agent_skills_report_claims)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
@@ -409,7 +432,9 @@ activation_path_literal_debt=$((behavioral_coverage_debt + activation_path_dupli
 claude_activation_coverage_debt=$((activation_path_literal_debt + missing_claude_activation_assertions * 5))
 agent_docs_truth_debt=$((claude_activation_coverage_debt + stale_agent_skills_activation_claim * 15))
 claude_activation_locality_debt=$((agent_docs_truth_debt + claude_main_activation_blocks * 5 + missing_claude_split_modules * 5))
+agent_report_truth_debt=$((claude_activation_locality_debt + stale_agent_skills_report_claims * 5))
 
+printf 'METRIC agent_report_truth_debt=%s\n' "$agent_report_truth_debt"
 printf 'METRIC claude_activation_locality_debt=%s\n' "$claude_activation_locality_debt"
 printf 'METRIC agent_docs_truth_debt=%s\n' "$agent_docs_truth_debt"
 printf 'METRIC claude_activation_coverage_debt=%s\n' "$claude_activation_coverage_debt"
@@ -447,3 +472,4 @@ printf 'METRIC required_claude_activation_assertions=%s\n' "$required_claude_act
 printf 'METRIC stale_agent_skills_activation_claim=%s\n' "$stale_agent_skills_activation_claim"
 printf 'METRIC claude_main_activation_blocks=%s\n' "$claude_main_activation_blocks"
 printf 'METRIC missing_claude_split_modules=%s\n' "$missing_claude_split_modules"
+printf 'METRIC stale_agent_skills_report_claims=%s\n' "$stale_agent_skills_report_claims"

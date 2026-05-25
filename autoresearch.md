@@ -10,8 +10,9 @@ This session runs in the isolated worktree:
 The original checkout had unrelated uncommitted changes when this session started; do not touch or depend on them.
 
 ## Metrics
-- **Primary**: `claude_activation_locality_debt` (points, lower is better) — Claude activation logic still embedded in the large skills/files module instead of a tested focused submodule.
+- **Primary**: `agent_report_truth_debt` (points, lower is better) — stale root Agent Skills report claims after the Claude module split.
 - **Secondary**:
+  - `claude_activation_locality_debt`: Claude activation logic still embedded in the large skills/files module instead of a tested focused submodule.
   - `agent_docs_truth_debt`: stale Agent Skills architecture claims after Claude activation coverage changes.
   - `claude_activation_coverage_debt`: missing behavioral assertions for the large Claude Home Manager module's managed files and activation scripts.
   - `activation_path_literal_debt`: duplicated activation path literals in high-risk Darwin modules, after behavioral coverage is in place.
@@ -47,6 +48,7 @@ The original checkout had unrelated uncommitted changes when this session starte
   - `stale_agent_skills_activation_claim`: `ARCHITECTURE.md` still claims Claude has no custom activation scripts even though `modules/home/claude.nix` does.
   - `claude_main_activation_blocks`: Claude-specific `home.activation.*` blocks still present in `modules/home/claude.nix`.
   - `missing_claude_split_modules`: required focused Claude support modules (`claude-common.nix`, `claude-activations.nix`) missing.
+  - `stale_agent_skills_report_claims`: stale claims in `AGENT_SKILLS_NIX_REPORT.md` about live files, target structure, and verification status.
   - `nix_files`: count of measured Nix files.
 
 `doc_truth_debt = quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10`.
@@ -58,16 +60,18 @@ The original checkout had unrelated uncommitted changes when this session starte
 `claude_activation_coverage_debt = activation_path_literal_debt + missing_claude_activation_assertions * 5`.
 `agent_docs_truth_debt = claude_activation_coverage_debt + stale_agent_skills_activation_claim * 15`.
 `claude_activation_locality_debt = agent_docs_truth_debt + claude_main_activation_blocks * 5 + missing_claude_split_modules * 5`.
+`agent_report_truth_debt = claude_activation_locality_debt + stale_agent_skills_report_claims * 5`.
 
 The metric is a guide, not permission to game the benchmark. Do not delete useful code or documentation solely to reduce counts. Improvements should make a human reviewer happier and should keep checks passing.
 
 ## How to Run
 `./autoresearch.sh`
 
-It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `agent_docs_truth_debt`, `claude_activation_coverage_debt`, `activation_path_literal_debt`, `behavioral_coverage_debt`, `check_parity_debt`, `option_doc_debt`, `loop_guidance_debt`, `doc_truth_debt`, and `quality_debt` metrics are still emitted as secondary monitors.
+It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `claude_activation_locality_debt`, `agent_docs_truth_debt`, `claude_activation_coverage_debt`, `activation_path_literal_debt`, `behavioral_coverage_debt`, `check_parity_debt`, `option_doc_debt`, `loop_guidance_debt`, `doc_truth_debt`, and `quality_debt` metrics are still emitted as secondary monitors.
 
 ## Files in Scope
 - `ARCHITECTURE.md` — architecture and module-layout documentation.
+- `AGENT_SKILLS_NIX_REPORT.md` — root Agent Skills design report when Agent Skills implementation details move.
 - `CONTEXT.md` — glossary only; update only when terminology is clarified.
 - `tests/README.md` — test-suite documentation.
 - `tests/default.nix`, `tests/unit/*.nix`, `tests/lib/*.nix`, `tests/integration/*.nix` — quality gates and assertions.
@@ -117,9 +121,9 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - The static-lint gate may be expanded later if a rule can be enabled without fighting intentional Home Manager style.
 
 ## Experiment Queue
-1. Baseline `claude_activation_locality_debt` after docs and tests establish the Claude activation boundary.
-2. Move Claude-specific activation scripts into `modules/home/claude-activations.nix` and shared skill constants into `modules/home/claude-common.nix`, imported by the existing Claude module.
-3. Keep `modules/home/claude.nix` as the orchestrating module for managed files and `programs.agent-skills`; do not split every helper just to reduce line count.
+1. Baseline `agent_report_truth_debt` after the Claude split changed live Agent Skills files and verification status.
+2. Refresh `AGENT_SKILLS_NIX_REPORT.md` so it matches the current split modules, link-based targets, and Nix-backed verification.
+3. If report truth saturates, prefer a fresh docs-truth audit before another code refactor.
 4. If another code refactor is attempted, characterize behavior through existing checks first, then make the smallest source change possible.
 
 ## Recursive/Delegated Review Plan
@@ -157,5 +161,6 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Reinitialized around `agent_docs_truth_debt` after the new assertions exposed a stale `ARCHITECTURE.md` claim that `modules/home/claude.nix` has no custom activation scripts. Baseline found only that stale Agent Skills mechanism sentence.
 - Kept: refreshed the Agent Skills mechanism docs to distinguish upstream DSL-managed skill bundles from adjacent Claude activation scripts for settings seeding, Stop-hook diagnostics, and duplicate-skill cleanup (`agent_docs_truth_debt=0`).
 - Reinitialized around `claude_activation_locality_debt` to split tested Claude activation logic out of the large skill/file module without changing behavior.
-- Kept: moved Claude runtime activation scripts into `modules/home/claude-activations.nix`, shared skill constants into `modules/home/claude-common.nix`, and updated the architecture module inventory while keeping `modules/home/claude.nix` as the orchestrator for managed files and agent-skills bundle wiring.
+- Kept: moved Claude runtime activation scripts into `modules/home/claude-activations.nix`, shared skill constants into `modules/home/claude-common.nix`, and updated the architecture module inventory while keeping `modules/home/claude.nix` as the orchestrator for managed files and agent-skills bundle wiring (`claude_activation_locality_debt=0`).
+- Reinitialized around `agent_report_truth_debt` because the root Agent Skills report still reflected the pre-split `modules/home/skills.nix` era and older target-structure/verification assumptions.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.
