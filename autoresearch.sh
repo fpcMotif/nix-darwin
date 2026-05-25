@@ -145,6 +145,47 @@ count_guidance_sections() {
   printf '%s\n' "$count"
 }
 
+count_option_docs() {
+  python3 - "$1" <<'PY'
+import sys
+from pathlib import Path
+
+mode = sys.argv[1]
+count = 0
+for path in sorted(Path("modules").rglob("*.nix")):
+    text = path.read_text()
+    cursor = 0
+    while True:
+        idx = text.find("lib.mkOption {", cursor)
+        if idx == -1:
+            break
+
+        start = text.find("{", idx)
+        depth = 0
+        end = None
+        for pos, char in enumerate(text[start:], start):
+            if char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    end = pos + 1
+                    break
+
+        block = text[idx:end] if end is not None else text[idx:]
+        if mode == "total":
+            count += 1
+        elif mode == "missing_description" and "description =" not in block:
+            count += 1
+        elif mode == "missing_example" and "example =" not in block:
+            count += 1
+
+        cursor = end if end is not None else idx + 1
+
+print(count)
+PY
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -156,11 +197,16 @@ missing_statix_policy_doc=$(count_missing_statix_policy_doc)
 stale_review_date=$(count_stale_review_date)
 guidance_missing_sections=$(count_guidance_sections missing)
 guidance_empty_sections=$(count_guidance_sections empty)
+option_total=$(count_option_docs total)
+option_missing_descriptions=$(count_option_docs missing_description)
+option_missing_examples=$(count_option_docs missing_example)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
 loop_guidance_debt=$((doc_truth_debt + guidance_missing_sections * 10 + guidance_empty_sections * 5))
+option_doc_debt=$((loop_guidance_debt + option_missing_descriptions * 10 + option_missing_examples * 2))
 
+printf 'METRIC option_doc_debt=%s\n' "$option_doc_debt"
 printf 'METRIC loop_guidance_debt=%s\n' "$loop_guidance_debt"
 printf 'METRIC doc_truth_debt=%s\n' "$doc_truth_debt"
 printf 'METRIC quality_debt=%s\n' "$quality_debt"
@@ -175,3 +221,6 @@ printf 'METRIC missing_statix_policy_doc=%s\n' "$missing_statix_policy_doc"
 printf 'METRIC stale_review_date=%s\n' "$stale_review_date"
 printf 'METRIC guidance_missing_sections=%s\n' "$guidance_missing_sections"
 printf 'METRIC guidance_empty_sections=%s\n' "$guidance_empty_sections"
+printf 'METRIC option_total=%s\n' "$option_total"
+printf 'METRIC option_missing_descriptions=%s\n' "$option_missing_descriptions"
+printf 'METRIC option_missing_examples=%s\n' "$option_missing_examples"

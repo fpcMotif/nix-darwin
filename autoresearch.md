@@ -10,8 +10,9 @@ This session runs in the isolated worktree:
 The original checkout had unrelated uncommitted changes when this session started; do not touch or depend on them.
 
 ## Metrics
-- **Primary**: `loop_guidance_debt` (points, lower is better) — prompt/goal/search/experiment guidance debt for safe resumed autoresearch.
+- **Primary**: `option_doc_debt` (points, lower is better) — custom Nix option documentation debt.
 - **Secondary**:
+  - `loop_guidance_debt`: prompt/goal/search/experiment guidance debt for safe resumed autoresearch.
   - `doc_truth_debt`: documentation/check truthfulness debt from repository-local signals.
   - `quality_debt`: the previous saturated module/test/lint/line-length metric.
   - `docs_missing_modules`: source modules under `modules/` not named in `ARCHITECTURE.md`.
@@ -24,17 +25,21 @@ The original checkout had unrelated uncommitted changes when this session starte
   - `stale_review_date`: `ARCHITECTURE.md` Last reviewed date is not the current session date.
   - `guidance_missing_sections`: required autoresearch guidance sections are missing.
   - `guidance_empty_sections`: required autoresearch guidance sections exist but have no body.
+  - `option_total`: `lib.mkOption` declarations under `modules/`.
+  - `option_missing_descriptions`: `lib.mkOption` declarations without a `description` field.
+  - `option_missing_examples`: `lib.mkOption` declarations without an `example` field.
   - `nix_files`: count of measured Nix files.
 
 `doc_truth_debt = quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10`.
 `loop_guidance_debt = doc_truth_debt + guidance_missing_sections * 10 + guidance_empty_sections * 5`.
+`option_doc_debt = loop_guidance_debt + option_missing_descriptions * 10 + option_missing_examples * 2`.
 
 The metric is a guide, not permission to game the benchmark. Do not delete useful code or documentation solely to reduce counts. Improvements should make a human reviewer happier and should keep checks passing.
 
 ## How to Run
 `./autoresearch.sh`
 
-It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `doc_truth_debt` and `quality_debt` metrics are still emitted as secondary monitors.
+It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `loop_guidance_debt`, `doc_truth_debt`, and `quality_debt` metrics are still emitted as secondary monitors.
 
 ## Files in Scope
 - `ARCHITECTURE.md` — architecture and module-layout documentation.
@@ -113,5 +118,6 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Kept: added a real `unit-static-lint` gate for `statix` + `deadnix`, fixed actionable lint findings, and documented the narrow `repeated_keys` statix opt-out (`quality_debt=1`).
 - Kept: wrapped the final long BetterMouse assertion message (`quality_debt=0`).
 - Previous primary metric reached its lower bound (`quality_debt=0`). Reinitialized around `doc_truth_debt` to catch stale source-of-truth docs and policy drift without weakening checks. Baseline `doc_truth_debt=10` showed only the `ARCHITECTURE.md` review date was stale after the doc was re-read.
-- `doc_truth_debt` then reached its lower bound (`0`). User asked to recursively improve the prompt, goal, search goal, experiments, beliefs, hypotheses, and assumptions. Reinitialize around `loop_guidance_debt` so the persisted prompt guides future agents realistically instead of chasing saturated metrics.
+- `doc_truth_debt` then reached its lower bound (`0`). User asked to recursively improve the prompt, goal, search goal, experiments, beliefs, hypotheses, and assumptions. Reinitialized around `loop_guidance_debt` so the persisted prompt guides future agents realistically instead of chasing saturated metrics.
+- `loop_guidance_debt` reached its lower bound (`0`). Reinitialize around `option_doc_debt` to test the backlog hypothesis that custom option examples expose real documentation debt in Nix modules.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.
