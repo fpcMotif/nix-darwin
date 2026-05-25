@@ -11,6 +11,7 @@ in
 
     config = lib.mkOption {
       type = lib.types.either lib.types.path lib.types.str;
+      example = "${currentSystemUserHome}/MyRime-main";
       description = "Path to the Rime user-config directory (the directory copied into ~/Library/Rime).";
     };
   };

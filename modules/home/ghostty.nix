@@ -159,24 +159,28 @@ in
       light = lib.mkOption {
         type = lib.types.str;
         default = "Apple System Colors Light";
+        example = "Catppuccin Latte";
         description = "Theme used in macOS light mode (only when theme.auto = true).";
       };
 
       dark = lib.mkOption {
         type = lib.types.str;
         default = "Cursor Dark";
+        example = "Catppuccin Macchiato";
         description = "Theme used in macOS dark mode (only when theme.auto = true).";
       };
 
       fixed = lib.mkOption {
         type = lib.types.str;
         default = "Catppuccin Macchiato";
+        example = "Apple System Colors Dark";
         description = "Single theme name used when theme.auto = false.";
       };
 
       boldIsBright = lib.mkOption {
         type = lib.types.nullOr lib.types.bool;
         default = null;
+        example = true;
         description = "Map bold text to the bright color palette. null = Ghostty default.";
       };
 
@@ -214,18 +218,21 @@ in
       family = lib.mkOption {
         type = lib.types.str;
         default = "MonoLisa";
+        example = "Maple Mono NF CN";
         description = "Primary font family (always quoted in the generated config).";
       };
 
       size = lib.mkOption {
         type = lib.types.int;
         default = 14;
+        example = 15;
         description = "Font size in points.";
       };
 
       thicken = lib.mkOption {
         type = lib.types.bool;
         default = false;
+        example = true;
         description = "Apply Ghostty's font-thicken (macOS only).";
       };
 
@@ -240,21 +247,25 @@ in
         regular = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
+          example = "MonoLisa";
           description = "Override for the regular font-style face.";
         };
         italic = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
+          example = "MonoLisa Italic";
           description = "Override for the italic font-style face.";
         };
         bold = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
+          example = "MonoLisa Bold";
           description = "Override for the bold font-style face.";
         };
         boldItalic = lib.mkOption {
           type = lib.types.nullOr lib.types.str;
           default = null;
+          example = "MonoLisa Bold Italic";
           description = "Override for the bold-italic font-style face.";
         };
       };
@@ -264,18 +275,21 @@ in
       style = lib.mkOption {
         type = lib.types.enum [ "block" "block_hollow" "underline" "bar" ];
         default = "block";
+        example = "bar";
         description = "Cursor shape.";
       };
 
       blink = lib.mkOption {
         type = lib.types.bool;
         default = false;
+        example = true;
         description = "Whether the cursor blinks.";
       };
 
       hideMouseWhileTyping = lib.mkOption {
         type = lib.types.bool;
         default = true;
+        example = false;
         description = "Hide the mouse pointer while typing.";
       };
     };
@@ -284,30 +298,35 @@ in
       titlebarStyle = lib.mkOption {
         type = lib.types.enum [ "native" "transparent" "tabs" "hidden" ];
         default = "transparent";
+        example = "tabs";
         description = "macOS titlebar style.";
       };
 
       optionAsAlt = lib.mkOption {
         type = lib.types.bool;
         default = true;
+        example = false;
         description = "Treat macOS Option as Alt.";
       };
 
       saveState = lib.mkOption {
         type = lib.types.enum [ "default" "never" "always" ];
         default = "always";
+        example = "never";
         description = "Whether Ghostty restores window state across launches.";
       };
 
       quitAfterLastClosed = lib.mkOption {
         type = lib.types.bool;
         default = true;
+        example = false;
         description = "Quit Ghostty after the last window closes.";
       };
 
       confirmClose = lib.mkOption {
         type = lib.types.bool;
         default = false;
+        example = true;
         description = "Confirm before closing a surface that has running processes.";
       };
 
@@ -328,6 +347,7 @@ in
       title = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
         default = null;
+        example = "Ghostty";
         description = "Static window title. null lets running programs set it.";
       };
 
@@ -335,21 +355,25 @@ in
         x = lib.mkOption {
           type = lib.types.int;
           default = 4;
+          example = 8;
           description = "Horizontal padding inside the window (cells).";
         };
         y = lib.mkOption {
           type = lib.types.int;
           default = 4;
+          example = 6;
           description = "Vertical padding inside the window (cells).";
         };
         balance = lib.mkOption {
           type = lib.types.bool;
           default = true;
+          example = false;
           description = "Distribute padding evenly across both sides.";
         };
         color = lib.mkOption {
           type = lib.types.str;
           default = "background";
+          example = "#1e1e2e";
           description = "Color used for window padding (Ghostty window-padding-color).";
         };
       };
@@ -360,6 +384,7 @@ in
     scrollback.lines = lib.mkOption {
       type = lib.types.int;
       default = 10000;
+      example = 20000;
       description = "Scrollback buffer size in lines.";
     };
 
@@ -367,12 +392,14 @@ in
       shell = lib.mkOption {
         type = lib.types.enum [ "none" "detect" "bash" "fish" "zsh" ];
         default = "zsh";
+        example = "detect";
         description = "Shell integration mode.";
       };
 
       features = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ "cursor" "sudo" "title" ];
+        example = [ "cursor" "sudo" "title" "ssh-env" ];
         description = "Enabled shell-integration features (joined with commas).";
       };
     };
@@ -383,12 +410,14 @@ in
       position = lib.mkOption {
         type = lib.types.enum [ "top" "bottom" "left" "right" "center" ];
         default = "top";
+        example = "bottom";
         description = "Edge the quick terminal slides in from.";
       };
 
       animationDuration = lib.mkOption {
         type = lib.types.float;
         default = 0.15;
+        example = 0.2;
         description = "Quick terminal slide animation duration (seconds).";
       };
     };

@@ -17,6 +17,7 @@ in
     bettermouse.profile = lib.mkOption {
       type = lib.types.nullOr (lib.types.either lib.types.path lib.types.str);
       default = null;
+      example = "${currentSystemUserHome}/MyRime-main/better_mouse_setting_bm_cfg_4958.plist";
       description = ''
         Optional binary plist exported from BetterMouse (Preferences → Export). When set, the file
         is copied to ~/Library/Application Support/BetterMouse/ on activation as a one-shot seed.
