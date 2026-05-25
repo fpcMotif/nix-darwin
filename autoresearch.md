@@ -59,6 +59,52 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Documentation must describe source-of-truth behavior, not aspirational behavior.
 - Be adversarial: after each kept change, inspect whether the metric could have improved while maintainability got worse; if yes, fix the metric or discard the idea.
 
+## Current Beliefs
+- The original quality signals were useful but are now saturated; further real improvement needs broader targets or better loop guidance, not negative debt.
+- The highest-value near-term work is improving source-of-truth documentation, check coverage, and module navigability while keeping the active Mac target stable.
+- Small Nix changes beat broad rewrites in this repo because `darwinConfigurations.f` is personal production infrastructure.
+- A metric is a steering aid, not the goal. If a metric rewards a change that would confuse a maintainer, discard the change and revise the metric.
+
+## Assumptions to Re-check
+- `ARCHITECTURE.md` still matches actual flake/module behavior after each structural change.
+- The `statix` `repeated_keys` opt-out remains justified; if modules become harder to scan, revisit it.
+- `autoresearch.checks.sh` is representative enough for fast iteration, even though full CI also covers Linux and system builds.
+- Worktree state may be pruned by tooling; verify `pwd`, branch, and `git status` before each experiment.
+- RLM/subagent availability is not guaranteed; use them opportunistically, and record blockers instead of pretending recursive review happened.
+
+## Search Goals
+- Find stale documentation claims after code changes, especially in `ARCHITECTURE.md`, `tests/README.md`, and `CLAUDE.md`.
+- Look for custom module options without clear descriptions, defaults, or tests.
+- Compare CI coverage, local `just` recipes, and `autoresearch.checks.sh` for drift.
+- Search for shallow modules or duplicated activation patterns where a small helper would improve locality without adding speculative seams.
+- Revisit reference repos only for patterns; never import or lint them as active source.
+
+## Hypotheses Backlog
+- A metric for option-documentation coverage may reveal real maintainability debt in custom `martin.*` modules.
+- A check-parity metric may catch drift between `tests/default.nix`, `.github/workflows/build.yml`, `justfile`, and `autoresearch.checks.sh`.
+- Some repeated Home Manager activation patterns may be deepened behind small helper functions, but only if at least two call sites become clearer.
+- `modules/home/claude.nix` is large; a focused split may improve locality, but only if tests and docs make ownership clearer.
+- The static-lint gate may be expanded later if a rule can be enabled without fighting intentional Home Manager style.
+
+## Experiment Queue
+1. Baseline `loop_guidance_debt` after adding the metric and before adding guidance sections.
+2. Add these belief/assumption/search/hypothesis/queue/recursive/realism sections and verify the loop guidance metric drops.
+3. If saturated again, reinitialize around option-documentation coverage rather than adding cosmetic text.
+4. If a code refactor is attempted, characterize behavior through existing checks first, then make the smallest source change possible.
+
+## Recursive/Delegated Review Plan
+- Try RLM for goal and hypothesis review when the tool is healthy; current attempts failed with path/certificate errors, so do not depend on it.
+- If RLM is unavailable, use available `reviewer`, `planner`, or `oracle` subagents for read-only critique before broad metric changes.
+- Use DeepWiki for Nix/Home Manager upstream behavior when local assumptions touch library semantics.
+- Capture recursive-review blockers in ASI so future iterations know whether a missing review was a tool problem or a deliberate skip.
+
+## Realism Guardrails
+- Never weaken tests, remove useful docs, or exclude active files just to improve a metric.
+- When a primary metric reaches zero, reinitialize around a broader real quality target instead of inventing negative debt.
+- Keep every kept change reviewable on its own: one hypothesis, one small diff, one clear verification path.
+- Prefer discarding unchanged runs over keeping process-only churn unless the process artifact materially helps future agents.
+- Treat the active Mac config as production; avoid risky evaluation or activation semantics for cosmetic wins.
+
 ## What's Been Tried
 - Baseline `quality_debt=308`: module/test documentation drift and lint-contract gaps dominated.
 - Kept: refreshed `ARCHITECTURE.md` module inventory so Darwin/Home module docs match current imports (`quality_debt=98`).
