@@ -10,7 +10,7 @@ There is a more "Nix-native" path, but it is not a full replacement for the curr
 
 - `home.file` is the most native Home Manager symlink mechanism for static paths.
 - `agent-skills-nix` already supports that as `structure = "link"`.
-- For these skill targets, `symlink-tree` is usually safer because it creates a writable target directory and symlinks/copies the bundle contents into it during activation.
+- For the current static, fully Nix-owned user-global skill roots, `link` is the simplest fit.
 - Fully pure Nix store paths or Nix profiles alone are insufficient because the agents do not scan arbitrary Nix store/profile locations.
 
 Recommendation: keep `programs.agent-skills` with the repo's current `link` targets for static, fully Nix-owned skill roots. Revisit `symlink-tree` only if an agent needs to write runtime-managed files inside the skill root itself.
@@ -85,9 +85,9 @@ linkTarget = dest: {
 | Target | Destination | Why it exists |
 | --- | --- | --- |
 | `agents` | `$HOME/.agents/skills` | Shared Open Agent Skills registry. Codex documents this as a user-level skills path. Cursor also documents it as a user-level skills path. |
-| `claude` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills` | Claude Code documents personal skills under `~/.claude/skills`. |
+| `claude` | `$HOME/.claude/skills` | Claude Code documents personal skills under `~/.claude/skills`; this repo uses a static `link` target. |
 | `cursor` | `$HOME/.cursor/skills` | Cursor documents this as its native user-level skills path. |
-| `codex` | `${CODEX_HOME:-$HOME/.codex}/skills` | Compatibility mirror provided by `agent-skills-nix`. Codex's primary documented path is `$HOME/.agents/skills`, so this can be removed later if duplicate discovery is a concern. |
+| `codex` | `$HOME/.codex/skills` | Compatibility mirror provided by `agent-skills-nix`. Codex's primary documented path is `$HOME/.agents/skills`, so this can be removed later if duplicate discovery is a concern. |
 | `pi` | `$HOME/.pi/agent/skills` | Oh My Pi / Pi harness-specific skill location. This is custom and not part of upstream `agent-skills-nix` defaults. |
 
 ## Why mapping still exists
@@ -101,8 +101,8 @@ The mapping exists because three separate systems have different responsibilitie
 
 2. **Home Manager activation time**
    - Places that bundle where user-space applications expect it.
-   - Handles `$HOME`, `${CLAUDE_CONFIG_DIR:-...}`, `${CODEX_HOME:-...}`, and custom paths.
-   - Can create writable destination directories for runtime-managed files.
+   - Uses static Home Manager `link` targets for the current user-global skill roots.
+   - Can switch individual targets to `symlink-tree`/`copy-tree` later if they need writable runtime-managed files.
 
 3. **Agent runtime**
    - Scans fixed paths.
@@ -122,7 +122,7 @@ Partially. Home Manager's `home.file` is the Nix-native way to link files into `
 | --- | --- | --- | --- | --- |
 | `home.file` / `structure = "link"` | Yes | No, static paths only | Usually no; points at `/nix/store` | Static, fully Nix-owned, read-only targets. |
 | `home.file.recursive = true` | Yes | No, static paths only | Target dirs exist, leaves are symlinks | Static directory trees where Home Manager owns all files. |
-| `symlink-tree` activation | Home Manager-native activation, not pure option-only linking | Yes | Yes, destination dir can be writable | Best global skills default. |
+| `symlink-tree` activation | Home Manager-native activation, not pure option-only linking | Yes | Yes, destination dir can be writable | Writable/env-expanded global targets. |
 | `copy-tree` activation | Home Manager-native activation, not pure option-only linking | Yes | Yes | Best project-local installs where files should be inspectable/editable. |
 | Nix profile package | Yes | Not applicable | Not at agent path | Not enough; agents do not scan profile package resources. |
 | `/etc/codex/skills` via system config | Yes for Codex admin scope | Static system path | System-owned | Codex-only; not universal and requires admin/system ownership. |
@@ -158,7 +158,7 @@ Recommended policy for this repo:
 1. Keep `$HOME/.agents/skills` enabled as the shared default.
 2. Keep `~/.claude/skills` enabled because Claude Code documents it as the personal skills path.
 3. Keep `~/.cursor/skills` enabled if Cursor is actively used; Cursor also sees `$HOME/.agents/skills`, but the native mirror makes debugging easier.
-4. Treat `${CODEX_HOME:-$HOME/.codex}/skills` as optional. Codex documents `$HOME/.agents/skills`; the Codex-specific mirror is useful only for compatibility with tools or habits that expect `.codex/skills`.
+4. Treat `$HOME/.codex/skills` as optional. Codex documents `$HOME/.agents/skills`; the Codex-specific mirror is useful only for compatibility with tools or habits that expect `.codex/skills`.
 5. Keep `$HOME/.pi/agent/skills` enabled for Oh My Pi while that harness expects it.
 6. Do not add Zed or VS Code skill targets yet. Zed currently documents rules files, and Agent Skills support is still visible as an open PR. VS Code Copilot documents instructions and `AGENTS.md`, not `SKILL.md` directories.
 
@@ -190,9 +190,9 @@ Because agents scan their documented skill directories. A Nix store bundle is in
 
 Use it where possible, but not universally. `home.file` is static and symlink-based. It does not expand runtime shell variables in target paths and is awkward when the target directory must remain writable for runtime-managed files.
 
-### Why keep `symlink-tree` if it still makes symlinks?
+### Why keep `link` if it makes the target read-only?
 
-Because it is the right boundary: Nix owns the immutable skill contents, while Home Manager creates a writable destination directory that agents can scan. The symlink leaves keep content deduplicated and store-backed without making the whole target path a read-only store symlink.
+Because these user-global targets are static and fully Nix-owned in this repo. `link` keeps the implementation simple, store-backed, and easy to reason about. If an agent later needs writable state inside a skill root, move only that target to `symlink-tree` or `copy-tree` and add an activation test for the new ownership boundary.
 
 ### What should be simplified later?
 
