@@ -353,6 +353,24 @@ count_stale_agent_skills_activation_claim() {
   fi
 }
 
+count_claude_main_activation_blocks() {
+  if [ -f modules/home/claude.nix ]; then
+    grep -c 'home\.activation\.claude' modules/home/claude.nix || true
+  else
+    printf '0\n'
+  fi
+}
+
+count_missing_claude_split_modules() {
+  local count=0 file
+  for file in modules/home/claude-common.nix modules/home/claude-activations.nix; do
+    if [ ! -f "$file" ]; then
+      count=$((count + 1))
+    fi
+  done
+  printf '%s\n' "$count"
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -378,6 +396,8 @@ activation_path_duplicate_literals=$(count_activation_path_duplicate_literals)
 missing_claude_activation_assertions=$(count_missing_claude_activation_assertions)
 required_claude_activation_assertions=5
 stale_agent_skills_activation_claim=$(count_stale_agent_skills_activation_claim)
+claude_main_activation_blocks=$(count_claude_main_activation_blocks)
+missing_claude_split_modules=$(count_missing_claude_split_modules)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
@@ -388,7 +408,9 @@ behavioral_coverage_debt=$((check_parity_debt + missing_behavioral_assertions * 
 activation_path_literal_debt=$((behavioral_coverage_debt + activation_path_duplicate_literals * 4))
 claude_activation_coverage_debt=$((activation_path_literal_debt + missing_claude_activation_assertions * 5))
 agent_docs_truth_debt=$((claude_activation_coverage_debt + stale_agent_skills_activation_claim * 15))
+claude_activation_locality_debt=$((agent_docs_truth_debt + claude_main_activation_blocks * 5 + missing_claude_split_modules * 5))
 
+printf 'METRIC claude_activation_locality_debt=%s\n' "$claude_activation_locality_debt"
 printf 'METRIC agent_docs_truth_debt=%s\n' "$agent_docs_truth_debt"
 printf 'METRIC claude_activation_coverage_debt=%s\n' "$claude_activation_coverage_debt"
 printf 'METRIC activation_path_literal_debt=%s\n' "$activation_path_literal_debt"
@@ -423,3 +445,5 @@ printf 'METRIC activation_path_duplicate_literals=%s\n' "$activation_path_duplic
 printf 'METRIC missing_claude_activation_assertions=%s\n' "$missing_claude_activation_assertions"
 printf 'METRIC required_claude_activation_assertions=%s\n' "$required_claude_activation_assertions"
 printf 'METRIC stale_agent_skills_activation_claim=%s\n' "$stale_agent_skills_activation_claim"
+printf 'METRIC claude_main_activation_blocks=%s\n' "$claude_main_activation_blocks"
+printf 'METRIC missing_claude_split_modules=%s\n' "$missing_claude_split_modules"
