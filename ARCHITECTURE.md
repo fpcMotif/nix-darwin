@@ -278,15 +278,16 @@ programs.agent-skills = {
 - **Disambiguate name collisions.** If two sources expose the same skill name, set `idPrefix` on one and enable the prefixed IDs (e.g. `openai/pdf`, `anthropic/pdf`).
 - **Recursive discovery by default.** Keep `filter.maxDepth = null`. Use `filter.maxDepth = 1` only for known-flat roots (e.g. the curated dotfiles folders).
 - **Bundle Nix-provided tools.** Use `skills.explicit.<name>.packages` and `transform` when a skill needs Nix-provided binaries; this avoids assuming globally installed tools.
-- **Leave room for agent-managed subtrees.** Keep `excludePatterns = [ "/.system" ]` unless Nix must own every file in the target directory.
-- **Adding a target is a deletion contract.** Each enabled target uses rsync with deletion semantics — Nix becomes authoritative for that directory. Enable new targets deliberately.
+- **Be explicit about target ownership.** Current user-global targets are static `link` targets from `modules/home/claude-common.nix`, so Nix owns those skill roots and `excludePatterns = [ ]` is intentional. Use `excludePatterns = [ "/.system" ]` only when a `symlink-tree`/`copy-tree` target must preserve agent-managed subtrees.
+- **Adding a target is an ownership contract.** With `link`, Home Manager owns a static target path as store-backed files. With `symlink-tree`/`copy-tree`, activation can delete destination contents that are absent from the bundle. Enable new targets deliberately after checking for unmanaged files.
 
 ### Project-local skills
 
 Project-local skills are a separate decision from user-global skills. Use upstream `mkLocalInstallScript` or `mkShellHook` with `defaultLocalTargets` when a repo should receive generated local skills under `.agents/skills`, `.claude/skills`, `.cursor/skills`, or `.codex/skills`.
 
 - Use **`copy-tree`** for local targets so contributors can inspect or edit generated files without chasing Nix store symlinks.
-- Use **`symlink-tree`** for global Home Manager targets.
+- Use **`link`** for static, fully Nix-owned user-global targets like the current `.agents/skills`, `.claude/skills`, `.cursor/skills`, `.codex/skills`, and `.pi/agent/skills` mirrors.
+- Use **`symlink-tree`** when a target needs a writable directory with store-backed leaves.
 - Avoid **`link`** when the destination uses shell variables (e.g. `${CLAUDE_CONFIG_DIR:-$HOME/.claude}`); `home.file` cannot expand them at activation time.
 
 ### Editor support
@@ -305,7 +306,7 @@ For these editors, keep shared instructions in `AGENTS.md` and add editor-native
 | Use raw library functions or the Home Manager DSL?                                 | DSL. Stays aligned with upstream options, target defaults, warnings, and future `agent-skills-nix` changes.  |
 | Is `$HOME/.agents/skills` or `$HOME/.codex/skills` the Codex source of truth?      | `$HOME/.agents/skills`. Codex documents it; `targets.codex` is a compatibility mirror.                       |
 | Should Zed and VS Code targets be created preemptively?                            | No. Both currently want rules/instructions, not declared `SKILL.md` mirrors.                                 |
-| What is the main operational risk?                                                 | Enabled targets are rsync-managed. Adding one can delete unmanaged files in that directory.                  |
+| What is the main operational risk?                                                 | Enabled targets are ownership boundaries. `link` takes over a static path; `symlink-tree`/`copy-tree` can delete unmanaged destination contents. |
 
 ## Package ownership
 
