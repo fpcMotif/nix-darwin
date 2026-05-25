@@ -501,6 +501,35 @@ print(sum(1 for pattern in patterns if pattern in report))
 PY
 }
 
+count_architecture_agent_static_target_inconsistencies() {
+  python3 <<'PY'
+from pathlib import Path
+
+module = Path("modules/home/claude.nix").read_text()
+common = Path("modules/home/claude-common.nix").read_text()
+architecture = Path("ARCHITECTURE.md").read_text()
+
+if 'structure = "link"' not in module:
+    print(0)
+    raise SystemExit
+
+required_static_dirs = [
+    'claude = ".claude/skills";',
+    'codex = ".codex/skills";',
+]
+if any(pattern not in common for pattern in required_static_dirs):
+    print(0)
+    raise SystemExit
+
+patterns = [
+    "`${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills`",
+    "`${CODEX_HOME:-$HOME/.codex}/skills`",
+]
+
+print(sum(1 for pattern in patterns if pattern in architecture))
+PY
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -534,6 +563,7 @@ stale_architecture_agent_target_policy_claims=$(count_stale_architecture_agent_t
 hotkeys_missing_repo_shortcut_files=$(count_hotkeys_missing_repo_shortcut_files)
 hotkeys_missing_tmux_copy_mode_bindings=$(count_hotkeys_missing_tmux_copy_mode_bindings)
 agent_report_link_policy_inconsistencies=$(count_agent_report_link_policy_inconsistencies)
+architecture_agent_static_target_inconsistencies=$(count_architecture_agent_static_target_inconsistencies)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
@@ -551,7 +581,9 @@ architecture_agent_policy_debt=$((root_fallback_docs_debt + stale_architecture_a
 hotkeys_repo_shortcut_docs_debt=$((architecture_agent_policy_debt + hotkeys_missing_repo_shortcut_files * 3))
 hotkeys_active_binding_docs_debt=$((hotkeys_repo_shortcut_docs_debt + hotkeys_missing_tmux_copy_mode_bindings * 2))
 agent_report_link_policy_debt=$((hotkeys_active_binding_docs_debt + agent_report_link_policy_inconsistencies * 4))
+architecture_agent_static_target_debt=$((agent_report_link_policy_debt + architecture_agent_static_target_inconsistencies * 4))
 
+printf 'METRIC architecture_agent_static_target_debt=%s\n' "$architecture_agent_static_target_debt"
 printf 'METRIC agent_report_link_policy_debt=%s\n' "$agent_report_link_policy_debt"
 printf 'METRIC hotkeys_active_binding_docs_debt=%s\n' "$hotkeys_active_binding_docs_debt"
 printf 'METRIC hotkeys_repo_shortcut_docs_debt=%s\n' "$hotkeys_repo_shortcut_docs_debt"
@@ -601,3 +633,4 @@ printf 'METRIC stale_architecture_agent_target_policy_claims=%s\n' "$stale_archi
 printf 'METRIC hotkeys_missing_repo_shortcut_files=%s\n' "$hotkeys_missing_repo_shortcut_files"
 printf 'METRIC hotkeys_missing_tmux_copy_mode_bindings=%s\n' "$hotkeys_missing_tmux_copy_mode_bindings"
 printf 'METRIC agent_report_link_policy_inconsistencies=%s\n' "$agent_report_link_policy_inconsistencies"
+printf 'METRIC architecture_agent_static_target_inconsistencies=%s\n' "$architecture_agent_static_target_inconsistencies"
