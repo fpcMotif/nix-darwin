@@ -10,8 +10,9 @@ This session runs in the isolated worktree:
 The original checkout had unrelated uncommitted changes when this session started; do not touch or depend on them.
 
 ## Metrics
-- **Primary**: `architecture_agent_policy_debt` (points, lower is better) — stale Agent Skills target-policy claims in `ARCHITECTURE.md`.
+- **Primary**: `hotkeys_repo_shortcut_docs_debt` (points, lower is better) — stale repo-local shortcut file references in `HOTKEYS.md`.
 - **Secondary**:
+  - `architecture_agent_policy_debt`: stale Agent Skills target-policy claims in `ARCHITECTURE.md`.
   - `root_fallback_docs_debt`: stale root-layout fallback documentation for missing top-level files.
   - `agent_report_truth_debt`: stale root Agent Skills report claims after the Claude module split.
   - `claude_activation_locality_debt`: Claude activation logic still embedded in the large skills/files module instead of a tested focused submodule.
@@ -53,6 +54,7 @@ The original checkout had unrelated uncommitted changes when this session starte
   - `stale_agent_skills_report_claims`: stale claims in `AGENT_SKILLS_NIX_REPORT.md` about live files, target structure, and verification status.
   - `stale_root_fallback_claims`: `ARCHITECTURE.md` still documents a top-level `skills.nix` fallback even though no such file exists.
   - `stale_architecture_agent_target_policy_claims`: `ARCHITECTURE.md` still says global targets use `symlink-tree`/rsync or default `/.system` excludes while the live Claude module uses static `link` targets and `excludePatterns = [ ]`.
+  - `hotkeys_missing_repo_shortcut_files`: shortcut source paths listed in `HOTKEYS.md` that no longer exist in the repo.
   - `nix_files`: count of measured Nix files.
 
 `doc_truth_debt = quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10`.
@@ -67,19 +69,21 @@ The original checkout had unrelated uncommitted changes when this session starte
 `agent_report_truth_debt = claude_activation_locality_debt + stale_agent_skills_report_claims * 5`.
 `root_fallback_docs_debt = agent_report_truth_debt + stale_root_fallback_claims * 10`.
 `architecture_agent_policy_debt = root_fallback_docs_debt + stale_architecture_agent_target_policy_claims * 8`.
+`hotkeys_repo_shortcut_docs_debt = architecture_agent_policy_debt + hotkeys_missing_repo_shortcut_files * 3`.
 
 The metric is a guide, not permission to game the benchmark. Do not delete useful code or documentation solely to reduce counts. Improvements should make a human reviewer happier and should keep checks passing.
 
 ## How to Run
 `./autoresearch.sh`
 
-It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `root_fallback_docs_debt`, `agent_report_truth_debt`, `claude_activation_locality_debt`, `agent_docs_truth_debt`, `claude_activation_coverage_debt`, `activation_path_literal_debt`, `behavioral_coverage_debt`, `check_parity_debt`, `option_doc_debt`, `loop_guidance_debt`, `doc_truth_debt`, and `quality_debt` metrics are still emitted as secondary monitors.
+It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `architecture_agent_policy_debt`, `root_fallback_docs_debt`, `agent_report_truth_debt`, `claude_activation_locality_debt`, `agent_docs_truth_debt`, `claude_activation_coverage_debt`, `activation_path_literal_debt`, `behavioral_coverage_debt`, `check_parity_debt`, `option_doc_debt`, `loop_guidance_debt`, `doc_truth_debt`, and `quality_debt` metrics are still emitted as secondary monitors.
 
 ## Files in Scope
 - `ARCHITECTURE.md` — architecture and module-layout documentation.
 - `AGENT_SKILLS_NIX_REPORT.md` — root Agent Skills design report when Agent Skills implementation details move.
 - `CONTEXT.md` — glossary only; update only when terminology is clarified.
 - `tests/README.md` — test-suite documentation.
+- `HOTKEYS.md` — shortcut inventory and shortcut source references.
 - `tests/default.nix`, `tests/unit/*.nix`, `tests/lib/*.nix`, `tests/integration/*.nix` — quality gates and assertions.
 - `hosts/**/*.nix`, `modules/**/*.nix`, `lib/**/*.nix`, `pkgs/**/*.nix` — source refactors when they improve readability without behavior drift.
 - `.github/workflows/*.yml` — only if check wiring/docs require it.
@@ -127,9 +131,9 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - The static-lint gate may be expanded later if a rule can be enabled without fighting intentional Home Manager style.
 
 ## Experiment Queue
-1. Baseline `architecture_agent_policy_debt` after finding Agent Skills policy text still describes older `symlink-tree`/rsync target behavior.
-2. Refresh the policy section to match current static `link` targets and fully Nix-owned target roots.
-3. If Agent Skills policy truth saturates, prefer another docs-truth audit before code refactors.
+1. Baseline `hotkeys_repo_shortcut_docs_debt` after finding `HOTKEYS.md` still references removed `personal-settings-main/*` shortcut files.
+2. Refresh the repo-local shortcut source section so it points to existing Nix-managed modules instead of removed legacy dotfiles.
+3. If hotkey source docs saturate, prefer another docs-truth audit before code refactors.
 4. If another code refactor is attempted, characterize behavior through existing checks first, then make the smallest source change possible.
 
 ## Recursive/Delegated Review Plan
@@ -173,5 +177,6 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Reinitialized around `root_fallback_docs_debt` after finding `ARCHITECTURE.md` still documented a removed top-level `skills.nix` fallback.
 - Kept: refreshed the repository layout and off-flake fallback section so `ARCHITECTURE.md` documents only the existing top-level `home.nix` compatibility shim and points Agent Skills wiring back to the flake/Home Manager modules (`root_fallback_docs_debt=0`).
 - Reinitialized around `architecture_agent_policy_debt` after finding `ARCHITECTURE.md` still described older `symlink-tree`/rsync target policy while the live module uses static `link` targets and `excludePatterns = [ ]`.
-- Kept: refreshed the Agent Skills policy and Q&A in `ARCHITECTURE.md` to describe static `link` targets, explicit target ownership, when `symlink-tree`/`copy-tree` remain appropriate, and why `excludePatterns = [ ]` is intentional for fully Nix-owned user-global targets.
+- Kept: refreshed the Agent Skills policy and Q&A in `ARCHITECTURE.md` to describe static `link` targets, explicit target ownership, when `symlink-tree`/`copy-tree` remain appropriate, and why `excludePatterns = [ ]` is intentional for fully Nix-owned user-global targets (`architecture_agent_policy_debt=0`).
+- Reinitialized around `hotkeys_repo_shortcut_docs_debt` after finding `HOTKEYS.md` still listed removed `personal-settings-main/*` shortcut source files.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.

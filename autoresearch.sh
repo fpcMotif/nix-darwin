@@ -428,6 +428,32 @@ count_stale_architecture_agent_target_policy_claims() {
   printf '%s\n' "$count"
 }
 
+count_hotkeys_missing_repo_shortcut_files() {
+  python3 <<'PY'
+from pathlib import Path
+
+doc = Path("HOTKEYS.md")
+if not doc.exists():
+    print(0)
+    raise SystemExit
+
+missing = 0
+for line in doc.read_text().splitlines():
+    line = line.strip()
+    if not line.startswith("- `") or "personal-settings-main/" not in line:
+        continue
+    path = line.split("`", 2)[1]
+    if "*" in path:
+        parent = Path(path.split("*", 1)[0]).parent
+        if not parent.exists():
+            missing += 1
+    elif not Path(path).exists():
+        missing += 1
+
+print(missing)
+PY
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -458,6 +484,7 @@ missing_claude_split_modules=$(count_missing_claude_split_modules)
 stale_agent_skills_report_claims=$(count_stale_agent_skills_report_claims)
 stale_root_fallback_claims=$(count_stale_root_fallback_claims)
 stale_architecture_agent_target_policy_claims=$(count_stale_architecture_agent_target_policy_claims)
+hotkeys_missing_repo_shortcut_files=$(count_hotkeys_missing_repo_shortcut_files)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
@@ -472,7 +499,9 @@ claude_activation_locality_debt=$((agent_docs_truth_debt + claude_main_activatio
 agent_report_truth_debt=$((claude_activation_locality_debt + stale_agent_skills_report_claims * 5))
 root_fallback_docs_debt=$((agent_report_truth_debt + stale_root_fallback_claims * 10))
 architecture_agent_policy_debt=$((root_fallback_docs_debt + stale_architecture_agent_target_policy_claims * 8))
+hotkeys_repo_shortcut_docs_debt=$((architecture_agent_policy_debt + hotkeys_missing_repo_shortcut_files * 3))
 
+printf 'METRIC hotkeys_repo_shortcut_docs_debt=%s\n' "$hotkeys_repo_shortcut_docs_debt"
 printf 'METRIC architecture_agent_policy_debt=%s\n' "$architecture_agent_policy_debt"
 printf 'METRIC root_fallback_docs_debt=%s\n' "$root_fallback_docs_debt"
 printf 'METRIC agent_report_truth_debt=%s\n' "$agent_report_truth_debt"
@@ -516,3 +545,4 @@ printf 'METRIC missing_claude_split_modules=%s\n' "$missing_claude_split_modules
 printf 'METRIC stale_agent_skills_report_claims=%s\n' "$stale_agent_skills_report_claims"
 printf 'METRIC stale_root_fallback_claims=%s\n' "$stale_root_fallback_claims"
 printf 'METRIC stale_architecture_agent_target_policy_claims=%s\n' "$stale_architecture_agent_target_policy_claims"
+printf 'METRIC hotkeys_missing_repo_shortcut_files=%s\n' "$hotkeys_missing_repo_shortcut_files"
