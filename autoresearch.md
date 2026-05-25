@@ -184,4 +184,5 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Reinitialized around `hotkeys_repo_shortcut_docs_debt` after finding `HOTKEYS.md` still listed removed `personal-settings-main/*` shortcut source files.
 - Kept: replaced the stale repo-local shortcut file list with current Nix-managed shortcut source files in Darwin, host, Ghostty, tmux, Zed, and Yazi modules (`hotkeys_repo_shortcut_docs_debt=0`).
 - Reinitialized around `hotkeys_active_binding_docs_debt` after finding active tmux copy-mode bindings that were absent from the shortcut inventory.
+- Kept: documented tmux copy-mode exit/selection/copy/rectangle/mouse-copy and pane-navigation bindings in `HOTKEYS.md` without changing `modules/home/tmux.nix`.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.

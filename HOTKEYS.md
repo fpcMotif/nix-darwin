@@ -130,6 +130,15 @@ Source: `modules/home/tmux.nix`
 | `prefix+m` | Zoom pane |
 | `prefix+r` | Reload tmux config |
 | `prefix+v` | Copy mode |
+| copy-mode `q` | Exit copy mode |
+| copy-mode `v` | Begin selection |
+| copy-mode `V` | Select the current line |
+| copy-mode `ctrl+v` | Toggle rectangle selection |
+| copy-mode `y` | Copy selection through OSC52 and exit copy mode |
+| copy-mode mouse drag | Copy mouse selection through OSC52 |
+| copy-mode `ctrl+h/j/k/l` | Move between panes while staying in copy mode |
+| copy-mode `ctrl+\` | Switch to the last pane while staying in copy mode |
+| copy-mode `ctrl+space` | Select the next pane while staying in copy mode |
 
 ### Zed
 
