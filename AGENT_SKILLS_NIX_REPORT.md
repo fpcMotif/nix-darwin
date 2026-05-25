@@ -13,74 +13,70 @@ There is a more "Nix-native" path, but it is not a full replacement for the curr
 - For these skill targets, `symlink-tree` is usually safer because it creates a writable target directory and symlinks/copies the bundle contents into it during activation.
 - Fully pure Nix store paths or Nix profiles alone are insufficient because the agents do not scan arbitrary Nix store/profile locations.
 
-Recommendation: keep `programs.agent-skills` plus `symlink-tree` global targets. Use `link` only for static, fully Nix-owned paths where the agent never needs to create runtime files inside the skill root.
+Recommendation: keep `programs.agent-skills` with the repo's current `link` targets for static, fully Nix-owned skill roots. Revisit `symlink-tree` only if an agent needs to write runtime-managed files inside the skill root itself.
 
 ## Current implementation
 
-Live file: `modules/home/claude.nix`.
+Live files:
 
-The module imports:
+- `modules/home/claude.nix` — managed Claude files plus `programs.agent-skills` wiring.
+- `modules/home/claude-common.nix` — shared skill target directories and disabled/transformed skill IDs.
+- `modules/home/claude-activations.nix` — Claude runtime-state activation scripts for settings seeding, Stop-hook diagnostics, and duplicate-skill cleanup.
+
+`modules/home/claude.nix` imports both the upstream Home Manager module and the local activation module:
 
 ```nix
-inputs.agent-skills.homeManagerModules.default
+imports = [
+  inputs.agent-skills.homeManagerModules.default
+  ./claude-activations.nix
+];
 ```
 
-and configures:
+The skill bundle still uses the upstream DSL:
 
 ```nix
 programs.agent-skills = {
   enable = true;
 
   sources = {
-    dotfiles-pi = filteredSource "dotfiles" "dot_pi/agent/skills"
+    dotfiles-pi = mkSource "dotfiles" "dot_pi/agent/skills"
       "^(git-workflow|review|ralph-loop|web-browser)$";
-
-    dotfiles-claude = filteredSource "dotfiles" "dot_claude/skills"
+    dotfiles-claude = mkSource "dotfiles" "dot_claude/skills"
       "^(lazygit)$";
-
-    mp-engineering = bucketSource "mattpocock-skills" "engineering";
-    mp-productivity = bucketSource "mattpocock-skills" "productivity";
-    mp-misc = bucketSource "mattpocock-skills" "misc";
-    effect-ts = filteredSource "effect-ts-skills" "skills" null;
-  };
+  } // mpSources // effectSources // superpowersSources;
 
   skills = {
-    enable = enabledMattpocockSkills;
-    enableAll = [ "effect-ts" ];
+    enable = enabledMattpocockSkills ++ enabledSuperpowersSkills;
+    enableAll = builtins.attrNames effectSources;
     explicit = {
-      git-workflow = {
-        from = "dotfiles-pi";
-        path = "git-workflow";
-        packages = [ pkgs.git pkgs.gh pkgs.jq ];
+      git-workflow = mkSkill "dotfiles-pi" "git-workflow" [ pkgs.git pkgs.gh pkgs.jq ];
+      review = mkSkill "dotfiles-pi" "review" [ pkgs.git pkgs.gh pkgs.jq ];
+      lazygit = mkSkill "dotfiles-claude" "lazygit" [ pkgs.git pkgs.lazygit ];
+      ralph-loop = mkSkill "dotfiles-pi" "ralph-loop" [ ];
+      web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];
+
+      grill-with-docs = mkSkill "mp-engineering" "grill-with-docs" [ ] // {
+        transform = appendKarpathy grillKarpathyFooter;
       };
-      review = {
-        from = "dotfiles-pi";
-        path = "review";
-        packages = [ pkgs.git pkgs.gh pkgs.jq ];
+      improve-codebase-architecture = mkSkill "mp-engineering" "improve-codebase-architecture" [ ] // {
+        transform = appendKarpathy deepenKarpathyFooter;
       };
-      lazygit = {
-        from = "dotfiles-claude";
-        path = "lazygit";
-        packages = [ pkgs.git pkgs.lazygit ];
-      };
-      ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
-      web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
     };
   };
 
-  targets = {
-    agents.enable = true;
-    claude.enable = true;
-    cursor.enable = true;
-    codex.enable = true;
+  targets = lib.mapAttrs (_: linkTarget) skillTargetDirs;
+  excludePatterns = [ ];
+};
+```
 
-    pi = {
-      enable = true;
-      dest = "$HOME/.pi/agent/skills";
-      structure = "symlink-tree";
-      systems = [ ];
-    };
-  };
+`linkTarget` is intentionally simple and static:
+
+```nix
+linkTarget = dest: {
+  enable = true;
+  inherit dest;
+  structure = "link";
+  systems = [ ];
 };
 ```
 
@@ -131,11 +127,11 @@ Partially. Home Manager's `home.file` is the Nix-native way to link files into `
 | Nix profile package | Yes | Not applicable | Not at agent path | Not enough; agents do not scan profile package resources. |
 | `/etc/codex/skills` via system config | Yes for Codex admin scope | Static system path | System-owned | Codex-only; not universal and requires admin/system ownership. |
 
-### Why `link` is not the default here
+### Why `link` is acceptable here
 
-`agent-skills-nix`'s Home Manager module explicitly treats `link` differently: it uses `home.file`, and comments note that `link` requires a static path relative to `$HOME`; shell-variable expansion is not supported for `link`. The default agent targets include env-expanded paths such as `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills` and `${CODEX_HOME:-$HOME/.codex}/skills`, so `symlink-tree` is the safer default.
+`agent-skills-nix` treats `link` differently: it uses `home.file`, so the destination must be a static path relative to `$HOME`; shell-variable expansion is not supported. This repo deliberately supplies static target dirs from `modules/home/claude-common.nix` (`.agents/skills`, `.claude/skills`, `.cursor/skills`, `.codex/skills`, `.pi/agent/skills`), so `link` matches the current contract and keeps the target roots fully Nix-owned.
 
-`symlink-tree` also keeps the destination directory writable. That matters because `agent-skills-nix` excludes the root-level `/.system` path by default so agents can manage their own runtime/system skill state without Nix deleting or replacing it.
+If a future agent needs writable runtime state inside the skill root, switch that target to `symlink-tree` or `copy-tree` deliberately and add activation tests for the new behavior.
 
 ## What `agent-skills-nix` already does well
 
@@ -221,15 +217,12 @@ If duplicate discovery becomes noisy, first remove `targets.codex.enable = true`
 
 Verified in this environment:
 
-- `modules/home/skills.nix` now uses the upstream Home Manager DSL.
-- No old `home.activation.agentSkills*`, direct `mkSyncScript`, or direct `inputs.agent-skills.lib.agent-skills` code remains in the live skills module.
-- `git diff --check` passed after the implementation change.
+- `modules/home/claude.nix` uses the upstream Home Manager DSL for `programs.agent-skills`.
+- `modules/home/claude-activations.nix` owns Claude runtime-state activation scripts separately from the skill bundle wiring.
+- `.#checks.aarch64-darwin.integration-configurations-eval` covers managed Claude files, settings seeding, Stop-hook wrapping, disabled `grill-me` cleanup, and superpowers plugin `brainstorming` de-duplication.
+- Autoresearch correctness checks pass with `unit-format`, `unit-static-lint`, `unit-mksystem`, `unit-overlay`, and `integration-configurations-eval`.
 
 Not verified here:
 
-- `nix fmt ./`
-- `nix eval`
-- agent-skills bundle build/activation, including generated dependency tables and package symlinks from `skills.explicit.<name>.packages`
-- `darwin-rebuild build --flake .#f`
-
-Reason: this Windows environment does not have `nix`, `nixpkgs-fmt`, or `nixfmt` available, and WSL is unavailable/misconfigured.
+- `darwin-rebuild switch --flake .#f` (activation on the production machine remains a human-controlled step).
+- Runtime UI discovery inside each agent after activation; the Nix-level target mapping and generated files are evaluated, but app-side refresh behavior is outside the test suite.
