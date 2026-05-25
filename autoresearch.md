@@ -10,8 +10,9 @@ This session runs in the isolated worktree:
 The original checkout had unrelated uncommitted changes when this session started; do not touch or depend on them.
 
 ## Metrics
-- **Primary**: `behavioral_coverage_debt` (points, lower is better) — behavioral integration assertion debt for high-risk active custom modules.
+- **Primary**: `activation_path_literal_debt` (points, lower is better) — duplicated activation path literals in high-risk Darwin modules, after behavioral coverage is in place.
 - **Secondary**:
+  - `behavioral_coverage_debt`: behavioral integration assertion debt for high-risk active custom modules.
   - `check_parity_debt`: drift between test definitions, local recipes, CI, and the autoresearch correctness gate.
   - `option_doc_debt`: custom Nix option documentation debt.
   - `loop_guidance_debt`: prompt/goal/search/experiment guidance debt for safe resumed autoresearch.
@@ -37,6 +38,7 @@ The original checkout had unrelated uncommitted changes when this session starte
   - `ci_missing_system_builds`: expected system configuration builds missing from CI.
   - `missing_behavioral_assertions`: required integration assertions missing for active high-risk modules with activation scripts or generated config.
   - `required_behavioral_assertions`: count of required high-risk behavioral assertions.
+  - `activation_path_duplicate_literals`: repeated high-risk activation path literals in `modules/darwin/rime.nix` and `modules/darwin/mouse-display.nix` beyond one source-of-truth occurrence.
   - `nix_files`: count of measured Nix files.
 
 `doc_truth_debt = quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10`.
@@ -44,13 +46,14 @@ The original checkout had unrelated uncommitted changes when this session starte
 `option_doc_debt = loop_guidance_debt + option_missing_descriptions * 10 + option_missing_examples * 2`.
 `check_parity_debt = option_doc_debt + just_check_missing_test_attrs * 3 + autoresearch_missing_focused_checks * 8 + just_check_missing_darwin_build * 10 + ci_missing_flake_check * 20 + ci_missing_system_builds * 10`.
 `behavioral_coverage_debt = check_parity_debt + missing_behavioral_assertions * 5`.
+`activation_path_literal_debt = behavioral_coverage_debt + activation_path_duplicate_literals * 4`.
 
 The metric is a guide, not permission to game the benchmark. Do not delete useful code or documentation solely to reduce counts. Improvements should make a human reviewer happier and should keep checks passing.
 
 ## How to Run
 `./autoresearch.sh`
 
-It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `check_parity_debt`, `option_doc_debt`, `loop_guidance_debt`, `doc_truth_debt`, and `quality_debt` metrics are still emitted as secondary monitors.
+It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `behavioral_coverage_debt`, `check_parity_debt`, `option_doc_debt`, `loop_guidance_debt`, `doc_truth_debt`, and `quality_debt` metrics are still emitted as secondary monitors.
 
 ## Files in Scope
 - `ARCHITECTURE.md` — architecture and module-layout documentation.
@@ -103,9 +106,9 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - The static-lint gate may be expanded later if a rule can be enabled without fighting intentional Home Manager style.
 
 ## Experiment Queue
-1. Baseline `behavioral_coverage_debt` after adding required assertion signals for active high-risk custom modules with activation scripts or generated config.
-2. Add real integration assertions for missing Rime, Ghostty, and BetterMouse behaviors instead of adding marker-only tests.
-3. If behavioral coverage saturates, revisit small source refactors only where the new tests characterize current behavior first.
+1. Baseline `activation_path_literal_debt` after adding duplicate-literal signals for Rime and BetterMouse activation paths now covered by integration tests.
+2. Factor repeated activation path literals into named Nix constants in the owning modules, preserving generated script output semantics where possible.
+3. If activation path literals saturate, revisit other small source refactors only where tests already characterize current behavior.
 4. If a code refactor is attempted, characterize behavior through existing checks first, then make the smallest source change possible.
 
 ## Recursive/Delegated Review Plan
@@ -135,4 +138,6 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Reinitialized around `check_parity_debt` to test the backlog hypothesis that local recipes, CI, and the autoresearch correctness gate may drift from the real check set. The valid baseline found `just check` was a stale manual subset while CI and the focused autoresearch gate were aligned with their contracts.
 - Kept: make `just check` delegate to `nix flake check --show-trace --print-build-logs` before building `darwinConfigurations.f.system`, so the developer-facing local recipe matches its full-check-suite contract without duplicating check attr names (`check_parity_debt=0`).
 - Reinitialized around `behavioral_coverage_debt` to cover active high-risk custom modules with activation scripts or generated config. Baseline found missing assertions for Rime activation, Ghostty generated config/theme output, and BetterMouse seed/launchd behavior.
+- Kept: added real integration assertions for Rime enablement/package/postActivation/user activation, Ghostty generated config/custom theme file, and BetterMouse seed activation/launchd agents (`behavioral_coverage_debt=0`).
+- Reinitialized around `activation_path_literal_debt` to simplify duplicated high-risk activation paths in Rime and BetterMouse now that behavior is covered by tests.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.
