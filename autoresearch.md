@@ -10,8 +10,9 @@ This session runs in the isolated worktree:
 The original checkout had unrelated uncommitted changes when this session started; do not touch or depend on them.
 
 ## Metrics
-- **Primary**: `option_doc_debt` (points, lower is better) — custom Nix option documentation debt.
+- **Primary**: `check_parity_debt` (points, lower is better) — drift between test definitions, local recipes, CI, and the autoresearch correctness gate.
 - **Secondary**:
+  - `option_doc_debt`: custom Nix option documentation debt.
   - `loop_guidance_debt`: prompt/goal/search/experiment guidance debt for safe resumed autoresearch.
   - `doc_truth_debt`: documentation/check truthfulness debt from repository-local signals.
   - `quality_debt`: the previous saturated module/test/lint/line-length metric.
@@ -28,18 +29,24 @@ The original checkout had unrelated uncommitted changes when this session starte
   - `option_total`: `lib.mkOption` declarations under `modules/`.
   - `option_missing_descriptions`: `lib.mkOption` declarations without a `description` field.
   - `option_missing_examples`: `lib.mkOption` declarations without an `example` field.
+  - `just_check_missing_test_attrs`: check attributes in `tests/default.nix` not covered by `just check` unless it delegates to `nix flake check`.
+  - `autoresearch_missing_focused_checks`: unit/integration check attributes missing from `autoresearch.checks.sh`.
+  - `just_check_missing_darwin_build`: whether `just check` misses the active `darwinConfigurations.f.system` build.
+  - `ci_missing_flake_check`: whether CI is missing `nix flake check`.
+  - `ci_missing_system_builds`: expected system configuration builds missing from CI.
   - `nix_files`: count of measured Nix files.
 
 `doc_truth_debt = quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10`.
 `loop_guidance_debt = doc_truth_debt + guidance_missing_sections * 10 + guidance_empty_sections * 5`.
 `option_doc_debt = loop_guidance_debt + option_missing_descriptions * 10 + option_missing_examples * 2`.
+`check_parity_debt = option_doc_debt + just_check_missing_test_attrs * 3 + autoresearch_missing_focused_checks * 8 + just_check_missing_darwin_build * 10 + ci_missing_flake_check * 20 + ci_missing_system_builds * 10`.
 
 The metric is a guide, not permission to game the benchmark. Do not delete useful code or documentation solely to reduce counts. Improvements should make a human reviewer happier and should keep checks passing.
 
 ## How to Run
 `./autoresearch.sh`
 
-It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `loop_guidance_debt`, `doc_truth_debt`, and `quality_debt` metrics are still emitted as secondary monitors.
+It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `option_doc_debt`, `loop_guidance_debt`, `doc_truth_debt`, and `quality_debt` metrics are still emitted as secondary monitors.
 
 ## Files in Scope
 - `ARCHITECTURE.md` — architecture and module-layout documentation.
@@ -92,9 +99,9 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - The static-lint gate may be expanded later if a rule can be enabled without fighting intentional Home Manager style.
 
 ## Experiment Queue
-1. Baseline `loop_guidance_debt` after adding the metric and before adding guidance sections.
-2. Add these belief/assumption/search/hypothesis/queue/recursive/realism sections and verify the loop guidance metric drops.
-3. If saturated again, reinitialize around option-documentation coverage rather than adding cosmetic text.
+1. Baseline `check_parity_debt` after adding parity signals for `tests/default.nix`, `justfile`, CI, and `autoresearch.checks.sh`.
+2. If the baseline finds local recipe drift, prefer making `just check` delegate to the source-of-truth flake checks over duplicating a brittle manual check list.
+3. If check parity saturates, evaluate behavioral test coverage for high-risk custom modules before adding more documentation-only targets.
 4. If a code refactor is attempted, characterize behavior through existing checks first, then make the smallest source change possible.
 
 ## Recursive/Delegated Review Plan
@@ -119,5 +126,6 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Kept: wrapped the final long BetterMouse assertion message (`quality_debt=0`).
 - Previous primary metric reached its lower bound (`quality_debt=0`). Reinitialized around `doc_truth_debt` to catch stale source-of-truth docs and policy drift without weakening checks. Baseline `doc_truth_debt=10` showed only the `ARCHITECTURE.md` review date was stale after the doc was re-read.
 - `doc_truth_debt` then reached its lower bound (`0`). User asked to recursively improve the prompt, goal, search goal, experiments, beliefs, hypotheses, and assumptions. Reinitialized around `loop_guidance_debt` so the persisted prompt guides future agents realistically instead of chasing saturated metrics.
-- `loop_guidance_debt` reached its lower bound (`0`). Reinitialize around `option_doc_debt` to test the backlog hypothesis that custom option examples expose real documentation debt in Nix modules.
+- `loop_guidance_debt` reached its lower bound (`0`). Reinitialized around `option_doc_debt` to test the backlog hypothesis that custom option examples expose real documentation debt in Nix modules.
+- `option_doc_debt` reached its lower bound (`0`). Reinitialize around `check_parity_debt` to test the backlog hypothesis that local recipes, CI, and the autoresearch correctness gate may drift from the real check set.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.

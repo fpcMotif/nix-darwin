@@ -186,6 +186,93 @@ print(count)
 PY
 }
 
+count_just_check_missing_test_attrs() {
+  python3 <<'PY'
+import re
+from pathlib import Path
+
+def check_attrs():
+    attrs = []
+    pattern = re.compile(r"^\s*([A-Za-z0-9_-]+)\s*=\s*(?:callTest|pkgs\.runCommand)")
+    for line in Path("tests/default.nix").read_text().splitlines():
+        match = pattern.match(line)
+        if match:
+            attrs.append(match.group(1))
+    return attrs
+
+def just_check_recipe():
+    lines = Path("justfile").read_text().splitlines()
+    block = []
+    in_recipe = False
+    for line in lines:
+        if re.match(r"^check:", line):
+            in_recipe = True
+            block.append(line)
+            continue
+        if in_recipe and line and not line[0].isspace() and not line.startswith("#"):
+            break
+        if in_recipe:
+            block.append(line)
+    return "\n".join(block)
+
+recipe = just_check_recipe()
+if "nix flake check" in recipe:
+    print(0)
+else:
+    print(sum(1 for attr in check_attrs() if attr not in recipe))
+PY
+}
+
+count_autoresearch_missing_focused_checks() {
+  python3 <<'PY'
+import re
+from pathlib import Path
+
+attrs = []
+pattern = re.compile(r"^\s*([A-Za-z0-9_-]+)\s*=\s*(?:callTest|pkgs\.runCommand)")
+for line in Path("tests/default.nix").read_text().splitlines():
+    match = pattern.match(line)
+    if match and match.group(1).startswith(("unit-", "integration-")):
+        attrs.append(match.group(1))
+
+checks = Path("autoresearch.checks.sh").read_text()
+print(sum(1 for attr in attrs if attr not in checks))
+PY
+}
+
+count_just_check_missing_darwin_build() {
+  if awk '/^check:/ { in_check = 1 } in_check && /^[^[:space:]#]/ && !/^check:/ { exit } in_check { print }' justfile \
+    | grep -Fq 'darwinConfigurations.f.system'; then
+    printf '0\n'
+  else
+    printf '1\n'
+  fi
+}
+
+count_ci_missing_flake_check() {
+  if grep -Fq 'nix flake check' .github/workflows/build.yml; then
+    printf '0\n'
+  else
+    printf '1\n'
+  fi
+}
+
+count_ci_missing_system_builds() {
+  local count=0 config
+
+  if ! grep -Fq 'darwinConfigurations.f.system' .github/workflows/build.yml; then
+    count=$((count + 1))
+  fi
+
+  for config in wsl x230 vm-aarch64-utm; do
+    if ! grep -Fq "$config" .github/workflows/build.yml; then
+      count=$((count + 1))
+    fi
+  done
+
+  printf '%s\n' "$count"
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -200,12 +287,19 @@ guidance_empty_sections=$(count_guidance_sections empty)
 option_total=$(count_option_docs total)
 option_missing_descriptions=$(count_option_docs missing_description)
 option_missing_examples=$(count_option_docs missing_example)
+just_check_missing_test_attrs=$(count_just_check_missing_test_attrs)
+autoresearch_missing_focused_checks=$(count_autoresearch_missing_focused_checks)
+just_check_missing_darwin_build=$(count_just_check_missing_darwin_build)
+ci_missing_flake_check=$(count_ci_missing_flake_check)
+ci_missing_system_builds=$(count_ci_missing_system_builds)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
 loop_guidance_debt=$((doc_truth_debt + guidance_missing_sections * 10 + guidance_empty_sections * 5))
 option_doc_debt=$((loop_guidance_debt + option_missing_descriptions * 10 + option_missing_examples * 2))
+check_parity_debt=$((option_doc_debt + just_check_missing_test_attrs * 3 + autoresearch_missing_focused_checks * 8 + just_check_missing_darwin_build * 10 + ci_missing_flake_check * 20 + ci_missing_system_builds * 10))
 
+printf 'METRIC check_parity_debt=%s\n' "$check_parity_debt"
 printf 'METRIC option_doc_debt=%s\n' "$option_doc_debt"
 printf 'METRIC loop_guidance_debt=%s\n' "$loop_guidance_debt"
 printf 'METRIC doc_truth_debt=%s\n' "$doc_truth_debt"
@@ -224,3 +318,8 @@ printf 'METRIC guidance_empty_sections=%s\n' "$guidance_empty_sections"
 printf 'METRIC option_total=%s\n' "$option_total"
 printf 'METRIC option_missing_descriptions=%s\n' "$option_missing_descriptions"
 printf 'METRIC option_missing_examples=%s\n' "$option_missing_examples"
+printf 'METRIC just_check_missing_test_attrs=%s\n' "$just_check_missing_test_attrs"
+printf 'METRIC autoresearch_missing_focused_checks=%s\n' "$autoresearch_missing_focused_checks"
+printf 'METRIC just_check_missing_darwin_build=%s\n' "$just_check_missing_darwin_build"
+printf 'METRIC ci_missing_flake_check=%s\n' "$ci_missing_flake_check"
+printf 'METRIC ci_missing_system_builds=%s\n' "$ci_missing_system_builds"
