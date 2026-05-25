@@ -325,6 +325,25 @@ print(debt)
 PY
 }
 
+count_missing_claude_activation_assertions() {
+  python3 <<'PY'
+import re
+from pathlib import Path
+
+required = [
+    "darwin-claude-managed-files",
+    "darwin-claude-settings-seed-activation",
+    "darwin-claude-stop-hook-debug-activation",
+    "darwin-claude-disable-grill-skills-activation",
+    "darwin-claude-disable-superpowers-brainstorming-activation",
+]
+
+text = Path("tests/integration/configurations-eval-test.nix").read_text()
+assertions = set(re.findall(r'helpers\.assertTest\s+"([^"]+)"', text))
+print(sum(1 for name in required if name not in assertions))
+PY
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -347,6 +366,8 @@ ci_missing_system_builds=$(count_ci_missing_system_builds)
 missing_behavioral_assertions=$(count_missing_behavioral_assertions)
 required_behavioral_assertions=8
 activation_path_duplicate_literals=$(count_activation_path_duplicate_literals)
+missing_claude_activation_assertions=$(count_missing_claude_activation_assertions)
+required_claude_activation_assertions=5
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
@@ -355,7 +376,9 @@ option_doc_debt=$((loop_guidance_debt + option_missing_descriptions * 10 + optio
 check_parity_debt=$((option_doc_debt + just_check_missing_test_attrs * 3 + autoresearch_missing_focused_checks * 8 + just_check_missing_darwin_build * 10 + ci_missing_flake_check * 20 + ci_missing_system_builds * 10))
 behavioral_coverage_debt=$((check_parity_debt + missing_behavioral_assertions * 5))
 activation_path_literal_debt=$((behavioral_coverage_debt + activation_path_duplicate_literals * 4))
+claude_activation_coverage_debt=$((activation_path_literal_debt + missing_claude_activation_assertions * 5))
 
+printf 'METRIC claude_activation_coverage_debt=%s\n' "$claude_activation_coverage_debt"
 printf 'METRIC activation_path_literal_debt=%s\n' "$activation_path_literal_debt"
 printf 'METRIC behavioral_coverage_debt=%s\n' "$behavioral_coverage_debt"
 printf 'METRIC check_parity_debt=%s\n' "$check_parity_debt"
@@ -385,3 +408,5 @@ printf 'METRIC ci_missing_system_builds=%s\n' "$ci_missing_system_builds"
 printf 'METRIC missing_behavioral_assertions=%s\n' "$missing_behavioral_assertions"
 printf 'METRIC required_behavioral_assertions=%s\n' "$required_behavioral_assertions"
 printf 'METRIC activation_path_duplicate_literals=%s\n' "$activation_path_duplicate_literals"
+printf 'METRIC missing_claude_activation_assertions=%s\n' "$missing_claude_activation_assertions"
+printf 'METRIC required_claude_activation_assertions=%s\n' "$required_claude_activation_assertions"
