@@ -132,6 +132,10 @@ let
   darwinBetterMouseSeedActivation = darwinHome.home.activation.bettermouseSeed.data;
   darwinBetterMouseLaunchd = darwinHome.launchd.agents.bettermouse.config;
   darwinGhosttyConfig = darwinHome.xdg.configFile."ghostty/config".text;
+  darwinClaudeSettingsSeed = darwinHome.home.activation.claudeSettingsSeed.data;
+  darwinClaudeStopHookDebug = darwinHome.home.activation.claudeStopHookDebug.data;
+  darwinClaudeDisableGrillSkills = darwinHome.home.activation.claudeDisableGrillSkills.data;
+  darwinClaudeDisableSuperpowers = darwinHome.home.activation.claudeDisableSuperpowersPluginBrainstorming.data;
 
   darwinChecks = [
     (helpers.assertTest "darwin-f-evaluates"
@@ -141,6 +145,72 @@ let
     (helpers.assertTest "darwin-primary-user"
       (darwinConfig.system.primaryUser == user)
       "Darwin primary user should match ${user}")
+
+    (helpers.assertTest "darwin-claude-managed-files"
+      (
+        builtins.hasAttr ".local/bin/claude" darwinHome.home.file
+          && builtins.hasAttr ".claude/CLAUDE.md" darwinHome.home.file
+          && builtins.hasAttr "RTK.md" darwinHome.home.file
+          && builtins.hasAttr ".claude/RTK.md" darwinHome.home.file
+          && builtins.hasAttr ".codex/RTK.md" darwinHome.home.file
+          && builtins.hasAttr ".claude/hooks/.rtk-hook.sha256" darwinHome.home.file
+          && builtins.hasAttr ".codex/hooks/.rtk-hook.sha256" darwinHome.home.file
+          && darwinHome.home.file.".claude/statusline-command.sh".executable == true
+          && darwinHome.home.file.".claude/hooks/stop-hook-debug.sh".executable == true
+          && darwinHome.home.file.".claude/hooks/rtk-rewrite.sh".executable == true
+          && darwinHome.home.file.".codex/hooks/rtk-rewrite.sh".executable == true
+      )
+      "Darwin Claude should install the Nix-managed launcher, docs, RTK hooks, and executable scripts")
+
+    (helpers.assertTest "darwin-claude-settings-seed-activation"
+      (
+        lib.hasInfix ''target="/Users/${user}/.claude/settings.json"'' darwinClaudeSettingsSeed
+          && lib.hasInfix ''if [ ! -e "$target" ]; then'' darwinClaudeSettingsSeed
+          && lib.hasInfix ''run install -m 0644 /nix/store/'' darwinClaudeSettingsSeed
+          && lib.hasInfix ''settings.json.tmpl "$target"'' darwinClaudeSettingsSeed
+      )
+      "Darwin Claude settings activation should seed settings.json once without fighting runtime edits")
+
+    (helpers.assertTest "darwin-claude-stop-hook-debug-activation"
+      (
+        lib.hasInfix ''wrap_stop_hook()'' darwinClaudeStopHookDebug
+          && lib.hasInfix ''stop-hook-debug.sh'' darwinClaudeStopHookDebug
+          && lib.hasInfix ''[.hooks.Stop[]?.hooks[]?.command | contains($w)] | any'' darwinClaudeStopHookDebug
+          && lib.hasInfix ''[ -f "$file.orig" ] || cp "$file" "$file.orig"'' darwinClaudeStopHookDebug
+          && lib.hasInfix ''.hooks.Stop |= map(.hooks |= map(.command = ($wrapper + " " + $hookid + " " + .command)))''
+          darwinClaudeStopHookDebug
+          && lib.hasInfix ''wrap_stop_hook superpowers'' darwinClaudeStopHookDebug
+          && lib.hasInfix ''wrap_stop_hook ralph-loop'' darwinClaudeStopHookDebug
+          && lib.hasInfix ''wrap_stop_hook codex'' darwinClaudeStopHookDebug
+      )
+      "Darwin Claude Stop-hook debug activation should idempotently wrap known plugin Stop hooks")
+
+    (helpers.assertTest "darwin-claude-disable-grill-skills-activation"
+      (
+        lib.hasInfix ''/Users/${user}/.agents/skills'' darwinClaudeDisableGrillSkills
+          && lib.hasInfix ''/Users/${user}/.claude/skills'' darwinClaudeDisableGrillSkills
+          && lib.hasInfix ''/Users/${user}/.codex/skills'' darwinClaudeDisableGrillSkills
+          && lib.hasInfix ''/Users/${user}/.cursor/skills'' darwinClaudeDisableGrillSkills
+          && lib.hasInfix ''/Users/${user}/.pi/agent/skills'' darwinClaudeDisableGrillSkills
+          && lib.hasInfix ''for skill in grill-me; do'' darwinClaudeDisableGrillSkills
+          && lib.hasInfix ''rm -rf -- "$dir/$skill"'' darwinClaudeDisableGrillSkills
+          && lib.hasInfix ''anthropic-skills:grill-me'' darwinClaudeDisableGrillSkills
+          && lib.hasInfix ''skills-disabled'' darwinClaudeDisableGrillSkills
+      )
+      "Darwin Claude activation should keep disabled grill-me out of every picker and session cache")
+
+    (helpers.assertTest "darwin-claude-disable-superpowers-brainstorming-activation"
+      (
+        lib.hasInfix ''.claude/plugins/cache/frad-dotclaude/superpowers/*/skills''
+          darwinClaudeDisableSuperpowers
+        && lib.hasInfix ''[ -d "$skills_dir/brainstorming" ] || continue''
+          darwinClaudeDisableSuperpowers
+        && lib.hasInfix ''skills-disabled'' darwinClaudeDisableSuperpowers
+        && lib.hasInfix ''rm -rf -- "$disabled/brainstorming"'' darwinClaudeDisableSuperpowers
+        && lib.hasInfix ''mv -- "$skills_dir/brainstorming" "$disabled/brainstorming"''
+          darwinClaudeDisableSuperpowers
+      )
+      "Darwin Claude activation should park only the plugin-provided brainstorming skill")
 
     (helpers.assertTest "darwin-bettermouse-profile-source"
       (
