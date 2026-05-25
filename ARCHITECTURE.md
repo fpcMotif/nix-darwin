@@ -224,9 +224,9 @@ This section is the largest because the moving parts (sources, targets, discover
 | Target option       | Path                                              | Why                                                                                       |
 |---------------------|---------------------------------------------------|-------------------------------------------------------------------------------------------|
 | `targets.agents`    | `$HOME/.agents/skills`                            | Shared Open Agent Skills registry. Primary path for Codex and a documented Cursor path.   |
-| `targets.claude`    | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills`      | Claude Code personal skills.                                                              |
+| `targets.claude`    | `$HOME/.claude/skills`                            | Claude Code personal skills; static `link` target in this repo.                           |
 | `targets.cursor`    | `$HOME/.cursor/skills`                            | Cursor-native user skills (deterministic discovery).                                      |
-| `targets.codex`     | `${CODEX_HOME:-$HOME/.codex}/skills`              | Compatibility mirror only. The primary Codex path is `$HOME/.agents/skills`.              |
+| `targets.codex`     | `$HOME/.codex/skills`                             | Compatibility mirror only. The primary Codex path is `$HOME/.agents/skills`.              |
 | `targets.pi`        | `$HOME/.pi/agent/skills`                          | Custom target — Oh My Pi / Pi harness.                                                    |
 
 ### Sources and selection
