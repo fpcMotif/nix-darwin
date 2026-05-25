@@ -10,8 +10,9 @@ This session runs in the isolated worktree:
 The original checkout had unrelated uncommitted changes when this session started; do not touch or depend on them.
 
 ## Metrics
-- **Primary**: `doc_truth_debt` (points, lower is better) — documentation/check truthfulness debt from repository-local signals.
+- **Primary**: `loop_guidance_debt` (points, lower is better) — prompt/goal/search/experiment guidance debt for safe resumed autoresearch.
 - **Secondary**:
+  - `doc_truth_debt`: documentation/check truthfulness debt from repository-local signals.
   - `quality_debt`: the previous saturated module/test/lint/line-length metric.
   - `docs_missing_modules`: source modules under `modules/` not named in `ARCHITECTURE.md`.
   - `docs_missing_tests`: test files or test attributes not named in `tests/README.md`.
@@ -21,16 +22,19 @@ The original checkout had unrelated uncommitted changes when this session starte
   - `stale_linting_policy`: `ARCHITECTURE.md` still says statix/deadnix are not enforced even though they are.
   - `missing_statix_policy_doc`: `statix.toml` exists but `ARCHITECTURE.md` does not describe the local policy.
   - `stale_review_date`: `ARCHITECTURE.md` Last reviewed date is not the current session date.
+  - `guidance_missing_sections`: required autoresearch guidance sections are missing.
+  - `guidance_empty_sections`: required autoresearch guidance sections exist but have no body.
   - `nix_files`: count of measured Nix files.
 
 `doc_truth_debt = quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10`.
+`loop_guidance_debt = doc_truth_debt + guidance_missing_sections * 10 + guidance_empty_sections * 5`.
 
 The metric is a guide, not permission to game the benchmark. Do not delete useful code or documentation solely to reduce counts. Improvements should make a human reviewer happier and should keep checks passing.
 
 ## How to Run
 `./autoresearch.sh`
 
-It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `quality_debt` metric is still emitted as a secondary monitor.
+It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `doc_truth_debt` and `quality_debt` metrics are still emitted as secondary monitors.
 
 ## Files in Scope
 - `ARCHITECTURE.md` — architecture and module-layout documentation.
@@ -63,4 +67,5 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Kept: added a real `unit-static-lint` gate for `statix` + `deadnix`, fixed actionable lint findings, and documented the narrow `repeated_keys` statix opt-out (`quality_debt=1`).
 - Kept: wrapped the final long BetterMouse assertion message (`quality_debt=0`).
 - Previous primary metric reached its lower bound (`quality_debt=0`). Reinitialized around `doc_truth_debt` to catch stale source-of-truth docs and policy drift without weakening checks. Baseline `doc_truth_debt=10` showed only the `ARCHITECTURE.md` review date was stale after the doc was re-read.
+- `doc_truth_debt` then reached its lower bound (`0`). User asked to recursively improve the prompt, goal, search goal, experiments, beliefs, hypotheses, and assumptions. Reinitialize around `loop_guidance_debt` so the persisted prompt guides future agents realistically instead of chasing saturated metrics.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.

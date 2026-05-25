@@ -3,7 +3,8 @@ set -euo pipefail
 
 # Repository-local maintainability signals for the Nix config. This is not a
 # substitute for review; it catches documentation drift, check-contract gaps,
-# and stale source-of-truth docs that make the repo harder to navigate.
+# stale source-of-truth docs, and missing guidance that would make a resumed
+# autoresearch loop less realistic or more likely to overfit.
 
 count_missing_module_docs() {
   local count=0 file base
@@ -104,6 +105,46 @@ count_stale_review_date() {
   fi
 }
 
+section_exists() {
+  grep -Fxq "$1" autoresearch.md
+}
+
+section_has_body() {
+  awk -v heading="$1" '
+    $0 == heading { in_section = 1; next }
+    in_section && /^## / { exit }
+    in_section && $0 !~ /^[[:space:]]*$/ && $0 !~ /^<!--/ { found = 1; exit }
+    END { exit(found ? 0 : 1) }
+  ' autoresearch.md
+}
+
+count_guidance_sections() {
+  local mode=$1 count=0 heading
+  local required_sections=(
+    '## Current Beliefs'
+    '## Assumptions to Re-check'
+    '## Search Goals'
+    '## Hypotheses Backlog'
+    '## Experiment Queue'
+    '## Recursive/Delegated Review Plan'
+    '## Realism Guardrails'
+  )
+
+  for heading in "${required_sections[@]}"; do
+    if ! section_exists "$heading"; then
+      if [ "$mode" = missing ]; then
+        count=$((count + 1))
+      fi
+    elif ! section_has_body "$heading"; then
+      if [ "$mode" = empty ]; then
+        count=$((count + 1))
+      fi
+    fi
+  done
+
+  printf '%s\n' "$count"
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -113,10 +154,14 @@ nix_files=$(count_nix_files)
 stale_linting_policy=$(count_stale_linting_policy)
 missing_statix_policy_doc=$(count_missing_statix_policy_doc)
 stale_review_date=$(count_stale_review_date)
+guidance_missing_sections=$(count_guidance_sections missing)
+guidance_empty_sections=$(count_guidance_sections empty)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
+loop_guidance_debt=$((doc_truth_debt + guidance_missing_sections * 10 + guidance_empty_sections * 5))
 
+printf 'METRIC loop_guidance_debt=%s\n' "$loop_guidance_debt"
 printf 'METRIC doc_truth_debt=%s\n' "$doc_truth_debt"
 printf 'METRIC quality_debt=%s\n' "$quality_debt"
 printf 'METRIC docs_missing_modules=%s\n' "$docs_missing_modules"
@@ -128,3 +173,5 @@ printf 'METRIC nix_files=%s\n' "$nix_files"
 printf 'METRIC stale_linting_policy=%s\n' "$stale_linting_policy"
 printf 'METRIC missing_statix_policy_doc=%s\n' "$missing_statix_policy_doc"
 printf 'METRIC stale_review_date=%s\n' "$stale_review_date"
+printf 'METRIC guidance_missing_sections=%s\n' "$guidance_missing_sections"
+printf 'METRIC guidance_empty_sections=%s\n' "$guidance_empty_sections"
