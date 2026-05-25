@@ -168,4 +168,5 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Reinitialized around `agent_report_truth_debt` because the root Agent Skills report still reflected the pre-split `modules/home/skills.nix` era and older target-structure/verification assumptions.
 - Kept: refreshed `AGENT_SKILLS_NIX_REPORT.md` to match current split modules, link-based target wiring, and Nix-backed verification (`agent_report_truth_debt=0`).
 - Reinitialized around `root_fallback_docs_debt` after finding `ARCHITECTURE.md` still documented a removed top-level `skills.nix` fallback.
+- Kept: refreshed the repository layout and off-flake fallback section so `ARCHITECTURE.md` documents only the existing top-level `home.nix` compatibility shim and points Agent Skills wiring back to the flake/Home Manager modules.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.

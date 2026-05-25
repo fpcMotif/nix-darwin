@@ -49,15 +49,14 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 │   └── home/                 # Martin's Home Manager profile
 ├── pkgs/                     # custom derivations + overlay (exposed as pkgs.martin.*)
 ├── references/               # external sample repos, never imported by the flake
-├── home.nix                  # off-flake Home Manager fallback (escape hatch)
-└── skills.nix                # off-flake agent-skills fallback (escape hatch)
+└── home.nix                  # off-flake Home Manager compatibility shim
 ```
 
 `flake.nix` stays thin: it wires inputs, overlays, system outputs, and the formatter. Host- and feature-specific behavior belongs in `hosts/` and `modules/`. `references/` is for humans, never for Nix.
 
-### Off-flake fallbacks
+### Off-flake compatibility shim
 
-`home.nix` and `skills.nix` exist so Home Manager and the agent-skills bundle can be applied on a machine that has Nix but isn't currently driving this flake (e.g. a fresh checkout where `darwin-rebuild` hasn't run yet, or a future Linux box without a flake output). They duplicate intent; the flake remains the source of truth. Treat them as a recovery path and re-derive from the flake when possible.
+`home.nix` exists so Home Manager can still import `modules/home` directly on a Nix-capable machine that is not currently driving this flake. The flake remains the source of truth for active system outputs and Agent Skills wiring; re-derive from the flake whenever possible.
 
 ## Composition model
 
