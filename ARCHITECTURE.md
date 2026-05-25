@@ -187,7 +187,9 @@ modules/home/
 ├── ai-cli.nix             # shared AI CLI package/config glue
 ├── ai-model-routing.nix   # model-router scripts and generated routing config
 ├── amp.nix                # Amp CLI wrapper/state integration
-├── claude.nix             # Claude Code, agent-skills bundle, hooks, and managed Claude files
+├── claude.nix             # Claude Code managed files and agent-skills bundle wiring
+├── claude-activations.nix # Claude runtime-state activation maintenance
+├── claude-common.nix      # shared Claude skill target and selection constants
 ├── cleanup.nix            # user-level cleanup jobs and activation maintenance
 ├── crush.nix              # Crush CLI wrapper/config integration
 ├── cursor.nix             # Cursor settings, extensions, and activation glue
