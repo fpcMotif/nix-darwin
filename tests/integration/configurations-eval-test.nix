@@ -192,7 +192,7 @@ let
     (helpers.assertTest "darwin-rime-post-activation"
       (
         lib.hasInfix ''input_methods_dir="/Library/Input Methods"'' darwinRimePostActivation
-          && lib.hasInfix ''target="$input_methods_dir/Squirrel.app"'' darwinRimePostActivation
+          && lib.hasInfix ''target="/Library/Input Methods/Squirrel.app"'' darwinRimePostActivation
           && lib.hasInfix ''source="/nix/store/'' darwinRimePostActivation
           && lib.hasInfix ''/Library/Input Methods/Squirrel.app"'' darwinRimePostActivation
           && lib.hasInfix ''backup-before-nix'' darwinRimePostActivation

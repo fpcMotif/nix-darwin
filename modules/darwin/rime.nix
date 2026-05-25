@@ -4,6 +4,11 @@ let
   cfg = config.martin.rime;
   hmDag = inputs.home-manager.lib.hm.dag;
   rimeConfigSource = toString cfg.config;
+  rimeUserDir = "${currentSystemUserHome}/Library/Rime";
+  inputMethodsDir = "/Library/Input Methods";
+  squirrelApp = "${inputMethodsDir}/Squirrel.app";
+  packagedSquirrelApp = "${pkgs.martin.squirrel}${squirrelApp}";
+  squirrelExecutable = "${squirrelApp}/Contents/MacOS/Squirrel";
 in
 {
   options.martin.rime = {
@@ -28,16 +33,16 @@ in
     # is on disk before the per-user `home.activation.rimeUserConfig` step
     # tries to talk to it.
     system.activationScripts.postActivation.text = lib.mkAfter ''
-      input_methods_dir="/Library/Input Methods"
-      target="$input_methods_dir/Squirrel.app"
-      source="${pkgs.martin.squirrel}/Library/Input Methods/Squirrel.app"
+      input_methods_dir="${inputMethodsDir}"
+      target="${squirrelApp}"
+      source="${packagedSquirrelApp}"
 
       mkdir -p "$input_methods_dir"
 
       # Idempotent: if the symlink already points at the current store path,
       # don't churn the inode (breaks watchers and is a no-op anyway).
       if [ "$(readlink "$target" 2>/dev/null)" != "$source" ]; then
-        echo "[rime] linking Squirrel.app into /Library/Input Methods"
+        echo "[rime] linking Squirrel.app into ${inputMethodsDir}"
         if [ -e "$target" ] && [ ! -L "$target" ]; then
           backup="$target.backup-before-nix"
           if [ -e "$backup" ]; then
@@ -55,7 +60,7 @@ in
     home-manager.users.${currentSystemUser} = {
       home.activation.rimeUserConfig = hmDag.entryAfter [ "writeBoundary" ] ''
         echo "[rime] syncing MyRime-main into ~/Library/Rime"
-        run mkdir -p "${currentSystemUserHome}/Library/Rime"
+        run mkdir -p "${rimeUserDir}"
 
         if [ ! -d "${rimeConfigSource}" ]; then
           echo "[rime] ERROR: config source not found: ${rimeConfigSource}" >&2
@@ -71,11 +76,11 @@ in
           --exclude '*.userdb/' \
           --exclude '*.userdb.txt' \
           --exclude 'sync/' \
-          "${rimeConfigSource}/" "${currentSystemUserHome}/Library/Rime/"
+          "${rimeConfigSource}/" "${rimeUserDir}/"
 
-        if [ -x "/Library/Input Methods/Squirrel.app/Contents/MacOS/Squirrel" ]; then
+        if [ -x "${squirrelExecutable}" ]; then
           echo "[rime] redeploying Squirrel"
-          run "/Library/Input Methods/Squirrel.app/Contents/MacOS/Squirrel" --reload || true
+          run "${squirrelExecutable}" --reload || true
         fi
       '';
     };

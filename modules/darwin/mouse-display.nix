@@ -3,7 +3,8 @@
 let
   cfg = config.martin.mouseDisplay;
   hmDag = inputs.home-manager.lib.hm.dag;
-  bettermouseSeed = "${currentSystemUserHome}/Library/Application Support/BetterMouse/bm_cfg.plist";
+  bettermouseConfigDir = "${currentSystemUserHome}/Library/Application Support/BetterMouse";
+  bettermouseSeed = "${bettermouseConfigDir}/bm_cfg.plist";
   appLogDir = "${currentSystemUserHome}/Library/Logs/nix-managed-apps";
   profileSource =
     if cfg.bettermouse.profile == null
@@ -37,7 +38,7 @@ in
         run mkdir -p "${appLogDir}"
 
         if [ -n "${profileSource}" ]; then
-          seed_dir="${currentSystemUserHome}/Library/Application Support/BetterMouse"
+          seed_dir="${bettermouseConfigDir}"
           stamp="$seed_dir/.nix-seed-source"
           src="${profileSource}"
 
