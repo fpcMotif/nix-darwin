@@ -393,6 +393,20 @@ print(sum(1 for pattern in stale_patterns if pattern in text))
 PY
 }
 
+count_stale_root_fallback_claims() {
+  local count=0
+
+  if [ ! -f skills.nix ] && grep -Fq 'skills.nix' ARCHITECTURE.md; then
+    count=$((count + 1))
+  fi
+
+  if [ ! -f skills.nix ] && grep -Fq 'home.nix` and `skills.nix` exist' ARCHITECTURE.md; then
+    count=$((count + 1))
+  fi
+
+  printf '%s\n' "$count"
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -421,6 +435,7 @@ stale_agent_skills_activation_claim=$(count_stale_agent_skills_activation_claim)
 claude_main_activation_blocks=$(count_claude_main_activation_blocks)
 missing_claude_split_modules=$(count_missing_claude_split_modules)
 stale_agent_skills_report_claims=$(count_stale_agent_skills_report_claims)
+stale_root_fallback_claims=$(count_stale_root_fallback_claims)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
@@ -433,7 +448,9 @@ claude_activation_coverage_debt=$((activation_path_literal_debt + missing_claude
 agent_docs_truth_debt=$((claude_activation_coverage_debt + stale_agent_skills_activation_claim * 15))
 claude_activation_locality_debt=$((agent_docs_truth_debt + claude_main_activation_blocks * 5 + missing_claude_split_modules * 5))
 agent_report_truth_debt=$((claude_activation_locality_debt + stale_agent_skills_report_claims * 5))
+root_fallback_docs_debt=$((agent_report_truth_debt + stale_root_fallback_claims * 10))
 
+printf 'METRIC root_fallback_docs_debt=%s\n' "$root_fallback_docs_debt"
 printf 'METRIC agent_report_truth_debt=%s\n' "$agent_report_truth_debt"
 printf 'METRIC claude_activation_locality_debt=%s\n' "$claude_activation_locality_debt"
 printf 'METRIC agent_docs_truth_debt=%s\n' "$agent_docs_truth_debt"
@@ -473,3 +490,4 @@ printf 'METRIC stale_agent_skills_activation_claim=%s\n' "$stale_agent_skills_ac
 printf 'METRIC claude_main_activation_blocks=%s\n' "$claude_main_activation_blocks"
 printf 'METRIC missing_claude_split_modules=%s\n' "$missing_claude_split_modules"
 printf 'METRIC stale_agent_skills_report_claims=%s\n' "$stale_agent_skills_report_claims"
+printf 'METRIC stale_root_fallback_claims=%s\n' "$stale_root_fallback_claims"
