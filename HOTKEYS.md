@@ -152,17 +152,16 @@ Source: `MyRime-main/default.yaml` and active `~/Library/Rime/default.yaml`
 | `ctrl+shift+3` | Toggle ASCII punctuation |
 | `ctrl+shift+4` | Toggle traditionalization |
 
-## Repo-Local Shortcut Files
+## Shortcut-Relevant Source Files
 
-These files contain additional shortcut maps, but several are source/legacy
-dotfiles rather than active Home Manager outputs:
+Current shortcut behavior is sourced from Nix modules and host config, not the
+removed legacy `personal-settings-main` tree. Check these files when updating
+this inventory:
 
-- `personal-settings-main/kitty/kitty.conf`
-- `personal-settings-main/tmux/tmux.conf`
-- `personal-settings-main/nvim/lua/keymap.lua`
-- `personal-settings-main/nvim/lua/window.lua`
-- `personal-settings-main/nvim/lua/terminal.lua`
-- `personal-settings-main/nvim/lua/plugins/*.lua`
-- `personal-settings-main/lazygit/config.yml`
-- `personal-settings-main/mpv/input.conf`
-- `personal-settings-main/yazi/keymap.toml`
+- `modules/darwin/skhd.nix` — global launcher prefix and Finder cut/move mode.
+- `hosts/darwin/default.nix` — host-local `martin.skhd.extraConfig` additions.
+- `modules/darwin/hammerspoon.nix` — Hammerspoon helper surface for future global automation.
+- `modules/home/ghostty.nix` — Ghostty split/tab/window keybind generation.
+- `modules/home/tmux.nix` — tmux prefix, pane, window, and copy-mode bindings.
+- `modules/home/zed.nix` — Zed keymap output.
+- `modules/home/yazi.nix` — Yazi terminal file-manager config.
