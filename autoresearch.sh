@@ -454,6 +454,29 @@ print(missing)
 PY
 }
 
+count_hotkeys_missing_tmux_copy_mode_bindings() {
+  python3 <<'PY'
+from pathlib import Path
+
+tmux = Path("modules/home/tmux.nix").read_text()
+hotkeys = Path("HOTKEYS.md").read_text()
+
+required = [
+    ("bind -T copy-mode-vi q", "copy-mode `q`"),
+    ("bind -T copy-mode-vi v", "copy-mode `v`"),
+    ("bind -T copy-mode-vi V", "copy-mode `V`"),
+    ("bind -T copy-mode-vi 'C-v'", "copy-mode `ctrl+v`"),
+    ("bind -T copy-mode-vi y", "copy-mode `y`"),
+    ("bind -T copy-mode-vi MouseDragEnd1Pane", "copy-mode mouse drag"),
+    ("bind -T copy-mode-vi 'C-h'", "copy-mode `ctrl+h/j/k/l`"),
+    ("bind -T copy-mode-vi 'C-\\\\'", "copy-mode `ctrl+\\`"),
+    ("bind -T copy-mode-vi 'C-Space'", "copy-mode `ctrl+space`"),
+]
+
+print(sum(1 for module_pattern, doc_token in required if module_pattern in tmux and doc_token not in hotkeys))
+PY
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -485,6 +508,7 @@ stale_agent_skills_report_claims=$(count_stale_agent_skills_report_claims)
 stale_root_fallback_claims=$(count_stale_root_fallback_claims)
 stale_architecture_agent_target_policy_claims=$(count_stale_architecture_agent_target_policy_claims)
 hotkeys_missing_repo_shortcut_files=$(count_hotkeys_missing_repo_shortcut_files)
+hotkeys_missing_tmux_copy_mode_bindings=$(count_hotkeys_missing_tmux_copy_mode_bindings)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
@@ -500,7 +524,9 @@ agent_report_truth_debt=$((claude_activation_locality_debt + stale_agent_skills_
 root_fallback_docs_debt=$((agent_report_truth_debt + stale_root_fallback_claims * 10))
 architecture_agent_policy_debt=$((root_fallback_docs_debt + stale_architecture_agent_target_policy_claims * 8))
 hotkeys_repo_shortcut_docs_debt=$((architecture_agent_policy_debt + hotkeys_missing_repo_shortcut_files * 3))
+hotkeys_active_binding_docs_debt=$((hotkeys_repo_shortcut_docs_debt + hotkeys_missing_tmux_copy_mode_bindings * 2))
 
+printf 'METRIC hotkeys_active_binding_docs_debt=%s\n' "$hotkeys_active_binding_docs_debt"
 printf 'METRIC hotkeys_repo_shortcut_docs_debt=%s\n' "$hotkeys_repo_shortcut_docs_debt"
 printf 'METRIC architecture_agent_policy_debt=%s\n' "$architecture_agent_policy_debt"
 printf 'METRIC root_fallback_docs_debt=%s\n' "$root_fallback_docs_debt"
@@ -546,3 +572,4 @@ printf 'METRIC stale_agent_skills_report_claims=%s\n' "$stale_agent_skills_repor
 printf 'METRIC stale_root_fallback_claims=%s\n' "$stale_root_fallback_claims"
 printf 'METRIC stale_architecture_agent_target_policy_claims=%s\n' "$stale_architecture_agent_target_policy_claims"
 printf 'METRIC hotkeys_missing_repo_shortcut_files=%s\n' "$hotkeys_missing_repo_shortcut_files"
+printf 'METRIC hotkeys_missing_tmux_copy_mode_bindings=%s\n' "$hotkeys_missing_tmux_copy_mode_bindings"
