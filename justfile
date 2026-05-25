@@ -45,12 +45,11 @@ drift:
         printf '%-10s %s\n' "$b" "$(readlink -f ~/.nix-profile/bin/$b 2>/dev/null | sed -E 's|.*-([0-9][^/]*)/bin.*|\1|')"; \
     done
 
-# Run the full check suite (unit + integration + system eval).
+# Run the full flake check suite for this host, then build the active Darwin system.
 check:
-    nix build --no-link \
-        '.#darwinConfigurations.f.system' \
-        '.#checks.aarch64-darwin.unit-overlay' \
-        '.#checks.aarch64-darwin.integration-configurations-eval'
+    nix flake check --show-trace --print-build-logs
+    nix build --no-link --show-trace \
+        '.#darwinConfigurations.f.system'
 
 # Garbage-collect old generations older than 30 days.
 gc:
