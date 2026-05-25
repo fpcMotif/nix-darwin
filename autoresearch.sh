@@ -344,6 +344,15 @@ print(sum(1 for name in required if name not in assertions))
 PY
 }
 
+count_stale_agent_skills_activation_claim() {
+  if grep -Fq 'no custom activation scripts' ARCHITECTURE.md \
+    && grep -Fq 'home.activation.' modules/home/claude.nix; then
+    printf '1\n'
+  else
+    printf '0\n'
+  fi
+}
+
 docs_missing_modules=$(count_missing_module_docs)
 docs_missing_tests=$(count_test_attrs_missing_from_readme)
 docs_stale_tests=$(count_stale_readme_tests)
@@ -368,6 +377,7 @@ required_behavioral_assertions=8
 activation_path_duplicate_literals=$(count_activation_path_duplicate_literals)
 missing_claude_activation_assertions=$(count_missing_claude_activation_assertions)
 required_claude_activation_assertions=5
+stale_agent_skills_activation_claim=$(count_stale_agent_skills_activation_claim)
 
 quality_debt=$((docs_missing_modules * 10 + docs_missing_tests * 8 + docs_stale_tests * 8 + lint_contract_gaps * 25 + long_nix_lines))
 doc_truth_debt=$((quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10))
@@ -377,7 +387,9 @@ check_parity_debt=$((option_doc_debt + just_check_missing_test_attrs * 3 + autor
 behavioral_coverage_debt=$((check_parity_debt + missing_behavioral_assertions * 5))
 activation_path_literal_debt=$((behavioral_coverage_debt + activation_path_duplicate_literals * 4))
 claude_activation_coverage_debt=$((activation_path_literal_debt + missing_claude_activation_assertions * 5))
+agent_docs_truth_debt=$((claude_activation_coverage_debt + stale_agent_skills_activation_claim * 15))
 
+printf 'METRIC agent_docs_truth_debt=%s\n' "$agent_docs_truth_debt"
 printf 'METRIC claude_activation_coverage_debt=%s\n' "$claude_activation_coverage_debt"
 printf 'METRIC activation_path_literal_debt=%s\n' "$activation_path_literal_debt"
 printf 'METRIC behavioral_coverage_debt=%s\n' "$behavioral_coverage_debt"
@@ -410,3 +422,4 @@ printf 'METRIC required_behavioral_assertions=%s\n' "$required_behavioral_assert
 printf 'METRIC activation_path_duplicate_literals=%s\n' "$activation_path_duplicate_literals"
 printf 'METRIC missing_claude_activation_assertions=%s\n' "$missing_claude_activation_assertions"
 printf 'METRIC required_claude_activation_assertions=%s\n' "$required_claude_activation_assertions"
+printf 'METRIC stale_agent_skills_activation_claim=%s\n' "$stale_agent_skills_activation_claim"

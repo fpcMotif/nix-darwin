@@ -10,8 +10,9 @@ This session runs in the isolated worktree:
 The original checkout had unrelated uncommitted changes when this session started; do not touch or depend on them.
 
 ## Metrics
-- **Primary**: `claude_activation_coverage_debt` (points, lower is better) — missing behavioral assertions for the large Claude Home Manager module's managed files and activation scripts.
+- **Primary**: `agent_docs_truth_debt` (points, lower is better) — stale Agent Skills architecture claims after Claude activation coverage changes.
 - **Secondary**:
+  - `claude_activation_coverage_debt`: missing behavioral assertions for the large Claude Home Manager module's managed files and activation scripts.
   - `activation_path_literal_debt`: duplicated activation path literals in high-risk Darwin modules, after behavioral coverage is in place.
   - `behavioral_coverage_debt`: behavioral integration assertion debt for high-risk active custom modules.
   - `check_parity_debt`: drift between test definitions, local recipes, CI, and the autoresearch correctness gate.
@@ -42,6 +43,7 @@ The original checkout had unrelated uncommitted changes when this session starte
   - `activation_path_duplicate_literals`: repeated high-risk activation path literals in `modules/darwin/rime.nix` and `modules/darwin/mouse-display.nix` beyond one source-of-truth occurrence.
   - `missing_claude_activation_assertions`: required integration assertions missing for `modules/home/claude.nix` managed files and activation scripts.
   - `required_claude_activation_assertions`: count of required Claude activation/file assertions.
+  - `stale_agent_skills_activation_claim`: `ARCHITECTURE.md` still claims Claude has no custom activation scripts even though `modules/home/claude.nix` does.
   - `nix_files`: count of measured Nix files.
 
 `doc_truth_debt = quality_debt + stale_linting_policy * 25 + missing_statix_policy_doc * 15 + stale_review_date * 10`.
@@ -51,13 +53,14 @@ The original checkout had unrelated uncommitted changes when this session starte
 `behavioral_coverage_debt = check_parity_debt + missing_behavioral_assertions * 5`.
 `activation_path_literal_debt = behavioral_coverage_debt + activation_path_duplicate_literals * 4`.
 `claude_activation_coverage_debt = activation_path_literal_debt + missing_claude_activation_assertions * 5`.
+`agent_docs_truth_debt = claude_activation_coverage_debt + stale_agent_skills_activation_claim * 15`.
 
 The metric is a guide, not permission to game the benchmark. Do not delete useful code or documentation solely to reduce counts. Improvements should make a human reviewer happier and should keep checks passing.
 
 ## How to Run
 `./autoresearch.sh`
 
-It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `activation_path_literal_debt`, `behavioral_coverage_debt`, `check_parity_debt`, `option_doc_debt`, `loop_guidance_debt`, `doc_truth_debt`, and `quality_debt` metrics are still emitted as secondary monitors.
+It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh` runs the correctness gate after successful metric runs. The previous `claude_activation_coverage_debt`, `activation_path_literal_debt`, `behavioral_coverage_debt`, `check_parity_debt`, `option_doc_debt`, `loop_guidance_debt`, `doc_truth_debt`, and `quality_debt` metrics are still emitted as secondary monitors.
 
 ## Files in Scope
 - `ARCHITECTURE.md` — architecture and module-layout documentation.
@@ -110,9 +113,9 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - The static-lint gate may be expanded later if a rule can be enabled without fighting intentional Home Manager style.
 
 ## Experiment Queue
-1. Baseline `claude_activation_coverage_debt` after adding required assertion signals for `modules/home/claude.nix` managed files and activation scripts.
-2. Add real integration assertions for Claude managed files, settings seed, Stop-hook debug wrapping, disabled grill skills, and superpowers brainstorming de-duplication.
-3. If Claude activation coverage saturates, only then consider a focused split of `modules/home/claude.nix` along the tested boundaries.
+1. Baseline `agent_docs_truth_debt` after Claude activation tests exposed a stale Agent Skills architecture claim.
+2. Refresh the Agent Skills mechanism docs so they distinguish upstream DSL-managed skill bundles from adjacent Claude runtime activation scripts.
+3. If docs truth saturates, only then consider a focused split of `modules/home/claude.nix` along the tested boundaries.
 4. If a code refactor is attempted, characterize behavior through existing checks first, then make the smallest source change possible.
 
 ## Recursive/Delegated Review Plan
@@ -146,4 +149,6 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Reinitialized around `activation_path_literal_debt` to simplify duplicated high-risk activation paths in Rime and BetterMouse now that behavior is covered by tests.
 - Kept: factored repeated BetterMouse Application Support, Rime user config, and Squirrel input-method paths into named constants (`activation_path_literal_debt=0`).
 - Reinitialized around `claude_activation_coverage_debt` to characterize the large Claude Home Manager module before any future split/refactor.
+- Kept: added integration assertions for Claude managed files, settings seed, Stop-hook debug wrapping, disabled grill-me cleanup, and superpowers plugin brainstorming parking (`claude_activation_coverage_debt=0`).
+- Reinitialized around `agent_docs_truth_debt` after the new assertions exposed a stale `ARCHITECTURE.md` claim that `modules/home/claude.nix` has no custom activation scripts.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.
