@@ -216,7 +216,7 @@ This section is the largest because the moving parts (sources, targets, discover
 
 ### Mechanism
 
-`modules/home/claude.nix` imports `inputs.agent-skills.homeManagerModules.default` and uses the upstream `programs.agent-skills` DSL — no custom activation scripts. The module owns one declarative bundle of selected `SKILL.md` directories and syncs that bundle to enabled targets via rsync.
+`modules/home/claude.nix` imports `inputs.agent-skills.homeManagerModules.default` and uses the upstream `programs.agent-skills` DSL for the skill bundle and target sync. The same module also owns Claude-specific activation scripts for mutable runtime state — settings seeding, Stop-hook diagnostics, and duplicate-skill cleanup — all running after Home Manager's `writeBoundary` and covered by integration assertions. The module owns one declarative bundle of selected `SKILL.md` directories and exposes that bundle to enabled targets via the upstream sync machinery.
 
 ### Enabled targets
 

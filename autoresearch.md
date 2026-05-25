@@ -150,5 +150,6 @@ It prints `METRIC name=value` lines for pi-autoresearch. `autoresearch.checks.sh
 - Kept: factored repeated BetterMouse Application Support, Rime user config, and Squirrel input-method paths into named constants (`activation_path_literal_debt=0`).
 - Reinitialized around `claude_activation_coverage_debt` to characterize the large Claude Home Manager module before any future split/refactor.
 - Kept: added integration assertions for Claude managed files, settings seed, Stop-hook debug wrapping, disabled grill-me cleanup, and superpowers plugin brainstorming parking (`claude_activation_coverage_debt=0`).
-- Reinitialized around `agent_docs_truth_debt` after the new assertions exposed a stale `ARCHITECTURE.md` claim that `modules/home/claude.nix` has no custom activation scripts.
+- Reinitialized around `agent_docs_truth_debt` after the new assertions exposed a stale `ARCHITECTURE.md` claim that `modules/home/claude.nix` has no custom activation scripts. Baseline found only that stale Agent Skills mechanism sentence.
+- Kept: refreshed the Agent Skills mechanism docs to distinguish upstream DSL-managed skill bundles from adjacent Claude activation scripts for settings seeding, Stop-hook diagnostics, and duplicate-skill cleanup.
 - Tooling blockers: `openai/gpt-5.3-codex-spark` subagent calls fail because this pi environment has no OpenAI API key; Parallel.ai `deep_research` fails because the account has insufficient credit. Use available subagents plus DeepWiki/public docs until auth/credit changes.
