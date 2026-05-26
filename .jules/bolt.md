@@ -1,0 +1,3 @@
+## 2025-05-18 - Optimize nested jq calls inside Bash loops
+**Learning:** Shell scripts processing structured data (JSON, YAML) often incur heavy process-spawning overhead if `jq` (or similar tools) is called repeatedly within a loop to extract fields individually. The overhead of spawning a subprocess far outweighs the parsing cost itself.
+**Action:** Push data iteration logic directly into the processing tool's syntax (e.g. using `jq`'s `[]`, `map()`, and filtering combinations instead of Bash `for` loops with multiple `jq` calls) to resolve parsing bottlenecks down from O(N) process creations to a single O(1) invocation.
