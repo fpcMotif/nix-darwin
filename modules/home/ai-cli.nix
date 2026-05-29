@@ -18,21 +18,31 @@
     _unset_ai_env() {
       unset ANTHROPIC_API_KEY ANTHROPIC_API_URL ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN \
             OPENAI_API_KEY OPENAI_API_KEY_ID OPENAI_BASE_URL OPENAI_API_BASE OPENAI_ENDPOINT \
-            CODEX_API_KEY CODEX_BASE_URL GEMINI_API_KEY GEMINI_BASE_URL GOOGLE_API_KEY \
+            CODEX_API_KEY CODEX_BASE_URL \
             AMP_API_KEY AMP_URL AMP_API_BASE_URL
     }
 
+    # `claude`/`cc` default to ultracode (xhigh effort + standing dynamic-workflow
+    # orchestration). ultracode is NOT a valid `--effort` value — that flag only
+    # accepts low|medium|high|xhigh|max — so it's enabled via its `--settings`
+    # boolean key. The `unset` is load-bearing: the session-wide
+    # CLAUDE_CODE_EFFORT_LEVEL=xhigh default (modules/home/zsh.nix) would
+    # otherwise shadow ultracode for the whole session — so wrappers drop it to
+    # get full ultracode, while bypass launches stay floored at xhigh (never
+    # max). Switch effort per-session from inside Claude Code with `/effort <level>`.
     cofficial() {
       (
         _unset_ai_env
-        "$HOME/.local/bin/claude" --dangerously-skip-permissions "$@"
+        unset CLAUDE_CODE_EFFORT_LEVEL CLAUDE_EFFORT
+        "$HOME/.local/bin/claude" --dangerously-skip-permissions --settings '{"ultracode":true}' "$@"
       )
     }
 
     claude() {
       (
         _unset_ai_env
-        command "$HOME/.local/bin/claude" "$@"
+        unset CLAUDE_CODE_EFFORT_LEVEL CLAUDE_EFFORT
+        command "$HOME/.local/bin/claude" --settings '{"ultracode":true}' "$@"
       )
     }
 

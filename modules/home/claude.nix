@@ -149,8 +149,8 @@ let
   linkTarget = dest: { enable = true; inherit dest; structure = "link"; systems = [ ]; };
 
   # Skill picker target dirs. Used both by `programs.agent-skills.targets`
-  # below and by claudeDisableGrillSkills' rm-loop — keeping one list
-  # means a new target is auto-covered by the disable sweep.
+  # below and by the skill-sweep activation scripts — keeping one list
+  # means a new target is auto-covered by every sweep.
   skillTargetDirs = {
     agents = ".agents/skills";
     claude = ".claude/skills";
@@ -158,6 +158,49 @@ let
     codex = ".codex/skills";
     pi = ".pi/agent/skills";
   };
+  # The same dirs as a quoted, absolute, space-separated shell list, for the
+  # `for dir in …` loops in the activation sweeps below.
+  skillTargetDirsSh = lib.concatMapStringsSep " " (d: ''"${homeDir}/${d}"'')
+    (lib.attrValues skillTargetDirs);
+
+  # Remove a skill's copy from every picker target dir.
+  mkSkillTargetRm = ids: ''
+    for dir in ${skillTargetDirsSh}; do
+      for skill in ${lib.escapeShellArgs ids}; do
+        rm -rf -- "$dir/$skill"
+      done
+    done
+  '';
+
+  # Scrub each id from Claude Desktop sessions: drop its slashCommand entry
+  # from every session file (the `grep -lZ` pre-filter skips the jq+mv on the
+  # 99% of session files that never mention it, cutting a per-switch
+  # O(sessions) spawn storm to O(matches)), then handle its skills-plugin
+  # cache dir via `cacheAction` (which sees `$skill` and `$dir`). Shared by the
+  # remove-sweep (claudePruneRemovedSkills) and disable-sweep
+  # (claudeDisableGrillSkills); they differ only in that cache action.
+  mkSessionSweep = { ids, cacheAction }: ''
+    sessions="${homeDir}/Library/Application Support/Claude/local-agent-mode-sessions"
+    if [ -d "$sessions" ]; then
+      for skill in ${lib.escapeShellArgs ids}; do
+        while IFS= read -r -d "" file; do
+          tmp=$(mktemp)
+          ${pkgs.jq}/bin/jq --arg command "anthropic-skills:$skill" '
+            if (.slashCommands? | type) == "array" then
+              .slashCommands = (.slashCommands - [$command])
+            else
+              .
+            end
+          ' "$file" > "$tmp" && mv "$tmp" "$file"
+        done < <(${pkgs.findutils}/bin/find "$sessions" -type f -name "local_*.json" \
+                   -exec ${pkgs.gnugrep}/bin/grep -lZ "anthropic-skills:$skill" {} +)
+
+        while IFS= read -r -d "" dir; do
+          ${cacheAction}
+        done < <(${pkgs.findutils}/bin/find "$sessions/skills-plugin" -type d -path "*/skills/$skill" -print0 2>/dev/null || true)
+      done
+    fi
+  '';
 
   # mattpocock/skills promoted buckets. `personal/` and `deprecated/` are
   # excluded per upstream CONTEXT.md. New upstream skills under any bucket
@@ -165,6 +208,36 @@ let
   mattpocockBuckets = [ "engineering" "productivity" "misc" ];
   # Skills genuinely turned off — kept out of every picker.
   disabledMattpocockSkills = [ "grill-me" ];
+  # Lean curation: niche / one-off skills trimmed from proactive discovery to
+  # keep the model's auto-loaded skill catalog compact. Proactive (model)
+  # discovery stays ON for the curated set — this only prunes the long tail so
+  # discovery context stays cheap. Treated exactly like disabledMattpocockSkills
+  # (filtered out of bucket discovery, so they leave the bundle and home-manager
+  # drops their picker symlinks), grouped separately so the rationale
+  # (signal/noise, not "broken") stays legible. Re-add an id to a bucket by
+  # removing it here, or surface it on demand with `/<name>` once re-enabled.
+  leanExcludedMattpocockSkills = [
+    "caveman" # token-compression chat mode; niche
+    "git-guardrails-claude-code" # one-time git-hook setup, not a recurring workflow
+    "migrate-to-shoehorn" # @total-typescript/shoehorn-specific test migration
+    "scaffold-exercises" # course / exercise authoring
+    "setup-matt-pocock-skills" # runtime installer that fights this Nix-managed setup
+    "setup-pre-commit" # Husky / lint-staged JS setup, one-off
+    "zoom-out" # situational reflection; marginal proactive value
+  ];
+  # Skills removed from the curated sources entirely. These should not be
+  # merely disabled/catalogued; prune stale target copies after rebuilds.
+  removedSkillIds = [ "git-workflow" "lazygit" ];
+  # Claude Code plugins disabled on the GLOBAL surface (CLI + Desktop) by
+  # flipping their enabledPlugins flag off each rebuild — see
+  # claudeDisableGlobalMcpPlugins below. context7 is dropped outright; the
+  # code-context plugin's deepwiki + exa MCP servers are moved to per-project
+  # opt-in (templates/mcp/code-context.mcp.json, docs/adr/0003). claude.ai
+  # connectors are account-side and unaffected.
+  disabledClaudePlugins = [
+    "context7@claude-plugins-official"
+    "code-context@frad-dotclaude"
+  ];
   # NOT disabled — still enabled, just sourced via skills.explicit below so a
   # Karpathy `transform` can be attached. They only leave bucket auto-discovery
   # because a skill present in both the allowlist and `explicit` makes
@@ -187,7 +260,7 @@ let
           (name: type:
             type == "directory"
             && builtins.pathExists (root + "/${name}/SKILL.md")
-            && !(builtins.elem name (disabledMattpocockSkills ++ transformedMattpocockSkills))
+            && !(builtins.elem name (disabledMattpocockSkills ++ transformedMattpocockSkills ++ leanExcludedMattpocockSkills))
           )
           entries);
     in
@@ -252,16 +325,24 @@ let
   # so Nix stays the single source of truth — no runtime mutation of ~/.claude/skills.
   effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 
-  # obra/superpowers (the original; flat `skills/<name>/SKILL.md`). Auto-updates
-  # on `nix flake update superpowers`. Only `brainstorming` is enabled — every
-  # other upstream skill is still discovered into the catalog (so it tracks
-  # upstream) but left unbundled (disabled). New skills do NOT auto-enable; add
-  # the id here to turn one on. The frad-dotclaude/superpowers *plugin* ships its
-  # own brainstorming; claudeDisableSuperpowersPluginBrainstorming below parks
-  # just that one so exactly one brainstorming surfaces (the plugin's other
-  # skills stay live).
-  superpowersSources = { superpowers = mkSource "superpowers" "skills" null; };
+  # obra/superpowers (the original; flat `skills/<name>/SKILL.md`). Only
+  # `brainstorming` is sourced from the Nix input. We intentionally do not
+  # discover the rest of the upstream catalog because disabled git/worktree
+  # workflow skills still show up in audits and picker metadata. New
+  # superpowers skills require an explicit regex/allowlist change.
+  superpowersSources = { superpowers = mkSource "superpowers" "skills" "^(brainstorming)$"; };
   enabledSuperpowersSkills = [ "brainstorming" ];
+
+  # mattpocock/skills `in-progress/` bucket holds unpromoted skills. We pull in
+  # ONLY `teach` — a stateful /teach learning-workspace skill that is
+  # `disable-model-invocation: true` (slash-command only), bundling its
+  # *-FORMAT.md templates alongside SKILL.md. Same regex-restricted-source
+  # pattern as superpowers' brainstorming: the bucket also ships a `review`
+  # skill whose id collides with the dotfiles-pi `review` below, so an
+  # unrestricted source here would make discoverCatalog throw on the duplicate;
+  # `^(teach)$` keeps review and the half-baked writing-* skills out.
+  inProgressSources = { mp-in-progress = mkSource "mattpocock-skills" "skills/in-progress" "^(teach)$"; };
+  enabledInProgressSkills = [ "teach" ];
 in
 {
   imports = [ inputs.agent-skills.homeManagerModules.default ];
@@ -279,6 +360,18 @@ in
         };
         "${root}/hooks/.rtk-hook.sha256".source = rtkHookChecksum;
       };
+
+      # Locally-authored jj skill (no dotfiles upstream yet). Installed via plain
+      # home.file symlinks rather than a programs.agent-skills `path` source: the
+      # module CAN source local paths, but it wraps a `path` source in a
+      # platform-stamped copy derivation and reads it back (IFD), which makes
+      # `nix flake check` fail to evaluate the x86_64-linux hosts from darwin
+      # ("platform mismatch"). A plain path symlink is platform-agnostic. The same
+      # store dir is linked into every picker target; Pi's realpath de-dup
+      # collapses them, exactly like agent-skills' `link` targets.
+      jjSkillFiles = listToAttrs (map
+        (dir: { name = "${dir}/jj"; value = { source = ./skills/jj; }; })
+        (lib.attrValues skillTargetDirs));
     in
     {
       ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
@@ -292,7 +385,7 @@ in
         source = stopHookDebug;
         executable = true;
       };
-    } // mkRtkFiles ".claude" // mkRtkFiles ".codex";
+    } // mkRtkFiles ".claude" // mkRtkFiles ".codex" // jjSkillFiles;
 
   # === Stop hook diagnostic instrumentation ===
   # Idempotently rewrites the 3 installed plugin Stop hook configs to
@@ -335,42 +428,50 @@ in
     wrap_stop_hook codex       "$base/openai-codex/codex/1.0.4/hooks/hooks.json"
   '';
 
+  # Git-flow style automation was removed from the curated sources instead of
+  # parked. Delete any stale mirrors or cached session copies left by earlier
+  # generations so it cannot linger as a selectable skill.
+  home.activation.claudePruneRemovedSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if [ -n "''${DRY_RUN:-}" ]; then
+      echo "claude-prune-removed-skills: would prune removed skills: ${lib.escapeShellArgs removedSkillIds}" >&2
+    else
+      ${mkSkillTargetRm removedSkillIds}
+      ${mkSessionSweep { ids = removedSkillIds; cacheAction = ''rm -rf -- "$dir"''; }}
+    fi
+  '';
+
+  # Surge ships its agent skill inside the app bundle. Keep live symlinks to the
+  # bundle instead of copying it into the Nix store so Surge updates refresh it.
+  home.activation.surgeAgentSkillSymlinks = lib.hm.dag.entryAfter [ "agent-skills" ] ''
+    source="/Applications/Surge.app/Contents/Resources/Skills/surge"
+    if [ -d "$source" ] && [ -f "$source/SKILL.md" ]; then
+      for dir in ${skillTargetDirsSh}; do
+        ${pkgs.coreutils}/bin/mkdir -p "$dir"
+        target="$dir/surge"
+        ${pkgs.coreutils}/bin/rm -rf -- "$target"
+        ${pkgs.coreutils}/bin/ln -s -- "$source" "$target"
+      done
+    else
+      echo "surge-agent-skill: missing $source, skipping" >&2
+    fi
+  '';
+
   # Claude can cache Anthropic-provided skills outside the Nix-managed skill
   # targets. Keep the disabled skills (currently grill-me — grill-with-docs is
   # preserved as the preferred planning skill) out of every picker source plus
   # active Claude Desktop sessions and the skills-plugin cache.
   home.activation.claudeDisableGrillSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    for dir in ${lib.concatMapStringsSep " " (d: ''"${homeDir}/${d}"'') (lib.attrValues skillTargetDirs)}; do
-      for skill in ${lib.escapeShellArgs disabledMattpocockSkills}; do
-        rm -rf -- "$dir/$skill"
-      done
-    done
-
-    sessions="${homeDir}/Library/Application Support/Claude/local-agent-mode-sessions"
-    if [ -d "$sessions" ]; then
-      # grep -lZ pre-filter: skip jq+mv on the 99% of session files
-      # that don't mention the skill. Cuts a per-switch O(sessions)
-      # spawn storm down to O(matches).
-      while IFS= read -r -d "" file; do
-        tmp=$(mktemp)
-        ${pkgs.jq}/bin/jq '
-          if (.slashCommands? | type) == "array" then
-            .slashCommands = (.slashCommands - ["anthropic-skills:grill-me"])
-          else
-            .
-          end
-        ' "$file" > "$tmp" && mv "$tmp" "$file"
-      done < <(${pkgs.findutils}/bin/find "$sessions" -type f -name "local_*.json" \
-                 -exec ${pkgs.gnugrep}/bin/grep -lZ "anthropic-skills:grill-me" {} +)
-
-      while IFS= read -r -d "" dir; do
+    ${mkSkillTargetRm disabledMattpocockSkills}
+    ${mkSessionSweep {
+      ids = disabledMattpocockSkills;
+      cacheAction = ''
         parent="$(${pkgs.coreutils}/bin/dirname "$dir")"
         disabled="$parent/../skills-disabled"
         mkdir -p "$disabled"
-        rm -rf -- "$disabled/grill-me"
-        mv "$dir" "$disabled/grill-me"
-      done < <(${pkgs.findutils}/bin/find "$sessions/skills-plugin" -type d -path "*/skills/grill-me" -print0 2>/dev/null || true)
-    fi
+        rm -rf -- "$disabled/$skill"
+        mv -- "$dir" "$disabled/$skill"
+      '';
+    }}
   '';
 
   # obra/superpowers (Nix-managed) is the canonical `brainstorming` source. The
@@ -393,6 +494,48 @@ in
     done
   '';
 
+  # The official Anthropic `code-simplifier` plugin (claude-plugins-official)
+  # and frad-dotclaude's `refactor` plugin BOTH ship an agent named
+  # `code-simplifier`, so both surface (code-simplifier:code-simplifier vs
+  # refactor:code-simplifier). Keep the official one canonical and park ONLY
+  # the refactor plugin's duplicate agent — its `/refactor`, `/refactor-project`
+  # commands and `best-practices` skill have no official equivalent and stay
+  # live (separate `commands`/`skills` entries we never touch).
+  #
+  # Two levers are needed because Claude discovers plugin agents BOTH ways:
+  # refactor's plugin.json lists the agent explicitly under `agents`, while the
+  # official plugin omits `agents` entirely yet its agent still loads — proving
+  # convention discovery of `agents/*.md`. So we (1) strip the explicit entry
+  # from plugin.json (backing up plugin.json.orig once, like claudeStopHookDebug)
+  # and (2) park agents/code-simplifier.md into a sibling agents-disabled/ dir
+  # (like the brainstorming block). Non-destructive, version-globbed, re-runs
+  # each switch so a plugin update that restores either lever is re-applied.
+  home.activation.claudeDisableRefactorPluginCodeSimplifier = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    for plugin_dir in "${homeDir}"/.claude/plugins/cache/frad-dotclaude/refactor/*; do
+      [ -d "$plugin_dir" ] || continue
+      manifest="$plugin_dir/.claude-plugin/plugin.json"
+
+      if [ -f "$manifest" ] && ${pkgs.jq}/bin/jq -e \
+          '[.agents[]? | select(endswith("code-simplifier.md"))] | any' "$manifest" >/dev/null 2>&1; then
+        [ -f "$manifest.orig" ] || cp "$manifest" "$manifest.orig"
+        tmp=$(mktemp)
+        ${pkgs.jq}/bin/jq \
+          '.agents |= map(select(endswith("code-simplifier.md") | not))' \
+          "$manifest" > "$tmp" && mv "$tmp" "$manifest"
+        echo "refactor-dedup: stripped code-simplifier agent from $manifest" >&2
+      fi
+
+      agent="$plugin_dir/agents/code-simplifier.md"
+      if [ -f "$agent" ]; then
+        disabled="$plugin_dir/agents-disabled"
+        mkdir -p "$disabled"
+        rm -rf -- "$disabled/code-simplifier.md"
+        mv -- "$agent" "$disabled/code-simplifier.md"
+        echo "refactor-dedup: parked $agent" >&2
+      fi
+    done
+  '';
+
   # === settings.json: declarative seed, mutable thereafter ===
   # Claude rewrites theme, env vars, and plugin state into this file at
   # runtime, so a hard symlink would fight the app. Seed once on first
@@ -404,26 +547,51 @@ in
     fi
   '';
 
+  # === Disable context7 / code-context on the global surface ===
+  # settings.json is otherwise seed-once-then-mutable (above), but
+  # enabledPlugins is exactly the kind of "reproducible disable" lever the
+  # grill-me / refactor-dedup blocks already use: flip the named plugins off on
+  # every rebuild so a UI re-enable or a plugin-cache refresh can't quietly
+  # bring back context7's MCP server or code-context's deepwiki/exa servers
+  # globally. Idempotent (only rewrites when a flag actually changes) and runs
+  # after the seed so the file exists. The plugins stay *installed* — projects
+  # opt back into deepwiki/exa via a local .mcp.json
+  # (templates/mcp/code-context.mcp.json). claude.ai connectors are account-side
+  # and untouched. See docs/adr/0003-scope-code-context-mcp-per-project.md.
+  home.activation.claudeDisableGlobalMcpPlugins = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
+    target="${homeDir}/.claude/settings.json"
+    if [ ! -f "$target" ]; then
+      echo "claude-disable-mcp-plugins: missing $target, skipping" >&2
+    else
+      tmp=$(mktemp)
+      if ${pkgs.jq}/bin/jq \
+          --argjson ids ${lib.escapeShellArg (builtins.toJSON disabledClaudePlugins)} \
+          'reduce $ids[] as $id (.; .enabledPlugins[$id] = false)' \
+          "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
+        mv -- "$tmp" "$target"
+        echo "claude-disable-mcp-plugins: disabled ${lib.concatStringsSep ", " disabledClaudePlugins}" >&2
+      else
+        rm -f -- "$tmp"
+      fi
+    fi
+  '';
+
   # === Skills (was modules/home/skills.nix) ===
   programs.agent-skills = {
     enable = true;
 
     sources = {
       dotfiles-pi = mkSource "dotfiles" "dot_pi/agent/skills"
-        "^(git-workflow|review|ralph-loop|web-browser)$";
-      dotfiles-claude = mkSource "dotfiles" "dot_claude/skills"
-        "^(lazygit)$";
-    } // mpSources // effectSources // superpowersSources;
+        "^(review|ralph-loop|web-browser)$";
+    } // mpSources // effectSources // superpowersSources // inProgressSources;
 
     skills = {
-      enable = enabledMattpocockSkills ++ enabledSuperpowersSkills;
+      enable = enabledMattpocockSkills ++ enabledSuperpowersSkills ++ enabledInProgressSkills;
       enableAll = builtins.attrNames effectSources;
       explicit = {
         # Skills that need CLI deps symlinked into the bundle dir.
         # mattpocock skills inherit from user PATH (git/gh/jq/bun globally).
-        git-workflow = mkSkill "dotfiles-pi" "git-workflow" [ pkgs.git pkgs.gh pkgs.jq ];
         review = mkSkill "dotfiles-pi" "review" [ pkgs.git pkgs.gh pkgs.jq ];
-        lazygit = mkSkill "dotfiles-claude" "lazygit" [ pkgs.git pkgs.lazygit ];
         ralph-loop = mkSkill "dotfiles-pi" "ralph-loop" [ ];
         web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];
 

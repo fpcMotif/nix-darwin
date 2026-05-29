@@ -312,14 +312,17 @@ in
   # darwin-rebuild switch.
   home.activation.codexLspConfig = hm.dag.entryAfter [ "writeBoundary" ] ''
     target="${homeDir}/.codex/config.toml"
-    [ -f "$target" ] || { echo "codex-lsp: $target missing, skipping" >&2; exit 0; }
 
-    if ${pkgs.gnugrep}/bin/grep -qF 'managed by ~/nix-config/modules/home/lsp.nix' "$target"; then
-      exit 0
+    if [ ! -f "$target" ]; then
+      echo "codex-lsp: $target missing, skipping" >&2
+    elif ${pkgs.gnugrep}/bin/grep -qF 'managed by ~/nix-config/modules/home/lsp.nix' "$target"; then
+      :
+    elif [ -n "''${DRY_RUN:-}" ]; then
+      echo "codex-lsp: would append managed [lsp] block to $target" >&2
+    else
+      ${pkgs.coreutils}/bin/cat ${codexLspToml} >> "$target"
+      echo "codex-lsp: appended managed [lsp] block to $target" >&2
     fi
-
-    ${pkgs.coreutils}/bin/cat ${codexLspToml} >> "$target"
-    echo "codex-lsp: appended managed [lsp] block to $target" >&2
   '';
 
   # === Claude Desktop / Codex App: ensure mcpServers key exists ===
@@ -327,17 +330,24 @@ in
   # and lives in templates/lsp-overrides/mcp-bridge.json. This activation
   # only guarantees the mcpServers object is present so the user can add
   # `lsp-<lang>` entries without losing surrounding preferences.
-  # Darwin only.
+  # Darwin only; Linux configs should not create a no-op macOS path.
   home.activation.claudeDesktopMcpScaffold =
-    hm.dag.entryAfter [ "writeBoundary" ] ''
-      target="${homeDir}/Library/Application Support/Claude/claude_desktop_config.json"
-      [ -f "$target" ] || exit 0
-      if ${pkgs.jq}/bin/jq -e '.mcpServers' "$target" >/dev/null 2>&1; then
-        exit 0
-      fi
-      tmp=$(${pkgs.coreutils}/bin/mktemp)
-      ${pkgs.jq}/bin/jq '. + { mcpServers: (.mcpServers // {}) }' \
-        "$target" > "$tmp" && ${pkgs.coreutils}/bin/mv "$tmp" "$target"
-      echo "claude-desktop: scaffolded empty mcpServers in $target" >&2
-    '';
+    lib.mkIf pkgs.stdenv.isDarwin (
+      hm.dag.entryAfter [ "writeBoundary" ] ''
+        target="${homeDir}/Library/Application Support/Claude/claude_desktop_config.json"
+
+        if [ ! -f "$target" ]; then
+          :
+        elif ${pkgs.jq}/bin/jq -e '.mcpServers' "$target" >/dev/null 2>&1; then
+          :
+        elif [ -n "''${DRY_RUN:-}" ]; then
+          echo "claude-desktop: would scaffold empty mcpServers in $target" >&2
+        else
+          tmp=$(${pkgs.coreutils}/bin/mktemp)
+          ${pkgs.jq}/bin/jq '. + { mcpServers: (.mcpServers // {}) }' \
+            "$target" > "$tmp" && ${pkgs.coreutils}/bin/mv "$tmp" "$target"
+          echo "claude-desktop: scaffolded empty mcpServers in $target" >&2
+        fi
+      ''
+    );
 }

@@ -24,8 +24,12 @@
     BUN_INSTALL = "$HOME/.bun";
 
     CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
-    CLAUDE_CODE_EFFORT_LEVEL = "max";
     CLAUDE_CODE_NO_FLICKER = "1";
+    # Baseline effort floor for any `claude` launched OUTSIDE the ai-cli.nix
+    # wrappers (IDE, raw ~/.local/bin/claude, inherited shells): xhigh, never
+    # max. The `claude`/`cc` wrappers `unset` this so they run full ultracode
+    # (xhigh + dynamic-workflow orchestration) instead. See modules/home/ai-cli.nix.
+    CLAUDE_CODE_EFFORT_LEVEL = "xhigh";
 
     OBSIDIAN_VAULT = "$HOME/Documents/obsidian";
   };
@@ -166,7 +170,6 @@
       ip = "ipconfig getifaddr en0";
 
       g = "git";
-      lg = "lazygit";
       gst = "git status";
       gd = "git diff";
       gds = "git diff --staged";
@@ -218,7 +221,6 @@
       pn = "pnpm";
       oc = "opencode";
 
-      gy = "gemini -y";
       cct = "cmux claude-teams --dangerously-skip-permissions";
       cdx = "_codex_cli";
 
@@ -453,8 +455,8 @@
         if (( $+commands[bat] )); then
           tips+=("[bat] Your %F{green}cat%f is aliased to bat -- syntax highlighting, line numbers, and git change markers included.")
         fi
-        if (( $+commands[lazygit] )); then
-          tips+=("[lazygit] Run %F{green}lg%f for a powerful git TUI. Press %F{yellow}c%f for AI commit messages.")
+        if (( $+commands[jj] )); then
+          tips+=("[jj] Run %F{green}jj diff%f for delta-highlighted hunks, and %F{green}jj split%f / %F{green}jj squash -i%f for interactive hunk review.")
         fi
         if (( $+commands[zoxide] )); then
           tips+=("[zoxide] Use %F{green}z <partial-name>%f to jump to frequently visited directories.")

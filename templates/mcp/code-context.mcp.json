@@ -1,0 +1,17 @@
+{
+  "$comment": "Per-project deepwiki + exa MCP servers. context7/deepwiki/exa are OFF on the global Claude Code surface (modules/home/claude.nix → claudeDisableGlobalMcpPlugins; see docs/adr/0003-scope-code-context-mcp-per-project.md). To opt a project in: copy this file to that project's repo root as `.mcp.json`, drop these `$`-prefixed comment keys, then approve the servers when Claude Code prompts on first run (or list their names under `enabledMcpjsonServers` in the project's .claude/settings.json). deepwiki is keyless; exa reads EXA_API_KEY from your environment via ${EXA_API_KEY} expansion — export it (e.g. in your shell) before use.",
+
+  "mcpServers": {
+    "deepwiki-code-context": {
+      "type": "http",
+      "url": "https://mcp.deepwiki.com/mcp"
+    },
+    "exa-code-context": {
+      "type": "http",
+      "url": "https://mcp.exa.ai/mcp?tools=get_code_context_exa",
+      "headers": {
+        "x-api-key": "${EXA_API_KEY}"
+      }
+    }
+  }
+}

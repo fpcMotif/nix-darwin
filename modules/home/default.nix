@@ -30,5 +30,9 @@
     username = currentSystemUser;
     homeDirectory = currentSystemUserHome;
     stateVersion = "24.05";
+    # We run HM master + nixpkgs-unstable (the bleeding-edge pair). Their
+    # release strings drift (e.g. HM 26.05 vs nixpkgs 26.11) purely from
+    # upstream version-bump timing, not a real mismatch — silence the heuristic.
+    enableNixpkgsReleaseCheck = false;
   };
 }

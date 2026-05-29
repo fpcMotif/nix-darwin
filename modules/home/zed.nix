@@ -102,10 +102,6 @@
           type = "registry";
         };
         opencode.type = "registry";
-        gemini = {
-          favorite_models = [ "gemini-3.1-pro-preview" ];
-          type = "registry";
-        };
         codex-acp.type = "registry";
         claude-acp.type = "registry";
         amp-acp.type = "registry";
