@@ -48,13 +48,16 @@ au_latest_npm() {
   local v
   if [ "$tag" = latest ]; then
     # Bleeding-edge priority: pick the first available tag.
-    local priority=("canary" "dev" "next" "preview" "beta" "alpha" "rc" "latest")
     local meta
     meta=$(curl -fsSL "https://registry.npmjs.org/${encoded}")
-    for t in "${priority[@]}"; do
-      v=$(printf '%s\n' "$meta" | jq -r --arg t "$t" '."dist-tags"[$t] // ""')
-      if [ -n "$v" ] && [ "$v" != "null" ]; then break; fi
-    done
+    # Optimization: Replaced O(n) subprocess spawning (Bash loop running jq 8 times)
+    # with a single O(1) jq invocation that maps and filters the tags natively.
+    v=$(printf '%s\n' "$meta" | jq -r '
+      .["dist-tags"] |
+      [ .canary, .dev, .next, .preview, .beta, .alpha, .rc, .latest ] |
+      map(select(. != null and . != "")) |
+      .[0] // ""
+    ')
   else
     v=$(curl -fsSL "https://registry.npmjs.org/${encoded}" \
           | jq -r --arg t "$tag" '."dist-tags"[$t] // ""')
