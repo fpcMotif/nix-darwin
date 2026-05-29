@@ -25,7 +25,7 @@
     cofficial() {
       (
         _unset_ai_env
-        "$HOME/.local/bin/claude" --dangerously-skip-permissions "$@"
+        "$HOME/.local/bin/claude" "$@"
       )
     }
 
