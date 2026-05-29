@@ -1,0 +1,3 @@
+## 2025-02-23 - Minimize subprocess overhead in jq parsing loops
+**Learning:** In bash scripts parsing JSON, spawning a subprocess for `jq` in a bash loop for each array element or dictionary key incurs massive overhead, making the script substantially slower (especially for networking/API scripts). This is a codebase-specific pattern to watch out for, as shell scripts are heavily used for updates.
+**Action:** When filtering or prioritizing values from JSON in bash, write a single native `jq` query utilizing arrays, `map`, and `select` instead of iterating in bash. Push the iteration logic completely into `jq`.
