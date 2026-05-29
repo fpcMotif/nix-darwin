@@ -21,7 +21,7 @@ final: _prev:
     sf-symbols = final.callPackage ./sf-symbols.nix { };
     squirrel = final.callPackage ./squirrel.nix { };
 
-    gemini-cli-preview = final.callPackage ./gemini-cli-preview.nix { };
+    bun-canary-bin = final.callPackage ./bun-canary-bin.nix { };
     oh-my-pi = final.callPackage ./oh-my-pi.nix { };
     pi-coding-agent = final.callPackage ./pi-coding-agent.nix { };
     sourcegraph-amp = final.callPackage ./sourcegraph-amp.nix { };

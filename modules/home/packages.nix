@@ -24,7 +24,6 @@ let
 
     # Git and version control.
     git
-    lazygit
     delta
     jujutsu
 
@@ -38,14 +37,15 @@ let
     gh
     just
     rtk
-    bun
-    nodejs_25
+    # bun comes from `martin.bun-canary-bin` (canary channel) in darwinPackages
+    # below — nixpkgs `bun` would collide on $out/bin/bun, so it's not listed.
+    # node runtime only (no bundled npm — we use bun). slim is cached on
+    # cache.nixos.org; the full nodejs isn't for this rev and would compile.
+    # Latest Current line; bump at major EOL (nodejs_25 was removed at Node 25 EOL).
+    nodejs-slim_26
     # Frontend and SSO/OIDC helpers. OXC is the formatter/linter stack;
     # oxlint lives in ./lsp.nix because it also runs as an LSP server.
     oxfmt
-    # Keep Wrangler's vendored TypeScript below the first-party TypeScript
-    # package in the Home Manager buildEnv.
-    (lib.lowPrio wrangler)
     mkcert
     jwt-cli
     step-cli
@@ -100,7 +100,9 @@ let
     swiftformat
     swiftlint
 
-    martin.gemini-cli-preview
+    # bun, canary channel. Replaces nixpkgs `bun` (removed from commonPackages)
+    # because `bun upgrade` can't write into the read-only /nix/store.
+    martin.bun-canary-bin
     martin.sourcegraph-amp
     martin.droid
     martin.opencode
