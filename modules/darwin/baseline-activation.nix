@@ -142,7 +142,7 @@ let
         fi
 
         if /bin/launchctl print-disabled "$scope" 2>/dev/null \
-          | /usr/bin/grep -F "\"$label\" => true" >/dev/null; then
+          | /usr/bin/grep -Eq "\"$label\" => (true|disabled)"; then
           already_disabled=1
         fi
 
@@ -182,50 +182,74 @@ let
     ''
       # Darwin baseline activation state: reversible path markers for ${marker.name}.
       state_file=${escapeShellArg marker.stateFile}
-      state_dir="$(dirname "$state_file")"
+      state_dir="$(/usr/bin/dirname "$state_file")"
       marker_name=${escapeShellArg marker.markerName}
+      marker_text=${escapeShellArg marker.markerText}
 
       if ${if marker.enable then "true" else "false"} || [ -f "$state_file" ]; then
-        run mkdir -p "$state_dir"
-        new_state="$(mktemp "$state_dir/.${tmpName}.XXXXXX")"
-        : > "$new_state"
-
-        ${optionalString (marker.enable && marker.paths != [ ]) ''
-          for path in ${escapeShellArgs marker.paths}; do
-            if [ -d "$path" ]; then
-              marker="$path/$marker_name"
-
-              if [ -f "$marker" ] && grep -qx ${escapeShellArg marker.markerText} "$marker"; then
-                printf '%s\n' "$path" >> "$new_state"
-              elif [ ! -e "$marker" ]; then
-                printf '%s\n' ${escapeShellArg marker.markerText} > "$marker"
-                chmod 0644 "$marker" 2>/dev/null || true
-                printf '%s\n' "$path" >> "$new_state"
-              fi
-            fi
-          done
-        ''}
-
-        if [ -f "$state_file" ]; then
-          while IFS= read -r old_path; do
-            marker="$old_path/$marker_name"
-            if [ -n "$old_path" ] \
-              && ! grep -Fxq "$old_path" "$new_state" \
-              && [ -f "$marker" ] \
-              && grep -qx ${escapeShellArg marker.markerText} "$marker"; then
-              rm -f "$marker"
-            fi
-          done < "$state_file"
-        fi
-
-        if [ -s "$new_state" ]; then
-          mv "$new_state" "$state_file"
-          chmod 0644 "$state_file" 2>/dev/null || true
+        if [ -n "''${DRY_RUN:-}" ]; then
+          echo "would reconcile Darwin baseline path markers for ${marker.name}"
         else
-          rm -f "$state_file" "$new_state"
+          /bin/mkdir -p "$state_dir"
+          new_state="$(/usr/bin/mktemp "$state_dir/.${tmpName}.XXXXXX")"
+          : > "$new_state"
+
+          ${optionalString (marker.enable && marker.paths != [ ]) ''
+            for path in ${escapeShellArgs marker.paths}; do
+              if [ -d "$path" ]; then
+                marker="$path/$marker_name"
+
+                if [ -f "$marker" ] && /usr/bin/grep -Fxq "$marker_text" "$marker"; then
+                  printf '%s\n' "$path" >> "$new_state"
+                elif [ ! -e "$marker" ]; then
+                  printf '%s\n' "$marker_text" > "$marker"
+                  /bin/chmod 0644 "$marker" 2>/dev/null || true
+                  printf '%s\n' "$path" >> "$new_state"
+                fi
+              fi
+            done
+          ''}
+
+          if [ -f "$state_file" ]; then
+            while IFS= read -r old_path; do
+              marker="$old_path/$marker_name"
+              if [ -n "$old_path" ] \
+                && ! /usr/bin/grep -Fxq "$old_path" "$new_state" \
+                && [ -f "$marker" ] \
+                && /usr/bin/grep -Fxq "$marker_text" "$marker"; then
+                /bin/rm -f "$marker"
+              fi
+            done < "$state_file"
+          fi
+
+          if [ -s "$new_state" ]; then
+            /bin/mv "$new_state" "$state_file"
+            /bin/chmod 0644 "$state_file" 2>/dev/null || true
+          else
+            /bin/rm -f "$state_file" "$new_state"
+          fi
         fi
       fi
     '';
+
+  pathMarkerAssertions = marker: [
+    {
+      assertion = lib.hasPrefix "/" marker.stateFile;
+      message = "Darwin baseline activation state marker ${marker.name} must use an absolute stateFile path.";
+    }
+    {
+      assertion = lib.all (lib.hasPrefix "/") marker.paths;
+      message = "Darwin baseline activation state marker ${marker.name} paths must be absolute.";
+    }
+    {
+      assertion = !(lib.hasInfix "/" marker.markerName);
+      message = "Darwin baseline activation state marker ${marker.name} must use a markerName basename, not a path.";
+    }
+    {
+      assertion = !(lib.hasInfix "\n" marker.markerText);
+      message = "Darwin baseline activation state marker ${marker.name} markerText must be a single line.";
+    }
+  ];
 
   pathMarkerActivations = listToAttrs (map
     (marker: {
@@ -264,12 +288,7 @@ in
           message = "Darwin baseline activation state entry ${entry.name} uses a gui domain without a user.";
         })
         cfg.launchdDisabledDomains)
-      ++ (map
-        (marker: {
-          assertion = !(lib.hasInfix "/" marker.markerName);
-          message = "Darwin baseline activation state marker ${marker.name} must use a markerName basename, not a path.";
-        })
-        cfg.pathMarkers);
+      ++ lib.concatMap pathMarkerAssertions cfg.pathMarkers;
 
     system.activationScripts.postActivation.text = lib.mkAfter (renderLaunchdState cfg.launchdDisabledDomains);
 

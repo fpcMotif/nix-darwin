@@ -94,7 +94,7 @@ in
         user_group=staff
       fi
 
-      /bin/mkdir -p "$health_log_dir"
+      /bin/mkdir -p "$health_log_dir" 2>/dev/null || true
       /usr/sbin/chown ${lib.escapeShellArg currentSystemUser}:"$user_group" "$health_log_dir" 2>/dev/null || true
       /bin/chmod 0755 "$health_log_dir" 2>/dev/null || true
     '';

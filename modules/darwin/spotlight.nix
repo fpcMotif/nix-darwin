@@ -47,7 +47,7 @@ in
           stateFile = "${currentSystemUserHome}/Library/Application Support/nix-config/spotlight-exclusions";
           paths = cfg.excludedPaths;
           markerName = ".metadata_never_index";
-          markerText = markerText;
+          inherit markerText;
         }
       ];
     }

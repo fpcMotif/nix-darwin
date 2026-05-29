@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ ... }:
 
 {
   # Homebrew is kept as an emergency, opt-in scaffold.
@@ -21,5 +21,4 @@
     ./spotlight.nix
   ];
 
-  nixpkgs.hostPlatform = lib.mkDefault "aarch64-darwin";
 }

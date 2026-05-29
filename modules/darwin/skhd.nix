@@ -56,7 +56,6 @@ let
     ${prefix} - c      : ${openApp "Cursor"}
     ${prefix} - d      : ${openApp "Drafts"}
     ${prefix} - f      : ${openApp "Finder"}
-    ${prefix} - g      : ${openApp "Gemini"}
     ${prefix} - s      : ${openApp "Safari"}
     ${prefix} - t      : ${openApp "Terminal"}
     ${prefix} - w      : ${openApp "Warp"}
