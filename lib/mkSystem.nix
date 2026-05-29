@@ -8,7 +8,8 @@
 }:
 
 let
-  isDarwin = inputs.nixpkgs.lib.hasSuffix "darwin" system;
+  lib = inputs.nixpkgs.lib;
+  isDarwin = lib.hasSuffix "darwin" system;
   systemFunc =
     if isDarwin then
       inputs.darwin.lib.darwinSystem
@@ -45,6 +46,7 @@ systemFunc {
   modules = [
     {
       nixpkgs = {
+        hostPlatform = lib.mkDefault system;
         inherit overlays;
         config.allowUnfree = true;
       };

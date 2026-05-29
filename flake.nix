@@ -58,6 +58,9 @@
 
   outputs = inputs@{ self, nixpkgs, ... }:
     let
+      lib = nixpkgs.lib;
+      systemUser = "martinfan";
+
       supportedSystems = [
         "aarch64-darwin"
         "x86_64-linux"
@@ -69,6 +72,32 @@
         "x86_64-linux"
       ];
 
+      hostDefinitions = {
+        f = {
+          system = "aarch64-darwin";
+          target = "darwin";
+          hostModule = ./hosts/darwin;
+        };
+
+        wsl = {
+          system = "x86_64-linux";
+          target = "nixos";
+          hostModule = ./hosts/wsl;
+        };
+
+        x230 = {
+          system = "x86_64-linux";
+          target = "nixos";
+          hostModule = ./hosts/x230;
+        };
+
+        vm-aarch64-utm = {
+          system = "aarch64-linux";
+          target = "nixos";
+          hostModule = ./hosts/vm-aarch64-utm;
+        };
+      };
+
       overlays = [
         inputs.nur.overlays.default
         (import ./pkgs)
@@ -78,6 +107,17 @@
       mkSystem = import ./lib/mkSystem.nix {
         inherit inputs overlays;
       };
+
+      mkConfiguredSystem = hostname: host:
+        mkSystem {
+          inherit hostname;
+          user = systemUser;
+          inherit (host) system hostModule;
+        };
+
+      hostsFor = target:
+        builtins.mapAttrs mkConfiguredSystem
+          (lib.filterAttrs (_: host: host.target == target) hostDefinitions);
 
       legacyPackagesFor = s:
         let
@@ -93,40 +133,15 @@
         };
     in
     {
-      darwinConfigurations.f = mkSystem {
-        system = "aarch64-darwin";
-        user = "martinfan";
-        hostname = "f";
-        hostModule = ./hosts/darwin;
-      };
+      darwinConfigurations = hostsFor "darwin";
+      nixosConfigurations = hostsFor "nixos";
 
-      nixosConfigurations.wsl = mkSystem {
-        system = "x86_64-linux";
-        user = "martinfan";
-        hostname = "wsl";
-        hostModule = ./hosts/wsl;
-      };
+      legacyPackages = lib.genAttrs supportedSystems legacyPackagesFor;
 
-      nixosConfigurations.x230 = mkSystem {
-        system = "x86_64-linux";
-        user = "martinfan";
-        hostname = "x230";
-        hostModule = ./hosts/x230;
-      };
-
-      nixosConfigurations.vm-aarch64-utm = mkSystem {
-        system = "aarch64-linux";
-        user = "martinfan";
-        hostname = "vm-aarch64-utm";
-        hostModule = ./hosts/vm-aarch64-utm;
-      };
-
-      legacyPackages = nixpkgs.lib.genAttrs supportedSystems legacyPackagesFor;
-
-      formatter = nixpkgs.lib.genAttrs supportedSystems
+      formatter = lib.genAttrs supportedSystems
         (s: nixpkgs.legacyPackages.${s}.nixpkgs-fmt);
 
-      checks = nixpkgs.lib.genAttrs checkSystems (s:
+      checks = lib.genAttrs checkSystems (s:
         import ./tests {
           inherit inputs self;
           system = s;
