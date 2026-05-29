@@ -214,7 +214,7 @@
       oc = "opencode";
 
       gy = "gemini -y";
-      cct = "cmux claude-teams --dangerously-skip-permissions";
+      cct = "cmux claude-teams";
       cdx = "_codex_cli";
 
       obsidian = "ob";
@@ -417,7 +417,7 @@
         if (( $+commands[claude] )); then
           tips+=(
             "[AI] Claude has %F{cyan}agent-teams%f experimental feature enabled -- great for complex multi-step tasks."
-            "[AI] Run %F{green}cc%f for Claude with skip-permissions, %F{green}cofficial%f for clean env."
+            "[AI] Run %F{green}cc%f for Claude, %F{green}cofficial%f for clean env."
           )
         fi
         if (( $+commands[mgrep] )); then
