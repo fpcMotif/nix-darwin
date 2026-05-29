@@ -26,13 +26,26 @@ au_repo_root() {
 # Version polling
 # ---------------------------------------------------------------------------
 
-# Latest GitHub release tag (including pre-releases if they are the newest).
-#   au_latest_github_release <owner/repo> [strip-regex]
+# Latest GitHub release tag. Defaults to the latest STABLE release: GitHub
+# floats the newest full (non-prerelease) release to `.[0]` of /releases, so a
+# later-published alpha does NOT win — verified against openai/codex, where
+# `.[0]` is 0.135.0 even though 0.136.0-alpha.1 was published afterwards.
+#
+# Pass `prerelease` as the 3rd arg to instead take the newest release of ANY
+# kind (alpha/beta/rc), chosen by `published_at` so that ordering quirk doesn't
+# matter. Drafts are always skipped.
+#   au_latest_github_release <owner/repo> [strip-regex] [stable|prerelease]
 au_latest_github_release() {
-  local repo=$1 strip=${2:-^v}
+  local repo=$1 strip=${2:-^v} channel=${3:-stable}
   local v
-  v=$(curl -fsSL "https://api.github.com/repos/${repo}/releases?per_page=1" \
-        | jq -r '.[0].tag_name // ""' | sed "s|${strip}||")
+  if [ "$channel" = prerelease ]; then
+    v=$(curl -fsSL "https://api.github.com/repos/${repo}/releases?per_page=30" \
+          | jq -r '[.[] | select(.draft | not)] | sort_by(.published_at) | last | .tag_name // ""' \
+          | sed "s|${strip}||")
+  else
+    v=$(curl -fsSL "https://api.github.com/repos/${repo}/releases?per_page=1" \
+          | jq -r '.[0].tag_name // ""' | sed "s|${strip}||")
+  fi
   [ -n "$v" ] && [ "$v" != "null" ] || {
     echo "au_latest_github_release: empty tag for ${repo}" >&2; return 1
   }
@@ -47,14 +60,16 @@ au_latest_npm() {
   local encoded="${pkg//\//%2f}"
   local v
   if [ "$tag" = latest ]; then
-    # Bleeding-edge priority: pick the first available tag.
-    local priority=("canary" "dev" "next" "preview" "beta" "alpha" "rc" "latest")
+    # Bleeding-edge priority: pick the first available tag. A single jq query
+    # filters the priority list natively instead of spawning jq once per tag.
     local meta
     meta=$(curl -fsSL "https://registry.npmjs.org/${encoded}")
-    for t in "${priority[@]}"; do
-      v=$(printf '%s\n' "$meta" | jq -r --arg t "$t" '."dist-tags"[$t] // ""')
-      if [ -n "$v" ] && [ "$v" != "null" ]; then break; fi
-    done
+    v=$(printf '%s\n' "$meta" | jq -r '
+      .["dist-tags"] |
+      [ .canary, .dev, .next, .preview, .beta, .alpha, .rc, .latest ] |
+      map(select(. != null and . != "")) |
+      .[0] // ""
+    ')
   else
     v=$(curl -fsSL "https://registry.npmjs.org/${encoded}" \
           | jq -r --arg t "$tag" '."dist-tags"[$t] // ""')
@@ -97,6 +112,19 @@ au_prefetch_unpacked_sri() {
   local nar
   nar=$(nix-prefetch-url --unpack --quiet "$url")
   nix hash convert --to sri --hash-algo sha256 "$nar"
+}
+
+# Like au_prefetch_sri but also emits the downloaded store path, for callers
+# that must inspect the asset bytes (e.g. `strings` a binary for its version).
+# One download serves both. Line 1: SRI hash. Line 2: store path.
+au_prefetch_sri_path() {
+  local url=$1
+  local out nar path
+  out=$(nix-prefetch-url --print-path --quiet "$url")
+  { IFS= read -r nar; IFS= read -r path; } <<<"$out"
+  printf '%s\n%s\n' \
+    "$(nix hash convert --to sri --hash-algo sha256 "$nar")" \
+    "$path"
 }
 
 # Compute npmDepsHash directly from a package-lock.json — no fake-hash dance.

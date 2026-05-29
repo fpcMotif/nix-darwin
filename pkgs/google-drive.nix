@@ -11,11 +11,11 @@ stdenv.mkDerivation {
   # current upstream release for review-time visibility, but the URL
   # itself still resolves to "latest". Bumps stay manual — see
   # ARCHITECTURE.md §"Package ownership".
-  version = "124.0";
+  version = "125.0";
 
   src = fetchurl {
     url = "https://dl.google.com/drive-file-stream/GoogleDrive.dmg";
-    hash = "sha256-cEYTNYjgoLrL75U9MXBH2xK98Nz/IjHgPxa9WzRmDZE=";
+    hash = "sha256-KEmYZq3cMlx8/hrgXqtR1EPU8SJ2oxxxPNyOad5lgks=";
   };
 
   nativeBuildInputs = [ undmg ];

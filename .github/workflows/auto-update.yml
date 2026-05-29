@@ -92,8 +92,8 @@ jobs:
             - all flake inputs via `scripts/update-flake-inputs.sh`
               (nixpkgs → codex / zed-editor / node toolchain, darwin,
               home-manager, agent-skills, claude-code, NUR/crush, dotfiles, …)
-            - vendored derivations under `pkgs/`: codex, sourcegraph-amp
-              (amp), gemini-cli-preview, opencode (cli + electron),
+            - vendored derivations under `pkgs/`: codex (prerelease channel),
+              bun-canary-bin, sourcegraph-amp (amp), opencode (cli + electron),
               pi-coding-agent, oh-my-pi.
 
             Each updater is allowed to fail individually; partial bumps still
