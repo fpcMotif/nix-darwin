@@ -13,6 +13,7 @@
 /.factory/
 /.pi/todos/
 /progress.md
+/autoresearch.config.json
 
 # macOS metadata.
 .DS_Store

@@ -38,7 +38,7 @@ _Avoid_: monitoring, analytics, metrics pipeline.
 ### Agent-skills curation
 
 **superpowers**:
-The upstream **obra/superpowers** repo, pinned as a Nix flake input and treated as the canonical source for the `brainstorming` skill. Bare "superpowers" always means this.
+The upstream **obra/superpowers** repo, pinned as a Nix flake input and filtered to the canonical `brainstorming` skill. Bare "superpowers" always means this.
 _Avoid_: using "superpowers" to mean the plugin — say "the superpowers plugin" for that.
 
 **superpowers plugin**:
@@ -49,6 +49,17 @@ A skill deliberately moved into a sibling `skills-disabled/` directory so no ski
 
 **Enabled skill** vs **Discovered skill**:
 A *discovered* skill exists in the catalog (its source is wired up) but is not placed in any picker. An *enabled* skill is additionally surfaced into the picker target dirs and is selectable. Wiring a source discovers its skills; it does not enable them.
+Rejected workflow skills should be removed from source filters instead of left discovered-but-disabled.
+
+### AI tooling surfaces
+
+**Vendored agent CLI**:
+An AI coding-agent binary packaged under `pkgs/` and installed via `home.packages` (codex, droid, opencode, amp, pi, oh-my-pi). It lives on the `darwin-rebuild` build path, so its upstream pinning is a maintenance surface for the whole system rebuild — a stale source hash wedges the rebuild, not just that one tool.
+_Avoid_: conflating it with a model used only over its API, or with a GUI app launched from the hotkey plane.
+
+**API-only model access**:
+Use of an AI model purely over its provider API from inside an editor or agent — e.g. a Zed `agent_servers` favorite model plus the provider's `*_API_KEY` env. There is no binary and nothing on the build path.
+_Avoid_: assuming API-only model access implies an installed CLI for that provider.
 
 ### Hosts & identity
 
@@ -66,13 +77,14 @@ The human-facing device name in macOS Sharing/Finder — "Martin's Mac mini". De
 
 - **"superpowers"** — overloaded between obra/superpowers (the Nix-managed source; canonical) and frad-dotclaude/superpowers (the plugin; a fork). Resolution: bare "superpowers" = obra; always qualify the plugin as "the superpowers plugin".
 - **"f"** — the host identity (flake attr ≡ OS `HostName`/`LocalHostName` ≡ personal handle), *not* the Unix user (`martinfan`) and *not* the display ComputerName ("Martin's Mac mini").
+- **"Gemini"** — formerly spanned every AI tooling surface at once (the vendored CLI `gemini-cli-preview`, a Zed favorite model, `GEMINI_*`/`GOOGLE_API_KEY` env, and a `⌃⌥⇧g` app-launcher hotkey) and was deliberately removed in full (see `docs/adr/0002`). Treat the reappearance of any Gemini surface as a regression, not a gap to fill.
 
 ## Example dialogue
 
 > **Dev:** Two `brainstorming` skills are showing up in the picker.
 > **Maintainer:** obra's `brainstorming` is enabled from the Nix source, and the superpowers plugin ships its own. We park the plugin's so only obra's surfaces.
 > **Dev:** What about the plugin's `writing-plans` and `executing-plans`?
-> **Maintainer:** Those stay live — we park only the plugin's `brainstorming`, not its whole skills dir. obra's `writing-plans` is merely discovered, not enabled, so there's no clash.
+> **Maintainer:** Those stay live — we park only the plugin's `brainstorming`, not its whole skills dir. The Nix-managed obra source is filtered to `brainstorming`, so rejected workflow skills are not discovered there.
 
 > **Dev:** Dropbox is packaged, so should it be in the Darwin baseline?
 > **Maintainer:** Not unless we explicitly want the client and its helpers always running. Otherwise it is background churn; keep the app path opt-in and preserve a quiet baseline.

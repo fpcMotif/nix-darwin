@@ -1,5 +1,12 @@
 # Agent Skills Nix Report
 
+> **Status (current implementation supersedes the analysis below):** `modules/home/claude.nix`
+> now uses `structure = "link"` for *every* skill target (agents/claude/cursor/codex/pi) with
+> `excludePatterns = [ ]`. Pi's `realpath` de-dup collapses identical store paths, so the
+> writable-tree concern that motivated `symlink-tree` does not apply here. The sections below
+> are kept as the original design analysis; where they recommend `symlink-tree` or refer to a
+> `modules/home/skills.nix`, read `link` and `modules/home/claude.nix` respectively.
+
 ## Executive summary
 
 This repo now uses `agent-skills-nix` through its upstream Home Manager module in `modules/home/claude.nix`. That is the right long-term direction: Nix builds one selected skill bundle, while Home Manager activates that bundle into the directories that Codex, Claude Code, Cursor, and Oh My Pi actually scan.
@@ -33,35 +40,24 @@ programs.agent-skills = {
 
   sources = {
     dotfiles-pi = filteredSource "dotfiles" "dot_pi/agent/skills"
-      "^(git-workflow|review|ralph-loop|web-browser)$";
-
-    dotfiles-claude = filteredSource "dotfiles" "dot_claude/skills"
-      "^(lazygit)$";
+      "^(review|ralph-loop|web-browser)$";
 
     mp-engineering = bucketSource "mattpocock-skills" "engineering";
     mp-productivity = bucketSource "mattpocock-skills" "productivity";
     mp-misc = bucketSource "mattpocock-skills" "misc";
     effect-ts = filteredSource "effect-ts-skills" "skills" null;
+    superpowers = filteredSource "superpowers" "skills"
+      "^(brainstorming)$";
   };
 
   skills = {
     enable = enabledMattpocockSkills;
     enableAll = [ "effect-ts" ];
     explicit = {
-      git-workflow = {
-        from = "dotfiles-pi";
-        path = "git-workflow";
-        packages = [ pkgs.git pkgs.gh pkgs.jq ];
-      };
       review = {
         from = "dotfiles-pi";
         path = "review";
         packages = [ pkgs.git pkgs.gh pkgs.jq ];
-      };
-      lazygit = {
-        from = "dotfiles-claude";
-        path = "lazygit";
-        packages = [ pkgs.git pkgs.lazygit ];
       };
       ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
       web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
@@ -178,7 +174,8 @@ When revising this setup:
 6. Enable only targets that correspond to tools actually used.
 7. Before enabling a new target, check whether that directory already contains unmanaged files. Activation can delete or overwrite files depending on the selected structure.
 8. If a skill needs tools such as `jq`, `curl`, or language runtimes, use `skills.explicit.<name>.packages` and/or `transform` so the dependency is declared in Nix and visible from the skill directory.
-9. Run `nix fmt ./` and `darwin-rebuild build --flake .#f` on a Nix-capable machine.
+9. Remove rejected workflow skills from source filters, not only from `skills.enable`, so they disappear from catalog metadata as well as target directories.
+10. Run `nix fmt ./` and `darwin-rebuild build --flake .#f` on a Nix-capable machine.
 
 ## Grill-me review
 

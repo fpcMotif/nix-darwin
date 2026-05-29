@@ -27,7 +27,6 @@ Source: `modules/darwin/skhd.nix`
 | `ctrl+alt+shift+c` | Open Cursor |
 | `ctrl+alt+shift+d` | Open Drafts |
 | `ctrl+alt+shift+f` | Open Finder |
-| `ctrl+alt+shift+g` | Open Gemini |
 | `ctrl+alt+shift+s` | Open Safari |
 | `ctrl+alt+shift+t` | Open Terminal |
 | `ctrl+alt+shift+w` | Open Warp |

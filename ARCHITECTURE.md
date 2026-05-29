@@ -49,31 +49,36 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 │   └── home/                 # Martin's Home Manager profile
 ├── pkgs/                     # custom derivations + overlay (exposed as pkgs.martin.*)
 ├── references/               # external sample repos, never imported by the flake
-├── home.nix                  # off-flake Home Manager fallback (escape hatch)
-└── skills.nix                # off-flake agent-skills fallback (escape hatch)
+└── home.nix                  # off-flake Home Manager shim → imports ./modules/home
 ```
 
 `flake.nix` stays thin: it wires inputs, overlays, system outputs, and the formatter. Host- and feature-specific behavior belongs in `hosts/` and `modules/`. `references/` is for humans, never for Nix.
 
-### Off-flake fallbacks
+### Off-flake fallback
 
-`home.nix` and `skills.nix` exist so Home Manager and the agent-skills bundle can be applied on a machine that has Nix but isn't currently driving this flake (e.g. a fresh checkout where `darwin-rebuild` hasn't run yet, or a future Linux box without a flake output). They duplicate intent; the flake remains the source of truth. Treat them as a recovery path and re-derive from the flake when possible.
+`home.nix` is a thin compatibility shim — `imports = [ ./modules/home ];` plus a couple of `_module.args` defaults — so Home Manager can be applied on a machine that has Nix but isn't currently driving this flake (e.g. a fresh checkout where `darwin-rebuild` hasn't run yet, or a future Linux box without a flake output). It delegates to the flake's module set rather than duplicating it; the flake remains the source of truth.
 
 ## Composition model
 
-`lib/mkSystem.nix` is the central constructor. Each system supplies three facts:
+`flake.nix` declares hosts once in `hostDefinitions`, keyed by the
+public flake attribute (`f`, `wsl`, `x230`, `vm-aarch64-utm`). Each
+entry records the target family, platform triple, and host module.
+`lib/mkSystem.nix` is the central constructor. Each system supplies
+four facts:
 
-- **`system`** — platform triple, e.g. `aarch64-darwin`. Darwin vs NixOS is inferred from the suffix.
+- **`system`** — platform triple, e.g. `aarch64-darwin`.
 - **`user`** — Martin's username for that host.
+- **`hostname`** — host identity; by convention this matches the flake attribute key.
 - **`hostModule`** — host-specific module path under `hosts/`.
 
 The constructor:
 
 1. Selects nix-darwin or NixOS based on the `system` suffix.
-2. Applies the shared overlay from `pkgs/default.nix`.
-3. Imports shared platform modules.
-4. Wires Home Manager as a system module.
-5. Passes `inputs`, `currentSystemUser`, and `currentSystemUserHome` through `specialArgs`.
+2. Sets `nixpkgs.hostPlatform` from `system` so shared modules do not hard-code Apple Silicon.
+3. Applies the shared overlay from `pkgs/default.nix`.
+4. Imports shared platform modules.
+5. Wires Home Manager as a system module.
+6. Passes `inputs`, `currentSystemUser`, and `currentSystemUserHome` through `specialArgs`.
 
 Shared modules consume `currentSystemUser` instead of hard-coding `martinfan`. The profile is still Martin-specific; this is not a generic multi-user framework.
 
@@ -84,7 +89,7 @@ Shared modules consume `currentSystemUser` instead of hard-coding `martinfan`. T
 ```nix
 final: prev: {
   martin = {
-    # gemini-preview, amp, pi, oh-my-pi, dropbox, drive, raycast, ...
+    # amp, pi, oh-my-pi, dropbox, drive, raycast, ...
   };
 }
 ```
@@ -189,14 +194,29 @@ The platform-specific home path is computed once in `lib/mkSystem.nix` and expos
 
 ```text
 modules/home/
-├── default.nix         # username, homeDirectory, stateVersion, imports
-├── packages.nix        # common + Darwin-only packages
-├── zsh.nix             # zsh, fzf, direnv, aliases/functions, editor env
-├── prompt.nix          # option-gated Starship config (enabled on active Mac)
-├── tmux.nix            # tmux behavior from legacy dotfiles, without TPM bootstrap
-├── ghostty.nix         # Ghostty config managed as XDG text
-├── git.nix             # Git behavior without copied identity/signing keys
-└── skills.nix          # agent skill bundle activation
+├── default.nix          # username, homeDirectory, stateVersion, imports
+├── packages.nix         # common + Darwin-only packages
+├── zsh.nix              # zsh, fzf, direnv, aliases/functions, editor env
+├── prompt.nix           # option-gated Starship config (enabled on active Mac)
+├── tmux.nix             # tmux behavior from legacy dotfiles, without TPM bootstrap
+├── ghostty.nix          # Ghostty config managed as XDG text
+├── kitty.nix            # Kitty terminal config
+├── git.nix              # Git behavior without copied identity/signing keys
+├── jujutsu.nix          # jj VCS config + local jj skill
+├── ssh.nix              # SSH client config (settings, not deprecated matchBlocks)
+├── yazi.nix             # Yazi file manager
+├── obsidian.nix         # Obsidian vault wiring
+├── lsp.nix              # single source of truth for language servers (Claude/Codex/Neovim)
+├── claude.nix           # Claude Code config + the agent-skills bundle
+├── ai-cli.nix           # claude/cc/codex/amp shell wrappers (ultracode defaults)
+├── ai-model-routing.nix # two-tier AI model routing
+├── opencode.nix         # opencode CLI config
+├── crush.nix            # crush CLI config
+├── amp.nix              # Sourcegraph Amp settings
+├── droid.nix            # Factory droid config
+├── cursor.nix           # Cursor editor config
+├── zed.nix              # Zed editor config
+└── cleanup.nix          # prunes stale managed state
 ```
 
 Common packages should be portable across Mac, future Omakub Home Manager, and NixOS where practical. Darwin-only packages live behind `pkgs.stdenv.isDarwin` checks.
@@ -207,7 +227,7 @@ This section is the largest because the moving parts (sources, targets, discover
 
 ### Mechanism
 
-`modules/home/skills.nix` imports `inputs.agent-skills.homeManagerModules.default` and uses the upstream `programs.agent-skills` DSL — no custom activation scripts. The module owns one declarative bundle of selected `SKILL.md` directories and syncs that bundle to enabled targets via rsync.
+`modules/home/claude.nix` imports `inputs.agent-skills.homeManagerModules.default` and uses the upstream `programs.agent-skills` DSL — no custom activation scripts. The module owns one declarative bundle of selected `SKILL.md` directories and links that bundle into each enabled target.
 
 ### Enabled targets
 
@@ -228,31 +248,21 @@ programs.agent-skills = {
 
   sources = {
     dotfiles-pi     = { input = "dotfiles";          subdir = "dot_pi/agent/skills"; };
-    dotfiles-claude = { input = "dotfiles";          subdir = "dot_claude/skills"; };
     mp-engineering  = { input = "mattpocock-skills"; subdir = "skills/engineering"; };
     mp-productivity = { input = "mattpocock-skills"; subdir = "skills/productivity"; };
     mp-misc         = { input = "mattpocock-skills"; subdir = "skills/misc"; };
     effect-ts       = { input = "effect-ts-skills";  subdir = "skills"; };
+    superpowers     = { input = "superpowers";       subdir = "skills"; filter.nameRegex = "^(brainstorming)$"; };
   };
 
   skills = {
-    enable = enabledMattpocockSkills; # all promoted Matt Pocock skills except disabledMattpocockSkills.
+    enable = enabledMattpocockSkills ++ enabledSuperpowersSkills;
     enableAll = [ "effect-ts" ];
     explicit = {
-      git-workflow = {
-        from = "dotfiles-pi";
-        path = "git-workflow";
-        packages = [ pkgs.git pkgs.gh pkgs.jq ];
-      };
       review = {
         from = "dotfiles-pi";
         path = "review";
         packages = [ pkgs.git pkgs.gh pkgs.jq ];
-      };
-      lazygit = {
-        from = "dotfiles-claude";
-        path = "lazygit";
-        packages = [ pkgs.git pkgs.lazygit ];
       };
       ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
       web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
@@ -265,6 +275,7 @@ programs.agent-skills = {
 
 - **Publish once, mirror deliberately.** Build one Nix-managed bundle, then mirror only to agent-native directories whose discovery behavior is documented or consciously accepted.
 - **Allowlist public sources.** Use explicit skill entries for selected third-party skills when they need Nix-provided packages; otherwise `skills.enable = [ … ]` is acceptable. Reserve `skills.enableAll = [ "source" ]` for tightly trusted private sources.
+- **Remove bad workflow skills at the source filter.** Do not leave rejected git-flow/worktree automation merely disabled in the catalog; narrow `nameRegex` or remove the source entry so picker metadata cannot rediscover it.
 - **Disambiguate name collisions.** If two sources expose the same skill name, set `idPrefix` on one and enable the prefixed IDs (e.g. `openai/pdf`, `anthropic/pdf`).
 - **Recursive discovery by default.** Keep `filter.maxDepth = null`. Use `filter.maxDepth = 1` only for known-flat roots (e.g. the curated dotfiles folders).
 - **Bundle Nix-provided tools.** Use `skills.explicit.<name>.packages` and `transform` when a skill needs Nix-provided binaries; this avoids assuming globally installed tools.
@@ -304,7 +315,7 @@ Default policy: **pure Nix first.**
 - **CLI / dev tools** → `modules/home/packages.nix`.
 - **Mac GUI apps Martin owns or vendors** → custom derivations in `pkgs/`, exposed as `pkgs.martin.<name>`, declared on the Darwin host where appropriate.
 - **System-level Mac apps currently in scope** — Dropbox, Google Drive, Raycast — declared on the Darwin host via `pkgs.martin.*`. Anything not yet packaged as a derivation is tracked as an explicit gap until it has one; brew is **not** a fallback.
-- **Agent / dev tooling** — Gemini preview, Amp, Pi, Oh My Pi — packaged in `pkgs/` as custom derivations.
+- **Agent / dev tooling** — Amp, Pi, Oh My Pi — packaged in `pkgs/` as custom derivations.
 
 A tool should never be installed simultaneously through Nix and a brew variant unless it is a temporary migration step; record the migration intent in the same commit if so.
 
@@ -481,6 +492,7 @@ Borrow patterns selectively. Do not copy Linux-specific NixOS concepts into nix-
 - Mac is the active target; optimize for it first.
 - Keep the flake root thin — inputs, overlays, system outputs, formatter, nothing else.
 - Keep shared modules parameterized by `currentSystemUser` and `currentSystemUserHome`; the home path is computed once in `lib/mkSystem.nix`, never re-derived in host or Home Manager modules.
+- Home Manager activation blocks that write or delete files must run after `writeBoundary`, be idempotent, and respect `DRY_RUN` without mutating the filesystem.
 - Keep Home Manager from clobbering unmanaged config files without explicit migration intent (each new `programs.*` module must ship the activation-guard pattern from `modules/home/prompt.nix`).
 - Keep brew variants disabled unless explicitly testing an escape hatch.
 - Treat sample repos as references, never as active configuration.
@@ -501,6 +513,10 @@ Update this doc in the same PR when you:
 Bump the **Last reviewed** date at the top whenever you re-read the whole doc end-to-end.
 
 ## Citable references
+- Nix flake reference — <https://nix.dev/manual/nix/stable/command-ref/new-cli/nix3-flake.html>
+- Nixpkgs `mkOption` / option-type reference — <https://nixos.org/manual/nixpkgs/stable/#sec-functions-library-options>
+- nix-darwin configuration options (`nixpkgs.hostPlatform`, activation scripts) — <https://nix-darwin.github.io/nix-darwin/manual/index.html>
+- Home Manager `home.activation` dry-run contract — <https://nix-community.github.io/home-manager/options.xhtml#opt-home.activation>
 
 - Agent Skills specification — <https://agentskills.io/specification>
 - `agent-skills-nix` target matrix and Home Manager DSL — <https://github.com/Kyure-A/agent-skills-nix#default-target-paths>
