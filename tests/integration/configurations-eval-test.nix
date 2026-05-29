@@ -23,6 +23,18 @@ let
     let r = builtins.tryEval (toString drv.drvPath);
     in r.success && r.value != "";
 
+  # A config's system.build.toplevel can only be eval-checked on a builder of
+  # its own platform. home-manager's agent-skills bundle resolves bundlePath via
+  # import-from-derivation, which builds a platform-stamped source, so computing
+  # a foreign-platform toplevel's drvPath here aborts with a "platform mismatch"
+  # rather than a catchable eval error. The `system != pkgs.system` short-circuit
+  # skips the foreign case; the CI check matrix runs this suite on every
+  # supported system, so each toplevel is still eval-verified on its native host.
+  toplevelEvaluatesOnNative = name: system: config:
+    helpers.assertTest "nixos-${name}-evaluates"
+      (system != pkgs.system || evalsOk config.system.build.toplevel)
+      "nixosConfigurations.${name}.toplevel should evaluate (checked on its native builder)";
+
   hasPackage = name: packages:
     lib.any (pkg: lib.getName pkg == name) packages;
 
@@ -87,9 +99,17 @@ let
       (homeConfig.programs.agent-skills.sources ? dotfiles-pi)
       "${prefix} should configure dotfiles-pi skill source")
 
-    (helpers.assertTest "${prefix}-agent-skills-source-dotfiles-claude"
-      (homeConfig.programs.agent-skills.sources ? dotfiles-claude)
-      "${prefix} should configure dotfiles-claude skill source")
+    (helpers.assertTest "${prefix}-removes-lazygit"
+      (
+        let
+          cfg = homeConfig.programs.agent-skills;
+          prune = homeConfig.home.activation.claudePruneRemovedSkills.data;
+        in
+        !(cfg.sources ? dotfiles-claude)
+        && !(builtins.hasAttr "lazygit" cfg.skills.explicit)
+        && lib.hasInfix "lazygit" prune
+      )
+      "${prefix} should fully remove the lazygit skill: no dotfiles-claude source, no explicit entry, pruned from target dirs")
 
     (helpers.assertTest "${prefix}-agent-skills-source-mp-productivity"
       (homeConfig.programs.agent-skills.sources ? mp-productivity)
@@ -107,6 +127,40 @@ let
       )
       "${prefix} should expose grill-with-docs explicitly but not the older grill-me skill")
 
+    (helpers.assertTest "${prefix}-agent-skills-removes-git-workflow"
+      (
+        let cfg = homeConfig.programs.agent-skills;
+        in
+        !(builtins.hasAttr "git-workflow" cfg.catalog)
+        && !(builtins.elem "git-workflow" cfg.skills.enable)
+        && !(builtins.hasAttr "git-workflow" cfg.skills.explicit)
+      )
+      "${prefix} should remove git-workflow from discovery and the active skill bundle")
+
+    (helpers.assertTest "${prefix}-agent-skills-superpowers-brainstorming-only"
+      (homeConfig.programs.agent-skills.sources.superpowers.filter.nameRegex == "^(brainstorming)$")
+      "${prefix} should not discover disabled superpowers workflow skills")
+
+    (helpers.assertTest "${prefix}-agent-skills-removed-prune-dry-run-safe"
+      (
+        let activation = homeConfig.home.activation.claudePruneRemovedSkills.data;
+        in
+        lib.hasInfix "DRY_RUN" activation
+        && lib.hasInfix "git-workflow" activation
+        && !(lib.hasInfix "exit 0" activation)
+      )
+      "${prefix} should prune removed skills without mutating during Home Manager dry runs")
+
+    (helpers.assertTest "${prefix}-claude-refactor-code-simplifier-deduped"
+      (
+        let activation = homeConfig.home.activation.claudeDisableRefactorPluginCodeSimplifier.data;
+        in
+        lib.hasInfix "frad-dotclaude/refactor" activation
+        && lib.hasInfix "code-simplifier.md" activation
+        && lib.hasInfix "agents-disabled" activation
+      )
+      "${prefix} should park the refactor plugin's duplicate code-simplifier agent, keeping the official one")
+
     (helpers.assertTest "${prefix}-agent-skills-agents-target"
       (homeConfig.programs.agent-skills.targets.agents.enable == true)
       "${prefix} should enable the shared agents skill target")
@@ -122,6 +176,25 @@ let
     (helpers.assertTest "${prefix}-agent-skills-pi-target"
       (homeConfig.programs.agent-skills.targets.pi.dest == ".pi/agent/skills")
       "${prefix} should configure the Oh My Pi skill target")
+
+    (helpers.assertTest "${prefix}-lsp-activation-dry-run-safe"
+      (
+        let
+          codex = homeConfig.home.activation.codexLspConfig.data;
+          desktopOk =
+            if prefix == "darwin" then
+              let desktop = homeConfig.home.activation.claudeDesktopMcpScaffold.data;
+              in
+              lib.hasInfix "DRY_RUN" desktop
+              && !(lib.hasInfix "exit 0" desktop)
+            else
+              !(homeConfig.home.activation ? claudeDesktopMcpScaffold);
+        in
+        lib.hasInfix "DRY_RUN" codex
+        && !(lib.hasInfix "exit 0" codex)
+        && desktopOk
+      )
+      "${prefix} LSP activation scripts should respect Home Manager dry runs without exiting activation")
   ];
 
   darwinConfig = self.darwinConfigurations."f".config;
@@ -213,6 +286,9 @@ let
           && builtins.elem ".metadata_never_index" darwinHome.programs.git.ignores
           && lib.hasInfix "managed by nix-config martin.spotlight" activation
           && lib.hasInfix "spotlight-exclusions" activation
+          && lib.hasInfix "DRY_RUN" activation
+          && lib.hasInfix "/usr/bin/grep -Fxq \"$marker_text\" \"$marker\"" activation
+          && !(lib.hasInfix "grep -qx" activation)
           && lib.hasInfix "elif [ ! -e \"$marker\" ]" activation
       )
       "Darwin should mark dev/cache trees as user-context reversible Spotlight exclusions without clobbering existing markers")
@@ -310,6 +386,20 @@ let
       )
       "Darwin Home Manager should own the Hammerspoon init.lua")
 
+    # Native-config only: forcing the home.file spine makes agent-skills resolve
+    # its bundlePath, an import-from-derivation that builds a platform-stamped
+    # source. On aarch64-darwin the foreign x86_64-linux NixOS bundles cannot be
+    # built, so this lives in darwinChecks rather than the cross-platform
+    # homeChecks. The jj install is shared in claude.nix, so checking it once on
+    # the native host covers every host's mechanism.
+    (helpers.assertTest "darwin-installs-jj-skill"
+      (
+        darwinHome.home.file ? ".claude/skills/jj"
+          && darwinHome.home.file ? ".agents/skills/jj"
+          && darwinHome.home.file ? ".pi/agent/skills/jj"
+      )
+      "Darwin should install the locally-authored jj skill into the picker dirs")
+
     (helpers.assertTest "darwin-brew-default-disabled"
       (darwinConfig.martin.brew.homebrew.enable == false)
       "Homebrew emergency scaffold should remain disabled by default")
@@ -342,17 +432,9 @@ let
   vmHome = vmConfig.home-manager.users.${user};
 
   nixosChecks = [
-    (helpers.assertTest "nixos-wsl-evaluates"
-      (evalsOk self.nixosConfigurations.wsl.config.system.build.toplevel)
-      "nixosConfigurations.wsl.toplevel should evaluate")
-
-    (helpers.assertTest "nixos-x230-evaluates"
-      (evalsOk self.nixosConfigurations.x230.config.system.build.toplevel)
-      "nixosConfigurations.x230.toplevel should evaluate")
-
-    (helpers.assertTest "nixos-vm-aarch64-utm-evaluates"
-      (evalsOk self.nixosConfigurations.vm-aarch64-utm.config.system.build.toplevel)
-      "nixosConfigurations.vm-aarch64-utm.toplevel should evaluate")
+    (toplevelEvaluatesOnNative "wsl" "x86_64-linux" wslConfig)
+    (toplevelEvaluatesOnNative "x230" "x86_64-linux" x230Config)
+    (toplevelEvaluatesOnNative "vm-aarch64-utm" "aarch64-linux" vmConfig)
 
     (helpers.assertTest "wsl-host-name"
       (wslConfig.networking.hostName == "wsl")

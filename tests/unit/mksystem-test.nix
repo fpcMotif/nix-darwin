@@ -80,6 +80,20 @@ let
       )
       "grill-me should stay disabled in the Matt Pocock skill allowlist")
 
+    (helpers.assertTest "git-workflow-skill-removed"
+      (
+        let cfg = homeConfig.programs.agent-skills;
+        in
+        !(builtins.hasAttr "git-workflow" cfg.catalog)
+        && !(builtins.elem "git-workflow" cfg.skills.enable)
+        && !(builtins.hasAttr "git-workflow" cfg.skills.explicit)
+      )
+      "git-workflow should be removed from the skill catalog and bundle, not just disabled")
+
+    (helpers.assertTest "superpowers-source-brainstorming-only"
+      (homeConfig.programs.agent-skills.sources.superpowers.filter.nameRegex == "^(brainstorming)$")
+      "Nix-managed superpowers should source only brainstorming")
+
     (helpers.assertTest "pi-skill-target-configured"
       (homeConfig.programs.agent-skills.targets.pi.dest == ".pi/agent/skills")
       "Oh My Pi skill target should be configured explicitly")
@@ -136,7 +150,13 @@ let
     (helpers.assertTest "vm-aarch64-utm-host-name-matches-flake-attr"
       (vmConfig.networking.hostName == "vm-aarch64-utm")
       "vm-aarch64-utm networking.hostName must equal its flake attribute name (driven by mkSystem's hostname arg, not the host module)")
-
+    (helpers.assertTest "linux-host-platforms-match-host-definitions"
+      (
+        wslConfig.nixpkgs.hostPlatform.system == "x86_64-linux"
+        && x230Config.nixpkgs.hostPlatform.system == "x86_64-linux"
+        && vmConfig.nixpkgs.hostPlatform.system == "aarch64-linux"
+      )
+      "NixOS host platforms should come from the flake host definitions")
     (helpers.assertTest "linux-user-home"
       (x230Config.users.users.${user}.home == "/home/${user}")
       "NixOS users should use Linux home directories")

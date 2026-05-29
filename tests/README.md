@@ -30,7 +30,6 @@ nix build .#checks.aarch64-darwin.unit-overlay --no-link
 nix build .#checks.aarch64-darwin.unit-format --no-link
 nix build .#checks.aarch64-darwin.integration-configurations-eval --no-link
 nix build .#checks.aarch64-darwin.smoke-build-common --no-link
-nix build .#checks.aarch64-darwin.smoke-build-gemini --no-link
 nix build .#checks.aarch64-darwin.smoke-build-oh-my-pi --no-link
 nix build .#checks.aarch64-darwin.smoke-build-toolchain --no-link
 
@@ -46,13 +45,12 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 |-------------------------------------|-------------------|
 | `smoke`                             | Test infrastructure itself builds. |
 | `smoke-build-common`                | Common package smoke coverage, currently `mgrep --version`. |
-| `smoke-build-gemini`                | Darwin-only Gemini preview package path evaluates/builds on Darwin and skips on Linux. |
 | `smoke-build-oh-my-pi`              | Darwin-only Oh My Pi package exposes an executable `omp` wrapper and skips on Linux. |
-| `smoke-build-toolchain`             | Required Bun, Prek, Oxlint/Oxfmt, Tsgolint, Tsgo, Uv, and Ruff commands exist. |
-| `unit-mksystem`                     | `lib/mkSystem.nix` shape plus current user, Home Manager, host module, and skill-target wiring. |
+| `smoke-build-toolchain`             | Required Prek, Oxlint/Oxfmt, Tsgolint, Tsgo, Uv, and Ruff commands exist, plus the shipped canary Bun (and its `bunx` symlink) on Darwin. |
+| `unit-mksystem`                     | `lib/mkSystem.nix` shape plus current user, host platform, Home Manager, host module, and skill-target wiring. |
 | `unit-overlay`                      | `pkgs/default.nix` is a valid overlay and exposes the expected `pkgs.martin.*` attributes, descriptions, and CLI main programs. Darwin-only package evaluation is skipped on Linux. |
 | `unit-format`                       | `formatter.<system>` is configured as `nixpkgs-fmt`, evaluates, and all flake Nix files are formatted. |
-| `integration-configurations-eval`   | The flake's Darwin/NixOS configs evaluate and keep expected user, host, pure-Nix dotfile, required/forbidden toolchain, WSL, and agent-skills settings. |
+| `integration-configurations-eval`   | The flake's Darwin/NixOS configs evaluate and keep expected user, host, pure-Nix dotfile, activation dry-run, required/forbidden toolchain, WSL, and agent-skills settings. |
 
 ## CI
 

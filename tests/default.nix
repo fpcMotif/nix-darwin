@@ -40,17 +40,6 @@ in
     touch $out
   '';
 
-  smoke-build-gemini = pkgs.runCommand "smoke-build-gemini" { } (
-    if pkgs.stdenv.isDarwin then ''
-      echo "Building gemini-cli-preview as a Darwin smoke test..."
-      ls -la ${pkgs.martin.gemini-cli-preview}
-      touch $out
-    '' else ''
-      echo "Skipping Darwin-only smoke test on this platform"
-      touch $out
-    ''
-  );
-
   smoke-build-oh-my-pi = pkgs.runCommand "smoke-build-oh-my-pi" { } (
     if pkgs.stdenv.isDarwin then ''
       echo "Building oh-my-pi as a Darwin smoke test..."
@@ -62,17 +51,25 @@ in
     ''
   );
 
-  smoke-build-toolchain = pkgs.runCommand "smoke-build-toolchain" { } ''
-    echo "Checking required Nix-only dotfiles toolchain commands..."
-    ${lib.getExe pkgs.bun} --version
-    test -x ${pkgs.bun}/bin/bunx
-    ${lib.getExe pkgs.prek} --version
-    ${lib.getExe pkgs.oxlint} --version
-    ${lib.getExe pkgs.oxfmt} --version
-    ${lib.getExe pkgs.tsgolint} --help >/dev/null
-    ${lib.getExe pkgs.typescript-go} --version
-    ${lib.getExe pkgs.uv} --version
-    ${lib.getExe pkgs.ruff} --version
-    touch $out
-  '';
+  smoke-build-toolchain = pkgs.runCommand "smoke-build-toolchain" { } (
+    ''
+      echo "Checking required Nix-only dotfiles toolchain commands..."
+      ${lib.getExe pkgs.prek} --version
+      ${lib.getExe pkgs.oxlint} --version
+      ${lib.getExe pkgs.oxfmt} --version
+      ${lib.getExe pkgs.tsgolint} --help >/dev/null
+      ${lib.getExe pkgs.typescript-go} --version
+      ${lib.getExe pkgs.uv} --version
+      ${lib.getExe pkgs.ruff} --version
+    ''
+    # bun is shipped as the canary prebuilt (aarch64-darwin only), so validate
+    # the binary that is actually installed rather than stock nixpkgs `bun`.
+    + lib.optionalString pkgs.stdenv.isDarwin ''
+      ${lib.getExe pkgs.martin.bun-canary-bin} --version
+      test -L ${pkgs.martin.bun-canary-bin}/bin/bunx
+    ''
+    + ''
+      touch $out
+    ''
+  );
 }

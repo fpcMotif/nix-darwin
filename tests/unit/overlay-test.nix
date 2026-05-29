@@ -18,18 +18,18 @@ let
   };
 
   expected = [
+    "bun-canary-bin"
     "dropbox"
     "google-drive"
     "hammerspoon"
     "raycast"
-    "gemini-cli-preview"
     "oh-my-pi"
     "pi-coding-agent"
     "sourcegraph-amp"
   ];
 
   expectedMainPrograms = {
-    gemini-cli-preview = "gemini";
+    bun-canary-bin = "bun";
     oh-my-pi = "omp";
     pi-coding-agent = "pi";
     sourcegraph-amp = "amp";
@@ -42,6 +42,7 @@ let
   # Packages that only build on Darwin (binary cask / macOS-only). On Linux
   # we settle for "attribute exists" instead of evaluating the derivation.
   darwinOnly = [
+    "bun-canary-bin"
     "dropbox"
     "google-drive"
     "hammerspoon"
