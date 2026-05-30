@@ -63,7 +63,16 @@ let
   hasPackage = name: packages:
     lib.any (pkg: lib.getName pkg == name) packages;
 
-  homeChecks = prefix: homeConfig: expectedHomeDirectory: [
+  homeChecks = prefix: homeConfig: expectedHomeDirectory: let
+    packageNames = map lib.getName homeConfig.home.packages;
+    homePackageSet = builtins.listToAttrs (map
+      (name: {
+        inherit name;
+        value = true;
+      })
+      packageNames);
+    hasHomePackage = name: builtins.hasAttr name homePackageSet;
+  in [
     (helpers.assertTest "${prefix}-home-username"
       (homeConfig.home.username == user)
       "${prefix} Home Manager username should match ${user}")
@@ -73,19 +82,19 @@ let
       "${prefix} Home Manager home directory should match the platform")
 
     (helpers.assertTest "${prefix}-has-git-package"
-      (hasPackage "git" homeConfig.home.packages)
+      (hasHomePackage "git")
       "${prefix} Home Manager package list should include git")
 
     (helpers.assertTest "${prefix}-has-mgrep-package"
-      (hasPackage "mgrep" homeConfig.home.packages)
+      (hasHomePackage "mgrep")
       "${prefix} Home Manager package list should include mgrep")
 
     (helpers.assertTest "${prefix}-has-starship-package"
-      (hasPackage "starship" homeConfig.home.packages)
+      (hasHomePackage "starship")
       "${prefix} Home Manager package list should include starship")
 
     (helpers.assertTest "${prefix}-excludes-jj-starship-package"
-      (!(hasPackage "jj-starship" homeConfig.home.packages))
+      (!(hasHomePackage "jj-starship"))
       "${prefix} Home Manager package list should not include jj-starship")
 
     (helpers.assertTest "${prefix}-home-zsh-enabled"
