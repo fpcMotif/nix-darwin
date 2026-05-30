@@ -12,12 +12,32 @@
 #   * migrated Home Manager program modules are enabled
 #   * darwin-only agent packages are gated to darwin
 #   * system-level zsh stays on (this IS owned by Nix, not unmanaged dotfiles)
-{ pkgs, lib, self, ... }:
+{ pkgs, lib, self
+, evalScope ? "auto"
+, darwinConfigInput ? null
+, wslConfigInput ? null
+, x230ConfigInput ? null
+, vmConfigInput ? null
+, ...
+}:
 
 let
   helpers = import ../lib/assertions.nix { inherit pkgs lib; };
 
   user = "martinfan";
+  selectedScope = if evalScope == "auto" then
+    (if pkgs.stdenv.isDarwin then "darwin" else "nixos")
+  else evalScope;
+
+  darwinConfig = if darwinConfigInput != null then darwinConfigInput else self.darwinConfigurations."f".config;
+  darwinHome = darwinConfig.home-manager.users.${user};
+  darwinSkhdConfig = darwinConfig.services.skhd.skhdConfig;
+  wslConfig = if wslConfigInput != null then wslConfigInput else self.nixosConfigurations.wsl.config;
+  x230Config = if x230ConfigInput != null then x230ConfigInput else self.nixosConfigurations.x230.config;
+  vmConfig = if vmConfigInput != null then vmConfigInput else self.nixosConfigurations.vm-aarch64-utm.config;
+  wslHome = wslConfig.home-manager.users.${user};
+  x230Home = x230Config.home-manager.users.${user};
+  vmHome = vmConfig.home-manager.users.${user};
 
   evalsOk = drv:
     let r = builtins.tryEval (toString drv.drvPath);
@@ -196,10 +216,6 @@ let
       )
       "${prefix} LSP activation scripts should respect Home Manager dry runs without exiting activation")
   ];
-
-  darwinConfig = self.darwinConfigurations."f".config;
-  darwinHome = darwinConfig.home-manager.users.${user};
-  darwinSkhdConfig = darwinConfig.services.skhd.skhdConfig;
 
   darwinChecks = [
     (helpers.assertTest "darwin-f-evaluates"
@@ -424,13 +440,6 @@ let
       "Darwin Home Manager should pin Zed to the prebuilt nightly binary")
   ] ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
-  wslConfig = self.nixosConfigurations.wsl.config;
-  x230Config = self.nixosConfigurations.x230.config;
-  vmConfig = self.nixosConfigurations.vm-aarch64-utm.config;
-  wslHome = wslConfig.home-manager.users.${user};
-  x230Home = x230Config.home-manager.users.${user};
-  vmHome = vmConfig.home-manager.users.${user};
-
   nixosChecks = [
     (toplevelEvaluatesOnNative "wsl" "x86_64-linux" wslConfig)
     (toplevelEvaluatesOnNative "x230" "x86_64-linux" x230Config)
@@ -488,5 +497,8 @@ let
   ++ (homeChecks "x230" x230Home "/home/${user}")
   ++ (homeChecks "vm-aarch64-utm" vmHome "/home/${user}");
 
+  selectedChecks = if selectedScope == "darwin" then darwinChecks else
+    if selectedScope == "nixos" then nixosChecks
+    else darwinChecks ++ nixosChecks;
 in
-helpers.testSuite "configurations-eval" (darwinChecks ++ nixosChecks)
+helpers.testSuite "configurations-eval" selectedChecks

@@ -15,9 +15,7 @@ let
   };
   lib = pkgs.lib;
 
-  callTest = path: import path {
-    inherit inputs system pkgs lib self;
-  };
+  callTest = path: extraArgs: import path ({ inherit inputs system pkgs lib self; } // extraArgs);
 in
 {
   smoke = pkgs.runCommand "smoke-test" { } ''
@@ -26,12 +24,24 @@ in
   '';
 
   # Unit tests
-  unit-mksystem = callTest ./unit/mksystem-test.nix;
-  unit-overlay = callTest ./unit/overlay-test.nix;
-  unit-format = callTest ./unit/format-test.nix;
+  unit-mksystem = callTest ./unit/mksystem-test.nix {};
+  unit-overlay = callTest ./unit/overlay-test.nix {};
+  unit-format = callTest ./unit/format-test.nix {};
 
   # Integration tests
-  integration-configurations-eval = callTest ./integration/configurations-eval-test.nix;
+  integration-configurations-eval =
+    if pkgs.stdenv.isDarwin then
+      callTest ./integration/configurations-eval-test.nix {
+        evalScope = "darwin";
+        darwinConfig = self.darwinConfigurations."f".config;
+      }
+    else
+      callTest ./integration/configurations-eval-test.nix {
+        evalScope = "nixos";
+        wslConfig = self.nixosConfigurations.wsl.config;
+        x230Config = self.nixosConfigurations.x230.config;
+        vmConfig = self.nixosConfigurations.vm-aarch64-utm.config;
+      };
 
   # Smoke builds: verify these derivations actually build correctly.
   smoke-build-common = pkgs.runCommand "smoke-build-common" { } ''
