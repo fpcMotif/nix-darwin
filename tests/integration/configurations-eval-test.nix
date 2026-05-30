@@ -68,13 +68,12 @@ let
     homePrograms = homeConfig.programs;
     homeActivation = homeData.activation;
     homeXdg = homeConfig.xdg;
-    packageNames = map lib.getName homeData.packages;
     homePackageSet = builtins.listToAttrs (map
-      (name: {
-        inherit name;
+      (pkg: {
+        name = lib.getName pkg;
         value = true;
       })
-      packageNames);
+      homeData.packages);
     hasHomePackage = name: builtins.hasAttr name homePackageSet;
   in [
     (helpers.assertTest "${prefix}-home-username"
