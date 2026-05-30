@@ -12,12 +12,16 @@
 #   * migrated Home Manager program modules are enabled
 #   * darwin-only agent packages are gated to darwin
 #   * system-level zsh stays on (this IS owned by Nix, not unmanaged dotfiles)
-{ pkgs, lib, self
+{ pkgs, lib
 , evalScope ? "auto"
 , darwinConfigInput ? null
+, darwinSystemInput ? null
 , wslConfigInput ? null
+, wslSystemInput ? null
 , x230ConfigInput ? null
+, x230SystemInput ? null
 , vmConfigInput ? null
+, vmSystemInput ? null
 , ...
 }:
 
@@ -29,15 +33,19 @@ let
     (if pkgs.stdenv.isDarwin then "darwin" else "nixos")
   else evalScope;
 
-  darwinConfig = if darwinConfigInput != null then darwinConfigInput else self.darwinConfigurations."f".config;
-  darwinHome = darwinConfig.home-manager.users.${user};
-  darwinSkhdConfig = darwinConfig.services.skhd.skhdConfig;
-  wslConfig = if wslConfigInput != null then wslConfigInput else self.nixosConfigurations.wsl.config;
-  x230Config = if x230ConfigInput != null then x230ConfigInput else self.nixosConfigurations.x230.config;
-  vmConfig = if vmConfigInput != null then vmConfigInput else self.nixosConfigurations.vm-aarch64-utm.config;
-  wslHome = wslConfig.home-manager.users.${user};
-  x230Home = x230Config.home-manager.users.${user};
-  vmHome = vmConfig.home-manager.users.${user};
+  darwinConfig = if selectedScope == "darwin" then darwinConfigInput else null;
+  darwinSystem = if selectedScope == "darwin" then darwinSystemInput else null;
+  darwinHome = if darwinConfig != null then darwinConfig.home-manager.users.${user} else null;
+  darwinSkhdConfig = if darwinConfig != null then darwinConfig.services.skhd.skhdConfig else null;
+  wslConfig = if selectedScope == "nixos" then wslConfigInput else null;
+  x230Config = if selectedScope == "nixos" then x230ConfigInput else null;
+  vmConfig = if selectedScope == "nixos" then vmConfigInput else null;
+  wslSystem = if selectedScope == "nixos" then wslSystemInput else null;
+  x230System = if selectedScope == "nixos" then x230SystemInput else null;
+  vmSystem = if selectedScope == "nixos" then vmSystemInput else null;
+  wslHome = if wslConfig != null then wslConfig.home-manager.users.${user} else null;
+  x230Home = if x230Config != null then x230Config.home-manager.users.${user} else null;
+  vmHome = if vmConfig != null then vmConfig.home-manager.users.${user} else null;
 
   evalsOk = drv:
     let r = builtins.tryEval (toString drv.drvPath);
@@ -219,7 +227,7 @@ let
 
   darwinChecks = [
     (helpers.assertTest "darwin-f-evaluates"
-      (evalsOk self.darwinConfigurations."f".system)
+      (evalsOk darwinSystem)
       "darwinConfigurations.f.system should evaluate")
 
     (helpers.assertTest "darwin-primary-user"

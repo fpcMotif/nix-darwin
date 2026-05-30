@@ -33,15 +33,20 @@ in
     if pkgs.stdenv.isDarwin then
       callTest ./integration/configurations-eval-test.nix {
         evalScope = "darwin";
-        darwinConfig = self.darwinConfigurations."f".config;
+        darwinConfigInput = self.darwinConfigurations."f".config;
+        darwinSystemInput = self.darwinConfigurations."f".system;
       }
     else
       callTest ./integration/configurations-eval-test.nix {
         evalScope = "nixos";
-        wslConfig = self.nixosConfigurations.wsl.config;
-        x230Config = self.nixosConfigurations.x230.config;
-        vmConfig = self.nixosConfigurations.vm-aarch64-utm.config;
+        wslConfigInput = self.nixosConfigurations.wsl.config;
+        x230ConfigInput = self.nixosConfigurations.x230.config;
+        vmConfigInput = self.nixosConfigurations.vm-aarch64-utm.config;
+        wslSystemInput = self.nixosConfigurations.wsl.config;
+        x230SystemInput = self.nixosConfigurations.x230.config;
+        vmSystemInput = self.nixosConfigurations.vm-aarch64-utm.config;
       };
+
 
   # Smoke builds: verify these derivations actually build correctly.
   smoke-build-common = pkgs.runCommand "smoke-build-common" { } ''
