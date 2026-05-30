@@ -33,18 +33,14 @@ in
     if pkgs.stdenv.isDarwin then
       callTest ./integration/configurations-eval-test.nix {
         evalScope = "darwin";
-        darwinConfigInput = self.darwinConfigurations."f".config;
-        darwinSystemInput = self.darwinConfigurations."f".system;
+        darwinConfigurationInput = self.darwinConfigurations."f";
       }
     else
       callTest ./integration/configurations-eval-test.nix {
         evalScope = "nixos";
-        wslConfigInput = self.nixosConfigurations.wsl.config;
-        x230ConfigInput = self.nixosConfigurations.x230.config;
-        vmConfigInput = self.nixosConfigurations.vm-aarch64-utm.config;
-        wslSystemInput = self.nixosConfigurations.wsl.config;
-        x230SystemInput = self.nixosConfigurations.x230.config;
-        vmSystemInput = self.nixosConfigurations.vm-aarch64-utm.config;
+        wslConfigurationInput = self.nixosConfigurations.wsl;
+        x230ConfigurationInput = self.nixosConfigurations.x230;
+        vmConfigurationInput = self.nixosConfigurations.vm-aarch64-utm;
       };
 
 

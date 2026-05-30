@@ -14,14 +14,10 @@
 #   * system-level zsh stays on (this IS owned by Nix, not unmanaged dotfiles)
 { pkgs, lib
 , evalScope ? "auto"
-, darwinConfigInput ? null
-, darwinSystemInput ? null
-, wslConfigInput ? null
-, wslSystemInput ? null
-, x230ConfigInput ? null
-, x230SystemInput ? null
-, vmConfigInput ? null
-, vmSystemInput ? null
+, darwinConfigurationInput ? null
+, wslConfigurationInput ? null
+, x230ConfigurationInput ? null
+, vmConfigurationInput ? null
 , ...
 }:
 
@@ -33,16 +29,17 @@ let
     (if pkgs.stdenv.isDarwin then "darwin" else "nixos")
   else evalScope;
 
-  darwinConfig = if selectedScope == "darwin" then darwinConfigInput else null;
-  darwinSystem = if selectedScope == "darwin" then darwinSystemInput else null;
+  darwinConfiguration = if selectedScope == "darwin" then darwinConfigurationInput else null;
+  darwinConfig = if darwinConfiguration != null then darwinConfiguration.config else null;
+  darwinSystem = if darwinConfiguration != null then darwinConfiguration.system else null;
   darwinHome = if darwinConfig != null then darwinConfig.home-manager.users.${user} else null;
   darwinSkhdConfig = if darwinConfig != null then darwinConfig.services.skhd.skhdConfig else null;
-  wslConfig = if selectedScope == "nixos" then wslConfigInput else null;
-  x230Config = if selectedScope == "nixos" then x230ConfigInput else null;
-  vmConfig = if selectedScope == "nixos" then vmConfigInput else null;
-  wslSystem = if selectedScope == "nixos" then wslSystemInput else null;
-  x230System = if selectedScope == "nixos" then x230SystemInput else null;
-  vmSystem = if selectedScope == "nixos" then vmSystemInput else null;
+  wslConfiguration = if selectedScope == "nixos" then wslConfigurationInput else null;
+  x230Configuration = if selectedScope == "nixos" then x230ConfigurationInput else null;
+  vmConfiguration = if selectedScope == "nixos" then vmConfigurationInput else null;
+  wslConfig = if wslConfiguration != null then wslConfiguration.config else null;
+  x230Config = if x230Configuration != null then x230Configuration.config else null;
+  vmConfig = if vmConfiguration != null then vmConfiguration.config else null;
   wslHome = if wslConfig != null then wslConfig.home-manager.users.${user} else null;
   x230Home = if x230Config != null then x230Config.home-manager.users.${user} else null;
   vmHome = if vmConfig != null then vmConfig.home-manager.users.${user} else null;
