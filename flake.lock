@@ -32,11 +32,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1780023606,
-        "narHash": "sha256-kLRVx7T+9ETF26prUsMA9Nm0LidSFN08oPLkXK5V2CA=",
+        "lastModified": 1780109992,
+        "narHash": "sha256-qzmk1JsVr3Umi4k9cx5KCLxPSWQpd6NeKCXXSr4bYoY=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "879750a6fc504c9eafbab781798cb85e1b39242f",
+        "rev": "66c8b1714f2d45ce71de002baa89f8652483f245",
         "type": "github"
       },
       "original": {
@@ -160,11 +160,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1779969295,
-        "narHash": "sha256-HwIJ3tOcwSMiV75L7KqJXciXR9UfT+d7rwOZMX7cTnA=",
+        "lastModified": 1780099287,
+        "narHash": "sha256-efIPwVGtIWIjWcznhaop6XN6HxnOL8800hF6CBNvlqQ=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "61e2c9659324181e0f0ed911958c536333b1d4f6",
+        "rev": "7d8127d308c3fb9664f7e643eec944be74ebb37d",
         "type": "github"
       },
       "original": {
@@ -236,11 +236,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1780053924,
-        "narHash": "sha256-Pnq1FVWJAB7HXl5UwEXiai5yQZo6uIXEGrBpsPkBD/w=",
+        "lastModified": 1780116010,
+        "narHash": "sha256-xhQ1hGBfp5oxZghM5wKJuzUpbrEgLj1Yy7kmbDWXdJg=",
         "owner": "nix-community",
         "repo": "NUR",
-        "rev": "987c12196b1baab34e3be226ee490c402e5d0b14",
+        "rev": "663b271e319acd140f85cdc7493c16af1b3ee963",
         "type": "github"
       },
       "original": {
@@ -267,11 +267,11 @@
     "superpowers": {
       "flake": false,
       "locked": {
-        "lastModified": 1777932301,
-        "narHash": "sha256-3E3rO6hR87JUfS3XV1Eaoz6SDWOftleWvN9UPNFEMjw=",
+        "lastModified": 1780085125,
+        "narHash": "sha256-P/FD8HTQO+QzvMe3A/B2v2vjs8T6ZmIYH3MPp79dSzo=",
         "ref": "main",
-        "rev": "f2cbfbefebbfef77321e4c9abc9e949826bea9d7",
-        "revCount": 440,
+        "rev": "6fd4507659784c351abbd2bc264c7162cfd386dc",
+        "revCount": 441,
         "type": "git",
         "url": "https://github.com/obra/superpowers.git"
       },
