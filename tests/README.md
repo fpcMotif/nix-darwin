@@ -51,6 +51,13 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `unit-overlay`                      | `pkgs/default.nix` is a valid overlay and exposes the expected `pkgs.martin.*` attributes, descriptions, and CLI main programs. Darwin-only package evaluation is skipped on Linux. |
 | `unit-format`                       | `formatter.<system>` is configured as `nixpkgs-fmt`, evaluates, and all flake Nix files are formatted. |
 | `integration-configurations-eval`   | The flake's Darwin/NixOS configs evaluate and keep expected user, host, pure-Nix dotfile, activation dry-run, required/forbidden toolchain, WSL, and agent-skills settings. |
+| `integration-darwin-settings`       | Darwin-only. Exact-value assertions for every `system.defaults` key plus sudo Touch ID, firewall, pmset power management, skhd hotkeys, and the Gatekeeper guard; font-bundle membership + count; Rime/Squirrel and BetterMouse/BetterDisplay agent wiring. No-op skip on Linux. |
+
+Real-machine verification (Tier 2) lives outside the Nix checks in
+`scripts/verify-macos-settings.sh` (run via `just verify-macos`); the deferred
+VM tier (Tier 3) is designed in `docs/design/darwin-activation-vm-harness.md`.
+The overall strategy is recorded in
+`docs/adr/0004-macos-settings-testing-strategy.md`.
 
 ## CI
 

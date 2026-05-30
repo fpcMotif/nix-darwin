@@ -12,7 +12,8 @@
 #   * migrated Home Manager program modules are enabled
 #   * darwin-only agent packages are gated to darwin
 #   * system-level zsh stays on (this IS owned by Nix, not unmanaged dotfiles)
-{ pkgs, lib
+{ pkgs
+, lib
 , evalScope ? "auto"
 , darwinConfigurationInput ? null
 , wslConfigurationInput ? null
@@ -25,9 +26,10 @@ let
   helpers = import ../lib/assertions.nix { inherit pkgs lib; };
 
   user = "martinfan";
-  selectedScope = if evalScope == "auto" then
-    (if pkgs.stdenv.isDarwin then "darwin" else "nixos")
-  else evalScope;
+  selectedScope =
+    if evalScope == "auto" then
+      (if pkgs.stdenv.isDarwin then "darwin" else "nixos")
+    else evalScope;
 
   darwinConfiguration = if selectedScope == "darwin" then darwinConfigurationInput else null;
   darwinConfig = if darwinConfiguration != null then darwinConfiguration.config else null;
@@ -63,176 +65,178 @@ let
   hasPackage = name: packages:
     lib.any (pkg: lib.getName pkg == name) packages;
 
-  homeChecks = prefix: homeConfig: expectedHomeDirectory: let
-    homeData = homeConfig.home;
-    homePrograms = homeConfig.programs;
-    homeActivation = homeData.activation;
-    homeXdg = homeConfig.xdg;
-    homePackageSet = builtins.listToAttrs (map
-      (pkg: {
-        name = lib.getName pkg;
-        value = true;
-      })
-      homeData.packages);
-    hasHomePackage = name: builtins.hasAttr name homePackageSet;
-  in [
-    (helpers.assertTest "${prefix}-home-username"
-      (homeData.username == user)
-      "${prefix} Home Manager username should match ${user}")
+  homeChecks = prefix: homeConfig: expectedHomeDirectory:
+    let
+      homeData = homeConfig.home;
+      homePrograms = homeConfig.programs;
+      homeActivation = homeData.activation;
+      homeXdg = homeConfig.xdg;
+      homePackageSet = builtins.listToAttrs (map
+        (pkg: {
+          name = lib.getName pkg;
+          value = true;
+        })
+        homeData.packages);
+      hasHomePackage = name: builtins.hasAttr name homePackageSet;
+    in
+    [
+      (helpers.assertTest "${prefix}-home-username"
+        (homeData.username == user)
+        "${prefix} Home Manager username should match ${user}")
 
-    (helpers.assertTest "${prefix}-home-directory"
-      (homeData.homeDirectory == expectedHomeDirectory)
-      "${prefix} Home Manager home directory should match the platform")
+      (helpers.assertTest "${prefix}-home-directory"
+        (homeData.homeDirectory == expectedHomeDirectory)
+        "${prefix} Home Manager home directory should match the platform")
 
-    (helpers.assertTest "${prefix}-has-git-package"
-      (hasHomePackage "git")
-      "${prefix} Home Manager package list should include git")
+      (helpers.assertTest "${prefix}-has-git-package"
+        (hasHomePackage "git")
+        "${prefix} Home Manager package list should include git")
 
-    (helpers.assertTest "${prefix}-has-mgrep-package"
-      (hasHomePackage "mgrep")
-      "${prefix} Home Manager package list should include mgrep")
+      (helpers.assertTest "${prefix}-has-mgrep-package"
+        (hasHomePackage "mgrep")
+        "${prefix} Home Manager package list should include mgrep")
 
-    (helpers.assertTest "${prefix}-has-starship-package"
-      (hasHomePackage "starship")
-      "${prefix} Home Manager package list should include starship")
+      (helpers.assertTest "${prefix}-has-starship-package"
+        (hasHomePackage "starship")
+        "${prefix} Home Manager package list should include starship")
 
-    (helpers.assertTest "${prefix}-excludes-jj-starship-package"
-      (!(hasHomePackage "jj-starship"))
-      "${prefix} Home Manager package list should not include jj-starship")
+      (helpers.assertTest "${prefix}-excludes-jj-starship-package"
+        (!(hasHomePackage "jj-starship"))
+        "${prefix} Home Manager package list should not include jj-starship")
 
-    (helpers.assertTest "${prefix}-home-zsh-enabled"
-      (homePrograms.zsh.enable == true)
-      "${prefix} Home Manager should own zsh config")
+      (helpers.assertTest "${prefix}-home-zsh-enabled"
+        (homePrograms.zsh.enable == true)
+        "${prefix} Home Manager should own zsh config")
 
-    (helpers.assertTest "${prefix}-home-zsh-history-substring-enabled"
-      (homePrograms.zsh.historySubstringSearch.enable == true)
-      "${prefix} Home Manager should enable declarative history substring search")
+      (helpers.assertTest "${prefix}-home-zsh-history-substring-enabled"
+        (homePrograms.zsh.historySubstringSearch.enable == true)
+        "${prefix} Home Manager should enable declarative history substring search")
 
-    (helpers.assertTest "${prefix}-home-zoxide-enabled"
-      (homePrograms.zoxide.enable == true)
-      "${prefix} Home Manager should enable zoxide integration")
+      (helpers.assertTest "${prefix}-home-zoxide-enabled"
+        (homePrograms.zoxide.enable == true)
+        "${prefix} Home Manager should enable zoxide integration")
 
-    (helpers.assertTest "${prefix}-home-git-enabled"
-      (homePrograms.git.enable == true)
-      "${prefix} Home Manager should own git config")
+      (helpers.assertTest "${prefix}-home-git-enabled"
+        (homePrograms.git.enable == true)
+        "${prefix} Home Manager should own git config")
 
-    (helpers.assertTest "${prefix}-home-jujutsu-enabled"
-      (homePrograms.jujutsu.enable == true)
-      "${prefix} Home Manager should own jj config")
+      (helpers.assertTest "${prefix}-home-jujutsu-enabled"
+        (homePrograms.jujutsu.enable == true)
+        "${prefix} Home Manager should own jj config")
 
-    (helpers.assertTest "${prefix}-home-tmux-enabled"
-      (homePrograms.tmux.enable == true)
-      "${prefix} Home Manager should own tmux config")
+      (helpers.assertTest "${prefix}-home-tmux-enabled"
+        (homePrograms.tmux.enable == true)
+        "${prefix} Home Manager should own tmux config")
 
-    (helpers.assertTest "${prefix}-home-ghostty-config"
-      (builtins.hasAttr "ghostty/config" homeXdg.configFile)
-      "${prefix} Home Manager should own Ghostty config text")
+      (helpers.assertTest "${prefix}-home-ghostty-config"
+        (builtins.hasAttr "ghostty/config" homeXdg.configFile)
+        "${prefix} Home Manager should own Ghostty config text")
 
-    (helpers.assertTest "${prefix}-agent-skills-enabled"
-      (homePrograms.agent-skills.enable == true)
-      "${prefix} should enable agent-skills")
+      (helpers.assertTest "${prefix}-agent-skills-enabled"
+        (homePrograms.agent-skills.enable == true)
+        "${prefix} should enable agent-skills")
 
-    (helpers.assertTest "${prefix}-agent-skills-source-dotfiles-pi"
-      (homePrograms.agent-skills.sources ? dotfiles-pi)
-      "${prefix} should configure dotfiles-pi skill source")
+      (helpers.assertTest "${prefix}-agent-skills-source-dotfiles-pi"
+        (homePrograms.agent-skills.sources ? dotfiles-pi)
+        "${prefix} should configure dotfiles-pi skill source")
 
-    (helpers.assertTest "${prefix}-removes-lazygit"
-      (
-        let
-          cfg = homePrograms.agent-skills;
-          prune = homeActivation.claudePruneRemovedSkills.data;
-        in
-        !(cfg.sources ? dotfiles-claude)
-        && !(builtins.hasAttr "lazygit" cfg.skills.explicit)
-        && lib.hasInfix "lazygit" prune
-      )
-      "${prefix} should fully remove the lazygit skill: no dotfiles-claude source, no explicit entry, pruned from target dirs")
+      (helpers.assertTest "${prefix}-removes-lazygit"
+        (
+          let
+            cfg = homePrograms.agent-skills;
+            prune = homeActivation.claudePruneRemovedSkills.data;
+          in
+          !(cfg.sources ? dotfiles-claude)
+          && !(builtins.hasAttr "lazygit" cfg.skills.explicit)
+          && lib.hasInfix "lazygit" prune
+        )
+        "${prefix} should fully remove the lazygit skill: no dotfiles-claude source, no explicit entry, pruned from target dirs")
 
-    (helpers.assertTest "${prefix}-agent-skills-source-mp-productivity"
-      (homePrograms.agent-skills.sources ? mp-productivity)
-      "${prefix} should configure the Matt Pocock productivity skill source")
+      (helpers.assertTest "${prefix}-agent-skills-source-mp-productivity"
+        (homePrograms.agent-skills.sources ? mp-productivity)
+        "${prefix} should configure the Matt Pocock productivity skill source")
 
-    (helpers.assertTest "${prefix}-agent-skills-prefers-grill-with-docs"
-      (
-        let
-          enabled = homePrograms.agent-skills.skills.enable;
-          explicit = homePrograms.agent-skills.skills.explicit;
-        in
-        builtins.hasAttr "grill-with-docs" explicit
-        && !(builtins.elem "grill-me" enabled)
-        && !(builtins.hasAttr "grill-me" explicit)
-      )
-      "${prefix} should expose grill-with-docs explicitly but not the older grill-me skill")
+      (helpers.assertTest "${prefix}-agent-skills-prefers-grill-with-docs"
+        (
+          let
+            enabled = homePrograms.agent-skills.skills.enable;
+            explicit = homePrograms.agent-skills.skills.explicit;
+          in
+          builtins.hasAttr "grill-with-docs" explicit
+          && !(builtins.elem "grill-me" enabled)
+          && !(builtins.hasAttr "grill-me" explicit)
+        )
+        "${prefix} should expose grill-with-docs explicitly but not the older grill-me skill")
 
-    (helpers.assertTest "${prefix}-agent-skills-removes-git-workflow"
-      (
-        let cfg = homePrograms.agent-skills;
-        in
-        !(builtins.hasAttr "git-workflow" cfg.catalog)
-        && !(builtins.elem "git-workflow" cfg.skills.enable)
-        && !(builtins.hasAttr "git-workflow" cfg.skills.explicit)
-      )
-      "${prefix} should remove git-workflow from discovery and the active skill bundle")
+      (helpers.assertTest "${prefix}-agent-skills-removes-git-workflow"
+        (
+          let cfg = homePrograms.agent-skills;
+          in
+          !(builtins.hasAttr "git-workflow" cfg.catalog)
+          && !(builtins.elem "git-workflow" cfg.skills.enable)
+          && !(builtins.hasAttr "git-workflow" cfg.skills.explicit)
+        )
+        "${prefix} should remove git-workflow from discovery and the active skill bundle")
 
-    (helpers.assertTest "${prefix}-agent-skills-superpowers-brainstorming-only"
-      (homePrograms.agent-skills.sources.superpowers.filter.nameRegex == "^(brainstorming)$")
-      "${prefix} should not discover disabled superpowers workflow skills")
+      (helpers.assertTest "${prefix}-agent-skills-superpowers-brainstorming-only"
+        (homePrograms.agent-skills.sources.superpowers.filter.nameRegex == "^(brainstorming)$")
+        "${prefix} should not discover disabled superpowers workflow skills")
 
-    (helpers.assertTest "${prefix}-agent-skills-removed-prune-dry-run-safe"
-      (
-        let activation = homeActivation.claudePruneRemovedSkills.data;
-        in
-        lib.hasInfix "DRY_RUN" activation
-        && lib.hasInfix "git-workflow" activation
-        && !(lib.hasInfix "exit 0" activation)
-      )
-      "${prefix} should prune removed skills without mutating during Home Manager dry runs")
+      (helpers.assertTest "${prefix}-agent-skills-removed-prune-dry-run-safe"
+        (
+          let activation = homeActivation.claudePruneRemovedSkills.data;
+          in
+          lib.hasInfix "DRY_RUN" activation
+          && lib.hasInfix "git-workflow" activation
+          && !(lib.hasInfix "exit 0" activation)
+        )
+        "${prefix} should prune removed skills without mutating during Home Manager dry runs")
 
-    (helpers.assertTest "${prefix}-claude-refactor-code-simplifier-deduped"
-      (
-        let activation = homeActivation.claudeDisableRefactorPluginCodeSimplifier.data;
-        in
-        lib.hasInfix "frad-dotclaude/refactor" activation
-        && lib.hasInfix "code-simplifier.md" activation
-        && lib.hasInfix "agents-disabled" activation
-      )
-      "${prefix} should park the refactor plugin's duplicate code-simplifier agent, keeping the official one")
+      (helpers.assertTest "${prefix}-claude-refactor-code-simplifier-deduped"
+        (
+          let activation = homeActivation.claudeDisableRefactorPluginCodeSimplifier.data;
+          in
+          lib.hasInfix "frad-dotclaude/refactor" activation
+          && lib.hasInfix "code-simplifier.md" activation
+          && lib.hasInfix "agents-disabled" activation
+        )
+        "${prefix} should park the refactor plugin's duplicate code-simplifier agent, keeping the official one")
 
-    (helpers.assertTest "${prefix}-agent-skills-agents-target"
-      (homePrograms.agent-skills.targets.agents.enable == true)
-      "${prefix} should enable the shared agents skill target")
+      (helpers.assertTest "${prefix}-agent-skills-agents-target"
+        (homePrograms.agent-skills.targets.agents.enable == true)
+        "${prefix} should enable the shared agents skill target")
 
-    (helpers.assertTest "${prefix}-agent-skills-claude-target"
-      (homePrograms.agent-skills.targets.claude.enable == true)
-      "${prefix} should enable the Claude skill target")
+      (helpers.assertTest "${prefix}-agent-skills-claude-target"
+        (homePrograms.agent-skills.targets.claude.enable == true)
+        "${prefix} should enable the Claude skill target")
 
-    (helpers.assertTest "${prefix}-agent-skills-codex-target"
-      (homePrograms.agent-skills.targets.codex.enable == true)
-      "${prefix} should enable the Codex skill target")
+      (helpers.assertTest "${prefix}-agent-skills-codex-target"
+        (homePrograms.agent-skills.targets.codex.enable == true)
+        "${prefix} should enable the Codex skill target")
 
-    (helpers.assertTest "${prefix}-agent-skills-pi-target"
-      (homePrograms.agent-skills.targets.pi.dest == ".pi/agent/skills")
-      "${prefix} should configure the Oh My Pi skill target")
+      (helpers.assertTest "${prefix}-agent-skills-pi-target"
+        (homePrograms.agent-skills.targets.pi.dest == ".pi/agent/skills")
+        "${prefix} should configure the Oh My Pi skill target")
 
-    (helpers.assertTest "${prefix}-lsp-activation-dry-run-safe"
-      (
-        let
-          codex = homeActivation.codexLspConfig.data;
-          desktopOk =
-            if prefix == "darwin" then
-              let desktop = homeActivation.claudeDesktopMcpScaffold.data;
-              in
-              lib.hasInfix "DRY_RUN" desktop
-              && !(lib.hasInfix "exit 0" desktop)
-            else
-              !(homeActivation ? claudeDesktopMcpScaffold);
-        in
-        lib.hasInfix "DRY_RUN" codex
-        && !(lib.hasInfix "exit 0" codex)
-        && desktopOk
-      )
-      "${prefix} LSP activation scripts should respect Home Manager dry runs without exiting activation")
-  ];
+      (helpers.assertTest "${prefix}-lsp-activation-dry-run-safe"
+        (
+          let
+            codex = homeActivation.codexLspConfig.data;
+            desktopOk =
+              if prefix == "darwin" then
+                let desktop = homeActivation.claudeDesktopMcpScaffold.data;
+                in
+                lib.hasInfix "DRY_RUN" desktop
+                && !(lib.hasInfix "exit 0" desktop)
+              else
+                !(homeActivation ? claudeDesktopMcpScaffold);
+          in
+          lib.hasInfix "DRY_RUN" codex
+          && !(lib.hasInfix "exit 0" codex)
+          && desktopOk
+        )
+        "${prefix} LSP activation scripts should respect Home Manager dry runs without exiting activation")
+    ];
 
   darwinChecks = [
     (helpers.assertTest "darwin-f-evaluates"
@@ -515,7 +519,7 @@ let
   ++ (homeChecks "vm-aarch64-utm" vmHome "/home/${user}");
 
   selectedChecks = if selectedScope == "darwin" then darwinChecks else
-    if selectedScope == "nixos" then nixosChecks
-    else darwinChecks ++ nixosChecks;
+  if selectedScope == "nixos" then nixosChecks
+  else darwinChecks ++ nixosChecks;
 in
 helpers.testSuite "configurations-eval" selectedChecks

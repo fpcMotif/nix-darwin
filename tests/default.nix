@@ -24,17 +24,18 @@ in
   '';
 
   # Unit tests
-  unit-mksystem = callTest ./unit/mksystem-test.nix {};
-  unit-overlay = callTest ./unit/overlay-test.nix {};
-  unit-format = callTest ./unit/format-test.nix {};
+  unit-mksystem = callTest ./unit/mksystem-test.nix { };
+  unit-overlay = callTest ./unit/overlay-test.nix { };
+  unit-format = callTest ./unit/format-test.nix { };
 
   # Integration tests
   integration-configurations-eval =
     if pkgs.stdenv.isDarwin then
-      callTest ./integration/configurations-eval-test.nix {
-        evalScope = "darwin";
-        darwinConfigurationInput = self.darwinConfigurations."f";
-      }
+      callTest ./integration/configurations-eval-test.nix
+        {
+          evalScope = "darwin";
+          darwinConfigurationInput = self.darwinConfigurations."f";
+        }
     else
       callTest ./integration/configurations-eval-test.nix {
         evalScope = "nixos";
@@ -42,6 +43,21 @@ in
         x230ConfigurationInput = self.nixosConfigurations.x230;
         vmConfigurationInput = self.nixosConfigurations.vm-aarch64-utm;
       };
+
+  # Darwin-only: exact-value lock-in for the macOS settings host "f" commits to.
+  # macOS settings have no meaning on the NixOS hosts, so this is a no-op skip
+  # off-darwin (the CI matrix still runs it on its native macOS builder).
+  integration-darwin-settings =
+    if pkgs.stdenv.isDarwin then
+      callTest ./integration/darwin-settings-test.nix
+        {
+          darwinConfigurationInput = self.darwinConfigurations."f";
+        }
+    else
+      pkgs.runCommand "integration-darwin-settings-skipped" { } ''
+        echo "Skipping darwin-only macOS settings test on ${system}"
+        touch $out
+      '';
 
 
   # Smoke builds: verify these derivations actually build correctly.

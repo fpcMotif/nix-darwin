@@ -52,6 +52,12 @@ check:
         '.#checks.aarch64-darwin.unit-overlay' \
         '.#checks.aarch64-darwin.integration-configurations-eval'
 
+# Tier 2: read back the LIVE macOS state and confirm it matches what the
+# config declares. Run after `just switch`. Non-hermetic, so it is NOT part of
+# `nix flake check` (which only proves the config declares the right values).
+verify-macos: _no-sudo
+    bash scripts/verify-macos-settings.sh
+
 # Garbage-collect old generations older than 30 days.
 gc:
     sudo nix-collect-garbage --delete-older-than 30d

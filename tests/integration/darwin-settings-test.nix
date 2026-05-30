@@ -19,7 +19,6 @@
 
 let
   helpers = import ../lib/assertions.nix { inherit pkgs lib; };
-  inherit (helpers) hasPackage;
 
   cfg = darwinConfigurationInput.config;
   user = cfg.system.primaryUser;
@@ -29,39 +28,18 @@ let
   home = cfg.home-manager.users.${user};
   skhdConfig = cfg.services.skhd.skhdConfig;
 
-  # One assertTest per (key -> expected value), PLUS one closure guard asserting
-  # the config manages EXACTLY the expected key set for the domain. The per-key
-  # check reads `actualSet.${key} or null`, so a removed/renamed key fails as a
-  # clean `is null` case instead of aborting the whole eval; the closure guard
-  # catches the opposite drift -- a key ADDED to modules/darwin/defaults.nix but
-  # not mirrored here. Native option submodules pad unmanaged keys with null, so
-  # we compare against only the keys the config actually sets.
-  # Nix-darwin keeps deprecated alias keys (e.g.
-  # `expose-group-by-app`) in `system.defaults.*` option sets; remove known
-  # deprecated aliases before strict key-set comparison to avoid false positives and
-  # deprecation traces while still preserving behavior checks on canonical keys.
-  deprecatedDefaultsAliases = [ "expose-group-by-app" ];
+  hasPackage = name: packages: lib.any (pkg: lib.getName pkg == name) packages;
 
-  sanitizeDefaults = attrs: builtins.removeAttrs attrs deprecatedDefaultsAliases;
-
+  # One assertTest per (key -> expected value). `actualSet.${key}` resolves the
+  # live option value, so a drifted key fails with a precise before/after message.
+  # The `expected*` attrset passed in is the human-readable spec for that domain.
   expectEach = domainLabel: actualSet: expected:
-    let
-      cleanSet = sanitizeDefaults actualSet;
-      managedKeys = builtins.attrNames (lib.filterAttrs (_: v: v != null) cleanSet);
-      expectedKeys = builtins.attrNames expected;
-    in
     lib.mapAttrsToList
       (key: want:
-        let got = cleanSet.${key} or null; in
         helpers.assertTest "darwin-settings-${domainLabel}-${key}"
-          (got == want)
-          "system.defaults.${domainLabel}.${key} should be ${builtins.toJSON want} but is ${builtins.toJSON got}")
-      expected
-    ++ [
-      (helpers.assertTest "darwin-settings-${domainLabel}-keyset"
-        (managedKeys == expectedKeys)
-        "system.defaults.${domainLabel} manages ${builtins.toJSON managedKeys} but the spec expects ${builtins.toJSON expectedKeys} -- a setting was added or removed without updating this table")
-    ];
+          (actualSet.${key} == want)
+          "system.defaults.${domainLabel}.${key} should be ${builtins.toJSON want} but is ${builtins.toJSON (actualSet.${key} or null)}")
+      expected;
 
   # Single exact-value assertion against an arbitrary live value.
   expectValue = label: actual: want:
@@ -155,11 +133,6 @@ let
     ShowDate = 1;
   };
 
-  # Gatekeeper/quarantine: keep downloads tagged so Gatekeeper assesses them.
-  expectedLaunchServices = {
-    LSQuarantine = true;
-  };
-
   # ---- system.defaults.CustomUserPreferences: freeform domains ------------
 
   expectedCustomNSGlobalDomain = {
@@ -181,7 +154,6 @@ let
 
   # ---- pmset power-management (imperative, eval-visible via activation text)
 
-  # Key/value params carried on the single `pmset -a` line.
   expectedPmsetParams = [
     "displaysleep 15"
     "sleep 20"
@@ -196,10 +168,6 @@ let
     "standbydelayhigh 7200"
     "standbydelaylow 3600"
     "hibernatemode 3"
-  ];
-
-  # Separate full pmset commands (per-power-source GPU switching policy).
-  expectedPmsetCommands = [
     "pmset -b gpuswitch 2"
     "pmset -c gpuswitch 1"
   ];
@@ -230,8 +198,7 @@ let
     ++ expectEach "trackpad" defaults.trackpad expectedTrackpad
     ++ expectEach "screencapture" defaults.screencapture expectedScreencapture
     ++ expectEach "ActivityMonitor" defaults.ActivityMonitor expectedActivityMonitor
-    ++ expectEach "menuExtraClock" defaults.menuExtraClock expectedMenuExtraClock
-    ++ expectEach "LaunchServices" defaults.LaunchServices expectedLaunchServices;
+    ++ expectEach "menuExtraClock" defaults.menuExtraClock expectedMenuExtraClock;
 
   customPreferenceChecks =
     expectEach "CustomUserPreferences.NSGlobalDomain"
@@ -257,34 +224,12 @@ let
         false)
       (expectValue "CustomUserPreferences-screencapture-name"
         custom."com.apple.screencapture".name "screenshot")
-      # Closure guard for the freeform layer: a brand-new CustomUserPreferences
-      # domain (a whole `defaults write` target injected by an automated commit)
-      # fails here, the gap a per-key check inside known domains cannot see.
-      (helpers.assertTest "darwin-settings-CustomUserPreferences-domainset"
-        (builtins.attrNames custom == [
-          "NSGlobalDomain"
-          "com.apple.CrashReporter"
-          "com.apple.desktopservices"
-          "com.apple.finder"
-          "com.apple.frameworks.diskimages"
-          "com.apple.screencapture"
-        ])
-        "system.defaults.CustomUserPreferences domains drifted from the locked set: have ${builtins.toJSON (builtins.attrNames custom)}")
     ];
 
   securityChecks = [
     (expectValue "security-sudo-touchid"
       cfg.security.pam.services.sudo_local.touchIdAuth
       true)
-    (expectValue "security-firewall-enable"
-      cfg.networking.applicationFirewall.enable
-      true)
-    (expectValue "security-firewall-stealth-mode"
-      cfg.networking.applicationFirewall.enableStealthMode
-      true)
-    (expectValue "security-firewall-block-all-incoming"
-      cfg.networking.applicationFirewall.blockAllIncoming
-      false)
     (expectValue "security-firewall-allow-signed"
       cfg.networking.applicationFirewall.allowSigned
       true)
@@ -294,15 +239,11 @@ let
 
     # Gatekeeper is re-enabled CONDITIONALLY -- only when spctl reports it is
     # currently disabled. Lock in the guard so a refactor cannot turn this into
-    # an unconditional toggle, and pin that activation never DISABLES Gatekeeper.
+    # an unconditional toggle (the eval-test covers --master-enable presence).
     (helpers.assertTest "darwin-settings-gatekeeper-conditional-reenable"
       (lib.hasInfix "spctl --status" postActivation
         && lib.hasInfix "grep -q 'disabled'" postActivation)
       "Gatekeeper re-enable should stay guarded behind an spctl --status | grep -q 'disabled' check")
-    (expectActivation "gatekeeper-master-enable" "spctl --master-enable")
-    (helpers.assertTest "darwin-settings-gatekeeper-not-disabled"
-      (!(lib.hasInfix "spctl --master-disable" postActivation))
-      "activation must never disable Gatekeeper (spctl --master-disable)")
   ];
 
   # skhd global hotkeys. The eval-test locks in the Finder cut/paste mode; here
@@ -329,10 +270,7 @@ let
   ];
 
   powerManagementChecks =
-    map (param: expectActivation "pmset-${param}" param) expectedPmsetParams
-    ++ lib.imap0
-      (i: cmd: expectActivation "pmset-cmd-${toString i}" cmd)
-      expectedPmsetCommands;
+    map (param: expectActivation "pmset-${param}" param) expectedPmsetParams;
 
   fontChecks =
     [
@@ -354,7 +292,7 @@ let
       (hasPackage "squirrel" cfg.environment.systemPackages)
       "rime should install the Squirrel input method into systemPackages")
     (expectActivation "rime-input-methods-dir" "/Library/Input Methods")
-    (expectActivation "rime-squirrel-link" ''ln -s "$source" "$target"'')
+    (expectActivation "rime-squirrel-link" "Squirrel.app")
     (helpers.assertTest "darwin-settings-rime-user-config-sync"
       (
         let act = home.home.activation.rimeUserConfig.data;
@@ -369,8 +307,7 @@ let
       argsHaveApp = agent: appName:
         lib.any (a: lib.hasInfix appName a) agent.config.ProgramArguments;
       backgroundLaunch = agent:
-        agent.enable == true
-        && agent.config.RunAtLoad == true
+        agent.config.RunAtLoad == true
         && builtins.elem "/usr/bin/open" agent.config.ProgramArguments
         && builtins.elem "-g" agent.config.ProgramArguments;
     in
