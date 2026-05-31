@@ -19,10 +19,23 @@ src_url="https://github.com/tw93/Mole/archive/refs/tags/V${latest}.tar.gz"
 analyze_url="https://github.com/tw93/Mole/releases/download/V${latest}/analyze-darwin-arm64"
 status_url="https://github.com/tw93/Mole/releases/download/V${latest}/status-darwin-arm64"
 
+# Prefetch hashes concurrently
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+pids=()
+
+(au_prefetch_unpacked_sri "$src_url" > "$work/src") & pids+=($!)
+(au_prefetch_sri "$analyze_url" > "$work/analyze") & pids+=($!)
+(au_prefetch_sri "$status_url" > "$work/status") & pids+=($!)
+
+for pid in "${pids[@]}"; do
+  wait "$pid"
+done
+
 # src uses fetchzip → unpacked hash.
-au_set_block_hash "$FILE" "tags/V\${version}.tar.gz" "$(au_prefetch_unpacked_sri "$src_url")"
-au_set_block_hash "$FILE" "/analyze-darwin-arm64"   "$(au_prefetch_sri        "$analyze_url")"
-au_set_block_hash "$FILE" "/status-darwin-arm64"    "$(au_prefetch_sri        "$status_url")"
+au_set_block_hash "$FILE" "tags/V\${version}.tar.gz" "$(cat "$work/src")"
+au_set_block_hash "$FILE" "/analyze-darwin-arm64"   "$(cat "$work/analyze")"
+au_set_block_hash "$FILE" "/status-darwin-arm64"    "$(cat "$work/status")"
 
 au_build .#martin.mole
 echo "mole bumped to $latest"
