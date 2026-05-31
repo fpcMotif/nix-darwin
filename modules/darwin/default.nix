@@ -19,6 +19,7 @@
     ./shell.nix
     ./skhd.nix
     ./spotlight.nix
+    ./zed.nix
   ];
 
 }

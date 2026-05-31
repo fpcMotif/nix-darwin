@@ -20,7 +20,7 @@
     };
 
     nixos-wsl = {
-      url = "git+https://github.com/nix-community/NixOS-WSL.git?ref=main";
+      url = "github:nix-community/NixOS-WSL/main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -30,7 +30,7 @@
     };
 
     agent-skills = {
-      url = "git+https://github.com/Kyure-A/agent-skills-nix.git?ref=master";
+      url = "github:Kyure-A/agent-skills-nix/master";
       inputs.home-manager.follows = "home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -41,17 +41,17 @@
     };
 
     mattpocock-skills = {
-      url = "git+https://github.com/mattpocock/skills.git?ref=main";
+      url = "github:mattpocock/skills/main";
       flake = false;
     };
 
     effect-ts-skills = {
-      url = "git+https://github.com/Effect-TS/skills.git?ref=main";
+      url = "github:Effect-TS/skills/main";
       flake = false;
     };
 
     superpowers = {
-      url = "git+https://github.com/obra/superpowers.git?ref=main";
+      url = "github:obra/superpowers/main";
       flake = false;
     };
   };
