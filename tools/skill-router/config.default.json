@@ -1,0 +1,67 @@
+{
+  "scopes": {
+    "repo": {
+      "precedence": 4,
+      "dirs": [
+        ".cursor/skills",
+        ".claude/skills",
+        ".agents/skills",
+        ".codex/skills",
+        ".crush/skills",
+        ".factory/skills",
+        ".opencode/skills",
+        ".agent/skills",
+        "skills",
+        "modules/home/skills"
+      ]
+    },
+    "workspace": {
+      "precedence": 3,
+      "dirs": [
+        ".cursor/skills",
+        ".claude/skills",
+        ".agents/skills",
+        ".codex/skills",
+        ".crush/skills",
+        ".factory/skills",
+        ".opencode/skills",
+        ".agent/skills"
+      ]
+    },
+    "user": {
+      "precedence": 2,
+      "dirs": [
+        "${HOME}/.cursor/skills",
+        "${HOME}/.claude/skills",
+        "${HOME}/.codex/skills",
+        "${HOME}/.config/agents/skills",
+        "${HOME}/.agents/skills",
+        "${HOME}/.pi/agent/skills",
+        "${HOME}/.config/crush/skills",
+        "${HOME}/.config/opencode/skills",
+        "${HOME}/.factory/skills"
+      ],
+      "exclude": ["skills-cursor"]
+    },
+    "package": {
+      "precedence": 1,
+      "provider": "intent"
+    }
+  },
+  "agents": {
+    "cursor": { "dir": "${HOME}/.cursor/skills", "mode": "filesystem" },
+    "claude": { "dir": "${HOME}/.claude/skills", "mode": "filesystem" },
+    "codex": { "dir": "${HOME}/.codex/skills", "mode": "filesystem" },
+    "xdg-agents": { "dir": "${HOME}/.config/agents/skills", "mode": "filesystem" },
+    "agents": { "dir": "${HOME}/.agents/skills", "mode": "filesystem" },
+    "crush": { "dir": "${HOME}/.config/crush/skills", "mode": "filesystem" },
+    "factory": { "dir": "${HOME}/.factory/skills", "mode": "filesystem" },
+    "opencode": { "dir": "${HOME}/.config/opencode/skills", "mode": "filesystem" },
+    "pi": { "dir": "${HOME}/.pi/agent/skills", "mode": "filesystem" }
+  },
+  "catalog": {
+    "maxEntries": 48,
+    "maxDescriptionChars": 220,
+    "intentRunner": "bunx @tanstack/intent@latest"
+  }
+}
