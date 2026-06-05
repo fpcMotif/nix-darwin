@@ -7,8 +7,9 @@
     "skill-router": "./src/cli.ts"
   },
   "scripts": {
-    "start": "bun run src/cli.ts",
-    "check": "bunx tsc --noEmit"
+    "start": "bun src/cli.ts",
+    "check": "bunx tsc --noEmit",
+    "test": "bun test"
   },
   "devDependencies": {
     "@types/bun": "latest",

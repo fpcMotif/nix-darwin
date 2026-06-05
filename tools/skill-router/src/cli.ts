@@ -9,7 +9,7 @@ const USAGE = `skill-router - unified agent skill discovery and loading
 
 Usage:
   skill-router discover [--json] [--cwd <path>] [--package | --no-package]
-  skill-router catalog [--map] [--format compact|agents|intent|all] [--cwd <path>]
+  skill-router catalog [--map] [--format compact|agents|intent|all] [--package | --no-package] [--cwd <path>]
   skill-router load <id> [--path] [--cwd <path>]
   skill-router sync [--agent <name>] [--scope repo,workspace] [--dry-run] [--cwd <path>]
   skill-router install-agents [--map] [--dry-run] [--target <AGENTS.md>] [--cwd <path>]
@@ -21,9 +21,10 @@ Identity formats:
 
 Precedence: repo > workspace > user > package
 
-Package scope (TanStack Intent) is opt-in and dormant by default — pass
---package to query installed intent-enabled npm packages via the pinned
-\`bunx @tanstack/intent\` runner.
+Package scope (TanStack Intent) is opt-in and dormant by default. Pass
+--package to discover or catalog installed intent-enabled npm packages via
+the pinned \`bunx @tanstack/intent\` runner, or load a package skill directly
+with \`skill-router load @pkg#skill\`.
 `;
 
 function parseArgs(argv: string[]) {
@@ -85,6 +86,7 @@ async function main() {
       const { text, skills } = await buildCatalog(cwd, {
         map: !!flags.map,
         format: (flags.format as "compact" | "agents" | "intent" | "all" | undefined) ?? "all",
+        includePackage: flags.package === true ? true : flags.noPackage === true ? false : undefined,
       });
       console.log(text);
       if (!flags.json) {

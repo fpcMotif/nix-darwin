@@ -36,7 +36,7 @@ ${entries}
 </available_skills>`;
 }
 
-export function renderIntentBlock(map = false): string {
+export function renderIntentBlock(map = false, intentRunner = "bunx @tanstack/intent"): string {
   const mapLines = map
     ? `- Task mappings: run \`skill-router catalog --map\` for explicit task-to-skill pairs when a repo opts in.`
     : "";
@@ -45,7 +45,7 @@ export function renderIntentBlock(map = false): string {
 ## Skill Loading
 
 Keep startup skill context near-zero. Discover/load only on demand:
-\`skill-router discover --json\`; \`skill-router load scope:id\`; packages: \`bunx @tanstack/intent@latest list|load @pkg#name\`.
+\`skill-router discover --json\`; \`skill-router load scope:id\`; packages: \`${intentRunner} list|load @pkg#name\`.
 Load 1-2 matching SKILL.md files max. Scope order: repo > workspace > user > package.
 ${mapLines}
 <!-- intent-skills:end -->`;
@@ -63,14 +63,17 @@ export function renderMapTable(skills: SkillRecord[]): string {
 ${rows}`;
 }
 
-export async function buildCatalog(cwd: string, opts: { map?: boolean; format?: "compact" | "agents" | "intent" | "all" }) {
+export async function buildCatalog(
+  cwd: string,
+  opts: { map?: boolean; format?: "compact" | "agents" | "intent" | "all"; includePackage?: boolean },
+) {
   const config = await loadConfig();
-  const skills = await discoverSkills({ cwd, includePackage: true });
+  const skills = await discoverSkills({ cwd, includePackage: opts.includePackage ?? false });
   const format = opts.format ?? "all";
 
   const parts: string[] = [];
   if (format === "intent" || format === "compact" || format === "all") {
-    parts.push(renderIntentBlock(opts.map));
+    parts.push(renderIntentBlock(opts.map, config.catalog.intentRunner));
   }
   if (format === "agents" || format === "all") {
     parts.push(renderAgentsBlock(skills, config.catalog.maxEntries, config.catalog.maxDescriptionChars));

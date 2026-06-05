@@ -1,5 +1,5 @@
-import { discoverIntentSkills, loadIntentSkill } from "./discover-intent.ts";
-import { discoverSkills, resolveSkill } from "./discover.ts";
+import { loadIntentSkill } from "./discover-intent.ts";
+import { discoverAllSkills, discoverSkills, resolveSkill } from "./discover.ts";
 import { loadConfig } from "./config.ts";
 
 export async function loadSkill(cwd: string, query: string): Promise<{ content: string; path: string; source: string } | null> {
@@ -11,7 +11,10 @@ export async function loadSkill(cwd: string, query: string): Promise<{ content: 
     return { ...loaded, source: "intent" };
   }
 
-  const skills = await discoverSkills({ cwd, includePackage: true });
+  const localOptions = { cwd, includePackage: false };
+  const skills = query.includes(":")
+    ? await discoverAllSkills(localOptions)
+    : await discoverSkills(localOptions);
   const match = resolveSkill(skills, query);
   if (!match?.path) return null;
 

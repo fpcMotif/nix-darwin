@@ -182,6 +182,16 @@ let
         (homePrograms.agent-skills.sources.superpowers.filter.nameRegex == "^(brainstorming)$")
         "${prefix} should not discover disabled superpowers workflow skills")
 
+      (helpers.assertTest "${prefix}-agent-skills-effect-ts-devshell-scoped"
+        (
+          let cfg = homePrograms.agent-skills;
+          in
+          !(builtins.elem "effect-ts" cfg.skills.enableAll)
+          && !(builtins.elem "effect-ts" cfg.skills.enable)
+          && !(builtins.hasAttr "effect-ts" cfg.skills.explicit)
+        )
+        "${prefix} should not globally bundle effect-ts — it is per-project devShell-scoped (templates/effect-skills)")
+
       (helpers.assertTest "${prefix}-agent-skills-removed-prune-dry-run-safe"
         (
           let activation = homeActivation.claudePruneRemovedSkills.data;
@@ -247,9 +257,9 @@ let
         (hasHomePackage "skill-router")
         "${prefix} should install the skill-router CLI")
 
-      (helpers.assertTest "${prefix}-skill-router-config-provisioned"
-        (homeData.file ? ".config/skill-router/config.json")
-        "${prefix} should provision the skill-router default config")
+      (helpers.assertTest "${prefix}-skill-router-config-not-managed"
+        (!(homeData.file ? ".config/skill-router/config.json"))
+        "${prefix} should leave skill-router config.json user-owned; the CLI bundles its default config")
 
       (helpers.assertTest "${prefix}-lsp-activation-dry-run-safe"
         (

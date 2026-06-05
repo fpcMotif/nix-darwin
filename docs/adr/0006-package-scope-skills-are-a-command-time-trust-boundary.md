@@ -24,6 +24,6 @@ A fixed-output derivation that pre-populates the Intent tarball into the bun cac
 
 ## Consequences
 
-- The pinned runner + `packageScope: false` default live in `tools/skill-router/config.default.json`; `discover.ts` reads the config default and honours the `--package` / `--no-package` overrides.
+- The pinned runner + `packageScope: false` default live in `tools/skill-router/config.default.json`; `discover.ts` reads the config default and honours the `--package` / `--no-package` overrides. `catalog`, `install-agents`, and local `load scope:id` stay local-only unless the user explicitly requests package scope (`catalog --package`) or loads a package ID (`load @pkg#skill`).
 - Anything on the rebuild path (an activation script, a build input) that depends on the package scope is a regression — as is flipping `packageScope` to `true` by default or wiring an activation-time `bunx intent` call. Those re-cross the boundary this ADR draws.
 - Per-project adoption, when a library ships intent skills, is a writable-`AGENTS.md` edit in that repo (`bunx @tanstack/intent@0.0.41 install`, never `--map`), not a change to the Nix-governed global config.

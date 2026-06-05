@@ -9,7 +9,7 @@ function rooted(root: string, path: string): string {
   return isAbsolute(path) ? path : join(root, path);
 }
 
-export async function discoverSkills(options: DiscoverOptions): Promise<SkillRecord[]> {
+export async function discoverAllSkills(options: DiscoverOptions): Promise<SkillRecord[]> {
   const config = await loadConfig();
   const cwd = options.cwd;
   const gitRoot = await findGitRoot(cwd);
@@ -54,8 +54,18 @@ export async function discoverSkills(options: DiscoverOptions): Promise<SkillRec
     );
   }
 
-  const merged = new Map<string, SkillRecord>();
   const sorted = batches.flat().sort((a, b) => b.precedence - a.precedence);
+
+  return sorted.sort((a, b) => {
+    const id = a.id.localeCompare(b.id);
+    if (id !== 0) return id;
+    return b.precedence - a.precedence;
+  });
+}
+
+export async function discoverSkills(options: DiscoverOptions): Promise<SkillRecord[]> {
+  const sorted = await discoverAllSkills(options);
+  const merged = new Map<string, SkillRecord>();
 
   for (const skill of sorted) {
     if (!merged.has(skill.id)) {

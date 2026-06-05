@@ -18,6 +18,17 @@ function removeMarkedBlock(content: string, start: string, end: string): string 
   return content.replace(pattern, "\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
 }
 
+function markedInner(content: string, start: string, end: string): string {
+  const startAt = content.indexOf(start);
+  const endAt = content.indexOf(end);
+  if (startAt === -1 || endAt === -1 || endAt < startAt) return content.trim();
+  return content.slice(startAt + start.length, endAt).trim();
+}
+
+function removeLegacyAvailableSkills(content: string): string {
+  return content.replace(/<available_skills>[\s\S]*?<\/available_skills>\s*/g, "");
+}
+
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -27,29 +38,22 @@ export async function installAgentsMd(
   targetPath: string,
   opts: { map?: boolean; dryRun?: boolean },
 ): Promise<{ path: string; text: string; wrote: boolean }> {
-  const { text: catalogText } = await buildCatalog(cwd, { map: opts.map, format: "compact" });
-  const splitAt = catalogText.indexOf("<available_skills>");
-  const intentText = splitAt === -1 ? catalogText : catalogText.slice(0, splitAt);
-  const intentInner = intentText.replace(INTENT_START, "").replace(INTENT_END, "").trim();
-  const agentsInner = splitAt === -1 ? "" : catalogText.slice(splitAt).trim();
+  const { text: intentText } = await buildCatalog(cwd, {
+    map: opts.map,
+    format: "compact",
+    includePackage: false,
+  });
+  const intentInner = markedInner(intentText, INTENT_START, INTENT_END);
 
   const file = Bun.file(targetPath);
   const exists = await file.exists();
   let content = exists ? await file.text() : "# AGENTS.md\n";
 
   content = replaceMarkedBlock(content, INTENT_START, INTENT_END, intentInner);
-  if (agentsInner) {
-    content = replaceMarkedBlock(content, MARKER_START, MARKER_END, agentsInner);
-  } else {
-    content = removeMarkedBlock(content, MARKER_START, MARKER_END);
-  }
+  content = removeMarkedBlock(content, MARKER_START, MARKER_END);
 
   // Drop legacy flat <available_skills> blocks outside skill-router markers.
-  if (content.includes(MARKER_START)) {
-    const parts = content.split(MARKER_START);
-    const head = parts[0].replace(/<available_skills>[\s\S]*?<\/available_skills>\s*/g, "");
-    content = head + MARKER_START + parts.slice(1).join(MARKER_START);
-  }
+  content = removeLegacyAvailableSkills(content);
 
   if (!opts.dryRun) {
     await Bun.write(targetPath, content);
