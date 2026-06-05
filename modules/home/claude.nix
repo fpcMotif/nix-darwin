@@ -335,9 +335,12 @@ let
   '';
 
   # Effect-TS/skills. Upstream publishes flat under `skills/<name>/SKILL.md`
-  # (currently just `effect-ts`); any sibling added later auto-loads on
-  # `nix flake update effect-ts-skills`. Replaces `bunx skills add Effect-TS/skills`
-  # so Nix stays the single source of truth — no runtime mutation of ~/.claude/skills.
+  # (currently just `effect-ts`). This source stays DEFINED but is no longer
+  # globally enabled (see `enableAll = [ ]` below) — effect-ts is dependency-
+  # conditional, so it is per-project devShell-scoped via
+  # templates/effect-skills/devshell.flake.nix instead of fanned into every
+  # repo's picker dirs. Keeping the source here documents the pin and makes a
+  # global re-enable a one-line change.
   effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 
   # obra/superpowers (the original; flat `skills/<name>/SKILL.md`). Only
@@ -602,7 +605,15 @@ in
 
     skills = {
       enable = enabledMattpocockSkills ++ enabledSuperpowersSkills ++ enabledInProgressSkills;
-      enableAll = builtins.attrNames effectSources;
+      # effect-ts is no longer globally bundled. It was the one bundled skill
+      # that is genuinely dependency-conditional: pure router noise in every
+      # non-Effect repo, and version-blind vs the repo's installed `effect` in
+      # Effect repos. It is now PER-PROJECT devShell-scoped — `nix develop` an
+      # Effect repo that ships templates/effect-skills/devshell.flake.nix and a
+      # copy-tree shellHook materialises effect-ts into that repo's
+      # .claude/.agents picker dirs only. effectSources stays defined (above)
+      # for reuse / trivial re-enable: `enableAll = builtins.attrNames effectSources;`.
+      enableAll = [ ];
       explicit = {
         # Skills that need CLI deps symlinked into the bundle dir.
         # mattpocock skills inherit from user PATH (git/gh/jq/bun globally).
