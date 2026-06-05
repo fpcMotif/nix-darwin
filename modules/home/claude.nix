@@ -145,7 +145,8 @@ let
   # the same /nix/store/...-agent-skills-bundle/<skill>/SKILL.md. Pi's
   # loader de-duplicates discovered skills by realpath, so identical
   # store paths collapse silently across ~/.claude/skills,
-  # ~/.pi/agent/skills, ~/.cursor/skills, ~/.codex/skills, ~/.agents/skills.
+  # ~/.pi/agent/skills, ~/.cursor/skills, ~/.codex/skills, ~/.agents/skills,
+  # and the native targets for Factory/Droid, OpenCode, and Crush.
   linkTarget = dest: { enable = true; inherit dest; structure = "link"; systems = [ ]; };
 
   # Skill picker target dirs. Used both by `programs.agent-skills.targets`
@@ -156,6 +157,10 @@ let
     claude = ".claude/skills";
     cursor = ".cursor/skills";
     codex = ".codex/skills";
+    xdg-agents = ".config/agents/skills";
+    crush = ".config/crush/skills";
+    factory = ".factory/skills";
+    opencode = ".config/opencode/skills";
     pi = ".pi/agent/skills";
   };
   # The same dirs as a quoted, absolute, space-separated shell list, for the
@@ -234,9 +239,19 @@ let
   # code-context plugin's deepwiki + exa MCP servers are moved to per-project
   # opt-in (templates/mcp/code-context.mcp.json, docs/adr/0003). claude.ai
   # connectors are account-side and unaffected.
+  #
+  # gitflow + git extend the bundle's removedSkillIds intent to the plugin
+  # surface: removedSkillIds drops git-workflow/lazygit from the curated
+  # bundle, but those removals never reached the equivalent plugin skills.
+  # gitflow ships 6 git-flow automation skills (start/finish-{feature,hotfix,
+  # release}); git ships commit/commit-and-push/config-git/update-gitignore,
+  # which overlap the /lazygit workflow. Disabling both flips their ~10 skills
+  # out of Claude Code's always-on startup catalog via the same lever.
   disabledClaudePlugins = [
     "context7@claude-plugins-official"
     "code-context@frad-dotclaude"
+    "gitflow@frad-dotclaude"
+    "git@frad-dotclaude"
   ];
   # NOT disabled — still enabled, just sourced via skills.explicit below so a
   # Karpathy `transform` can be attached. They only leave bucket auto-discovery
