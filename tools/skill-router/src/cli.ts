@@ -8,7 +8,7 @@ import { syncAgents } from "./sync.ts";
 const USAGE = `skill-router - unified agent skill discovery and loading
 
 Usage:
-  skill-router discover [--json] [--cwd <path>] [--no-package]
+  skill-router discover [--json] [--cwd <path>] [--package | --no-package]
   skill-router catalog [--map] [--format compact|agents|intent|all] [--cwd <path>]
   skill-router load <id> [--path] [--cwd <path>]
   skill-router sync [--agent <name>] [--scope repo,workspace] [--dry-run] [--cwd <path>]
@@ -20,6 +20,10 @@ Identity formats:
   @tanstack/query#core   package skill via TanStack Intent
 
 Precedence: repo > workspace > user > package
+
+Package scope (TanStack Intent) is opt-in and dormant by default — pass
+--package to query installed intent-enabled npm packages via the pinned
+\`bunx @tanstack/intent\` runner.
 `;
 
 function parseArgs(argv: string[]) {
@@ -33,6 +37,7 @@ function parseArgs(argv: string[]) {
     else if (arg === "--map") flags.map = true;
     else if (arg === "--dry-run") flags.dryRun = true;
     else if (arg === "--no-package") flags.noPackage = true;
+    else if (arg === "--package") flags.package = true;
     else if (arg === "--path") flags.path = true;
     else if (arg === "--cwd") flags.cwd = args.shift() ?? process.cwd();
     else if (arg === "--format") flags.format = args.shift() ?? "all";
@@ -58,7 +63,9 @@ async function main() {
     case "discover": {
       const skills = await discoverSkills({
         cwd,
-        includePackage: !flags.noPackage,
+        // Opt-in: --package forces the TanStack Intent scope on, --no-package
+        // forces it off, neither defers to config.catalog.packageScope (false).
+        includePackage: flags.package === true ? true : flags.noPackage === true ? false : undefined,
       });
       if (flags.json) {
         console.log(JSON.stringify(skills.map((s) => ({ ...s, logical: toLogicalId(s) })), null, 2));

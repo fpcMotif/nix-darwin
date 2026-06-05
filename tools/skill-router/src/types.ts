@@ -30,6 +30,10 @@ export type RouterConfig = {
     maxEntries: number;
     maxDescriptionChars: number;
     intentRunner: string;
+    // Package scope (TanStack Intent) is opt-in. When false (default) the
+    // intentRunner is never spawned unless a caller passes includePackage:true
+    // (CLI `--package`), keeping discovery local-only and off the network.
+    packageScope?: boolean;
   };
 };
 

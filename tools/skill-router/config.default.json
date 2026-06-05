@@ -62,6 +62,7 @@
   "catalog": {
     "maxEntries": 48,
     "maxDescriptionChars": 220,
-    "intentRunner": "bunx @tanstack/intent@latest"
+    "intentRunner": "bunx @tanstack/intent@0.0.41",
+    "packageScope": false
   }
 }

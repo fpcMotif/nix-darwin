@@ -38,7 +38,12 @@ export async function discoverSkills(options: DiscoverOptions): Promise<SkillRec
     ),
   );
 
-  if (options.includePackage !== false) {
+  // Package scope (TanStack Intent) is opt-in and dormant by default: a caller
+  // must explicitly pass includePackage (CLI `--package`), otherwise fall back
+  // to config.catalog.packageScope (false). This keeps the common discover path
+  // local-only — no `bunx @tanstack/intent` subprocess / network on every run.
+  const includePackage = options.includePackage ?? config.catalog.packageScope ?? false;
+  if (includePackage) {
     batches.push(
       await discoverIntentSkills(
         cwd,
