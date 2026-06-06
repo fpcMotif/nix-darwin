@@ -1,6 +1,6 @@
-import { loadConfig } from "./config.ts";
+import { resolveContext } from "./config.ts";
 import { discoverSkills, toLogicalId } from "./discover.ts";
-import type { SkillRecord } from "./types.ts";
+import type { RouterContext, SkillRecord } from "./types.ts";
 
 function trimDescription(text: string, max: number): string {
   const oneLine = text.replace(/\s+/g, " ").trim();
@@ -65,10 +65,16 @@ ${rows}`;
 
 export async function buildCatalog(
   cwd: string,
-  opts: { map?: boolean; format?: "compact" | "agents" | "intent" | "all"; includePackage?: boolean },
+  opts: {
+    map?: boolean;
+    format?: "compact" | "agents" | "intent" | "all";
+    includePackage?: boolean;
+    ctx?: RouterContext;
+  },
 ) {
-  const config = await loadConfig();
-  const skills = await discoverSkills({ cwd, includePackage: opts.includePackage ?? false });
+  const ctx = opts.ctx ?? (await resolveContext());
+  const { config } = ctx;
+  const skills = await discoverSkills({ cwd, includePackage: opts.includePackage ?? false, ctx });
   const format = opts.format ?? "all";
 
   const parts: string[] = [];

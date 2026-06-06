@@ -1,7 +1,9 @@
 import { join } from "node:path";
-import type { AgentConfig, RouterConfig, ScopeConfig } from "./types.ts";
+import { bunCommandRunner } from "./command-runner.ts";
+import { bunReadText } from "./file-reader.ts";
+import type { AgentConfig, RouterConfig, RouterContext, RouterRuntime, ScopeConfig } from "./types.ts";
 
-const DEFAULT_CONFIG_PATH = join(import.meta.dir, "..", "config.default.json");
+export const DEFAULT_CONFIG_PATH = join(import.meta.dir, "..", "config.default.json");
 
 type Env = Record<string, string | undefined>;
 type UserRouterConfig = {
@@ -9,6 +11,18 @@ type UserRouterConfig = {
   agents?: Record<string, Partial<AgentConfig>>;
   catalog?: Partial<RouterConfig["catalog"]>;
 };
+
+export function defaultRuntime(overrides: Partial<RouterRuntime> = {}): RouterRuntime {
+  const runtime: RouterRuntime = {
+    run: bunCommandRunner,
+    readText: bunReadText,
+    env: process.env,
+  };
+  for (const [key, value] of Object.entries(overrides) as Array<[keyof RouterRuntime, RouterRuntime[keyof RouterRuntime]]>) {
+    if (value !== undefined) Object.assign(runtime, { [key]: value });
+  }
+  return runtime;
+}
 
 export function expandPath(template: string, env: Env = process.env): string {
   const expanded = template.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-(.*?))?\}/g, (_, name: string, fallback?: string) => {
@@ -20,14 +34,24 @@ export function expandPath(template: string, env: Env = process.env): string {
   return expanded;
 }
 
-export async function loadConfig(path?: string): Promise<RouterConfig> {
-  const defaults = (await Bun.file(DEFAULT_CONFIG_PATH).json()) as RouterConfig;
-  const userPath = path ?? join(process.env.HOME ?? "", ".config", "skill-router", "config.json");
-  const userFile = Bun.file(userPath);
-  if (await userFile.exists()) {
-    return mergeConfig(defaults, (await userFile.json()) as UserRouterConfig);
+export async function loadConfig(runtime: RouterRuntime = defaultRuntime()): Promise<RouterConfig> {
+  const defaultsText = await runtime.readText(DEFAULT_CONFIG_PATH);
+  if (defaultsText === null) throw new Error(`missing default skill-router config: ${DEFAULT_CONFIG_PATH}`);
+
+  const defaults = JSON.parse(defaultsText) as RouterConfig;
+  const userPath = runtime.configPath ?? join(runtime.env.HOME ?? "", ".config", "skill-router", "config.json");
+  const userText = await runtime.readText(userPath);
+  if (userText !== null) {
+    return mergeConfig(defaults, JSON.parse(userText) as UserRouterConfig);
   }
   return defaults;
+}
+
+// Resolve the once-per-invocation context at the cli.ts edge: bind the runtime
+// and read+merge config a single time. Downstream modules accept the returned
+// RouterContext and read ctx.config instead of re-calling loadConfig.
+export async function resolveContext(runtime: RouterRuntime = defaultRuntime()): Promise<RouterContext> {
+  return { runtime, config: await loadConfig(runtime) };
 }
 
 export function resolveScopeDirs(dirs: string[] | undefined, env: Env = process.env): string[] {

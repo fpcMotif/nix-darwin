@@ -140,6 +140,7 @@
       c = "clear";
       code = "nvim";
       zed = "zeditor";
+      zededitor = "zeditor";
       ks = "tmux kill-server";
       pbc = "pbcopy";
       pbp = "pbpaste";

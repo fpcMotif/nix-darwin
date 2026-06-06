@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { buildCatalog } from "./catalog.ts";
+import { resolveContext } from "./config.ts";
 import { discoverSkills, resolveSkill, toLogicalId } from "./discover.ts";
 import { loadSkill, loadSkillPathOnly } from "./load.ts";
 import { defaultAgentsPath, installAgentsMd } from "./install-agents.ts";
@@ -59,6 +60,9 @@ function parseArgs(argv: string[]) {
 async function main() {
   const { cmd, rest, flags } = parseArgs(process.argv.slice(2));
   const cwd = (flags.cwd as string | undefined) ?? process.cwd();
+  // Resolve config + runtime once at the edge; threaded so every command reads
+  // the same context (no per-consumer loadConfig, no double-read).
+  const ctx = await resolveContext();
 
   switch (cmd) {
     case "discover": {
@@ -67,6 +71,7 @@ async function main() {
         // Opt-in: --package forces the TanStack Intent scope on, --no-package
         // forces it off, neither defers to config.catalog.packageScope (false).
         includePackage: flags.package === true ? true : flags.noPackage === true ? false : undefined,
+        ctx,
       });
       if (flags.json) {
         console.log(JSON.stringify(skills.map((s) => ({ ...s, logical: toLogicalId(s) })), null, 2));
@@ -87,6 +92,7 @@ async function main() {
         map: !!flags.map,
         format: (flags.format as "compact" | "agents" | "intent" | "all" | undefined) ?? "all",
         includePackage: flags.package === true ? true : flags.noPackage === true ? false : undefined,
+        ctx,
       });
       console.log(text);
       if (!flags.json) {
@@ -100,7 +106,7 @@ async function main() {
       if (!query) throw new Error("load requires a skill id");
 
       if (flags.path) {
-        const path = await loadSkillPathOnly(cwd, query);
+        const path = await loadSkillPathOnly(cwd, query, ctx);
         if (!path) {
           console.error(`skill not found: ${query}`);
           process.exit(1);
@@ -109,7 +115,7 @@ async function main() {
         break;
       }
 
-      const loaded = await loadSkill(cwd, query);
+      const loaded = await loadSkill(cwd, query, ctx);
       if (!loaded) {
         console.error(`skill not found: ${query}`);
         process.exit(1);
@@ -127,6 +133,7 @@ async function main() {
         agents,
         scopes,
         dryRun: !!flags.dryRun,
+        ctx,
       });
       for (const result of results) {
         console.log(`${result.agent}: linked=${result.linked.length} skipped=${result.skipped.length}`);
@@ -140,6 +147,7 @@ async function main() {
       const result = await installAgentsMd(cwd, target, {
         map: !!flags.map,
         dryRun: !!flags.dryRun,
+        ctx,
       });
       if (flags.dryRun) {
         console.log(result.text);

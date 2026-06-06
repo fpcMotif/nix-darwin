@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { buildCatalog } from "./catalog.ts";
+import type { RouterContext } from "./types.ts";
 
 const MARKER_START = "<!-- skill-router:available_skills:start -->";
 const MARKER_END = "<!-- skill-router:available_skills:end -->";
@@ -36,12 +37,13 @@ function escapeRegExp(value: string): string {
 export async function installAgentsMd(
   cwd: string,
   targetPath: string,
-  opts: { map?: boolean; dryRun?: boolean },
+  opts: { map?: boolean; dryRun?: boolean; ctx?: RouterContext },
 ): Promise<{ path: string; text: string; wrote: boolean }> {
   const { text: intentText } = await buildCatalog(cwd, {
     map: opts.map,
     format: "compact",
     includePackage: false,
+    ctx: opts.ctx,
   });
   const intentInner = markedInner(intentText, INTENT_START, INTENT_END);
 

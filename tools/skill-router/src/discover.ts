@@ -1,5 +1,5 @@
 import { isAbsolute, join } from "node:path";
-import { loadConfig, resolveScopeDirs } from "./config.ts";
+import { resolveContext, resolveScopeDirs } from "./config.ts";
 import { discoverFromDirs } from "./discover-local.ts";
 import { discoverIntentSkills } from "./discover-intent.ts";
 import { findGitRoot } from "./git.ts";
@@ -10,25 +10,25 @@ function rooted(root: string, path: string): string {
 }
 
 export async function discoverAllSkills(options: DiscoverOptions): Promise<SkillRecord[]> {
-  const config = await loadConfig();
+  const { runtime, config } = options.ctx ?? (await resolveContext());
   const cwd = options.cwd;
-  const gitRoot = await findGitRoot(cwd);
+  const gitRoot = await findGitRoot(cwd, runtime.run);
 
   const batches: SkillRecord[][] = [];
 
-  const repoDirs = resolveScopeDirs(config.scopes.repo.dirs).map((d) => rooted(cwd, d));
+  const repoDirs = resolveScopeDirs(config.scopes.repo.dirs, runtime.env).map((d) => rooted(cwd, d));
   batches.push(
     await discoverFromDirs("repo", config.scopes.repo.precedence, repoDirs),
   );
 
   if (gitRoot && cwd !== gitRoot) {
-    const workspaceDirs = resolveScopeDirs(config.scopes.workspace.dirs).map((d) => rooted(gitRoot, d));
+    const workspaceDirs = resolveScopeDirs(config.scopes.workspace.dirs, runtime.env).map((d) => rooted(gitRoot, d));
     batches.push(
       await discoverFromDirs("workspace", config.scopes.workspace.precedence, workspaceDirs),
     );
   }
 
-  const userDirs = resolveScopeDirs(config.scopes.user.dirs);
+  const userDirs = resolveScopeDirs(config.scopes.user.dirs, runtime.env);
   batches.push(
     await discoverFromDirs(
       "user",
@@ -50,6 +50,7 @@ export async function discoverAllSkills(options: DiscoverOptions): Promise<Skill
         config.catalog.intentRunner,
         config.scopes.package.precedence,
         options.includeGlobalPackages ?? false,
+        runtime.run,
       ),
     );
   }

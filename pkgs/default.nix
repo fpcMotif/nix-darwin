@@ -10,7 +10,6 @@ final: _prev:
   martin = {
     mkAppFromZip = final.callPackage ./lib/mk-app-from-zip.nix { };
 
-    dropbox = final.callPackage ./dropbox.nix { };
     google-drive = final.callPackage ./google-drive.nix { };
     hammerspoon = final.callPackage ./hammerspoon.nix { };
     raycast = final.callPackage ./raycast.nix { };

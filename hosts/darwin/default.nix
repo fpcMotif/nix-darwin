@@ -17,11 +17,6 @@
   martin = {
     backgroundServices = {
       cleanMyMacManualOnly = true;
-
-      dropbox = {
-        installClient = false;
-        disableBackgroundUpdaters = true;
-      };
     };
 
     fonts.enable = true;

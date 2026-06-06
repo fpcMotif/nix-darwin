@@ -27,6 +27,7 @@ in
   unit-mksystem = callTest ./unit/mksystem-test.nix { };
   unit-overlay = callTest ./unit/overlay-test.nix { };
   unit-format = callTest ./unit/format-test.nix { };
+  unit-skill-router = callTest ./unit/skill-router-test.nix { };
 
   # Integration tests
   integration-configurations-eval =

@@ -36,6 +36,10 @@
 # single source of truth for that file.
 
 {
+  xdg.configFile = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
+    "zed/settings.json".force = true;
+  };
+
   programs.zed-editor = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     enable = true;
     package = pkgs.martin.zed-nightly-bin;
@@ -225,6 +229,16 @@
         diagnostics = false;
         metrics = false;
       };
+
+      # Nix pins the Zed version (pkgs.martin.zed-nightly-bin) and the darwin
+      # module owns the /Applications bundle, so Zed must never self-update:
+      # its updater downloads a newer nightly and tries to rsync over the
+      # read-only store / root-owned bundle, which fails with "Permission
+      # denied" and churns/relaunches the app — leaving orphaned instances
+      # from old (GC-able) store paths that wedge the single-instance lock
+      # and make Zed "fail to open". Version bumps come from
+      # scripts/update-zed-nightly.sh + darwin-rebuild instead.
+      auto_update = false;
     };
 
     userKeymaps = [

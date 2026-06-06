@@ -1,3 +1,5 @@
+import { bunCommandRunner, type CommandRunner } from "./command-runner.ts";
+import { bunReadText, type ReadText } from "./file-reader.ts";
 import type { SkillRecord } from "./types.ts";
 
 type IntentListJson = {
@@ -12,21 +14,20 @@ type IntentListJson = {
 
 export async function discoverIntentSkills(
   cwd: string,
-  runner: string,
+  runnerCmd: string,
   precedence: number,
   global = false,
+  run: CommandRunner = bunCommandRunner,
 ): Promise<SkillRecord[]> {
-  const args = runner.split(" ").concat(["list", "--json"]);
+  const args = runnerCmd.split(" ").concat(["list", "--json"]);
   if (global) args.push("--global");
 
-  const proc = Bun.spawn(args, { cwd, stdout: "pipe", stderr: "pipe" });
-  const code = await proc.exited;
-  if (code !== 0) return [];
+  const { exitCode, stdout } = await run(args, { cwd });
+  if (exitCode !== 0) return [];
 
-  const text = await new Response(proc.stdout).text();
   let parsed: IntentListJson;
   try {
-    parsed = JSON.parse(text) as IntentListJson;
+    parsed = JSON.parse(stdout) as IntentListJson;
   } catch {
     return [];
   }
@@ -44,19 +45,20 @@ export async function discoverIntentSkills(
 
 export async function loadIntentSkill(
   cwd: string,
-  runner: string,
+  runnerCmd: string,
   intentId: string,
+  run: CommandRunner = bunCommandRunner,
+  read: ReadText = bunReadText,
 ): Promise<{ content: string; path: string } | null> {
-  const args = runner.split(" ").concat(["load", intentId, "--path"]);
-  const proc = Bun.spawn(args, { cwd, stdout: "pipe", stderr: "pipe" });
-  const code = await proc.exited;
-  if (code !== 0) return null;
+  const args = runnerCmd.split(" ").concat(["load", intentId, "--path"]);
+  const { exitCode, stdout } = await run(args, { cwd });
+  if (exitCode !== 0) return null;
 
-  const path = (await new Response(proc.stdout).text()).trim();
+  const path = stdout.trim();
   if (!path) return null;
 
-  const file = Bun.file(path);
-  if (!(await file.exists())) return null;
+  const content = await read(path);
+  if (content === null) return null;
 
-  return { path, content: await file.text() };
+  return { path, content };
 }

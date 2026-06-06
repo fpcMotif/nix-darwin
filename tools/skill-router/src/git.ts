@@ -1,9 +1,7 @@
-export async function findGitRoot(start: string): Promise<string | null> {
-  const proc = Bun.spawn(["git", "-C", start, "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "ignore",
-  });
-  const code = await proc.exited;
-  if (code !== 0) return null;
-  return (await new Response(proc.stdout).text()).trim() || null;
+import { bunCommandRunner, type CommandRunner } from "./command-runner.ts";
+
+export async function findGitRoot(start: string, run: CommandRunner = bunCommandRunner): Promise<string | null> {
+  const { exitCode, stdout } = await run(["git", "-C", start, "rev-parse", "--show-toplevel"]);
+  if (exitCode !== 0) return null;
+  return stdout.trim() || null;
 }

@@ -15,6 +15,9 @@
 /progress.md
 /autoresearch.config.json
 
+# Bun tool dependencies (skill-router uses bun run, not a Nix node_modules).
+/tools/skill-router/node_modules/
+
 # macOS metadata.
 .DS_Store
 

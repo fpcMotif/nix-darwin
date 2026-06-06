@@ -166,12 +166,12 @@ for agent in bettermouse betterdisplay; do
   fi
 done
 
-section "Background-churn suppression (CleanMyMac / Dropbox)"
-# CleanMyMac's HealthMonitor is a per-user (gui) label; Dropbox's privileged
-# updater is a SYSTEM-domain label (baseline-activation.nix marks it kind=system)
-# and never shows up in the gui domain -- so each label must be queried in its
-# own domain. The engine treats both `=> true` and `=> disabled` as disabled, so
-# this read-back accepts both forms too.
+section "Background-churn suppression (CleanMyMac)"
+# CleanMyMac's HealthMonitor is a per-user (gui) label; its Agent is a
+# SYSTEM-domain label (baseline-activation.nix marks it kind=system) and never
+# shows up in the gui domain -- so each label must be queried in its own domain.
+# The engine treats both `=> true` and `=> disabled` as disabled, so this
+# read-back accepts both forms too.
 gui_disabled="$(launchctl print-disabled "gui/$(id -u)" 2>/dev/null || true)"
 sys_disabled="$(sudo -n launchctl print-disabled system 2>/dev/null || true)"
 
@@ -189,7 +189,7 @@ check_disabled() { # label haystack domain-note
 }
 
 check_disabled com.macpaw.CleanMyMac5.HealthMonitor "$gui_disabled" "gui domain"
-check_disabled com.getdropbox.dropbox.UpdaterPrivilegedHelper "$sys_disabled" "system domain"
+check_disabled com.macpaw.CleanMyMac5.Agent "$sys_disabled" "system domain"
 
 section "Spotlight dev-tree exclusions"
 for d in gosh-my-pi .codex; do

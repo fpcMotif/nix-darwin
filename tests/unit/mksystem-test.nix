@@ -97,6 +97,18 @@ let
     (helpers.assertTest "pi-skill-target-configured"
       (homeConfig.programs.agent-skills.targets.pi.dest == ".pi/agent/skills")
       "Oh My Pi skill target should be configured explicitly")
+
+    (helpers.assertTest "factory-skill-target-configured"
+      (homeConfig.programs.agent-skills.targets.factory.dest == ".factory/skills")
+      "Factory/Droid skill target should be configured explicitly")
+
+    (helpers.assertTest "crush-skill-target-configured"
+      (homeConfig.programs.agent-skills.targets.crush.dest == ".config/crush/skills")
+      "Crush skill target should use the documented XDG config path")
+
+    (helpers.assertTest "opencode-skill-target-configured"
+      (homeConfig.programs.agent-skills.targets.opencode.dest == ".config/opencode/skills")
+      "OpenCode skill target should use the documented XDG config path")
   ];
 
   darwinChecks = lib.optionals isDarwin [

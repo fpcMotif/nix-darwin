@@ -1,3 +1,6 @@
+import type { CommandRunner } from "./command-runner.ts";
+import type { ReadText } from "./file-reader.ts";
+
 export type ScopeName = "repo" | "workspace" | "user" | "package";
 
 export type SkillRecord = {
@@ -37,8 +40,24 @@ export type RouterConfig = {
   };
 };
 
+export type RouterRuntime = {
+  run: CommandRunner;
+  readText: ReadText;
+  env: Record<string, string | undefined>;
+  configPath?: string;
+};
+
+// Resolved once at the cli.ts edge: the injected runtime plus the parsed config.
+// Threaded through every module so config is read exactly once per invocation —
+// downstream modules read ctx.config instead of re-calling loadConfig.
+export type RouterContext = {
+  runtime: RouterRuntime;
+  config: RouterConfig;
+};
+
 export type DiscoverOptions = {
   cwd: string;
   includePackage?: boolean;
   includeGlobalPackages?: boolean;
+  ctx?: RouterContext;
 };

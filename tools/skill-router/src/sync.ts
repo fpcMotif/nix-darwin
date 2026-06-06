@@ -1,8 +1,8 @@
 import { lstat, mkdir, readlink, rm, symlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { expandPath, loadConfig } from "./config.ts";
+import { expandPath, resolveContext } from "./config.ts";
 import { discoverSkills } from "./discover.ts";
-import type { SkillRecord } from "./types.ts";
+import type { RouterContext, SkillRecord } from "./types.ts";
 
 type SyncResult = {
   agent: string;
@@ -45,10 +45,11 @@ function skillsForAgent(skills: SkillRecord[], agent: string, scopes: Set<string
 
 export async function syncAgents(
   cwd: string,
-  opts: { agents?: string[]; scopes?: string[]; dryRun?: boolean },
+  opts: { agents?: string[]; scopes?: string[]; dryRun?: boolean; ctx?: RouterContext },
 ): Promise<SyncResult[]> {
-  const config = await loadConfig();
-  const skills = await discoverSkills({ cwd, includePackage: false });
+  const ctx = opts.ctx ?? (await resolveContext());
+  const { runtime, config } = ctx;
+  const skills = await discoverSkills({ cwd, includePackage: false, ctx });
   const scopeSet = new Set(opts.scopes ?? ["repo", "workspace"]);
   const agentNames = opts.agents ?? Object.keys(config.agents);
   const dryRun = opts.dryRun ?? false;
@@ -58,7 +59,7 @@ export async function syncAgents(
     const agentConfig = config.agents[agent];
     if (!agentConfig || agentConfig.mode !== "filesystem") continue;
 
-    const destRoot = expandPath(agentConfig.dir);
+    const destRoot = expandPath(agentConfig.dir, runtime.env);
     const linked: string[] = [];
     const skipped: string[] = [];
 
