@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Refresh every flake input via `nix flake update`. Keeps nixpkgs-tracked
-# tooling (codex, zed-editor, nodejs_24, ruff, gopls, etc.), nix-darwin,
+# tooling (codex, nodejs_24, ruff, gopls, etc.), nix-darwin,
 # home-manager, agent-skills, dotfiles, NUR (crush), and friends current.
 #
 # Why a dedicated script: `.github/workflows/auto-update.yml` only iterates
