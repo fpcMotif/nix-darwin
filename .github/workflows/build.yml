@@ -31,7 +31,17 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
       - name: Run nix flake check
-        run: nix flake check --show-trace --print-build-logs
+        run: |
+          nix build --no-link --show-trace --print-build-logs \
+            '.#checks.x86_64-linux.smoke' \
+            '.#checks.x86_64-linux.unit-mksystem' \
+            '.#checks.x86_64-linux.unit-overlay' \
+            '.#checks.x86_64-linux.unit-format' \
+            '.#checks.x86_64-linux.integration-configurations-eval' \
+            '.#checks.x86_64-linux.integration-darwin-settings' \
+            '.#checks.x86_64-linux.smoke-build-common' \
+            '.#checks.x86_64-linux.smoke-build-oh-my-pi' \
+            '.#checks.x86_64-linux.smoke-build-toolchain'
 
   darwin:
     name: f (aarch64-darwin)
@@ -47,7 +57,17 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
       - name: Run nix flake check (aarch64-darwin)
-        run: nix flake check --show-trace --print-build-logs
+        run: |
+          nix build --no-link --show-trace --print-build-logs \
+            '.#checks.aarch64-darwin.smoke' \
+            '.#checks.aarch64-darwin.unit-mksystem' \
+            '.#checks.aarch64-darwin.unit-overlay' \
+            '.#checks.aarch64-darwin.unit-format' \
+            '.#checks.aarch64-darwin.integration-configurations-eval' \
+            '.#checks.aarch64-darwin.integration-darwin-settings' \
+            '.#checks.aarch64-darwin.smoke-build-common' \
+            '.#checks.aarch64-darwin.smoke-build-oh-my-pi' \
+            '.#checks.aarch64-darwin.smoke-build-toolchain'
 
       - name: Build darwinConfigurations.f
         run: |

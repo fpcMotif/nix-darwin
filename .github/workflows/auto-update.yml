@@ -5,8 +5,8 @@ name: auto-update
 # After the loop, two HARD GUARDS run:
 #   1. au_assert_clean — fails if any FAKE placeholder hash or stray *.bak
 #      artifact survived. Prevents broken state from ever reaching a PR.
-#   2. nix flake check (eval-only) — fails if the lockfile diverged from the
-#      vendored derivations.
+#   2. focused Linux checks — fails if the lockfile diverged from the vendored
+#      derivations or the Linux-scoped config/tests stop evaluating.
 #
 # The PR auto-merges once build.yml's required checks turn green.
 #
@@ -71,11 +71,15 @@ jobs:
       - name: Guard — no FAKE hashes, no .bak files
         run: bash scripts/lib/auto-update.sh assert-clean
 
-      - name: Guard — flake still evaluates
+      - name: Guard — Linux checks still build
         run: |
-          # eval-only: fast, no builds, catches version/URL/hash divergence
-          # introduced by the bumps. Builds happen on the PR via build.yml.
-          nix flake check --no-build --show-trace
+          # `nix flake check --no-build` cannot handle the agent-skills
+          # import-from-derivation bundle path. Build the native Linux check
+          # slice instead; build.yml still validates the full Linux + macOS
+          # matrix on the generated PR.
+          nix build --no-link --show-trace --print-build-logs \
+            '.#checks.x86_64-linux.unit-overlay' \
+            '.#checks.x86_64-linux.integration-configurations-eval'
 
       - name: Open or update PR
         id: cpr
@@ -90,17 +94,17 @@ jobs:
 
             Bumps any of:
             - all flake inputs via `scripts/update-flake-inputs.sh`
-              (nixpkgs → codex / zed-editor / node toolchain, darwin,
+              (nixpkgs → codex / node toolchain, darwin,
               home-manager, agent-skills, claude-code, NUR/crush, dotfiles, …)
             - vendored derivations under `pkgs/`: codex (prerelease channel),
               bun-canary-bin, sourcegraph-amp (amp), opencode (cli + electron),
-              pi-coding-agent, oh-my-pi.
+              pi-coding-agent, oh-my-pi, google-drive, zed-nightly-bin.
 
             Each updater is allowed to fail individually; partial bumps still
             land in this PR. Two hard guards prevent broken state from being
             committed:
               1. `au_assert_clean` (no FAKE hashes / .bak artifacts)
-              2. `nix flake check --no-build`
+              2. focused Linux `nix build --no-link` checks
 
             Auto-merges on green CI. See `PANIC.md` for rollback.
           labels: auto-update
