@@ -50,7 +50,13 @@ check:
     nix build --no-link \
         '.#darwinConfigurations.f.system' \
         '.#checks.aarch64-darwin.unit-overlay' \
+        '.#checks.aarch64-darwin.unit-skill-router' \
         '.#checks.aarch64-darwin.integration-configurations-eval'
+
+# Run the skill-router bun suite (spawn-seam gate) offline via the Nix sandbox.
+test-router:
+    nix build --no-link --print-build-logs \
+        '.#checks.aarch64-darwin.unit-skill-router'
 
 # Tier 2: read back the LIVE macOS state and confirm it matches what the
 # config declares. Run after `just switch`. Non-hermetic, so it is NOT part of

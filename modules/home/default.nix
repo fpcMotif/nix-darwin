@@ -24,6 +24,7 @@
     ./amp.nix
     ./ssh.nix
     ./cursor.nix
+    ./skill-router.nix
   ];
 
   home = {

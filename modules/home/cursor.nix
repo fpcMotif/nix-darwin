@@ -1,10 +1,25 @@
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
 let
   cursorExtensions = [
     "esbenp.prettier-vscode"
     "ms-python.python"
   ];
+
+  # Cursor (like all VS Code forks) writes back to its own settings.json:
+  # UI toggles, and atomic saves that rename a temp file over the target.
+  # A home.file entry would symlink this into the read-only nix store
+  # (mode 0444), so Cursor's writes fail with EACCES / EntryWriteLocked.
+  # Instead we render the defaults in the store and copy them into place as
+  # a real, writable file during activation. Nix stays the source of truth
+  # (defaults are reapplied on every switch) while Cursor can still save.
+  cursorSettingsFile = pkgs.writeText "cursor-settings.json" (builtins.toJSON {
+    "extensions.autoCheckUpdates" = false;
+    "extensions.autoUpdate" = false;
+    "telemetry.telemetryLevel" = "off";
+    "editor.formatOnSave" = true;
+    "workbench.editor.enablePreview" = false;
+  });
 in
 {
   home.file = {
@@ -31,22 +46,22 @@ in
       '';
       executable = true;
     };
-
-    ".config/Cursor/User/settings.json" = {
-      text = builtins.toJSON {
-        "extensions.autoCheckUpdates" = false;
-        "extensions.autoUpdate" = false;
-        "telemetry.telemetryLevel" = "off";
-        "editor.formatOnSave" = true;
-        "workbench.editor.enablePreview" = false;
-      };
-    };
   };
 
   home.activation.cursorSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    mkdir -p "$HOME/Library/Application Support/Cursor/User"
-    ln -sf "$HOME/.config/Cursor/User/settings.json" \
-      "$HOME/Library/Application Support/Cursor/User/settings.json"
+    cursorUserDir="$HOME/Library/Application Support/Cursor/User"
+    mkdir -p "$cursorUserDir"
+
+    # Replace any prior read-only store symlink (or stale file) with a real,
+    # writable copy so Cursor can save changes back to it.
+    rm -f "$cursorUserDir/settings.json"
+    install -m 0644 ${cursorSettingsFile} "$cursorUserDir/settings.json"
+
+    # Drop the legacy XDG symlink the old layout created; Cursor on macOS
+    # reads the Library path directly, so the indirection is unneeded.
+    if [ -L "$HOME/.config/Cursor/User/settings.json" ]; then
+      rm -f "$HOME/.config/Cursor/User/settings.json"
+    fi
   '';
 
   home.activation.cursorExtensions =

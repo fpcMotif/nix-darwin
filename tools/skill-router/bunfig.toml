@@ -1,0 +1,5 @@
+[test]
+# Refuse to spawn a real subprocess under `bun test`: every test injects a
+# CommandRunner, so a forgotten injection fails offline instead of reaching the
+# network. See test/support/preload.ts and src/command-runner.ts.
+preload = ["./test/support/preload.ts"]

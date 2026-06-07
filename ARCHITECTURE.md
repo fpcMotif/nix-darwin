@@ -89,7 +89,7 @@ Shared modules consume `currentSystemUser` instead of hard-coding `martinfan`. T
 ```nix
 final: prev: {
   martin = {
-    # amp, pi, oh-my-pi, dropbox, drive, raycast, ...
+    # amp, pi, oh-my-pi, drive, raycast, ...
   };
 }
 ```
@@ -233,10 +233,13 @@ This section is the largest because the moving parts (sources, targets, discover
 
 | Target option       | Path                                              | Why                                                                                       |
 |---------------------|---------------------------------------------------|-------------------------------------------------------------------------------------------|
-| `targets.agents`    | `$HOME/.agents/skills`                            | Shared Open Agent Skills registry. Primary path for Codex and a documented Cursor path.   |
+| `targets.agents`    | `$HOME/.agents/skills`                            | Shared Open Agent Skills registry. Primary path for Codex, Cursor compatibility, Crush/OpenCode compatibility, and Zed. |
 | `targets.claude`    | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills`      | Claude Code personal skills.                                                              |
 | `targets.cursor`    | `$HOME/.cursor/skills`                            | Cursor-native user skills (deterministic discovery).                                      |
 | `targets.codex`     | `${CODEX_HOME:-$HOME/.codex}/skills`              | Compatibility mirror only. The primary Codex path is `$HOME/.agents/skills`.              |
+| `targets.crush`     | `$HOME/.config/crush/skills`                      | Crush-native user skills path; also covered by `.agents`, but native keeps the app self-describing. |
+| `targets.factory`   | `$HOME/.factory/skills`                           | Factory/Droid native user skills path; Droid does not document `~/.agents/skills` as a global source. |
+| `targets.opencode`  | `$HOME/.config/opencode/skills`                   | OpenCode-native user skills path; also covered by `.agents` and `.claude` compatibility.  |
 | `targets.pi`        | `$HOME/.pi/agent/skills`                          | Custom target — Oh My Pi / Pi harness.                                                    |
 
 ### Sources and selection
@@ -284,7 +287,7 @@ programs.agent-skills = {
 
 ### Project-local skills
 
-Project-local skills are a separate decision from user-global skills. Use upstream `mkLocalInstallScript` or `mkShellHook` with `defaultLocalTargets` when a repo should receive generated local skills under `.agents/skills`, `.claude/skills`, `.cursor/skills`, or `.codex/skills`.
+Project-local skills are a separate decision from user-global skills. Use upstream `mkLocalInstallScript` or `mkShellHook` with `defaultLocalTargets` when a repo should receive generated local skills under `.agents/skills`, `.claude/skills`, `.cursor/skills`, `.codex/skills`, `.crush/skills`, `.factory/skills`, or `.opencode/skills`.
 
 - Use **`copy-tree`** for local targets so contributors can inspect or edit generated files without chasing Nix store symlinks.
 - Use **`symlink-tree`** for global Home Manager targets.
@@ -294,10 +297,10 @@ Project-local skills are a separate decision from user-global skills. Use upstre
 
 Zed and VS Code are not equivalent skill targets today.
 
-- **Zed** documents `.rules`, `.cursorrules`, `AGENTS.md`, `CLAUDE.md`, and related rule files. Agent Skills support is in an open upstream PR (zed-industries/zed#50453), not a documented stable release target.
+- **Zed** now documents Agent Skills, but only from `~/.agents/skills/` and `<worktree>/.agents/skills/`, with a flat direct-child layout. The existing `targets.agents` mirror covers Zed; do not invent a Zed-specific target.
 - **VS Code Copilot** documents `AGENTS.md`, `.github/copilot-instructions.md`, and `.github/instructions/*.instructions.md`, not `SKILL.md` directories.
 
-For these editors, keep shared instructions in `AGENTS.md` and add editor-native rule/instruction files only when needed. Do **not** invent Nix skill mirrors until the editor documents a stable skills path.
+For VS Code-family tools without documented skill roots, keep shared instructions in `AGENTS.md` and add editor-native rule/instruction files only when needed. Do **not** invent Nix skill mirrors until the editor documents a stable skills path.
 
 ### Design Q&A (self-grilled)
 
@@ -305,7 +308,7 @@ For these editors, keep shared instructions in `AGENTS.md` and add editor-native
 |------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
 | Use raw library functions or the Home Manager DSL?                                 | DSL. Stays aligned with upstream options, target defaults, warnings, and future `agent-skills-nix` changes.  |
 | Is `$HOME/.agents/skills` or `$HOME/.codex/skills` the Codex source of truth?      | `$HOME/.agents/skills`. Codex documents it; `targets.codex` is a compatibility mirror.                       |
-| Should Zed and VS Code targets be created preemptively?                            | No. Both currently want rules/instructions, not declared `SKILL.md` mirrors.                                 |
+| Should Zed and VS Code targets be created preemptively?                            | No. Zed is covered by `.agents/skills`; VS Code currently wants rules/instructions, not declared skill mirrors. |
 | What is the main operational risk?                                                 | Enabled targets are rsync-managed. Adding one can delete unmanaged files in that directory.                  |
 
 ## Package ownership
@@ -314,7 +317,7 @@ Default policy: **pure Nix first.**
 
 - **CLI / dev tools** → `modules/home/packages.nix`.
 - **Mac GUI apps Martin owns or vendors** → custom derivations in `pkgs/`, exposed as `pkgs.martin.<name>`, declared on the Darwin host where appropriate.
-- **System-level Mac apps currently in scope** — Dropbox, Google Drive, Raycast — declared on the Darwin host via `pkgs.martin.*`. Anything not yet packaged as a derivation is tracked as an explicit gap until it has one; brew is **not** a fallback.
+- **System-level Mac apps currently in scope** — Google Drive, Raycast — declared on the Darwin host via `pkgs.martin.*`. Anything not yet packaged as a derivation is tracked as an explicit gap until it has one; brew is **not** a fallback. (Dropbox is a deliberate exception: it is installed natively, not Nix-vendored — see `docs/adr/0005`.)
 - **Agent / dev tooling** — Amp, Pi, Oh My Pi — packaged in `pkgs/` as custom derivations.
 
 A tool should never be installed simultaneously through Nix and a brew variant unless it is a temporary migration step; record the migration intent in the same commit if so.
@@ -351,7 +354,7 @@ These are dimensions every reviewer asks about. State the position even when the
 |----------------------|------------------------------------------------------------------------------------------------|
 | Secrets management   | **None today.** No `sops-nix` / `agenix`. Secrets live outside the flake; revisit before adding any service that reads them. |
 | Formatter            | Wired through `flake.nix` (`formatter.<system>`). Run via `nix fmt`.                           |
-| Linting              | `nix flake check` runs `nixpkgs-fmt --check` via `tests/default.nix`. Add `statix`/`deadnix` as explicit checks before treating them as enforced gates. |
+| Linting              | `nix flake check` runs `nixpkgs-fmt --check` via `tests/default.nix`, and gates the `tools/skill-router` bun suite offline through the `unit-skill-router` check (`tests/unit/skill-router-test.nix`) — the spawn-seam regression net (ADR-0006), run on both CI runners. Add `statix`/`deadnix` as explicit checks before treating them as enforced gates. |
 | CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin, x86_64 NixOS scaffolds (`wsl`, `x230`), and `vm-aarch64-utm` on macOS / Ubuntu runners, with `nix flake check` as the gate before config builds. |
 | Dev shells / direnv  | Not currently exposed. If `devShells.<system>` is added later, document the `.envrc` pattern. |
 

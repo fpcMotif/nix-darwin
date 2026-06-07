@@ -92,6 +92,13 @@
         writeCommitGraph = true;
       };
 
+      # Nix-built git resolves CA certs only via $NIX_SSL_CERT_FILE, which the
+      # interactive shell exports but GUI apps (Conductor, etc.) launched from
+      # Finder/launchd do not inherit -> "unable to get local issuer certificate
+      # (20)" on https fetches. Pin the bundle in config so git finds it in every
+      # context. /etc/ssl/certs/ca-certificates.crt is managed by nix-darwin.
+      http.sslCAInfo = "/etc/ssl/certs/ca-certificates.crt";
+
       init.defaultBranch = "main";
 
       merge.conflictstyle = "zdiff3";

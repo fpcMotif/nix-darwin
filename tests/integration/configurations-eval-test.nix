@@ -182,6 +182,16 @@ let
         (homePrograms.agent-skills.sources.superpowers.filter.nameRegex == "^(brainstorming)$")
         "${prefix} should not discover disabled superpowers workflow skills")
 
+      (helpers.assertTest "${prefix}-agent-skills-effect-ts-devshell-scoped"
+        (
+          let cfg = homePrograms.agent-skills;
+          in
+          !(builtins.elem "effect-ts" cfg.skills.enableAll)
+          && !(builtins.elem "effect-ts" cfg.skills.enable)
+          && !(builtins.hasAttr "effect-ts" cfg.skills.explicit)
+        )
+        "${prefix} should not globally bundle effect-ts — it is per-project devShell-scoped (templates/effect-skills)")
+
       (helpers.assertTest "${prefix}-agent-skills-removed-prune-dry-run-safe"
         (
           let activation = homeActivation.claudePruneRemovedSkills.data;
@@ -202,6 +212,15 @@ let
         )
         "${prefix} should park the refactor plugin's duplicate code-simplifier agent, keeping the official one")
 
+      (helpers.assertTest "${prefix}-claude-disables-gitflow-git-plugins"
+        (
+          let activation = homeActivation.claudeDisableGlobalMcpPlugins.data;
+          in
+          lib.hasInfix "gitflow@frad-dotclaude" activation
+          && lib.hasInfix "git@frad-dotclaude" activation
+        )
+        "${prefix} should disable the gitflow and git plugins on the global surface so their git-flow/commit skills leave Claude Code's startup catalog")
+
       (helpers.assertTest "${prefix}-agent-skills-agents-target"
         (homePrograms.agent-skills.targets.agents.enable == true)
         "${prefix} should enable the shared agents skill target")
@@ -210,13 +229,37 @@ let
         (homePrograms.agent-skills.targets.claude.enable == true)
         "${prefix} should enable the Claude skill target")
 
+      (helpers.assertTest "${prefix}-agent-skills-cursor-target"
+        (homePrograms.agent-skills.targets.cursor.enable == true)
+        "${prefix} should enable the Cursor skill target")
+
       (helpers.assertTest "${prefix}-agent-skills-codex-target"
         (homePrograms.agent-skills.targets.codex.enable == true)
         "${prefix} should enable the Codex skill target")
 
+      (helpers.assertTest "${prefix}-agent-skills-crush-target"
+        (homePrograms.agent-skills.targets.crush.dest == ".config/crush/skills")
+        "${prefix} should configure the native Crush skill target")
+
+      (helpers.assertTest "${prefix}-agent-skills-factory-target"
+        (homePrograms.agent-skills.targets.factory.dest == ".factory/skills")
+        "${prefix} should configure the native Factory/Droid skill target")
+
+      (helpers.assertTest "${prefix}-agent-skills-opencode-target"
+        (homePrograms.agent-skills.targets.opencode.dest == ".config/opencode/skills")
+        "${prefix} should configure the native OpenCode skill target")
+
       (helpers.assertTest "${prefix}-agent-skills-pi-target"
         (homePrograms.agent-skills.targets.pi.dest == ".pi/agent/skills")
         "${prefix} should configure the Oh My Pi skill target")
+
+      (helpers.assertTest "${prefix}-skill-router-installed"
+        (hasHomePackage "skill-router")
+        "${prefix} should install the skill-router CLI")
+
+      (helpers.assertTest "${prefix}-skill-router-config-not-managed"
+        (!(homeData.file ? ".config/skill-router/config.json"))
+        "${prefix} should leave skill-router config.json user-owned; the CLI bundles its default config")
 
       (helpers.assertTest "${prefix}-lsp-activation-dry-run-safe"
         (
@@ -290,21 +333,18 @@ let
           hasLaunchdLabel = label: lib.any (entry: builtins.elem label entry.labels) launchdEntries;
         in
         darwinConfig.martin.backgroundServices.cleanMyMacManualOnly == true
-          && darwinConfig.martin.backgroundServices.dropbox.installClient == false
-          && darwinConfig.martin.backgroundServices.dropbox.disableBackgroundUpdaters == true
           && hasLaunchdLabel "com.macpaw.CleanMyMac5.HealthMonitor"
-          && hasLaunchdLabel "com.getdropbox.dropbox.UpdaterPrivilegedHelper"
-          && !(hasPackage "dropbox" darwinConfig.environment.systemPackages)
+          && hasLaunchdLabel "com.macpaw.CleanMyMac5.Agent"
           && lib.hasInfix "/var/db/nix-config" activation
           && lib.hasInfix "background-services-disabled-by-nix" activation
           && lib.hasInfix "com.macpaw.CleanMyMac5.HealthMonitor" activation
-          && lib.hasInfix "com.getdropbox.dropbox.UpdaterPrivilegedHelper" activation
+          && lib.hasInfix "com.macpaw.CleanMyMac5.Agent" activation
           && lib.hasInfix "launchctl print-disabled" activation
           && lib.hasInfix "managed_before=1" activation
           && lib.hasInfix "grep -Fxq \"$domain\" \"$state_file\"" activation
           && lib.hasInfix "launchctl enable" activation
       )
-      "Darwin should keep CleanMyMac and Dropbox background churn out of the baseline with reversible launchd state")
+      "Darwin should keep CleanMyMac background churn out of the baseline with reversible launchd state")
 
     (helpers.assertTest "darwin-spotlight-dev-tree-exclusions"
       (
@@ -433,6 +473,9 @@ let
       (
         darwinHome.home.file ? ".claude/skills/jj"
           && darwinHome.home.file ? ".agents/skills/jj"
+          && darwinHome.home.file ? ".config/crush/skills/jj"
+          && darwinHome.home.file ? ".config/opencode/skills/jj"
+          && darwinHome.home.file ? ".factory/skills/jj"
           && darwinHome.home.file ? ".pi/agent/skills/jj"
       )
       "Darwin should install the locally-authored jj skill into the picker dirs")
@@ -459,6 +502,10 @@ let
           && lib.getName darwinHome.programs.zed-editor.package == "zed-nightly-bin"
       )
       "Darwin Home Manager should pin Zed to the prebuilt nightly binary")
+
+    (helpers.assertTest "darwin-zed-settings-force-managed"
+      (darwinHome.xdg.configFile."zed/settings.json".force == true)
+      "Darwin Home Manager should force-manage Zed settings so an equivalent regular file cannot block activation")
   ] ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
   nixosChecks = [

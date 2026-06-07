@@ -51,6 +51,28 @@ A skill deliberately moved into a sibling `skills-disabled/` directory so no ski
 A *discovered* skill exists in the catalog (its source is wired up) but is not placed in any picker. An *enabled* skill is additionally surfaced into the picker target dirs and is selectable. Wiring a source discovers its skills; it does not enable them.
 Rejected workflow skills should be removed from source filters instead of left discovered-but-disabled.
 
+### Skill-router effects
+
+**Router runtime (`RouterRuntime`)**:
+The injected runtime record that carries the effect adapters and process environment used by `skill-router`: `run` (Command seam), `readText` (Skill-read seam), `env`, and optional `configPath`. Production uses `defaultRuntime`; tests pass a runtime with a recording command adapter, controlled `HOME`, and a test config path. This is the seam for config/env loading — tests should not mutate `process.env.HOME` to make discovery work.
+_Avoid_: using this term for `RouterConfig` (the parsed config data) or for a long-lived application context with unrelated state.
+
+**Router context (`RouterContext`)**:
+The once-per-invocation `{ runtime, config }` pair resolved at the `cli.ts` edge by `resolveContext` and threaded through every module. Config is read and merged exactly once here; downstream modules read `ctx.config` and `ctx.runtime` rather than re-calling `loadConfig` — so a `catalog`/`install`/`sync` command no longer parses config twice. The `RouterRuntime` carries *how/where* (effect adapters + env); the `RouterContext` adds the resolved *what* (parsed config).
+_Avoid_: calling `loadConfig` from a downstream module (resolve once at the edge and pass `ctx`), or putting per-request data like `cwd` on it — `cwd` stays a separate argument.
+
+**Command seam (`CommandRunner`)**:
+The injected process-spawn capability `run(argv) → { exitCode, stdout }` through which every external-process call in `skill-router` flows — the dormant-by-default `intentRunner` (`bunx @tanstack/intent@…`, package scope) and `git rev-parse` (workspace scope). Production wires `bunCommandRunner`; tests wire a recording adapter that captures the full argv (the pinned binary included) and returns scripted output. The seam expresses only *how* a process launches, never *when* — the `includePackage` gate and the `@0.0.41` pin stay above it, and offline/ENOENT degrades to `[]`/`null` inside the adapter rather than throwing. `bunCommandRunner` refuses to run under `bun test`, so a forgotten injection fails loud and offline instead of spawning the pinned runner over the network.
+_Avoid_: using this term for the `intentRunner` command string (that is data the seam executes), or for build/activation-time work — the seam is never on the `darwin-rebuild` path (see `docs/adr/0006`).
+
+**Skill-read seam (`ReadText`)**:
+The injected file-read capability `read(path) → string | null` through which `skill-router` reads file *contents*: the `config.json` files (via `loadConfig`) and a resolved skill's body (the `loadSkill` / `loadIntentSkill` path). Production wires `bunReadText`; tests wire a reader that serves package bodies from memory with a real-file fallback, so the load path is exercised without staging skill files on disk. Distinct from directory discovery, which still walks the real filesystem.
+_Avoid_: widening this to *all* file I/O — directory listing, symlinking, and writes stay on the real filesystem; it reads file contents, it is not a virtual filesystem.
+
+**intentRunner**:
+The command *string* (e.g. `bunx @tanstack/intent@0.0.41`) that `config.catalog` hands to the Command seam — *data the seam executes*, distinct from the `CommandRunner` capability that executes it. The source parameter is spelled `runnerCmd` to keep the string one rename away from the `run` capability.
+_Avoid_: conflating `intentRunner`/`runnerCmd` (what to exec) with `run`/`CommandRunner` (how to exec).
+
 ### AI tooling surfaces
 
 **Vendored agent CLI**:
@@ -86,7 +108,7 @@ The human-facing device name in macOS Sharing/Finder — "Martin's Mac mini". De
 > **Dev:** What about the plugin's `writing-plans` and `executing-plans`?
 > **Maintainer:** Those stay live — we park only the plugin's `brainstorming`, not its whole skills dir. The Nix-managed obra source is filtered to `brainstorming`, so rejected workflow skills are not discovered there.
 
-> **Dev:** Dropbox is packaged, so should it be in the Darwin baseline?
-> **Maintainer:** Not unless we explicitly want the client and its helpers always running. Otherwise it is background churn; keep the app path opt-in and preserve a quiet baseline.
+> **Dev:** Should we package Dropbox as a `pkgs.martin.*` derivation like Drive and Raycast?
+> **Maintainer:** No — Dropbox is the deliberate exception (see `docs/adr/0005`). Its self-updater rewrites its own bundle and its server can force-deprecate old clients, so vendoring it into the read-only store fights the app on every update. Install it natively and let it self-update; re-adding a Nix scaffold is a regression, not a gap.
 > **Dev:** Is the macOS health report a monitoring stack?
 > **Maintainer:** No. It is a local snapshot for maintenance evidence, so it belongs in the baseline without adding remote telemetry.
