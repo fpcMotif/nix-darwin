@@ -19,4 +19,6 @@
     startMenuLaunchers = true;
     wslConf.automount.root = "/mnt";
   };
+
+  system.stateVersion = "23.05";
 }
