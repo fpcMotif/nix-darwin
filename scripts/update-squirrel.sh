@@ -9,12 +9,11 @@ cd "$(au_repo_root)"
 
 FILE="pkgs/squirrel.nix"
 
+# Optimization: Single `jq` call handles JSON extraction, regex match, capture, and filtering.
+# This eliminates spawning `grep`, `head`, and `sed` subprocesses on every update run.
 latest=$(
   curl -fsSL "https://api.github.com/repos/rime/squirrel/releases/latest" \
-    | jq -r '.assets[].name' \
-    | grep -oE 'Squirrel-[0-9.]+\.pkg' \
-    | head -1 \
-    | sed -E 's|Squirrel-([0-9.]+)\.pkg|\1|'
+    | jq -r '[.assets[].name | select(test("Squirrel-[0-9.]+\\.pkg")) | capture("Squirrel-(?<version>[0-9.]+)\\.pkg") | .version][0] // ""'
 )
 [ -n "$latest" ] || { echo "squirrel: could not parse version from asset name" >&2; exit 1; }
 

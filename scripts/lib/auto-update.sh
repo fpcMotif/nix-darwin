@@ -85,11 +85,13 @@ au_latest_npm() {
 #   au_current_version <file> [awk-range]
 au_current_version() {
   local file=$1 range=${2:-}
+  # Optimization: Use single `sed` extraction instead of `grep | head | cut` pipeline.
+  # This avoids spawning three child processes per version check.
   if [ -n "$range" ]; then
     awk "$range" "$file" \
-      | grep -oE 'version = "[^"]+"' | head -1 | cut -d'"' -f2
+      | sed -n '/version = "/{s/.*version = "\([^"]*\)".*/\1/p;q;}'
   else
-    grep -oE 'version = "[^"]+"' "$file" | head -1 | cut -d'"' -f2
+    sed -n '/version = "/{s/.*version = "\([^"]*\)".*/\1/p;q;}' "$file"
   fi
 }
 
