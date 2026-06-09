@@ -85,11 +85,19 @@ au_latest_npm() {
 #   au_current_version <file> [awk-range]
 au_current_version() {
   local file=$1 range=${2:-}
+  local re='version = "([^"]+)"'
   if [ -n "$range" ]; then
-    awk "$range" "$file" \
-      | grep -oE 'version = "[^"]+"' | head -1 | cut -d'"' -f2
+    local content
+    content=$(awk "$range" "$file")
+    if [[ "$content" =~ $re ]]; then
+      printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
   else
-    grep -oE 'version = "[^"]+"' "$file" | head -1 | cut -d'"' -f2
+    local content
+    content=$(<"$file")
+    if [[ "$content" =~ $re ]]; then
+      printf '%s\n' "${BASH_REMATCH[1]}"
+    fi
   fi
 }
 
@@ -152,8 +160,10 @@ au_extract_got_hash() {
   log=$(nix build "$attr" --no-link 2>&1)
   set -e
   local got
-  got=$(printf '%s\n' "$log" | grep -oE 'got:[[:space:]]+sha256-[A-Za-z0-9+/=]+' \
-          | head -1 | sed -E 's/got:[[:space:]]+//')
+  local re='got:[[:space:]]+(sha256-[A-Za-z0-9+/=]+)'
+  if [[ "$log" =~ $re ]]; then
+    got="${BASH_REMATCH[1]}"
+  fi
   [ -n "$got" ] || {
     echo "au_extract_got_hash: no 'got: sha256-…' line in build output" >&2
     printf '%s\n' "$log" | tail -20 >&2
