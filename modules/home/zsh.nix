@@ -222,7 +222,7 @@
       pn = "pnpm";
       oc = "opencode";
 
-      cct = "cmux claude-teams";
+      cct = "cmux claude-teams --dangerously-skip-permissions";
       cdx = "_codex_cli";
 
       obsidian = "ob";
