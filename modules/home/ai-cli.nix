@@ -34,7 +34,7 @@
       (
         _unset_ai_env
         unset CLAUDE_CODE_EFFORT_LEVEL CLAUDE_EFFORT
-        "$HOME/.local/bin/claude" --settings '{"ultracode":true}' "$@"
+        "$HOME/.local/bin/claude" --dangerously-skip-permissions --settings '{"ultracode":true}' "$@"
       )
     }
 
