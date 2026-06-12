@@ -30,14 +30,6 @@ jobs:
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      # TEMPORARY diagnostic (PR #86): integration-configurations-eval reports
-      # wsl/x230 toplevels failing to evaluate, but its tryEval swallows the
-      # error. Surface the real trace, then drop this step.
-      - name: Diagnose wsl/x230 toplevel eval
-        run: |
-          nix eval --raw '.#nixosConfigurations.wsl.config.system.build.toplevel.drvPath' --show-trace || true
-          nix eval --raw '.#nixosConfigurations.x230.config.system.build.toplevel.drvPath' --show-trace || true
-
       - name: Run nix flake check
         run: |
           nix build --no-link --show-trace --print-build-logs \
