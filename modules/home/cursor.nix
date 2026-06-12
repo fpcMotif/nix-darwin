@@ -48,7 +48,11 @@ in
     };
   };
 
-  home.activation.cursorSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  # Cursor's settings live under macOS's ~/Library and its CLI ships inside
+  # the .app bundle, so this whole sync is Darwin-only. A Linux host must not
+  # grow a ~/Library tree; revisit with XDG paths if Cursor joins the Linux
+  # profile.
+  home.activation.cursorSettings = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     cursorUserDir="$HOME/Library/Application Support/Cursor/User"
     mkdir -p "$cursorUserDir"
 
@@ -62,13 +66,13 @@ in
     if [ -L "$HOME/.config/Cursor/User/settings.json" ]; then
       rm -f "$HOME/.config/Cursor/User/settings.json"
     fi
-  '';
+  '');
 
   home.activation.cursorExtensions =
     let
       extensionArgs = lib.concatMapStringsSep " " lib.escapeShellArg cursorExtensions;
     in
-    lib.hm.dag.entryAfter [ "cursorSettings" ] ''
+    lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "cursorSettings" ] ''
       cursor_cmd=""
       if command -v cursor >/dev/null 2>&1; then
         cursor_cmd="$(command -v cursor)"
@@ -86,5 +90,5 @@ in
           echo "Cursor extension '$ext' could not be installed; continuing." >&2
         fi
       done
-    '';
+    '');
 }

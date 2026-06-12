@@ -21,7 +21,11 @@
     # macOS boots through Apple's own firmware path; nix-darwin does not manage
     # Linux-style EFI/systemd-boot settings. Efficiency gains on Darwin come
     # from faster and leaner Nix store behavior instead.
-    auto-optimise-store = true;
+    #
+    # Inline store optimisation (auto-optimise-store) is NOT used here: it has
+    # a long-standing store-corruption bug on macOS
+    # (https://github.com/NixOS/nix/issues/7273). The scheduled `nix.optimise`
+    # job below provides the same deduplication safely.
     max-jobs = "auto";
     cores = 0;
 
@@ -29,14 +33,25 @@
     # This still allows build parallelism, but caps memory pressure.
     max-substitution-jobs = 16;
 
-    # Prevent long-lived old generations/caches from bloating local storage.
-    keep-outputs = false;
-    keep-derivations = false;
+    # nix-direnv pins `nix develop` shells with GC roots; keeping outputs and
+    # derivations alive is its documented requirement so dev shells survive
+    # garbage collection and stay usable offline
+    # (https://github.com/nix-community/nix-direnv#installation).
+    # The weekly GC below still bounds store growth.
+    keep-outputs = true;
+    keep-derivations = true;
   };
 
   nix.gc = {
     automatic = true;
     interval = { Weekday = 0; Hour = 4; Minute = 30; };
     options = "--delete-older-than 14d";
+  };
+
+  # Scheduled `nix store optimise` (hardlink deduplication), run after the
+  # weekly GC so it only deduplicates what survived collection.
+  nix.optimise = {
+    automatic = true;
+    interval = { Weekday = 0; Hour = 5; Minute = 30; };
   };
 }

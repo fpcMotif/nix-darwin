@@ -58,6 +58,20 @@ test-router:
     nix build --no-link --print-build-logs \
         '.#checks.aarch64-darwin.unit-skill-router'
 
+# Lint Nix sources: statix (antipatterns) + deadnix (dead code). Advisory —
+# not yet a CI gate (see ARCHITECTURE.md). Tools come pinned from the repo
+# dev shell; statix.toml scopes both away from references/.
+lint:
+    nix develop --command statix check .
+    nix develop --command deadnix --fail . --exclude ./references
+
+# Build the reproducible OCI dev container for Apple Silicon Linux runtimes
+# (OrbStack/Docker/UTM guests). Requires an aarch64-linux builder — enable
+# martin.linuxBuilder in hosts/darwin/default.nix first.
+dev-container:
+    nix build '.#packages.aarch64-linux.dev-container'
+    @echo "Load with: docker load < result"
+
 # Tier 2: read back the LIVE macOS state and confirm it matches what the
 # config declares. Run after `just switch`. Non-hermetic, so it is NOT part of
 # `nix flake check` (which only proves the config declares the right values).

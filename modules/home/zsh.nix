@@ -1,5 +1,23 @@
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
+let
+  inherit (pkgs.stdenv) isDarwin;
+
+  # pnpm's platform-native global dir: ~/Library on macOS, XDG data on Linux.
+  pnpmHome = if isDarwin then "$HOME/Library/pnpm" else "$HOME/.local/share/pnpm";
+
+  # Terminal terminfo lookup chain. The /Applications entries are macOS app
+  # bundles and must not leak into Linux environments.
+  terminfoDirs = [
+    "$HOME/.terminfo"
+  ] ++ lib.optionals isDarwin [
+    "/Applications/Ghostty.app/Contents/Resources/terminfo"
+    "/Applications/kitty.app/Contents/Resources/kitty/terminfo"
+    "/Applications/kitty.app/Contents/Resources/terminfo"
+  ] ++ [
+    "/usr/share/terminfo"
+  ];
+in
 {
   home.sessionVariables = {
     EDITOR = "nvim";
@@ -11,7 +29,7 @@
     BAT_THEME = "Catppuccin Macchiato";
     EZA_CONFIG_DIR = "$HOME/.config/eza";
     RANGER_LOAD_DEFAULT_RC = "FALSE";
-    PNPM_HOME = "$HOME/Library/pnpm";
+    PNPM_HOME = pnpmHome;
     LESSKEYIN = "$HOME/.config/less/.lesskey";
     LESSHISTFILE = "$HOME/.config/less/.lesshst";
     POWERLINE_NERD_FONTS = "1";
@@ -52,7 +70,9 @@
     "$HOME/.antigravity/antigravity/bin"
     "$HOME/.amp/bin"
     "$HOME/.fabro/bin"
+  ] ++ lib.optionals isDarwin [
     "/Applications/Obsidian.app/Contents/MacOS"
+  ] ++ [
     "$HOME/.nix-profile/bin"
   ];
 
@@ -142,8 +162,6 @@
       zed = "zeditor";
       zededitor = "zeditor";
       ks = "tmux kill-server";
-      pbc = "pbcopy";
-      pbp = "pbpaste";
       scratch = "nvim -c \"setlocal buftype=nofile\"";
       vimdiff = "nvim -d";
       wr = "wrangler";
@@ -168,7 +186,6 @@
       down = "cd ~/Downloads";
       dev = "cd ~/Developer";
       doc = "cd ~/Documents";
-      ip = "ipconfig getifaddr en0";
 
       g = "git";
       gst = "git status";
@@ -201,7 +218,6 @@
       oxfix = "oxlint --fix";
       gsp = "ghostty-split";
       gpn = "ghostty-pane";
-      claude-conductor = "\"$HOME/Library/Application Support/com.conductor.app/bin/claude\"";
       pymobiledevice3 = "source ~/.venv/bin/activate && python -m pymobiledevice3";
 
       mg = "mgrep search";
@@ -210,8 +226,6 @@
       mgw = "mgrep search -w";
       mgwa = "mgrep search -w -a";
       mgs = "mgrep search -s";
-
-      sync = "sudo darwin-rebuild switch --flake ~/nix-config";
 
       sudo = "sudo -E";
 
@@ -240,18 +254,26 @@
       note-ls = "notesmd-cli list";
       note-open = "notesmd-cli open --editor";
       canary-start = "~/.local/bin/canary-debug";
+    } // lib.optionalAttrs isDarwin {
+      # macOS-only tools and paths; Linux hosts get none of these.
+      pbc = "pbcopy";
+      pbp = "pbpaste";
+      ip = "ipconfig getifaddr en0";
+      sync = "sudo darwin-rebuild switch --flake ~/nix-config";
+      claude-conductor = "\"$HOME/Library/Application Support/com.conductor.app/bin/claude\"";
     };
 
-    profileExtra = ''
+    profileExtra = lib.optionalString isDarwin ''
       source ~/.orbstack/shell/init.zsh 2>/dev/null || :
     '';
 
-    envExtra = ''
+    envExtra = lib.optionalString isDarwin ''
       export SHELL="/bin/zsh"
+    '' + ''
       export BAT_THEME="Catppuccin Macchiato"
       export HOMEBREW_NO_ANALYTICS=1
       export RANGER_LOAD_DEFAULT_RC="FALSE"
-      export PNPM_HOME="$HOME/Library/pnpm"
+      export PNPM_HOME="${pnpmHome}"
       export LESSKEYIN="$HOME/.config/less/.lesskey"
       export LESSHISTFILE="$HOME/.config/less/.lesshst"
       export POWERLINE_NERD_FONTS=1
@@ -259,11 +281,7 @@
       export TERMINFO="$HOME/.terminfo"
       typeset -aU _terminfo_dirs
       _terminfo_dirs=(
-        $HOME/.terminfo
-        /Applications/Ghostty.app/Contents/Resources/terminfo
-        /Applications/kitty.app/Contents/Resources/kitty/terminfo
-        /Applications/kitty.app/Contents/Resources/terminfo
-        /usr/share/terminfo
+        ${lib.concatStringsSep "\n        " terminfoDirs}
         ''${(s/:/)TERMINFO_DIRS}
       )
       _terminfo_dirs=(''${_terminfo_dirs:#})
@@ -284,6 +302,7 @@
 
       [[ -f "$_ZSH_CONFIG_DIR/.secret" ]] && source "$_ZSH_CONFIG_DIR/.secret"
 
+    '' + lib.optionalString isDarwin ''
       if [[ -z "$SDKROOT" ]]; then
         export SDKROOT="$(xcrun --show-sdk-path 2>/dev/null)"
       fi
@@ -292,6 +311,7 @@
         export CPPFLAGS="-isysroot $SDKROOT $CPPFLAGS"
       }
 
+    '' + ''
       if (( $+commands[hx] )); then
         export EDITOR=hx VISUAL=hx
       elif (( $+commands[nvim] )); then

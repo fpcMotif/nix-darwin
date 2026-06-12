@@ -72,6 +72,11 @@
         "x86_64-linux"
       ];
 
+      linuxSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+
       hostDefinitions = {
         f = {
           system = "aarch64-darwin";
@@ -119,13 +124,16 @@
         builtins.mapAttrs mkConfiguredSystem
           (lib.filterAttrs (_: host: host.target == target) hostDefinitions);
 
+      pkgsFor = s:
+        import nixpkgs {
+          system = s;
+          inherit overlays;
+          config.allowUnfree = true;
+        };
+
       legacyPackagesFor = s:
         let
-          pkgs = import nixpkgs {
-            system = s;
-            inherit overlays;
-            config.allowUnfree = true;
-          };
+          pkgs = pkgsFor s;
         in
         {
           crush = pkgs.nur.repos.charmbracelet.crush;
@@ -136,7 +144,47 @@
       darwinConfigurations = hostsFor "darwin";
       nixosConfigurations = hostsFor "nixos";
 
+      # The repo's own overlay (pkgs.martin.* and friends), reusable by other
+      # flakes without re-importing ./pkgs by path.
+      overlays.default = import ./pkgs;
+
       legacyPackages = lib.genAttrs supportedSystems legacyPackagesFor;
+
+      # Reproducible OCI dev container, Linux-only by nature. Build it on the
+      # Mac via martin.linuxBuilder (modules/darwin/linux-builder.nix) or on a
+      # Linux machine/CI, then load with `docker load < result`.
+      packages = lib.genAttrs linuxSystems (s: {
+        dev-container = (pkgsFor s).callPackage ./pkgs/dev-container.nix { };
+      });
+
+      # Repo dev shell: `nix develop` (or direnv via the root .envrc) provides
+      # the pinned maintainer toolchain — just, formatter, and the Nix linters
+      # `just lint` runs.
+      devShells = lib.genAttrs supportedSystems (s:
+        let
+          pkgs = pkgsFor s;
+        in
+        {
+          default = pkgs.mkShellNoCC {
+            packages = [
+              pkgs.just
+              pkgs.nixpkgs-fmt
+              pkgs.statix
+              pkgs.deadnix
+              pkgs.shellcheck
+            ];
+          };
+        });
+
+      # Seed for per-project pinned dev environments:
+      #   nix flake init -t <this-flake>#dev-shell
+      templates = {
+        dev-shell = {
+          path = ./templates/dev-shell;
+          description = "Pinned per-project dev shell (flake devShell + direnv .envrc)";
+        };
+        default = self.templates.dev-shell;
+      };
 
       formatter = lib.genAttrs supportedSystems
         (s: nixpkgs.legacyPackages.${s}.nixpkgs-fmt);

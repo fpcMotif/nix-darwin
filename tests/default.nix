@@ -45,6 +45,23 @@ in
         vmConfigurationInput = self.nixosConfigurations.vm-aarch64-utm;
       };
 
+  # Linux-only: the shared Home Manager profile must not leak macOS paths or
+  # tools into the Linux hosts. Evaluating the Linux configs requires a Linux
+  # builder (agent-skills resolves its bundle via import-from-derivation), so
+  # this is a no-op skip on Darwin; CI runs it on the x86_64-linux builder.
+  integration-home-linux-purity =
+    if pkgs.stdenv.isDarwin then
+      pkgs.runCommand "integration-home-linux-purity-skipped" { } ''
+        echo "Skipping Linux-only home purity test on ${system}"
+        touch $out
+      ''
+    else
+      callTest ./integration/home-linux-purity-test.nix {
+        wslConfigurationInput = self.nixosConfigurations.wsl;
+        x230ConfigurationInput = self.nixosConfigurations.x230;
+        vmConfigurationInput = self.nixosConfigurations.vm-aarch64-utm;
+      };
+
   # Darwin-only: exact-value lock-in for the macOS settings host "f" commits to.
   # macOS settings have no meaning on the NixOS hosts, so this is a no-op skip
   # off-darwin (the CI matrix still runs it on its native macOS builder).
