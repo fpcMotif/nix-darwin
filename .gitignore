@@ -2,6 +2,9 @@
 /result
 /result-*
 
+# direnv / nix-direnv shell cache (.envrc is checked in; the cache is not).
+/.direnv/
+
 # Stray sed/sed-bak artifacts left by scripts/update-*.sh (e.g. *.bak, *.bak2)
 # when an updater fails mid-flight. Not source of truth.
 *.bak

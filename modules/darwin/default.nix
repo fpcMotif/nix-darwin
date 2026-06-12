@@ -12,6 +12,7 @@
     ./fonts.nix
     ./hammerspoon.nix
     ./health-check.nix
+    ./linux-builder.nix
     ./mouse-display.nix
     ./nix.nix
     ./rime.nix

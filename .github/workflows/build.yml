@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: cachix/install-nix-action@v27
+      - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
@@ -38,10 +38,17 @@ jobs:
             '.#checks.x86_64-linux.unit-overlay' \
             '.#checks.x86_64-linux.unit-format' \
             '.#checks.x86_64-linux.integration-configurations-eval' \
+            '.#checks.x86_64-linux.integration-home-linux-purity' \
             '.#checks.x86_64-linux.integration-darwin-settings' \
             '.#checks.x86_64-linux.smoke-build-common' \
             '.#checks.x86_64-linux.smoke-build-oh-my-pi' \
             '.#checks.x86_64-linux.smoke-build-toolchain'
+
+      - name: Build dev shell and dev container (x86_64-linux)
+        run: |
+          nix build --no-link --show-trace \
+            '.#devShells.x86_64-linux.default' \
+            '.#packages.x86_64-linux.dev-container'
 
   darwin:
     name: f (aarch64-darwin)
@@ -50,7 +57,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: cachix/install-nix-action@v27
+      - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
@@ -64,10 +71,16 @@ jobs:
             '.#checks.aarch64-darwin.unit-overlay' \
             '.#checks.aarch64-darwin.unit-format' \
             '.#checks.aarch64-darwin.integration-configurations-eval' \
+            '.#checks.aarch64-darwin.integration-home-linux-purity' \
             '.#checks.aarch64-darwin.integration-darwin-settings' \
             '.#checks.aarch64-darwin.smoke-build-common' \
             '.#checks.aarch64-darwin.smoke-build-oh-my-pi' \
             '.#checks.aarch64-darwin.smoke-build-toolchain'
+
+      - name: Build dev shell (aarch64-darwin)
+        run: |
+          nix build --no-link --show-trace \
+            '.#devShells.aarch64-darwin.default'
 
       - name: Build darwinConfigurations.f
         run: |
@@ -86,7 +99,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: cachix/install-nix-action@v27
+      - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
@@ -105,7 +118,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: cachix/install-nix-action@v27
+      - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
@@ -116,3 +129,8 @@ jobs:
           nix build \
             .#nixosConfigurations.vm-aarch64-utm.config.system.build.toplevel \
             --no-link --print-out-paths --show-trace
+
+      - name: Build dev container (aarch64-linux)
+        run: |
+          nix build --no-link --show-trace \
+            '.#packages.aarch64-linux.dev-container'

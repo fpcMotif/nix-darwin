@@ -1,10 +1,10 @@
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
 {
   home.sessionVariables = {
     CLIPROXY_BASE_URL = "http://127.0.0.1:8317";
     CLIPROXY_CONFIG = "$HOME/CLIProxyAPI/config.yaml";
-
+  } // lib.optionalAttrs pkgs.stdenv.isDarwin {
     # Codex `chrome@openai-bundled` plugin is hardcoded to stable Google Chrome
     # paths on macOS. Point its check scripts at Chrome Canary instead so it can
     # detect the installed Codex extension + native messaging host there.

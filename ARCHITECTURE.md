@@ -1,7 +1,7 @@
 # Nix Architecture — Martin's cross-platform config
 
 > **Active target:** `darwinConfigurations.f` (Apple Silicon, nix-darwin).
-> **Last reviewed:** 2026-05-24.
+> **Last reviewed:** 2026-06-12.
 
 This repository is Martin's cross-platform Nix configuration. The Mac is the active target; Linux/Omakub and NixOS targets are deliberately staged behind it.
 
@@ -19,6 +19,7 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 - [Homebrew family policy](#homebrew-family-policy)
 - [Secrets, formatting, CI](#secrets-formatting-ci)
 - [Workflows](#workflows)
+- [Dev environments: shells, templates, containers](#dev-environments-shells-templates-containers)
 - [Linux / Omakub plan](#linux--omakub-plan)
 - [WSL, X230, and VM scaffolds](#wsl-x230-and-vm-scaffolds)
 - [Reference repositories](#reference-repositories)
@@ -48,7 +49,11 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 │   ├── nixos/                # shared NixOS module — staged for future hosts
 │   └── home/                 # Martin's Home Manager profile
 ├── pkgs/                     # custom derivations + overlay (exposed as pkgs.martin.*)
+│   └── dev-container.nix     # OCI dev image (packages.<linux-system>.dev-container)
+├── templates/
+│   └── dev-shell/            # `nix flake init -t .#dev-shell` per-project shell seed
 ├── references/               # external sample repos, never imported by the flake
+├── .envrc                    # direnv → repo devShell (devShells.<system>.default)
 └── home.nix                  # off-flake Home Manager shim → imports ./modules/home
 ```
 
@@ -168,8 +173,9 @@ modules/darwin/
 ├── fonts.nix                # curated macOS font bundle
 ├── hammerspoon.nix          # managed Hammerspoon init.lua
 ├── health-check.nix         # best-effort daily macOS health report LaunchAgent
+├── linux-builder.nix        # opt-in aarch64-linux builder VM (UTM/dev-container builds)
 ├── mouse-display.nix        # BetterMouse + BetterDisplay apps and seed config
-├── nix.nix                  # flakes / nix-command / trusted users
+├── nix.nix                  # flakes / nix-command / trusted users / GC + scheduled store optimise
 ├── rime.nix                 # Squirrel app link + MyRime-main sync
 ├── security.nix             # Touch ID sudo, firewall, Gatekeeper/quarantine posture
 ├── shell.nix                # zsh shell registration
@@ -354,9 +360,10 @@ These are dimensions every reviewer asks about. State the position even when the
 |----------------------|------------------------------------------------------------------------------------------------|
 | Secrets management   | **None today.** No `sops-nix` / `agenix`. Secrets live outside the flake; revisit before adding any service that reads them. |
 | Formatter            | Wired through `flake.nix` (`formatter.<system>`). Run via `nix fmt`.                           |
-| Linting              | `nix flake check` runs `nixpkgs-fmt --check` via `tests/default.nix`, and gates the `tools/skill-router` bun suite offline through the `unit-skill-router` check (`tests/unit/skill-router-test.nix`) — the spawn-seam regression net (ADR-0006), run on both CI runners. Add `statix`/`deadnix` as explicit checks before treating them as enforced gates. |
-| CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin, x86_64 NixOS scaffolds (`wsl`, `x230`), and `vm-aarch64-utm` on macOS / Ubuntu runners, with `nix flake check` as the gate before config builds. |
-| Dev shells / direnv  | Not currently exposed. If `devShells.<system>` is added later, document the `.envrc` pattern. |
+| Linting              | `nix flake check` runs `nixpkgs-fmt --check` via `tests/default.nix`, and gates the `tools/skill-router` bun suite offline through the `unit-skill-router` check (`tests/unit/skill-router-test.nix`) — the spawn-seam regression net (ADR-0006), run on both CI runners. `statix`/`deadnix` run advisorily via `just lint` (tools pinned in the repo dev shell, scoped by `statix.toml`); promote them to explicit checks once the existing findings are cleared. |
+| Cross-platform purity | `integration-home-linux-purity` (`tests/integration/home-linux-purity-test.nix`, ADR-0008) asserts at eval time that no macOS-only paths/tools (`/Applications`, `~/Library`, `pbcopy`, `darwin-rebuild`, …) reach the Linux hosts' session vars, zsh config, or activation scripts. Darwin-only code in `modules/home` must sit behind `pkgs.stdenv.isDarwin`. |
+| CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin, x86_64 NixOS scaffolds (`wsl`, `x230`), and `vm-aarch64-utm` on macOS / Ubuntu runners, with `nix flake check` as the gate before config builds. Also builds `devShells` on both runners and the `dev-container` image for both Linux systems. |
+| Dev shells / direnv  | `devShells.<system>.default` is the repo maintainer shell (just, nixpkgs-fmt, statix, deadnix, shellcheck); the checked-in root `.envrc` (`use flake`) auto-enters it via direnv + nix-direnv. Per-project shells seed from `templates.dev-shell` (`nix flake init -t .#dev-shell`). |
 
 When any row changes, update this table in the same PR.
 
@@ -442,6 +449,23 @@ darwin-rebuild build --flake .#f
 sudo darwin-rebuild switch --flake .#f
 ```
 
+## Dev environments: shells, templates, containers
+
+Everything dev-environment-shaped resolves from the flake's pin (ADR-0008).
+
+| Surface                                  | Use                                                                                       |
+|------------------------------------------|--------------------------------------------------------------------------------------------|
+| `devShells.<system>.default`             | This repo's maintainer shell. `nix develop`, or `direnv allow` once on the root `.envrc`. |
+| `templates.dev-shell`                    | Per-project pinned shell seed: `nix flake init -t ~/nix-config#dev-shell`, edit `packages`, commit `flake.lock`. |
+| `packages.<linux-system>.dev-container`  | Reproducible OCI dev image (`dockerTools.buildLayeredImage`, content-addressed tag). `docker load < result`, run under OrbStack/Docker/a UTM guest. |
+| `martin.linuxBuilder.enable`             | Opt-in nix-darwin Linux builder VM so the Mac itself can build the aarch64-linux container and the UTM guest toplevel (`just dev-container`). Off by default — it runs a background QEMU VM. |
+
+GC interaction: `modules/darwin/nix.nix` keeps `keep-outputs`/`keep-derivations`
+on (nix-direnv's documented requirement) so direnv-pinned shells survive the
+weekly GC, and runs scheduled `nix store optimise` instead of
+`auto-optimise-store`, which corrupts the store on macOS
+([NixOS/nix#7273](https://github.com/NixOS/nix/issues/7273)).
+
 ## Linux / Omakub plan
 
 Omakub is Ubuntu-focused, so it should not become a `nixosConfigurations.*` output. The likely future shape is a standalone Home Manager output:
@@ -495,6 +519,7 @@ Borrow patterns selectively. Do not copy Linux-specific NixOS concepts into nix-
 - Mac is the active target; optimize for it first.
 - Keep the flake root thin — inputs, overlays, system outputs, formatter, nothing else.
 - Keep shared modules parameterized by `currentSystemUser` and `currentSystemUserHome`; the home path is computed once in `lib/mkSystem.nix`, never re-derived in host or Home Manager modules.
+- `modules/home` is cross-platform: macOS-only paths (`/Applications`, `~/Library`) and tools (`pbcopy`, `xcrun`, `darwin-rebuild`, OrbStack) must sit behind `pkgs.stdenv.isDarwin`. The `integration-home-linux-purity` check fails CI on regressions.
 - Home Manager activation blocks that write or delete files must run after `writeBoundary`, be idempotent, and respect `DRY_RUN` without mutating the filesystem.
 - Keep Home Manager from clobbering unmanaged config files without explicit migration intent (each new `programs.*` module must ship the activation-guard pattern from `modules/home/prompt.nix`).
 - Keep brew variants disabled unless explicitly testing an escape hatch.

@@ -184,7 +184,9 @@ let
   # cache dir via `cacheAction` (which sees `$skill` and `$dir`). Shared by the
   # remove-sweep (claudePruneRemovedSkills) and disable-sweep
   # (claudeDisableGrillSkills); they differ only in that cache action.
-  mkSessionSweep = { ids, cacheAction }: ''
+  # Claude Desktop's session store lives under macOS's ~/Library, so the sweep
+  # is empty on Linux — callers still run their portable mkSkillTargetRm part.
+  mkSessionSweep = { ids, cacheAction }: lib.optionalString pkgs.stdenv.isDarwin ''
     sessions="${homeDir}/Library/Application Support/Claude/local-agent-mode-sessions"
     if [ -d "$sessions" ]; then
       for skill in ${lib.escapeShellArgs ids}; do
@@ -460,7 +462,8 @@ in
 
   # Surge ships its agent skill inside the app bundle. Keep live symlinks to the
   # bundle instead of copying it into the Nix store so Surge updates refresh it.
-  home.activation.surgeAgentSkillSymlinks = lib.hm.dag.entryAfter [ "agent-skills" ] ''
+  # Surge.app is a macOS bundle; Linux hosts must not reference /Applications.
+  home.activation.surgeAgentSkillSymlinks = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "agent-skills" ] ''
     source="/Applications/Surge.app/Contents/Resources/Skills/surge"
     if [ -d "$source" ] && [ -f "$source/SKILL.md" ]; then
       for dir in ${skillTargetDirsSh}; do
@@ -472,7 +475,7 @@ in
     else
       echo "surge-agent-skill: missing $source, skipping" >&2
     fi
-  '';
+  '');
 
   # Claude can cache Anthropic-provided skills outside the Nix-managed skill
   # targets. Keep the disabled skills (currently grill-me — grill-with-docs is
