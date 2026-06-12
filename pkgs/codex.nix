@@ -8,24 +8,24 @@
 }:
 
 let
-  version = "0.140.0-alpha.14";
+  version = "0.140.0-alpha.15";
 
   sources = {
     aarch64-darwin = {
       asset = "codex-aarch64-apple-darwin";
-      hash = "sha256-pDH4x/+EdMu8TTCXN8m8d6Eo04sTdA8FYA5lfEMZOsA=";
+      hash = "sha256-txOW5gUzh1w97qNTcFnaQe54j2dMMEWujlK8X9QDB4s=";
     };
     x86_64-darwin = {
       asset = "codex-x86_64-apple-darwin";
-      hash = "sha256-AY8JxzGY7oE6ExI29qBh0uSy8hCpyao69HfBBLyUtFc=";
+      hash = "sha256-4XgQpBjiM4HxmFej/QmAZVhA2YlXGYG4U09oSYvaVfk=";
     };
     aarch64-linux = {
       asset = "codex-aarch64-unknown-linux-musl";
-      hash = "sha256-51+b89XjeCT81Cm+KQoMBKNxdPH96koExC1ZhV/5ZA4=";
+      hash = "sha256-Z6W3N+gmjb1jEDaklIiywsAzJHQvQ569atLwy25YZmA=";
     };
     x86_64-linux = {
       asset = "codex-x86_64-unknown-linux-musl";
-      hash = "sha256-lp8jlVJq0gTqyh95B+Iubosm8rMMBsuRDvV4cS+BwsM=";
+      hash = "sha256-aX4Ht4mtuTzl6MlqdYvAWHF60hnbDGE2kbs/9UeSaSw=";
     };
   };
 
