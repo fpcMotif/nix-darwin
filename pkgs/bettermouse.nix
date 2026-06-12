@@ -5,7 +5,7 @@
 }:
 
 let
-  version = "1.6.8830";
+  version = "1.6.8837";
 in
 martin.mkAppFromZip {
   pname = "bettermouse";
@@ -14,7 +14,7 @@ martin.mkAppFromZip {
 
   src = fetchurl {
     url = "https://better-mouse.com/wp-content/uploads/BetterMouse.${version}.zip";
-    hash = "sha256-YKF5r5ftJ8OaIZGtSvLF+Q9bn5QBQTZd2Jc089U3odk=";
+    hash = "sha256-a1zgfzN85a4MhtEihf+7caS3ymn+S7YPt2lCcIL+1G4=";
   };
 
   meta = {
