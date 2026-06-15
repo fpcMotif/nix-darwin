@@ -24,7 +24,7 @@ let
 
   src = fetchzip {
     url = "https://github.com/tw93/Mole/archive/refs/tags/V${version}.tar.gz";
-    hash = "sha256-N7Gd4z+sCenuS1f4ZqRgKNzBBv3J9D3nrk2QmVifIOY=";
+    hash = "sha256-xWqPeM1A9YV/kPJwTa8AgasLqkSNkNquFeUG2gzfjyg=";
   };
 
   analyzeBin = fetchurl {
