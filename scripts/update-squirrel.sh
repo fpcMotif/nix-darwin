@@ -10,11 +10,10 @@ cd "$(au_repo_root)"
 FILE="pkgs/squirrel.nix"
 
 latest=$(
+  # Performance optimization: Replace multi-process pipeline (jq | grep | head | sed)
+  # with a single jq command using native regex and capture.
   curl -fsSL "https://api.github.com/repos/rime/squirrel/releases/latest" \
-    | jq -r '.assets[].name' \
-    | grep -oE 'Squirrel-[0-9.]+\.pkg' \
-    | head -1 \
-    | sed -E 's|Squirrel-([0-9.]+)\.pkg|\1|'
+    | jq -r '[.assets[].name | select(test("Squirrel-[0-9.]+\\.pkg")) | capture("Squirrel-(?<v>[0-9.]+)\\.pkg") | .v] | .[0] // empty'
 )
 [ -n "$latest" ] || { echo "squirrel: could not parse version from asset name" >&2; exit 1; }
 
