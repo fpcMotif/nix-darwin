@@ -8,7 +8,7 @@
 }:
 
 let
-  version = "0.142.0-alpha.1";
+  version = "0.142.0-alpha.2";
 
   sources = {
     aarch64-darwin = {
