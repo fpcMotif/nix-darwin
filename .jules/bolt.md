@@ -1,0 +1,4 @@
+
+## $(date +%Y-%m-%d) - Bash Pure Regex Optimization Antipattern
+**Learning:** Avoid simulating pipelines like `grep ... | head -1` using pure Bash `while read` loops to parse large multiline strings (like build logs) in memory. Iterating line-by-line in pure Bash is exceptionally slow. Although it avoids spawning subprocesses, `grep` is a compiled binary highly optimized for multi-line search. For large outputs (e.g. thousands of lines from `nix build`), the pure Bash loop can be an order of magnitude slower, resulting in a measurable performance regression.
+**Action:** When searching multiline streams or large variables, use standard Unix utilities (`grep`, `sed`, `awk`) even if it incurs a small subprocess spawn overhead, as their compiled execution far outpaces pure bash loops. Only use Bash regex (`=~`) when evaluating short strings, pre-filtered lines, or when avoiding subprocesses in highly-called tight loops (e.g., hundreds of calls).
