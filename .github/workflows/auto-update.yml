@@ -1,6 +1,6 @@
 name: auto-update
 
-# Hourly combined-PR strategy. Each scripts/update-*.sh runs in turn; failures
+# Daily combined-PR strategy. Each scripts/update-*.sh runs in turn; failures
 # are tolerated PER-SCRIPT so a broken upstream parser doesn't block the rest.
 # After the loop, two HARD GUARDS run:
 #   1. au_assert_clean — fails if any FAKE placeholder hash or stray *.bak
@@ -10,15 +10,16 @@ name: auto-update
 #
 # The PR auto-merges once build.yml's required checks turn green.
 #
-# Cadence rationale: amp / opencode / codex each ship multiple builds
-# per day. A daily cron leaves the active system 24h behind upstream, which
-# triggers in-CLI "newer version available" banners on tools that self-check.
-# Hourly keeps drift under ~1h while still amortising into a single nightly-
-# style PR thanks to the `branch: auto-update/nightly` reuse below.
+# Cadence rationale: an hourly cron was too aggressive — it re-ran the full
+# build.yml CI matrix (Linux + macOS) on every bump, up to ~24x/day, for what
+# is usually a one-line lockfile churn. A single daily run keeps upstream drift
+# bounded to ~24h while collapsing all updaters into one nightly-style PR via
+# the `branch: auto-update/nightly` reuse below. Trigger `workflow_dispatch`
+# manually when a same-day bump is needed.
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 3 * * *"
   workflow_dispatch:
 
 permissions:
@@ -33,7 +34,7 @@ jobs:
   bump:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # PAT (not GITHUB_TOKEN) so the resulting PR triggers build.yml.
           token: ${{ secrets.AUTO_UPDATE_PAT }}
