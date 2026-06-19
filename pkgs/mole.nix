@@ -20,21 +20,21 @@
 }:
 
 let
-  version = "1.43.0";
+  version = "1.43.1";
 
   src = fetchzip {
     url = "https://github.com/tw93/Mole/archive/refs/tags/V${version}.tar.gz";
-    hash = "sha256-xWqPeM1A9YV/kPJwTa8AgasLqkSNkNquFeUG2gzfjyg=";
+    hash = "sha256-cr/dv6yTM+d1X5FpHcuJPqWJCxNvEDbUyjJaDl3qaKg=";
   };
 
   analyzeBin = fetchurl {
     url = "https://github.com/tw93/Mole/releases/download/V${version}/analyze-darwin-arm64";
-    hash = "sha256-0Jdeu6SpfhAcSjh2eQJFpDThBmuEG12ylYHkCzX2R2M=";
+    hash = "sha256-D9fFCqI9J5wDbP6HN54cNHYoj5/+J8BiP+m2XVBlrNc=";
   };
 
   statusBin = fetchurl {
     url = "https://github.com/tw93/Mole/releases/download/V${version}/status-darwin-arm64";
-    hash = "sha256-iMpZhawrCUK0EPbtfIXfySVH0sUfXRaABX7kpny7P10=";
+    hash = "sha256-qItYKlOifKbbMsCiLUpXm/bjJf8yr9TBliiYMLSgZ1M=";
   };
 in
 stdenvNoCC.mkDerivation {

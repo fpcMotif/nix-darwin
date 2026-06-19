@@ -49,6 +49,11 @@ jobs:
             trusted-public-keys = claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk= cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=
 
       - name: Run updaters (each tolerated to fail)
+        # Authenticate the updaters' GitHub API polling (au_latest_github_release)
+        # so the 60/hr unauthenticated limit can't 403 a shared-runner IP and
+        # silently skip a bump.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           shopt -s nullglob
           fail_count=0

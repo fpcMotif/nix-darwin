@@ -19,6 +19,7 @@
       cleanMyMacManualOnly = true;
     };
 
+    autoSwitch.enable = true;
     fonts.enable = true;
     hammerspoon.enable = true;
     healthCheck.enable = true;
