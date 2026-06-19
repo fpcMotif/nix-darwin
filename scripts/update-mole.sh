@@ -19,8 +19,11 @@ src_url="https://github.com/tw93/Mole/archive/refs/tags/V${latest}.tar.gz"
 analyze_url="https://github.com/tw93/Mole/releases/download/V${latest}/analyze-darwin-arm64"
 status_url="https://github.com/tw93/Mole/releases/download/V${latest}/status-darwin-arm64"
 
-# src uses fetchzip → unpacked hash.
-au_set_block_hash "$FILE" "tags/V\${version}.tar.gz" "$(au_prefetch_unpacked_sri "$src_url")"
+# src uses fetchzip → unpacked hash. Anchor on `archive/refs/tags` (unique to
+# the source URL): the literal `${version}` in the URL must NOT appear in the
+# anchor, because au_set_block_hash feeds it through Perl's \Q…\E, which first
+# interpolates `$version` (empty) and so would never match.
+au_set_block_hash "$FILE" "archive/refs/tags" "$(au_prefetch_unpacked_sri "$src_url")"
 au_set_block_hash "$FILE" "/analyze-darwin-arm64"   "$(au_prefetch_sri        "$analyze_url")"
 au_set_block_hash "$FILE" "/status-darwin-arm64"    "$(au_prefetch_sri        "$status_url")"
 
