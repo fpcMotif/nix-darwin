@@ -56,7 +56,8 @@ let
     emmet-language-server # HTML/CSS emmet completion
 
     # === Go ===
-    gopls
+  ] ++ lib.optional (pkgs.stdenv.hostPlatform.system != "x86_64-linux") gopls
+  ++ [
 
     # === Rust ===
     rust-analyzer

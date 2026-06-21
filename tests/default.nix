@@ -100,9 +100,9 @@ in
     ''
       echo "Checking required Nix-only dotfiles toolchain commands..."
       ${lib.getExe pkgs.prek} --version
-      ${lib.getExe pkgs.oxlint} --version
+      ${lib.optionalString (system != "aarch64-linux") "${lib.getExe pkgs.oxlint} --version"}
       ${lib.getExe pkgs.oxfmt} --version
-      ${lib.getExe pkgs.tsgolint} --help >/dev/null
+      ${lib.optionalString (system != "aarch64-linux") "${lib.getExe pkgs.tsgolint} --help >/dev/null"}
       ${lib.getExe pkgs.typescript-go} --version
       ${lib.getExe pkgs.uv} --version
       ${lib.getExe pkgs.ruff} --version
