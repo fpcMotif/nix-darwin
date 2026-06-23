@@ -1,0 +1,3 @@
+## 2025-02-23 - Native Bash Regex performance
+**Learning:** Subprocesses like `grep`, `head`, and `awk` within Bash loops cause severe performance bottlenecks (~5.5s for 100 iterations on 9 items). Using native Bash regex (`[[ "$var" =~ $re ]]`) when parsing variables already loaded in memory provides a massive speedup (~0.08s for 100 iterations) without breaking macOS Bash 3.2 compatibility if the regex is stored in a separate variable.
+**Action:** When parsing a string variable within a loop, use Bash native regex (`=~`) alongside `BASH_REMATCH` arrays instead of piping through external binaries.
