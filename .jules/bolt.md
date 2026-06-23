@@ -1,0 +1,6 @@
+## 2025-02-23 - Native Bash Regex performance
+**Learning:** Subprocesses like `grep`, `head`, and `awk` within Bash loops cause severe performance bottlenecks (~5.5s for 100 iterations on 9 items). Using native Bash regex (`[[ "$var" =~ $re ]]`) when parsing variables already loaded in memory provides a massive speedup (~0.08s for 100 iterations) without breaking macOS Bash 3.2 compatibility if the regex is stored in a separate variable.
+**Action:** When parsing a string variable within a loop, use Bash native regex (`=~`) alongside `BASH_REMATCH` arrays instead of piping through external binaries.
+## 2025-02-23 - bun-canary-bin hash drift
+**Learning:** The `bun-canary-bin` derivation fetches a rolling zip (`canary/bun-darwin-aarch64.zip`). The upstream `bun` repository force-pushes the `canary` tag, meaning the zips content (and therefore its Nix SRI hash) naturally drifts without the derivation version or URL changing. This leads to CI evaluation failures with hash mismatches.
+**Action:** When this specific CI failure occurs, manually update the `aarch64-darwin` hash in `pkgs/bun-canary-bin.nix` with the `got:` hash from the CI log. This is an expected routine maintenance task for this rolling release asset.
