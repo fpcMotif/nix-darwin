@@ -39,11 +39,11 @@
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "pi-coding-agent";
-  version = "0.79.10";
+  version = "0.80.2";
 
   src = fetchurl {
     url = "https://github.com/badlogic/pi-mono/releases/download/v${finalAttrs.version}/pi-darwin-arm64.tar.gz";
-    hash = "sha256-bRuemc5jkqhxpKiGsfusBAtRwkvWUiGuBXOw57i7sws=";
+    hash = "sha256-x9Elu969hj+nbZInRFi6DrQF5c3jnbNNsfSfdn7Z8d0=";
   };
 
   sourceRoot = "pi";
