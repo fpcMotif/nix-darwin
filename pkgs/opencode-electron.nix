@@ -17,7 +17,7 @@
 }:
 
 let
-  version = "1.17.9";
+  version = "1.17.10";
 
   # Upstream renamed `opencode-electron-*` → `opencode-desktop-*` in v1.15.x.
   # The .app bundle and binary inside it stayed the same; we keep the
@@ -25,7 +25,7 @@ let
   sources = {
     "aarch64-darwin" = {
       url = "https://github.com/sst/opencode/releases/download/v${version}/opencode-desktop-mac-arm64.zip";
-      hash = "sha256-RQdJQfYJEUMOr6vPm4mPdKghOWWMzwaiJOh6/b7irxc=";
+      hash = "sha256-OIoYqmi+EWCVn7OhKmJRFf+YEmKK8BmxNkjYEdYMRUg=";
     };
   };
 
