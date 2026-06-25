@@ -15,7 +15,7 @@ stdenv.mkDerivation {
 
   src = fetchurl {
     url = "https://dl.google.com/drive-file-stream/GoogleDrive.dmg";
-    hash = "sha256-X1Jb4V/pbHJdRfqx50An21ESNSJgRB5dlLR4O2W/DAI=";
+    hash = "sha256-uZ1AJr3EVvUHEnpvv9jRVpWBMMxJpBFeVF6jhAOinIs=";
   };
 
   nativeBuildInputs = [ undmg ];
