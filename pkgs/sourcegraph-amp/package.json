@@ -3,6 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "dependencies": {
-    "@sourcegraph/amp": "0.0.1782352550-g22f8e4"
+    "@sourcegraph/amp": "0.0.1782439082-g706a2e"
   }
 }
