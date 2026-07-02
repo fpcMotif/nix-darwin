@@ -45,13 +45,13 @@ drift:
         printf '%-10s %s\n' "$b" "$(readlink -f ~/.nix-profile/bin/$b 2>/dev/null | sed -E 's|.*-([0-9][^/]*)/bin.*|\1|')"; \
     done
 
-# Run the full check suite (unit + integration + system eval).
+# Run the full check suite (unit + integration + system eval). Builds the
+# `quick` check group (single source of truth: tests/default.nix, see
+# scripts/lib/check-group.sh) plus the darwin system itself.
 check:
     nix build --no-link \
         '.#darwinConfigurations.f.system' \
-        '.#checks.aarch64-darwin.unit-overlay' \
-        '.#checks.aarch64-darwin.unit-skill-router' \
-        '.#checks.aarch64-darwin.integration-configurations-eval'
+        $(bash scripts/lib/check-group.sh aarch64-darwin quick)
 
 # Run the skill-router bun suite (spawn-seam gate) offline via the Nix sandbox.
 test-router:

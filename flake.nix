@@ -139,6 +139,17 @@
           crush = pkgs.nur.repos.charmbracelet.crush;
           martin = pkgs.martin;
         };
+
+      # Single import per system: `tests/default.nix` returns both the
+      # `checks` derivations and their named `groups` (see that file). Both
+      # flake outputs below are sourced from this one evaluation so group
+      # membership can't drift from the checks it describes.
+      testsFor = lib.genAttrs checkSystems (s:
+        import ./tests {
+          inherit inputs self;
+          system = s;
+        }
+      );
     in
     {
       darwinConfigurations = hostsFor "darwin";
@@ -189,11 +200,13 @@
       formatter = lib.genAttrs supportedSystems
         (s: nixpkgs.legacyPackages.${s}.nixpkgs-fmt);
 
-      checks = lib.genAttrs checkSystems (s:
-        import ./tests {
-          inherit inputs self;
-          system = s;
-        }
-      );
+      checks = lib.mapAttrs (_: t: t.checks) testsFor;
+
+      # Named subsets of `checks.<system>` (e.g. `ci-gate`, `quick`,
+      # `nightly-guard`) — the single source of truth that CI, `justfile`,
+      # and the nightly auto-update guard enumerate instead of hardcoding
+      # attr-name lists. See `tests/default.nix` and
+      # `scripts/lib/check-group.sh`.
+      checkGroups = lib.mapAttrs (_: t: t.groups) testsFor;
     };
 }
