@@ -31,18 +31,14 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
       - name: Run nix flake check
+        # The `ci-gate` check group (single source of truth: `tests/default.nix`,
+        # exposed as the `checkGroups` flake output) is resolved to attrpaths
+        # here rather than hardcoded — see `scripts/lib/check-group.sh`. Attr
+        # names never contain whitespace/globs, so the unquoted `$()` below is
+        # safe word-splitting, not a quoting bug.
         run: |
           nix build --no-link --show-trace --print-build-logs \
-            '.#checks.x86_64-linux.smoke' \
-            '.#checks.x86_64-linux.unit-mksystem' \
-            '.#checks.x86_64-linux.unit-overlay' \
-            '.#checks.x86_64-linux.unit-format' \
-            '.#checks.x86_64-linux.integration-configurations-eval' \
-            '.#checks.x86_64-linux.integration-home-linux-purity' \
-            '.#checks.x86_64-linux.integration-darwin-settings' \
-            '.#checks.x86_64-linux.smoke-build-common' \
-            '.#checks.x86_64-linux.smoke-build-oh-my-pi' \
-            '.#checks.x86_64-linux.smoke-build-toolchain'
+            $(bash scripts/lib/check-group.sh x86_64-linux ci-gate)
 
       - name: Build dev shell and dev container (x86_64-linux)
         run: |
@@ -64,18 +60,11 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
       - name: Run nix flake check (aarch64-darwin)
+        # Same `ci-gate` group as the x86_64-linux job above, resolved for
+        # this system — see `scripts/lib/check-group.sh`.
         run: |
           nix build --no-link --show-trace --print-build-logs \
-            '.#checks.aarch64-darwin.smoke' \
-            '.#checks.aarch64-darwin.unit-mksystem' \
-            '.#checks.aarch64-darwin.unit-overlay' \
-            '.#checks.aarch64-darwin.unit-format' \
-            '.#checks.aarch64-darwin.integration-configurations-eval' \
-            '.#checks.aarch64-darwin.integration-home-linux-purity' \
-            '.#checks.aarch64-darwin.integration-darwin-settings' \
-            '.#checks.aarch64-darwin.smoke-build-common' \
-            '.#checks.aarch64-darwin.smoke-build-oh-my-pi' \
-            '.#checks.aarch64-darwin.smoke-build-toolchain'
+            $(bash scripts/lib/check-group.sh aarch64-darwin ci-gate)
 
       - name: Build dev shell (aarch64-darwin)
         run: |

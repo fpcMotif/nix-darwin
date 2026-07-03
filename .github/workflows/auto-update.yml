@@ -82,10 +82,11 @@ jobs:
           # `nix flake check --no-build` cannot handle the agent-skills
           # import-from-derivation bundle path. Build the native Linux check
           # slice instead; build.yml still validates the full Linux + macOS
-          # matrix on the generated PR.
+          # matrix on the generated PR. The `nightly-guard` group
+          # (tests/default.nix, see scripts/lib/check-group.sh) IS that
+          # slice — it must stay this exact small, IFD-safe subset.
           nix build --no-link --show-trace --print-build-logs \
-            '.#checks.x86_64-linux.unit-overlay' \
-            '.#checks.x86_64-linux.integration-configurations-eval'
+            $(bash scripts/lib/check-group.sh x86_64-linux nightly-guard)
 
       - name: Open or update PR
         id: cpr
