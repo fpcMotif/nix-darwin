@@ -31,12 +31,12 @@
 }:
 
 let
-  version = "1.4.0-canary.1+6bb513507";
+  version = "1.4.0-canary.1+9657f3789";
 
   sources = {
     "aarch64-darwin" = {
       url = "https://github.com/oven-sh/bun/releases/download/canary/bun-darwin-aarch64.zip";
-      hash = "sha256-dBUYrvNYbWnNVJZOWA8e6HMyGLBkuXPuwHPdk5Ala8Q=";
+      hash = "sha256-BGjjdszqMhasiPBi4srmUK7vTCp0mMHazef1mJ9cp04=";
     };
   };
 
