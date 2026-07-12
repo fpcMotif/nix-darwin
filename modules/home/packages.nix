@@ -21,6 +21,7 @@ let
     fzf
     ast-grep
     mgrep
+    martin.fff-mcp
 
     # Git and version control.
     git
@@ -36,12 +37,11 @@ let
     jq
     gh
     just
-    rtk
     # bun comes from `martin.bun-canary-bin` (canary channel) in darwinPackages
     # below — nixpkgs `bun` would collide on $out/bin/bun, so it's not listed.
-    # node runtime only (no bundled npm — we use bun). slim is cached on
-    # cache.nixos.org; the full nodejs isn't for this rev and would compile.
-    # Latest Current line; bump at major EOL (nodejs_25 was removed at Node 25 EOL).
+    # node runtime only (no bundled npm — we use bun). Pinned to the newest
+    # LTS-line runtime; _26 = 26.5.0 is darwin-cached as of 2026-07 (was
+    # uncached at 26.3.1, which forced the old _24 pin).
     nodejs-slim_26
     # Frontend and SSO/OIDC helpers. OXC is the formatter/linter stack;
     # oxlint lives in ./lsp.nix because it also runs as an LSP server.
@@ -62,7 +62,11 @@ let
     rustfmt
     clippy
     cargo-nextest
-    cargo-watch
+    # bacon replaces cargo-watch: upstream archived it (points to bacon/watchexec),
+    # and at the 2026-07 pin it is uncached AND its link step deterministically
+    # crashes cctools ld (SIGTRAP) — it would re-break `just switch` after every
+    # nightly flake bump. bacon is darwin-cached.
+    bacon
     cargo-edit
 
     # Go.
@@ -112,6 +116,12 @@ let
     nur.repos.charmbracelet.crush
     martin.pi-coding-agent
     martin.oh-my-pi
+    martin.nub # Bun-rival toolkit on stock node (nubjs/nub).
+    # martin.trail  # TEMP-DISABLED: trail.nix uses an eval-time `builtins.fetchGit`
+    # of the PRIVATE repo, which fails under `sudo darwin-rebuild switch` (root has
+    # neither your git CA certs nor your GitHub auth). Re-enable once trail fetches
+    # without per-user creds — e.g. nix `access-tokens` set system-wide + a github:
+    # fetcher, a public repo, or install it via `uv` from ~/devv/trail instead.
     # zed-editor itself is installed by programs.zed-editor.enable in zed.nix.
   ];
 in

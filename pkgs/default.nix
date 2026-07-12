@@ -21,6 +21,8 @@ final: _prev:
     squirrel = final.callPackage ./squirrel.nix { };
 
     bun-canary-bin = final.callPackage ./bun-canary-bin.nix { };
+    fff-mcp = final.callPackage ./fff-mcp.nix { };
+    nub = final.callPackage ./nub.nix { };
     oh-my-pi = final.callPackage ./oh-my-pi.nix { };
     pi-coding-agent = final.callPackage ./pi-coding-agent.nix { };
     sourcegraph-amp = final.callPackage ./sourcegraph-amp.nix { };
@@ -28,5 +30,7 @@ final: _prev:
     opencode = final.callPackage ./opencode.nix { };
     opencode-electron = final.callPackage ./opencode-electron.nix { };
     zed-nightly-bin = final.callPackage ./zed-nightly-bin.nix { };
+
+    trail = final.callPackage ./trail.nix { };
   };
 }

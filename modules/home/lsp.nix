@@ -47,7 +47,12 @@ let
     # spawns `typescript-language-server`, and vtsls reads tsserver
     # from a `typescript` package. Keeping both here is cheap and
     # avoids breakage when a project pins to the legacy tsserver.
-    typescript
+    # lowPrio: both this package and typescript-go ship bin/tsc
+    # (typescript-go's is a symlink to its native TS7 tsgo binary).
+    # lowPrio lets buildEnv resolve the collision by dropping this
+    # package's tsc in favor of typescript-go's, while still keeping
+    # tsserver (and everything else here) for vtsls/tsls consumers.
+    (lib.lowPrio typescript)
     typescript-language-server
     vue-language-server # Vue SFCs (Vite + Vue)
     astro-language-server # Astro components (Vite-based)

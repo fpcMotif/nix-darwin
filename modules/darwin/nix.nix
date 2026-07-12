@@ -3,6 +3,13 @@
 {
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
+
+    # Flake builds here run from the live working tree, which is almost always
+    # dirty (nightly auto-update commits, in-progress edits). The resulting
+    # "Git tree '…' is dirty" line on every `just switch` is pure noise — the
+    # build still uses the working tree as-is — so silence it.
+    warn-dirty = false;
+
     trusted-users = [
       "root"
       currentSystemUser

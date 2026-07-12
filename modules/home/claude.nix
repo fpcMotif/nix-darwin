@@ -12,7 +12,7 @@
 # this flake. Nix just installs them as read-only store symlinks.
 
 let
-  inherit (lib) getExe optionalAttrs listToAttrs;
+  inherit (lib) optionalAttrs listToAttrs;
 
   dotClaude = inputs.dotfiles + "/dot_claude";
   homeDir = config.home.homeDirectory;
@@ -98,49 +98,6 @@ let
     - No proposed seam ships with only one adapter; the second adapter earned it.
     - Tests at the deepened interface survive subsequent internal refactors (they describe behaviour, not implementation).
   '';
-  rtkRewriteHook = pkgs.writeShellScript "rtk-rewrite.sh" ''
-    JQ=${getExe pkgs.jq}
-    RTK=${getExe pkgs.rtk}
-
-    INPUT=$(cat)
-    CMD=$(printf '%s' "$INPUT" | "$JQ" -r '.tool_input.command // empty')
-
-    if [ -z "$CMD" ]; then
-      exit 0
-    fi
-
-    REWRITTEN=$("$RTK" rewrite "$CMD" 2>/dev/null)
-    RTK_EXIT=$?
-    case "$RTK_EXIT" in
-      0 | 3) ;;
-      *) exit 0 ;;
-    esac
-
-    if [ "$CMD" = "$REWRITTEN" ]; then
-      exit 0
-    fi
-
-    # Codex PreToolUse payloads carry turn_id and reject updatedInput;
-    # short-circuit to `empty` in that branch. One jq pass folds the
-    # turn_id check, tool_input patch, and hookSpecificOutput wrap.
-    printf '%s' "$INPUT" | "$JQ" --arg cmd "$REWRITTEN" '
-      if has("turn_id") then empty
-      else {
-        hookSpecificOutput: {
-          hookEventName: "PreToolUse",
-          permissionDecision: "allow",
-          permissionDecisionReason: "RTK auto-rewrite",
-          updatedInput: (.tool_input + { command: $cmd })
-        }
-      }
-      end
-    '
-  '';
-  rtkHookChecksum = pkgs.runCommand "rtk-hook.sha256" { } ''
-    ${pkgs.coreutils}/bin/sha256sum ${rtkRewriteHook} \
-      | ${pkgs.gnused}/bin/sed 's|  .*|  rtk-rewrite.sh|' > $out
-  '';
-
   # `link` makes every target a tree of `home.file` symlinks pointing at
   # the same /nix/store/...-agent-skills-bundle/<skill>/SKILL.md. Pi's
   # loader de-duplicates discovered skills by realpath, so identical
@@ -372,15 +329,6 @@ in
   # churn so macOS TCC and editor integrations don't re-prompt every switch.
   home.file =
     let
-      mkRtkFiles = root: {
-        "${root}/RTK.md".source = dotClaude + "/RTK.md";
-        "${root}/hooks/rtk-rewrite.sh" = {
-          source = rtkRewriteHook;
-          executable = true;
-        };
-        "${root}/hooks/.rtk-hook.sha256".source = rtkHookChecksum;
-      };
-
       # Locally-authored jj skill (no dotfiles upstream yet). Installed via plain
       # home.file symlinks rather than a programs.agent-skills `path` source: the
       # module CAN source local paths, but it wraps a `path` source in a
@@ -396,7 +344,6 @@ in
     {
       ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
       ".claude/CLAUDE.md".source = renderChezmoi (dotClaude + "/claude.md.tmpl");
-      "RTK.md".source = dotClaude + "/RTK.md";
       ".claude/statusline-command.sh" = {
         source = dotClaude + "/executable_statusline-command.sh";
         executable = true;
@@ -405,7 +352,7 @@ in
         source = stopHookDebug;
         executable = true;
       };
-    } // mkRtkFiles ".claude" // mkRtkFiles ".codex" // jjSkillFiles;
+    } // jjSkillFiles;
 
   # === Stop hook diagnostic instrumentation ===
   # Idempotently rewrites the 3 installed plugin Stop hook configs to
@@ -443,7 +390,6 @@ in
     }
 
     base="${homeDir}/.claude/plugins/cache"
-    wrap_stop_hook superpowers "$base/frad-dotclaude/superpowers/2.1.0/.claude-plugin/plugin.json"
     wrap_stop_hook ralph-loop  "$base/claude-plugins-official/ralph-loop/1.0.0/hooks/hooks.json"
     wrap_stop_hook codex       "$base/openai-codex/codex/1.0.4/hooks/hooks.json"
   '';
@@ -493,26 +439,6 @@ in
         mv -- "$dir" "$disabled/$skill"
       '';
     }}
-  '';
-
-  # obra/superpowers (Nix-managed) is the canonical `brainstorming` source. The
-  # frad-dotclaude/superpowers *plugin* ships its own `brainstorming`, so both
-  # would otherwise surface in the picker. Park ONLY the plugin's `brainstorming`
-  # into a sibling skills-disabled/ dir so exactly one survives (the obra one);
-  # every other plugin skill (writing-plans, executing-plans, systematic-debugging,
-  # behavior-driven-development, need-vet, agent-team-driven-development, ...) is
-  # left live on purpose. Non-destructive and version-agnostic (globs the version
-  # dir); re-runs each switch, so a plugin update that restores brainstorming/ is
-  # re-parked on the next rebuild. The plugin's hooks/commands framework is
-  # untouched (separate concern — see claudeStopHookDebug).
-  home.activation.claudeDisableSuperpowersPluginBrainstorming = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    for skills_dir in "${homeDir}"/.claude/plugins/cache/frad-dotclaude/superpowers/*/skills; do
-      [ -d "$skills_dir/brainstorming" ] || continue
-      disabled="$(${pkgs.coreutils}/bin/dirname "$skills_dir")/skills-disabled"
-      mkdir -p "$disabled"
-      rm -rf -- "$disabled/brainstorming"
-      mv -- "$skills_dir/brainstorming" "$disabled/brainstorming"
-    done
   '';
 
   # The official Anthropic `code-simplifier` plugin (claude-plugins-official)
@@ -593,6 +519,45 @@ in
         echo "claude-disable-mcp-plugins: disabled ${lib.concatStringsSep ", " disabledClaudePlugins}" >&2
       else
         rm -f -- "$tmp"
+      fi
+    fi
+  '';
+
+  # === MCP: register fff (frecency-ranked, git-aware file search) ===
+  # `claude mcp add -s user` is the only supported way to write
+  # ~/.claude.json's mcpServers — that file carries other CLI-managed state
+  # (auth, project registry) we don't want to hand-roll with jq the way
+  # claudeDesktopMcpScaffold does for claude_desktop_config.json in
+  # lsp.nix (that file's shape is simple enough to own; this one isn't).
+  #
+  # Idempotency compares the *registered command path* to the current
+  # ${pkgs.martin.fff-mcp} store path rather than just "does fff exist" —
+  # every fff-mcp version bump gets a new store path, and a stale
+  # registration would silently break the moment `nix-collect-garbage`
+  # reaps the old one. Re-registering on every switch keeps it pinned to
+  # a path this generation actually holds a GC root on.
+  home.activation.claudeMcpFff = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    claudeBin="${pkgs.claude-code}/bin/claude"
+    fffBin="${pkgs.martin.fff-mcp}/bin/fff-mcp"
+    target="${homeDir}/.claude.json"
+
+    currentCmd=""
+    if [ -f "$target" ]; then
+      currentCmd=$(${pkgs.jq}/bin/jq -r '.mcpServers.fff.command // empty' "$target" 2>/dev/null || true)
+    fi
+
+    if [ ! -x "$claudeBin" ]; then
+      echo "claude-mcp-fff: claude CLI not found, skipping" >&2
+    elif [ "$currentCmd" = "$fffBin" ]; then
+      :
+    elif [ -n "''${DRY_RUN:-}" ]; then
+      echo "claude-mcp-fff: would (re)register fff -> $fffBin (was: ''${currentCmd:-none})" >&2
+    else
+      "$claudeBin" mcp remove -s user fff >/dev/null 2>&1 || true
+      if "$claudeBin" mcp add -s user fff -- "$fffBin" >&2; then
+        echo "claude-mcp-fff: registered fff -> $fffBin" >&2
+      else
+        echo "claude-mcp-fff: failed to register fff (see above)" >&2
       fi
     fi
   '';

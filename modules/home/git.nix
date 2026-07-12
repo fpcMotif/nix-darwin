@@ -1,4 +1,4 @@
-{ ... }:
+{ config, ... }:
 
 {
   programs.delta = {
@@ -102,6 +102,13 @@
       init.defaultBranch = "main";
 
       merge.conflictstyle = "zdiff3";
+
+      # Auto-resolve version/hash churn in auto-updated pkgs/*.nix (mapped via
+      # the repo's .gitattributes); see scripts/git-merge-pkgnix.sh.
+      merge.pkgnix = {
+        name = "newer-version-wins for auto-updated package pins";
+        driver = "${config.home.homeDirectory}/nix-config/scripts/git-merge-pkgnix.sh %O %A %B %L %P";
+      };
 
       pull.rebase = true;
 

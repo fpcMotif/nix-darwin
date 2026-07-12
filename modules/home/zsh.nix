@@ -56,6 +56,15 @@ in
     "/etc/profiles/per-user/$USER/bin"
     "/run/current-system/sw/bin"
     "/nix/var/nix/profiles/default/bin"
+    # Kimi Code's own binary. Must win over $HOME/.local/bin, which still
+    # holds an unrelated `uv tool install kimi-cli` shim (also named
+    # `kimi`) — see kimi-legacy rename below. Kimi Code's installer tries
+    # to self-add this dir to PATH by appending to ~/.zshrc, but that's a
+    # home-manager-generated file (read-only nix store symlink), so its
+    # `_update_path` step always fails with "Permission denied"; declaring
+    # it here is what makes that step a no-op instead (already-in-PATH
+    # short-circuit) on future `kimi update` runs.
+    "$HOME/.kimi-code/bin"
     "$HOME/.local/bin"
     "/usr/local/bin"
     "$HOME/bin"
@@ -80,8 +89,18 @@ in
     enable = true;
     enableZshIntegration = true;
     defaultCommand = "fd --type f --hidden --follow --exclude .git";
-    fileWidgetCommand = "fd --type f --hidden --exclude .git --color=always";
-    changeDirWidgetCommand = "fd --type d --hidden --exclude .git --color=always";
+    fileWidget = {
+      command = "fd --type f --hidden --exclude .git --color=always";
+      options = [
+        "--preview 'bat --style=numbers --color=always --line-range :500 {}'"
+      ];
+    };
+    changeDirWidget = {
+      command = "fd --type d --hidden --exclude .git --color=always";
+      options = [
+        "--preview 'eza --tree --level=2 --icons --color=always --no-quotes {}'"
+      ];
+    };
     defaultOptions = [
       "--height=50%"
       "--layout=reverse"
@@ -93,18 +112,30 @@ in
       "--color=fg:-1,bg:-1,hl:cyan,fg+:white,bg+:black,hl+:cyan"
       "--color=info:yellow,prompt:cyan,pointer:green,marker:yellow,spinner:green,header:cyan"
     ];
-    fileWidgetOptions = [
-      "--preview 'bat --style=numbers --color=always --line-range :500 {}'"
-    ];
-    changeDirWidgetOptions = [
-      "--preview 'eza --tree --level=2 --icons --color=always --no-quotes {}'"
-    ];
   };
 
   programs.direnv = {
     enable = true;
     enableZshIntegration = true;
     nix-direnv.enable = true;
+    # Trust my own project roots so `cd` never re-prompts with
+    # "direnv: error .envrc is blocked. Run 'direnv allow'": that prompt fires
+    # on every `.envrc`/flake.lock churn (auto-update commits, switches, merges)
+    # and is the recurring "direnv seems broken" symptom. Scoped to dirs I own —
+    # deliberately NOT ~/Downloads, where an untrusted repo's .envrc could land.
+    config.whitelist.prefix = [
+      "${config.home.homeDirectory}/nix-config"
+      "${config.home.homeDirectory}/devv"
+      "${config.home.homeDirectory}/Burrow"
+      "${config.home.homeDirectory}/ghostty"
+    ];
+    # Drop direnv's noisy `export +VAR … ~VAR` diff on every `cd`/reload — nix
+    # dev shells export ~50 vars and the dump dominates the terminal. `log_filter`
+    # is an allowlist (only messages matching the regexp are printed), so this
+    # keeps the useful `loading`/`using flake`/`nix-direnv` status lines and hides
+    # the export diff. Errors bypass the filter, so a blocked/failing .envrc still
+    # surfaces.
+    config.global.log_filter = "^(loading|using|nix-direnv)";
   };
 
   programs.zoxide = {
@@ -173,6 +204,13 @@ in
       la = "eza -la --icons --git --group-directories-first --hyperlink --no-quotes --color-scale=size --color-scale-mode=gradient --smart-group";
       lt = "eza -lT --level=2 --icons --hyperlink --no-quotes";
       tree = "eza --tree --icons --git-ignore --hyperlink --no-quotes";
+      # lsr (github.com/rockorager/lsr): no git-status/smart-group like eza, but
+      # wins decisively on large flat dirs (node_modules, build output, logs) —
+      # benchmarked ~2x faster than eza at 1k entries, ~7x at 10k. Kept as a
+      # separate alias rather than replacing ls/ll/la since eza is still better
+      # for everyday small-dir browsing (git status, color-scale, smart-group).
+      lr = "lsr -al --group-directories-first --color=auto --icons=auto --hyperlinks=auto";
+      lrt = "lsr --tree --color=auto --icons=auto";
       cat = "bat --paging=never";
       preview = "bat --style=numbers --color=always";
       find = "fd";

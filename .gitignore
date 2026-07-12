@@ -18,6 +18,10 @@
 /progress.md
 /autoresearch.config.json
 
+# Droid (Factory) auto-generated repo wiki cache — local tool output, not
+# authored documentation.
+/droid-wiki/
+
 # Bun tool dependencies (skill-router uses bun run, not a Nix node_modules).
 /tools/skill-router/node_modules/
 

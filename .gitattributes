@@ -1,0 +1,5 @@
+# Two independent auto-update runs (the nightly PR vs local scripts/update-*.sh)
+# collide on the same version/hash lines almost daily. The pkgnix driver
+# (scripts/git-merge-pkgnix.sh) auto-resolves those to the newer version;
+# structural conflicts still produce normal markers.
+pkgs/*.nix merge=pkgnix

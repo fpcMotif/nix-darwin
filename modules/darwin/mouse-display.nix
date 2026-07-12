@@ -9,6 +9,7 @@ let
     if cfg.bettermouse.profile == null
     then ""
     else toString cfg.bettermouse.profile;
+  lsregister = "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister";
 in
 {
   options.martin.mouseDisplay = {
@@ -30,6 +31,38 @@ in
       pkgs.martin.bettermouse
       pkgs.betterdisplay
     ];
+
+    # Run BetterMouse/BetterDisplay from /Applications copies, never straight
+    # from the store. macOS stamps any bundle the user grants Accessibility /
+    # Input-Monitoring with a kernel `com.apple.macl` xattr; on a *store* path
+    # that xattr makes the bundle undeletable even by root, so the weekly
+    # `nix.gc` aborts on it (fchmodat: Operation not permitted) and then stops
+    # collecting *anything* — every old version piles up forever. Copying to
+    # /Applications (writable, outside the store) keeps the store path clean and
+    # GC-able — same trick as modules/darwin/zed.nix. `xattr -rc` before re-copy
+    # defuses any macl already on the previous /Applications copy so version
+    # bumps don't get stuck.
+    system.activationScripts.postActivation.text = lib.mkAfter ''
+      install_managed_app() {
+        local src="$1" dst="$2" marker="$3" pkg="$4"
+        if [ ! -d "$src" ]; then
+          echo "[mouse-display] WARNING: $src not found; skipping /Applications install" >&2
+        elif [ "$(readlink "$marker" 2>/dev/null)" != "$pkg" ]; then
+          echo "[mouse-display] installing $src into /Applications"
+          if [ -e "$dst" ]; then
+            xattr -rc "$dst" 2>/dev/null || true
+            chmod -R u+w "$dst" 2>/dev/null || true
+          fi
+          rm -rf "$dst"
+          cp -R "$src" "$dst"
+          chmod -R u+w "$dst"
+          ln -sfn "$pkg" "$marker"
+          ${lsregister} -f "$dst" || true
+        fi
+      }
+      install_managed_app "${pkgs.martin.bettermouse}/Applications/BetterMouse.app" "/Applications/BetterMouse.app" "/Applications/.bettermouse.src" "${pkgs.martin.bettermouse}"
+      install_managed_app "${pkgs.betterdisplay}/Applications/BetterDisplay.app" "/Applications/BetterDisplay.app" "/Applications/.betterdisplay.src" "${pkgs.betterdisplay}"
+    '';
 
     home-manager.users.${currentSystemUser} = {
       home.activation.bettermouseSeed = hmDag.entryAfter [ "writeBoundary" ] ''
@@ -59,7 +92,7 @@ in
             ProgramArguments = [
               "/usr/bin/open"
               "-g"
-              "${pkgs.betterdisplay}/Applications/BetterDisplay.app"
+              "/Applications/BetterDisplay.app"
             ];
             ProcessType = "Interactive";
             RunAtLoad = true;
@@ -74,7 +107,7 @@ in
             ProgramArguments = [
               "/usr/bin/open"
               "-g"
-              "${pkgs.martin.bettermouse}/Applications/BetterMouse.app"
+              "/Applications/BetterMouse.app"
             ] ++ lib.optionals (cfg.bettermouse.profile != null) [
               "--args"
               bettermouseSeed
