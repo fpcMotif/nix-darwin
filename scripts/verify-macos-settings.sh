@@ -112,6 +112,7 @@ if pm="$(pmset -g custom 2>/dev/null)"; then
     "hibernatemode 3" "standbydelayhigh 7200" "standbydelaylow 3600"; do
     key="${kv%% *}"
     val="${kv##* }"
+    # Use native bash regex instead of piping grep/awk to avoid subprocess overhead
     re="([[:space:]]|^)${key}[[:space:]]+([^[:space:]]+)"
     if [[ "$pm" =~ $re ]]; then
       expect "pmset ${key}" "$val" "${BASH_REMATCH[2]}"
