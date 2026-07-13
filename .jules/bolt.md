@@ -1,0 +1,3 @@
+## 2024-07-13 - Optimize macOS setting verification overhead
+**Learning:** Parsing command output (like `pmset`) inside Bash loops using standard UNIX text utilities (`grep`, `head`, `awk`) spawns significant subprocess overhead (2-3 processes per key checked) resulting in measurable performance degradation, especially when the text to search is already in a bash variable. Native bash regex `=~` with BASH_REMATCH captures reduces this to 0 subprocesses.
+**Action:** Avoid spawning subprocesses (`grep`, `awk`, `head`) inside loops in shell scripts for strings already loaded into memory. Prefer Bash built-in string regex matching (`=~`), keeping in mind macOS bash 3.2 compatibility by defining regex patterns in variables first.
