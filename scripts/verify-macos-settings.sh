@@ -112,11 +112,11 @@ if pm="$(pmset -g custom 2>/dev/null)"; then
     "hibernatemode 3" "standbydelayhigh 7200" "standbydelaylow 3600"; do
     key="${kv%% *}"
     val="${kv##* }"
-    line="$(printf '%s' "$pm" | grep -E "^[[:space:]]*${key}[[:space:]]+" | head -1)"
-    if [ -z "$line" ]; then
-      na "pmset ${key} not exposed on this hardware (Apple Silicon)"
+    re="(^|[[:space:]])${key}[[:space:]]+([^[:space:]]+)"
+    if [[ "$pm" =~ $re ]]; then
+      expect "pmset ${key}" "$val" "${BASH_REMATCH[2]}"
     else
-      expect "pmset ${key}" "$val" "$(printf '%s' "$line" | awk '{print $2}')"
+      na "pmset ${key} not exposed on this hardware (Apple Silicon)"
     fi
   done
 else
