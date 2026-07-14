@@ -1,0 +1,3 @@
+## 2024-07-14 - Bash Regex Capture Performance Pattern
+**Learning:** Parsing multiline string variables line-by-line using `while read` loops or spawning `grep | head | awk` processes for every iteration inside a shell script is a significant performance anti-pattern. While `grep` is fast, the overhead of forking multiple subshells in a loop destroys performance.
+**Action:** When extracting data from a string variable inside a loop, use Bash native regex `[[ "$var" =~ $re ]]` and extract groups using `${BASH_REMATCH[]}`. This keeps all parsing natively inside Bash memory, eliminating subprocess overhead entirely.

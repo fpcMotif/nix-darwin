@@ -40,8 +40,6 @@ let
 
   lspServers = with pkgs; [
     # === TypeScript / JavaScript — modern Rust/Go stack ===
-    typescript-go # `tsgo --lsp` — TS 7 native LSP
-    oxlint # `oxlint --lsp` — oxc lint LSP
     vtsls # tsserver wrapper, opt-in fallback
     # Compat: `typescript-lsp@claude-plugins-official` plugin still
     # spawns `typescript-language-server`, and vtsls reads tsserver
@@ -60,14 +58,8 @@ let
     tailwindcss-language-server # Utility-class intellisense
     emmet-language-server # HTML/CSS emmet completion
 
-    # === Go ===
-    gopls
-
     # === Rust ===
     rust-analyzer
-
-    # === Swift / iOS ===
-    sourcekit-lsp
 
     # === Haskell ===
     haskell-language-server
@@ -81,6 +73,15 @@ let
 
     # === MCP bridge for desktop apps ===
     mcp-language-server # wraps any LSP as an MCP server
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
+    # === Swift / iOS ===
+    sourcekit-lsp
+  ] ++ lib.optionals (pkgs.stdenv.hostPlatform.system != "aarch64-linux") [
+    typescript-go # `tsgo --lsp` — TS 7 native LSP
+    oxlint # `oxlint --lsp` — oxc lint LSP
+  ] ++ lib.optionals (pkgs.stdenv.hostPlatform.system != "x86_64-linux") [
+    # === Go ===
+    gopls
   ];
 
   # Common JS/TS extension → language-id map used by tsgo, oxlint, and
