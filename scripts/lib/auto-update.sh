@@ -158,9 +158,13 @@ au_extract_got_hash() {
   set +e
   log=$(nix build "$attr" --no-link 2>&1)
   set -e
-  local got
-  got=$(printf '%s\n' "$log" | grep -oE 'got:[[:space:]]+sha256-[A-Za-z0-9+/=]+' \
-          | head -1 | sed -E 's/got:[[:space:]]+//')
+  # Bolt ⚡: Replaced external process pipeline (printf|grep|head|sed) with native Bash regex.
+  # This avoids spawning 4 subprocesses per extraction for an in-memory string.
+  local got=""
+  local re="got:[[:space:]]+(sha256-[A-Za-z0-9+/=]+)"
+  if [[ "$log" =~ $re ]]; then
+    got="${BASH_REMATCH[1]}"
+  fi
   [ -n "$got" ] || {
     echo "au_extract_got_hash: no 'got: sha256-…' line in build output" >&2
     printf '%s\n' "$log" | tail -20 >&2
