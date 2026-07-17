@@ -29,15 +29,35 @@ au_set_version "$FILE" "$latest"
 # Anchor each hash on its version-free npm package name (unique per block);
 # never anchor on the URL's ${version} segment — perl \Q\E would interpolate
 # it empty and silently no-op the bump.
-for pkg in \
-  cli-darwin-arm64 \
-  cli-darwin-x64-baseline \
-  cli-linux-arm64 \
+#
+# ⚡ Bolt Optimization:
+# Parallelize the network fetches for the hashes. Previously, these were
+# fetched sequentially, blocking the script for each request. By staging
+# the downloads concurrently via background jobs and collecting the PIDs,
+# we reduce the total network wait time from O(n) to O(1) in wall-clock time.
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+pids=()
+
+pkgs=(
+  cli-darwin-arm64
+  cli-darwin-x64-baseline
+  cli-linux-arm64
   cli-linux-x64-baseline
-do
+)
+
+for pkg in "${pkgs[@]}"; do
   url="https://registry.npmjs.org/@factory/${pkg}/-/${pkg}-${latest}.tgz"
-  sri=$(au_prefetch_sri "$url")
-  au_set_block_hash "$FILE" "$pkg" "$sri"
+  (au_prefetch_sri "$url" > "$work/$pkg") &
+  pids+=($!)
+done
+
+for pid in "${pids[@]}"; do
+  wait "$pid"
+done
+
+for pkg in "${pkgs[@]}"; do
+  au_set_block_hash "$FILE" "$pkg" "$(cat "$work/$pkg")"
 done
 
 echo "droid bumped to $latest"
