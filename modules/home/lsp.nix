@@ -61,13 +61,17 @@ let
     emmet-language-server # HTML/CSS emmet completion
 
     # === Go ===
+  ] ++ lib.optionals (pkgs.stdenv.hostPlatform.system != "x86_64-linux") [
     gopls
+  ] ++ [
 
     # === Rust ===
     rust-analyzer
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
 
     # === Swift / iOS ===
     sourcekit-lsp
+  ] ++ [
 
     # === Haskell ===
     haskell-language-server
