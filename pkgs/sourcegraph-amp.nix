@@ -31,7 +31,7 @@ let
 in
 buildNpmPackage {
   pname = "sourcegraph-amp";
-  version = "0.0.1784177987-g5d539a";
+  version = "0.0.1784264425-g070593";
 
   src = ./sourcegraph-amp;
 
