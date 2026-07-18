@@ -26,13 +26,21 @@ if [ "$current" = "$latest" ]; then
 fi
 echo "sourcegraph-amp: $current -> $latest"
 
-# Update the package.json pin and regenerate the lockfile.
+# Update the package.json pin and regenerate the lockfile. Use npm from Nix
+# rather than the PATH shim: Bun's `npm` writes bun.lock instead of the lock
+# file Nix consumes.
+nodejs_out=$(nix eval --raw nixpkgs#nodejs_24.outPath)
+npm_cmd="$nodejs_out/bin/npm"
+if [ ! -x "$npm_cmd" ]; then
+  echo "update-sourcegraph-amp: Nix Node npm not found at $npm_cmd" >&2
+  exit 1
+fi
 tmp=$(mktemp)
 jq --arg v "$latest" '.dependencies."@sourcegraph/amp" = $v' \
   "$PKG_DIR/package.json" > "$tmp"
 mv "$tmp" "$PKG_DIR/package.json"
 (cd "$PKG_DIR" && rm -f package-lock.json \
-   && npm install --package-lock-only --omit=peer >/dev/null)
+   && "$npm_cmd" install --package-lock-only --omit=peer >/dev/null)
 
 au_set_version "$FILE" "$latest"
 
