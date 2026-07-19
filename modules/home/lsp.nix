@@ -65,10 +65,11 @@ let
 
     # === Rust ===
     rust-analyzer
-
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     # === Swift / iOS ===
+    # Swift fails to build on Linux in nixpkgs. Keep it macOS-only.
     sourcekit-lsp
-
+  ] ++ [
     # === Haskell ===
     haskell-language-server
 
