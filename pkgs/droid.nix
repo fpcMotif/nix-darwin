@@ -6,7 +6,7 @@
 }:
 
 let
-  version = "0.175.0";
+  version = "0.175.1";
 
   # Factory publishes per-platform binary-only npm packages. These URLs are pinned to
   # a released build and mapped by system so we install the correct native executable
@@ -14,19 +14,19 @@ let
   sources = {
     "aarch64-darwin" = {
       url = "https://registry.npmjs.org/@factory/cli-darwin-arm64/-/cli-darwin-arm64-${version}.tgz";
-      hash = "sha256-X5O14YDPPLzaFptQhagWUSdwgUN28wKEt+VzN6QYtWY=";
+      hash = "sha256-IP6bakwqFhcedRtk3sk2q1q17l8St/X//wqQXg+cwlo=";
     };
     "x86_64-darwin" = {
       url = "https://registry.npmjs.org/@factory/cli-darwin-x64-baseline/-/cli-darwin-x64-baseline-${version}.tgz";
-      hash = "sha256-YWlenhZJddj+l8rqNgVfwAKmfxCuaiMtxKEIj+T0Xo8=";
+      hash = "sha256-tbaSmHCkocOymTHyoPbbbCHsIj0r0U8yB7mQv6KXgLY=";
     };
     "aarch64-linux" = {
       url = "https://registry.npmjs.org/@factory/cli-linux-arm64/-/cli-linux-arm64-${version}.tgz";
-      hash = "sha256-2zmVtWCJlCqjhbfaX0B7r7/tx3Kj/199AIEDzXlwGyw=";
+      hash = "sha256-UVWeVyIpKMEMqS1W6mfovBrHum2MK4TyWwc4GNE4gHo=";
     };
     "x86_64-linux" = {
       url = "https://registry.npmjs.org/@factory/cli-linux-x64-baseline/-/cli-linux-x64-baseline-${version}.tgz";
-      hash = "sha256-DJob1jFJ3fz5fvB62pNZhlup3qVv6Mfu/iaHjamRmVg=";
+      hash = "sha256-whQy508Pk99xKtMJtbiwlbyS34jZ1blyMKgS6ZwqYJ0=";
     };
   };
 
