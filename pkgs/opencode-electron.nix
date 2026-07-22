@@ -17,7 +17,7 @@
 }:
 
 let
-  version = "1.18.4";
+  version = "pr-38252-videos";
 
   # Upstream renamed `opencode-electron-*` → `opencode-desktop-*` in v1.15.x.
   # The .app bundle and binary inside it stayed the same; we keep the

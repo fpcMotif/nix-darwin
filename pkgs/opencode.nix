@@ -20,7 +20,7 @@
 }:
 
 let
-  version = "1.18.4";
+  version = "pr-38252-videos";
 
   sources = {
     "aarch64-darwin" = {
