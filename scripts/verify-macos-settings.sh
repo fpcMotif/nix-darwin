@@ -112,11 +112,12 @@ if pm="$(pmset -g custom 2>/dev/null)"; then
     "hibernatemode 3" "standbydelayhigh 7200" "standbydelaylow 3600"; do
     key="${kv%% *}"
     val="${kv##* }"
-    line="$(printf '%s' "$pm" | grep -E "^[[:space:]]*${key}[[:space:]]+" | head -1)"
-    if [ -z "$line" ]; then
-      na "pmset ${key} not exposed on this hardware (Apple Silicon)"
+    # ⚡ Bolt: Native bash regex instead of grep/awk subprocesses to significantly reduce overhead in loops
+    re="([[:space:]]|^)${key}[[:space:]]+([^[:space:]]+)"
+    if [[ "$pm" =~ $re ]]; then
+      expect "pmset ${key}" "$val" "${BASH_REMATCH[2]}"
     else
-      expect "pmset ${key}" "$val" "$(printf '%s' "$line" | awk '{print $2}')"
+      na "pmset ${key} not exposed on this hardware (Apple Silicon)"
     fi
   done
 else
@@ -177,11 +178,13 @@ sys_disabled="$(sudo -n launchctl print-disabled system 2>/dev/null || true)"
 
 check_disabled() { # label haystack domain-note
   local label="$1" haystack="$2" note="$3"
+  # ⚡ Bolt: Native bash pattern matching and regex instead of grep subprocesses to reduce overhead
+  local re_disabled="\"$label\" => (true|disabled)"
   if [ -z "$haystack" ]; then
     na "$label ($note unreadable; may need sudo)"
-  elif printf '%s' "$haystack" | grep -Eq "\"$label\" => (true|disabled)"; then
+  elif [[ "$haystack" =~ $re_disabled ]]; then
     ok "$label is disabled"
-  elif printf '%s' "$haystack" | grep -qF "$label"; then
+  elif [[ "$haystack" == *"$label"* ]]; then
     na "$label present but not in disabled state"
   else
     na "$label not currently registered ($note)"
