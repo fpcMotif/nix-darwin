@@ -22,11 +22,11 @@
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "oh-my-pi";
-  version = "17.0.7";
+  version = "17.0.8";
 
   src = fetchurl {
     url = "https://github.com/can1357/oh-my-pi/releases/download/v${finalAttrs.version}/omp-darwin-arm64";
-    hash = "sha256-ck1+lLkmDRnrgzN+sCeQuU5QJKAxLFo4337YAzEHYNY=";
+    hash = "sha256-ctgYEiMLhvyxcNJze+AXOOeppK/NH0gBkZS/cgNNyck=";
   };
 
   dontUnpack = true;
