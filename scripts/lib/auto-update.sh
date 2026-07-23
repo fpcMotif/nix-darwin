@@ -50,8 +50,8 @@ au_latest_github_release() {
           | jq -r '[.[] | select(.draft | not)] | sort_by(.published_at) | last | .tag_name // ""' \
           | sed "s|${strip}||")
   else
-    v=$(curl -fsSL ${auth[@]+"${auth[@]}"} "https://api.github.com/repos/${repo}/releases?per_page=1" \
-          | jq -r '.[0].tag_name // ""' | sed "s|${strip}||")
+    v=$(curl -fsSL ${auth[@]+"${auth[@]}"} "https://api.github.com/repos/${repo}/releases/latest" \
+          | jq -r '.tag_name // ""' | sed "s|${strip}||")
   fi
   [ -n "$v" ] && [ "$v" != "null" ] || {
     echo "au_latest_github_release: empty tag for ${repo}" >&2; return 1
