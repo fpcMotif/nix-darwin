@@ -1,0 +1,3 @@
+## 2024-06-25 - Native regex for in-memory multiline strings in Bash
+**Learning:** For shell scripts where a multiline string is already captured in memory (e.g. `log=$(nix build ...)`), piping it through `printf | grep | head | sed` is a massive anti-pattern that spawns multiple subprocesses. Because the string is already in memory, native bash regex `[[ "$log" =~ $re ]]` can extract substrings natively without any forks.
+**Action:** Always prefer `[[ "$var" =~ $re ]]` with `${BASH_REMATCH[1]}` over subprocess pipelines for variables already in memory. Store the pattern in a variable (`local re="..."`) for compatibility with macOS Bash 3.2.
