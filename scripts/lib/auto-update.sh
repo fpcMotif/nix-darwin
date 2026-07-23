@@ -50,8 +50,8 @@ au_latest_github_release() {
           | jq -r '[.[] | select(.draft | not)] | sort_by(.published_at) | last | .tag_name // ""' \
           | sed "s|${strip}||")
   else
-    v=$(curl -fsSL ${auth[@]+"${auth[@]}"} "https://api.github.com/repos/${repo}/releases?per_page=1" \
-          | jq -r '.[0].tag_name // ""' | sed "s|${strip}||")
+    v=$(curl -fsSL ${auth[@]+"${auth[@]}"} "https://api.github.com/repos/${repo}/releases/latest" \
+          | jq -r '.tag_name // ""' | sed "s|${strip}||")
   fi
   [ -n "$v" ] && [ "$v" != "null" ] || {
     echo "au_latest_github_release: empty tag for ${repo}" >&2; return 1
@@ -158,9 +158,13 @@ au_extract_got_hash() {
   set +e
   log=$(nix build "$attr" --no-link 2>&1)
   set -e
-  local got
-  got=$(printf '%s\n' "$log" | grep -oE 'got:[[:space:]]+sha256-[A-Za-z0-9+/=]+' \
-          | head -1 | sed -E 's/got:[[:space:]]+//')
+  # Bolt: Native bash regex avoids spawning 4 subprocesses (printf|grep|head|sed)
+  # for extracting a string from a variable already loaded in memory.
+  local got=""
+  local re="got:[[:space:]]+(sha256-[A-Za-z0-9+/=]+)"
+  if [[ "$log" =~ $re ]]; then
+    got="${BASH_REMATCH[1]}"
+  fi
   [ -n "$got" ] || {
     echo "au_extract_got_hash: no 'got: sha256-…' line in build output" >&2
     printf '%s\n' "$log" | tail -20 >&2
