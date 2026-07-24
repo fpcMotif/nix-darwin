@@ -1,3 +1,0 @@
-## 2024-05-30 - Bash regex parsing speedup for in-memory strings
-**Learning:** Parsing in-memory strings (like build logs already captured in a variable) using multiple subprocesses (`grep -oE | head -1 | sed -E`) causes significant overhead in bash due to multiple fork/exec calls per invocation. Using native bash regex (`=~`) with `BASH_REMATCH` avoids this.
-**Action:** When extracting data from a string already in a variable, prefer assigning a regex to a variable (`re="..."`) and using `[[ "$str" =~ $re ]]` rather than piping to `grep`/`awk`/`sed`. (Remember to ensure macOS bash 3.2 compatibility by defining the regex in a separate variable first).
