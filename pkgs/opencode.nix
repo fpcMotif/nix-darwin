@@ -24,17 +24,17 @@ let
 
   sources = {
     "aarch64-darwin" = {
-      url = "https://github.com/sst/opencode/releases/download/v${version}/opencode-darwin-arm64.zip";
+      url = "https://github.com/sst/opencode/releases/download/${if lib.hasPrefix "pr-" version then "" else "v"}${version}/opencode-darwin-arm64.zip";
       hash = "sha256-BPuIG2MrMjxxLf2m3LvG/Oc2OU8HunYXblLWZlkl1OY=";
       isZip = true;
     };
     "x86_64-linux" = {
-      url = "https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-x64.tar.gz";
+      url = "https://github.com/sst/opencode/releases/download/${if lib.hasPrefix "pr-" version then "" else "v"}${version}/opencode-linux-x64.tar.gz";
       hash = "sha256-urRjw/syJNOIu3z61j84cD35zwviz9LOjLSdiGtToXQ=";
       isZip = false;
     };
     "aarch64-linux" = {
-      url = "https://github.com/sst/opencode/releases/download/v${version}/opencode-linux-arm64.tar.gz";
+      url = "https://github.com/sst/opencode/releases/download/${if lib.hasPrefix "pr-" version then "" else "v"}${version}/opencode-linux-arm64.tar.gz";
       hash = "sha256-66h++6OXbVM6JMygMW+O83W1+OeXwKlcJe6RlwC3ujU=";
       isZip = false;
     };

@@ -24,7 +24,7 @@ let
   # nix-side derivation name `opencode-electron` for stability.
   sources = {
     "aarch64-darwin" = {
-      url = "https://github.com/sst/opencode/releases/download/v${version}/opencode-desktop-mac-arm64.zip";
+      url = "https://github.com/sst/opencode/releases/download/${if lib.hasPrefix "pr-" version then "" else "v"}${version}/opencode-desktop-mac-arm64.zip";
       hash = "sha256-LOScg+/s6XLXmRkQAVburQ6yhpagjHR+gJxq1igQjPI=";
     };
   };
