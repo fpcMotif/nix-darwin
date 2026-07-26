@@ -1,0 +1,3 @@
+## 2026-07-26 - Native Bash regex instead of subprocesses for multiline variables
+**Learning:** Parsing a multiline string already loaded into a Bash variable using a `printf | grep | head | awk` pipeline is an anti-pattern. It introduces massive subprocess overhead inside loops. Additionally, in macOS Bash 3.2, the native regex operator (`=~`) anchor `^` matches the start of the entire string, not the start of a line.
+**Action:** Use native Bash regex with `([[:space:]]|^)` instead of `^` to match the start of a line or word boundary, and extract values directly from `${BASH_REMATCH[]}`. This eliminates subprocesses and executes orders of magnitude faster.
