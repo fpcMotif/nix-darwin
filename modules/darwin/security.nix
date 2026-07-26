@@ -11,6 +11,11 @@
     blockAllIncoming = false;
   };
 
+  system.defaults.screensaver = {
+    askForPassword = true;
+    askForPasswordDelay = 0;
+  };
+
   system.defaults.LaunchServices.LSQuarantine = true;
 
   system.activationScripts.postActivation.text = lib.mkAfter ''
