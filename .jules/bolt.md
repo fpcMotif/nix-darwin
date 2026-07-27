@@ -1,0 +1,3 @@
+## $(date +%Y-%m-%d) - Bash native regex for multiline matching
+**Learning:** In Bash, using `=~` with the `^` anchor on a multiline variable matches only the absolute start of the string, not the start of individual lines (unlike `grep -E '^...'`). Attempting to use pure Bash loops (`while read -r line`) to simulate `grep` on large texts is an anti-pattern that slows things down.
+**Action:** When extracting data from a small, multiline string variable in a tight loop, use `([[:space:]]|^)` instead of `^` with the `=~` operator to natively match word boundaries or line starts without spawning `grep | awk` subprocesses.
