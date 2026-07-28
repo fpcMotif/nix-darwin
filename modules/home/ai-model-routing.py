@@ -23,6 +23,7 @@ import yaml
 # ── tiers ────────────────────────────────────────────────────────────────
 SPARK = "gpt-5.3-codex-spark"
 DEEP = "gpt-5.5"
+KIMI_K3 = "kimi-code/k3:max"
 
 HOME = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(
     os.environ.get("HOME", str(Path.home()))
@@ -203,6 +204,11 @@ def reconcile_omp() -> bool:
     roles["plan"] = f"openai-codex/{DEEP}:xhigh"
     roles["slow"] = f"openai-codex/{DEEP}:xhigh"
     roles["designer"] = f"openai-codex/{DEEP}:xhigh"
+
+    # Keep K3 selectable without changing the normal Codex role routing.
+    enabled = data.setdefault("enabledModels", [])
+    if KIMI_K3 not in enabled:
+        enabled.append(KIMI_K3)
 
     overrides = data.setdefault("task", {}).setdefault("agentModelOverrides", {})
     overrides["quick_task"] = "pi/smol"
