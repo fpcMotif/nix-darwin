@@ -13,11 +13,15 @@
 # write ~/.claude.json's mcpServers without risking its CLI-managed schema,
 # same reasoning as claudeDesktopMcpScaffold in lsp.nix).
 #
+# Note: upstream renamed the repo from dmtrKovalenko/fff.nvim to
+# dmtrKovalenko/fff (old URLs still 301-redirect, but we point at the
+# canonical name now).
+#
 # Update: bump `version` and the four hashes from
-# https://github.com/dmtrKovalenko/fff.nvim/releases — or copy them
-# straight out of that repo's Formula/fff-mcp.rb (same assets; hex sha256
-# there converts 1:1 to the SRI form below via
-# `nix hash convert --hash-algo sha256 --to sri <hex>`).
+# https://github.com/dmtrKovalenko/fff/releases — each release now publishes
+# a `<asset>.sha256` sidecar right next to the binary, so there's no need to
+# download-and-hash or go via a Formula file: fetch the sidecar, then convert
+# its hex digest to SRI with `nix hash convert --hash-algo sha256 --to sri <hex>`.
 
 { lib
 , stdenvNoCC
@@ -25,26 +29,26 @@
 }:
 
 let
-  version = "0.9.6";
+  version = "0.10.0";
 
-  releaseBase = "https://github.com/dmtrKovalenko/fff.nvim/releases/download/v${version}";
+  releaseBase = "https://github.com/dmtrKovalenko/fff/releases/download/v${version}";
 
   sources = {
     aarch64-darwin = {
       asset = "fff-mcp-aarch64-apple-darwin";
-      hash = "sha256-Kaf63q+wYvPllUsauMaeFNyiT14GHNjTseobqzhaN1Q=";
+      hash = "sha256-pblapLWGHlx0QP7eYFbMeGEiOr2leW2qvlH3hUWCEcM=";
     };
     x86_64-darwin = {
       asset = "fff-mcp-x86_64-apple-darwin";
-      hash = "sha256-WCWTJMLBOhtvJPExOMLNPq6f8g4FIBpTm+uPIESmUao=";
+      hash = "sha256-gais3HsXt/9UuqpqI5QpdIVf3+QTP5c0fJsMtE6d958=";
     };
     aarch64-linux = {
       asset = "fff-mcp-aarch64-unknown-linux-gnu";
-      hash = "sha256-keb6FOBAWI3JLehU41AgU28eJFjOM4aytyey56iPZoQ=";
+      hash = "sha256-Nww//NG+jlYMBeq6KygKAW4xPGBho/MHuufHQnxHeMc=";
     };
     x86_64-linux = {
       asset = "fff-mcp-x86_64-unknown-linux-gnu";
-      hash = "sha256-0b0riaeejtpxsXVCYEmc7B/qr9Kt83LpI3HI1raFCaM=";
+      hash = "sha256-4lLcG7BBLCcZgTzNAJVSNnbzYN3bCvcxp3hXKraWtZI=";
     };
   };
 
@@ -72,8 +76,8 @@ stdenvNoCC.mkDerivation {
 
   meta = {
     description = "Frecency-ranked, git-aware file search MCP server for AI agents (fff)";
-    homepage = "https://github.com/dmtrKovalenko/fff.nvim";
-    changelog = "https://github.com/dmtrKovalenko/fff.nvim/releases/tag/v${version}";
+    homepage = "https://github.com/dmtrKovalenko/fff";
+    changelog = "https://github.com/dmtrKovalenko/fff/releases/tag/v${version}";
     license = lib.licenses.mit;
     mainProgram = "fff-mcp";
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
