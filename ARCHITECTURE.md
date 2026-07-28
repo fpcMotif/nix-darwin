@@ -179,7 +179,7 @@ modules/darwin/
 ├── rime.nix                 # Squirrel app link + MyRime-main sync
 ├── security.nix             # Touch ID sudo, firewall, Gatekeeper/quarantine posture
 ├── shell.nix                # zsh shell registration
-├── skhd.nix                 # global hotkeys
+├── skhd.nix                 # global hotkeys (disabled on the active host: BetterMouse tap conflict)
 └── spotlight.nix            # Spotlight churn controls for dev/cache trees
 ```
 

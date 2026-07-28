@@ -54,7 +54,7 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `unit-format`                       | `formatter.<system>` is configured as `nixpkgs-fmt`, evaluates, and all flake Nix files are formatted. |
 | `unit-skill-router`                 | Runs the `tools/skill-router` bun suite (`test/subprocess-gating.test.ts`) offline inside the Nix sandbox. Pins the spawn seam so `discover`/`load` never reach a real `bunx @tanstack/intent` subprocess unless package scope is explicitly requested (ADR-0006); the bundled `bunfig.toml` preload (`SKILL_ROUTER_NO_REAL_SPAWN`) makes any real spawn fail loud and offline. Uses the shipped canary Bun on Darwin, stock `pkgs.bun` on Linux. |
 | `integration-configurations-eval`   | The flake's Darwin/NixOS configs evaluate and keep expected user, host, pure-Nix dotfile, activation dry-run, required/forbidden toolchain, WSL, and agent-skills settings. |
-| `integration-darwin-settings`       | Darwin-only. Exact-value assertions for every `system.defaults` key plus sudo Touch ID, firewall, pmset power management, skhd hotkeys, and the Gatekeeper guard; font-bundle membership + count; Rime/Squirrel and BetterMouse/BetterDisplay agent wiring. No-op skip on Linux. |
+| `integration-darwin-settings`       | Darwin-only. Exact-value assertions for every `system.defaults` key plus sudo Touch ID, firewall, pmset power management, the skhd-stays-disabled guard (BetterMouse tap conflict), and the Gatekeeper guard; font-bundle membership + count; Rime/Squirrel and BetterMouse/BetterDisplay agent wiring. No-op skip on Linux. |
 
 Real-machine verification (Tier 2) lives outside the Nix checks in
 `scripts/verify-macos-settings.sh` (run via `just verify-macos`); the deferred

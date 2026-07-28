@@ -26,7 +26,6 @@ let
   custom = defaults.CustomUserPreferences;
   postActivation = cfg.system.activationScripts.postActivation.text;
   home = cfg.home-manager.users.${user};
-  skhdConfig = cfg.services.skhd.skhdConfig;
 
   hasPackage = name: packages: lib.any (pkg: lib.getName pkg == name) packages;
 
@@ -246,27 +245,18 @@ let
       "Gatekeeper re-enable should stay guarded behind an spctl --status | grep -q 'disabled' check")
   ];
 
-  # skhd global hotkeys. The eval-test locks in the Finder cut/paste mode; here
-  # we cover the launcher prefix, the power/reload utilities, a representative
-  # launcher, and the host-injected Ghostty split bindings -- all of which would
-  # otherwise drift with green CI.
+  # skhd global hotkeys, retired 2026-07-19. skhd's CGEventTap conflicts with
+  # BetterMouse's, so the daemon is off and nix-darwin renders no launchd agent,
+  # no package, and no config text -- the launcher-prefix, display-sleep, reload,
+  # Raycast, and Ghostty-split assertions that lived here had nothing left to
+  # match. What is worth locking in now is the OFF state itself: this host runs
+  # BetterMouse, and a silent re-enable would bring the tap conflict back.
+  # HOTKEYS.md carries the user-facing consequences.
   hotkeyChecks = [
-    (helpers.assertTest "darwin-settings-skhd-launcher-prefix"
-      (lib.hasInfix "ctrl + alt + shift" skhdConfig)
-      "skhd should keep the ctrl+alt+shift launcher prefix")
-    (helpers.assertTest "darwin-settings-skhd-display-sleep"
-      (lib.hasInfix "pmset displaysleepnow" skhdConfig)
-      "skhd should bind a display-sleep-now power action")
-    (helpers.assertTest "darwin-settings-skhd-reload"
-      (lib.hasInfix "skhd --reload" skhdConfig)
-      "skhd should bind a config-reload action")
-    (helpers.assertTest "darwin-settings-skhd-raycast-launcher"
-      (lib.hasInfix ''open -a "Raycast"'' skhdConfig)
-      "skhd should keep the Raycast launcher binding")
-    (helpers.assertTest "darwin-settings-skhd-host-ghostty-split"
-      (lib.hasInfix "ctrl + alt + shift - e [" skhdConfig
-        && lib.hasInfix ''-k "cmd - d"'' skhdConfig)
-      "skhd should include the host-injected Ghostty split controls")
+    (helpers.assertTest "darwin-settings-skhd-disabled"
+      (cfg.martin.skhd.enable == false
+        && cfg.services.skhd.enable == false)
+      "skhd should stay disabled while BetterMouse owns the event tap")
   ];
 
   powerManagementChecks =

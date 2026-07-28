@@ -3,9 +3,32 @@
 This file is the current shortcut map for the Mac setup. The goal is to keep
 global automation small, memorable, and conflict-resistant.
 
+## Status: The skhd Layer Is Off
+
+**As of 2026-07-19, `martin.skhd.enable = false` in `hosts/darwin/default.nix`.**
+skhd's `CGEventTap` conflicts with BetterMouse's, and BetterMouse won: it is the
+higher-value daily driver. Everything under "Global Hotkeys", "Ghostty Global
+Split Hotkeys", and "Finder Cut And Move" below is therefore **inactive** — the
+tables are kept as the spec that comes back if skhd is ever re-enabled, not as a
+description of what currently works.
+
+Knock-on effects while it is off:
+
+- No `ctrl+alt+shift` launcher plane; use Raycast or Spotlight instead.
+- Finder is back to native `cmd+c` then `cmd+option+v` for moves.
+- The `gsp` / `gpn` shell helpers in `modules/home/zsh.nix` print a "skhd is not
+  on PATH" warning; use Ghostty's own `cmd+d` / `cmd+alt+arrow` keybinds.
+
+`modules/darwin/skhd.nix` and the `martin.skhd.extraConfig` block in
+`hosts/darwin/default.nix` are intentionally kept intact, so re-enabling is a
+one-line flip — but it needs a fix for the BetterMouse tap conflict first, and
+the `darwin-skhd-disabled-for-bettermouse` / `darwin-settings-skhd-disabled`
+assertions have to be rewritten in the same change.
+
 ## Best Design
 
-- Global automation: `skhd`, managed by nix-darwin in `modules/darwin/skhd.nix`.
+- Global automation: `skhd`, managed by nix-darwin in `modules/darwin/skhd.nix`
+  (currently disabled — see Status above).
 - Global prefix: `ctrl + alt + shift`.
 - App-local shortcuts: keep them inside each app config.
 - Terminal-first split control: prefer Ghostty/tmux panes for coding layouts;
@@ -17,7 +40,7 @@ global automation small, memorable, and conflict-resistant.
 
 ## Global Hotkeys
 
-Source: `modules/darwin/skhd.nix`
+Source: `modules/darwin/skhd.nix` — **inactive**, see Status above.
 
 | Hotkey | Action |
 | --- | --- |
@@ -40,7 +63,9 @@ Add host-specific global bindings in `hosts/darwin/default.nix` under
 
 ## Ghostty Global Split Hotkeys
 
-Source: `hosts/darwin/default.nix` (`martin.skhd.extraConfig`)
+Source: `hosts/darwin/default.nix` (`martin.skhd.extraConfig`) — **inactive**,
+see Status above. Ghostty's own app-local keybinds still work when Ghostty is
+focused; only the global forwarding is gone.
 
 These forward to Ghostty's app-local keybinds when Ghostty is focused. In any
 other app they only focus Ghostty, so the hotkey plane does not become a
@@ -59,7 +84,8 @@ Terminal equivalents from the shell: `gsp right`, `gsp down`, `gsp zoom`,
 
 ## Finder Cut And Move
 
-Source: `modules/darwin/skhd.nix`
+Source: `modules/darwin/skhd.nix` — **inactive**, see Status above. Finder's
+native `cmd+c` then `cmd+option+v` move is unaffected.
 
 | Hotkey | Action |
 | --- | --- |
@@ -110,8 +136,10 @@ Source: `modules/darwin/hammerspoon.nix`
 
 Hammerspoon is installed for richer automation than skhd should own: app/window
 state, timers, watchers, menu bar items, event taps, and small macOS workflows.
-The current config has no active global hotkeys, so it does not compete with
-skhd. It sets up:
+The current config has no active global hotkeys. With skhd off it is the
+remaining managed route for a global hotkey plane — but note it would install its
+own event tap, so anything added here has to be checked against BetterMouse
+first. It sets up:
 
 - auto-reload when `~/.hammerspoon/init.lua` changes;
 - a short load notification;

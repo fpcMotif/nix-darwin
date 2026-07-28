@@ -35,7 +35,6 @@ let
   darwinConfig = if darwinConfiguration != null then darwinConfiguration.config else null;
   darwinSystem = if darwinConfiguration != null then darwinConfiguration.system else null;
   darwinHome = if darwinConfig != null then darwinConfig.home-manager.users.${user} else null;
-  darwinSkhdConfig = if darwinConfig != null then darwinConfig.services.skhd.skhdConfig else null;
   wslConfiguration = if selectedScope == "nixos" then wslConfigurationInput else null;
   x230Configuration = if selectedScope == "nixos" then x230ConfigurationInput else null;
   vmConfiguration = if selectedScope == "nixos" then vmConfigurationInput else null;
@@ -425,28 +424,23 @@ let
       )
       "Darwin Starship Git branch chip should be hidden inside Jujutsu repos")
 
-    (helpers.assertTest "darwin-skhd-enabled"
-      (darwinConfig.services.skhd.enable == true)
-      "Darwin should enable skhd for managed global hotkeys")
-
-    (helpers.assertTest "darwin-skhd-finder-cut-mode"
+    # skhd is deliberately OFF on this host as of 2026-07-19: its CGEventTap
+    # fights BetterMouse's, and the mouse layer won that argument. Everything
+    # under `services.skhd` -- the launchd agent, the package, and the rendered
+    # `skhdConfig` -- is gated behind `mkIf cfg.enable` in modules/darwin/skhd.nix,
+    # so there is no config text left to assert on. The old
+    # darwin-skhd-finder-cut-mode / darwin-skhd-finder-native-move assertions
+    # were retired with the hotkey layer; modules/darwin/skhd.nix and the
+    # `martin.skhd.extraConfig` block in hosts/darwin/default.nix are kept intact
+    # so re-enabling stays a one-line flip. Assert the OFF state so that flip has
+    # to arrive as a deliberate test change rather than silently reintroducing
+    # the tap conflict.
+    (helpers.assertTest "darwin-skhd-disabled-for-bettermouse"
       (
-        lib.hasInfix ":: finder_cut" darwinSkhdConfig
-          && lib.hasInfix ''cmd - x ['' darwinSkhdConfig
-          && lib.hasInfix ''"finder" :'' darwinSkhdConfig
-          && lib.hasInfix ''-k "cmd - c"'' darwinSkhdConfig
-          && lib.hasInfix ''* ~'' darwinSkhdConfig
+        darwinConfig.martin.skhd.enable == false
+          && darwinConfig.services.skhd.enable == false
       )
-      "Darwin skhd config should intercept Cmd-X only in Finder and copy the selected items")
-
-    (helpers.assertTest "darwin-skhd-finder-native-move"
-      (
-        lib.hasInfix ''finder_cut < cmd - v ['' darwinSkhdConfig
-          && lib.hasInfix ''-k "cmd + alt - v"'' darwinSkhdConfig
-          && lib.hasInfix "finder_cut < escape ; default" darwinSkhdConfig
-          && lib.hasInfix "finder_cut < f19 ; default" darwinSkhdConfig
-      )
-      "Darwin skhd config should map pending Finder paste to Finder's native move")
+      "Darwin should keep skhd off so its event tap cannot conflict with BetterMouse")
 
     (helpers.assertTest "darwin-hammerspoon-installed"
       (

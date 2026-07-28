@@ -37,7 +37,8 @@
     spotlight.enable = true;
 
     skhd = {
-      enable = true;
+      # Disabled 2026-07-19: interferes with BetterMouse (event-tap conflict).
+      enable = false;
       # Add personal bindings here. skhd syntax: `mod - key : command`.
       # Global prefix `ctrl + alt + shift` is reserved by the defaults.
       extraConfig = ''
