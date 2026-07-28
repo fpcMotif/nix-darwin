@@ -47,7 +47,7 @@ in
         local src="$1" dst="$2" marker="$3" pkg="$4"
         if [ ! -d "$src" ]; then
           echo "[mouse-display] WARNING: $src not found; skipping /Applications install" >&2
-        elif [ "$(readlink "$marker" 2>/dev/null)" != "$pkg" ]; then
+        elif [ ! -e "$dst" ] || [ "$(readlink "$marker" 2>/dev/null)" != "$pkg" ]; then
           echo "[mouse-display] installing $src into /Applications"
           if [ -e "$dst" ]; then
             xattr -rc "$dst" 2>/dev/null || true
