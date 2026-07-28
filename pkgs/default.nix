@@ -21,6 +21,7 @@ final: _prev:
     squirrel = final.callPackage ./squirrel.nix { };
 
     bun-canary-bin = final.callPackage ./bun-canary-bin.nix { };
+    drafts-mcp-server = final.callPackage ./drafts-mcp-server.nix { };
     fff-mcp = final.callPackage ./fff-mcp.nix { };
     nub = final.callPackage ./nub.nix { };
     oh-my-pi = final.callPackage ./oh-my-pi.nix { };

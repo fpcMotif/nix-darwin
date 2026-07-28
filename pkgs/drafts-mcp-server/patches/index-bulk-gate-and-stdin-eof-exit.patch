@@ -1,0 +1,86 @@
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -3,8 +3,19 @@
+ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+ import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
+ import * as drafts from './drafts.js';
++const configuredMaxResults = Number.parseInt(process.env.DRAFTS_MCP_MAX_RESULTS ?? '', 10);
++const MAX_SUMMARY_RESULTS = Number.isInteger(configuredMaxResults) && configuredMaxResults > 0
++    ? configuredMaxResults
++    : 200;
++const ALLOW_BULK_QUERIES = process.env.DRAFTS_MCP_ALLOW_BULK === '1';
++const BULK_TOOL_NAMES = new Set([
++    'drafts_get_tag',
++    'drafts_get_workspace_drafts',
++    'drafts_get_drafts',
++    'drafts_search',
++]);
+ // Define all available tools
+-const TOOLS = [
++const ALL_TOOLS = [
+     {
+         name: 'drafts_list_workspaces',
+         description: 'List all workspaces in Drafts',
+@@ -33,7 +44,7 @@
+     },
+     {
+         name: 'drafts_get_tag',
+-        description: 'Get a tag and its associated drafts. Returns summaries (no content) — use drafts_get_draft for full content.',
++        description: `Get a tag and its associated drafts. Returns at most ${MAX_SUMMARY_RESULTS} summaries (no content) — use drafts_get_draft for full content.`,
+         inputSchema: {
+             type: 'object',
+             properties: {
+@@ -78,7 +89,7 @@
+     },
+     {
+         name: 'drafts_get_workspace_drafts',
+-        description: 'Get drafts from a specific workspace, optionally filtered by folder. Returns summaries (no content) — use drafts_get_draft for full content.',
++        description: `Get drafts from a specific workspace, optionally filtered by folder. Returns at most ${MAX_SUMMARY_RESULTS} summaries (no content) — use drafts_get_draft for full content.`,
+         inputSchema: {
+             type: 'object',
+             properties: {
+@@ -102,7 +113,7 @@
+     },
+     {
+         name: 'drafts_get_drafts',
+-        description: 'Get drafts with flexible filtering by content, folder, tag, flagged status, and dates. Returns summaries (no content) — use drafts_get_draft for full content.',
++        description: `Get drafts with flexible filtering by content, folder, tag, flagged status, and dates. Returns at most ${MAX_SUMMARY_RESULTS} summaries (no content) — use drafts_get_draft for full content.`,
+         inputSchema: {
+             type: 'object',
+             properties: {
+@@ -249,7 +260,7 @@
+     },
+     {
+         name: 'drafts_search',
+-        description: 'Search for drafts using a query string. Returns summaries (no content) — use drafts_get_draft for full content.',
++        description: `Search for drafts using a query string. Returns at most ${MAX_SUMMARY_RESULTS} summaries (no content) — use drafts_get_draft for full content.`,
+         inputSchema: {
+             type: 'object',
+             properties: {
+@@ -433,6 +444,9 @@
+         },
+     },
+ ];
++const TOOLS = ALLOW_BULK_QUERIES
++    ? ALL_TOOLS
++    : ALL_TOOLS.filter(tool => !BULK_TOOL_NAMES.has(tool.name));
+ /**
+  * Main server class
+  */
+@@ -764,10 +778,14 @@
+     async run() {
+         const transport = new StdioServerTransport();
+         await this.server.connect(transport);
++        // Exit when the client disconnects; stdio servers otherwise outlive
++        // their client and accumulate as orphaned processes.
++        process.stdin.on('end', () => process.exit(0));
++        process.stdin.on('close', () => process.exit(0));
+         console.error('Drafts MCP Server running on stdio');
+     }
+ }
+ // Start the server
+ const server = new DraftsMCPServer();
+ server.run().catch(console.error);
+-//# sourceMappingURL=index.js.map
+\ No newline at end of file
++//# sourceMappingURL=index.js.map

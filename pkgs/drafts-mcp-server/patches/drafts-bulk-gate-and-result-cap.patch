@@ -1,0 +1,122 @@
+--- a/dist/drafts.js
++++ b/dist/drafts.js
+@@ -1,4 +1,15 @@
+ import { executeAppleScript, escapeAppleScriptString, parseAppleScriptList } from './applescript.js';
++const configuredMaxResults = Number.parseInt(process.env.DRAFTS_MCP_MAX_RESULTS ?? '', 10);
++const MAX_SUMMARY_RESULTS = Number.isInteger(configuredMaxResults) && configuredMaxResults > 0
++    ? configuredMaxResults
++    : 200;
++const ALLOW_BULK_QUERIES = process.env.DRAFTS_MCP_ALLOW_BULK === '1';
++
++function requireBulkOverride(operation) {
++    if (!ALLOW_BULK_QUERIES) {
++        throw new Error(`${operation} is disabled: Drafts AppleScript bulk enumeration blocks the app on large libraries. Use a read-only SQLite bulk reader, or set DRAFTS_MCP_ALLOW_BULK=1 to override.`);
++    }
++}
+ /**
+  * List all workspaces in Drafts
+  */
+@@ -70,6 +81,7 @@
+  * Get drafts from a specific workspace
+  */
+ export async function getWorkspaceDrafts(workspaceName, folder) {
++    requireBulkOverride('Workspace draft listing');
+     const escapedWorkspace = escapeAppleScriptString(workspaceName);
+     const script = `
+     ${formatDateToISOScript}
+@@ -81,10 +93,13 @@
+         : `set matchingDrafts to every draft of targetWorkspace`}
+ 
+       set results to ""
++      set resultCount to 0
+       repeat with d in matchingDrafts
++        if resultCount is greater than or equal to ${MAX_SUMMARY_RESULTS} then exit repeat
+         set theDraft to contents of d
+         ${summaryPropsScript}
+         set results to results & props & "<<END>>"
++        set resultCount to resultCount + 1
+       end repeat
+ 
+       return results
+@@ -133,6 +148,9 @@
+  */
+ function isoDateToAppleScriptDate(isoDate, varName) {
+     const [year, month, day] = isoDate.split('-').map(Number);
++    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
++        throw new Error(`Invalid date filter "${isoDate}" — expected ISO format YYYY-MM-DD`);
++    }
+     return `set ${varName} to current date
+ set year of ${varName} to ${year}
+ set month of ${varName} to ${month}
+@@ -145,6 +163,7 @@
+  * Get drafts with flexible filtering
+  */
+ export async function getDrafts(filter) {
++    requireBulkOverride('Draft listing');
+     const conditions = [];
+     const dateSetup = [];
+     if (filter.query) {
+@@ -187,10 +206,13 @@
+       set matchingDrafts to every draft ${whereClause}
+ 
+       set results to ""
++      set resultCount to 0
+       repeat with d in matchingDrafts
++        if resultCount is greater than or equal to ${MAX_SUMMARY_RESULTS} then exit repeat
+         set theDraft to contents of d
+         ${summaryPropsScript}
+         set results to results & props & "<<END>>"
++        set resultCount to resultCount + 1
+       end repeat
+ 
+       return results
+@@ -357,6 +379,7 @@
+  * Get a tag with its drafts
+  */
+ export async function getTag(tagName) {
++    requireBulkOverride('Tag draft listing');
+     const escapedTagName = escapeAppleScriptString(tagName);
+     const script = `
+     ${formatDateToISOScript}
+@@ -364,10 +387,13 @@
+       set t to tag "${escapedTagName}"
+       set draftList to drafts of t
+       set results to ""
++      set resultCount to 0
+       repeat with d in draftList
++        if resultCount is greater than or equal to ${MAX_SUMMARY_RESULTS} then exit repeat
+         set theDraft to contents of d
+         ${summaryPropsScript}
+         set results to results & props & "<<END>>"
++        set resultCount to resultCount + 1
+       end repeat
+       return results
+     end tell
+@@ -380,16 +406,20 @@
+  * Search for drafts
+  */
+ export async function searchDrafts(query) {
++    requireBulkOverride('Draft search');
+     const escapedQuery = escapeAppleScriptString(query);
+     const script = `
+     ${formatDateToISOScript}
+     tell application "Drafts"
+       set searchResults to every draft whose content contains "${escapedQuery}"
+       set results to ""
++      set resultCount to 0
+       repeat with d in searchResults
++        if resultCount is greater than or equal to ${MAX_SUMMARY_RESULTS} then exit repeat
+         set theDraft to contents of d
+         ${summaryPropsScript}
+         set results to results & props & "<<END>>"
++        set resultCount to resultCount + 1
+       end repeat
+       return results
+     end tell
+@@ -593,4 +623,4 @@
+ function parseSingleDraft(output) {
+     return parseDraftProperties(output);
+ }
+-//# sourceMappingURL=drafts.js.map
+\ No newline at end of file
++//# sourceMappingURL=drafts.js.map
