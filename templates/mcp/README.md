@@ -6,7 +6,7 @@ of the global Claude Code surface on purpose — see
 
 ## `code-context.mcp.json` — deepwiki + exa
 
-context7, deepwiki, and exa are disabled globally
+deepwiki and exa are disabled globally
 (`modules/home/claude.nix` → `claudeDisableGlobalMcpPlugins`). To use deepwiki /
 exa in a specific repo:
 
