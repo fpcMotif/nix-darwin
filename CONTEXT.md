@@ -37,15 +37,14 @@ _Avoid_: monitoring, analytics, metrics pipeline.
 
 ### Agent-skills curation
 
-**superpowers**:
-The upstream **obra/superpowers** repo, pinned as a Nix flake input and filtered to the canonical `brainstorming` skill. Bare "superpowers" always means this.
-_Avoid_: using "superpowers" to mean the plugin — say "the superpowers plugin" for that.
-
-**superpowers plugin**:
-The `frad-dotclaude/superpowers` Claude Code plugin in `~/.claude/plugins/cache`. A divergent fork of obra's work with renamed/extra skills (`behavior-driven-development`, `need-vet`, `agent-team-driven-development`, `build-like-iphone-team`). Kept for its hooks/commands framework; its `brainstorming` is parked so only obra's surfaces.
-
 **Parked skill**:
 A skill deliberately moved into a sibling `skills-disabled/` directory so no skill picker can discover it. Used when a skill ships inside a third-party plugin we otherwise keep. Reversible and re-applied on every rebuild — distinct from a skill that is simply not enabled.
+
+**Plugin-provided skill**:
+A skill that is in this flake's bundle *and* declared by an enabled Claude Code plugin, so Claude Code would list it twice. The plugin copy wins on the Claude surface — it tracks upstream faster than the flake pin — and the bundle copy is hidden with `skillOverrides: "off"` in `~/.claude/settings.json`, a file no other agent reads. The id stays in the bundle and stays live in the other eight picker dirs, because Codex/Droid/OpenCode/Crush have no plugin system. Distinct from a *parked* skill, which is hidden from every picker.
+
+**Skill hygiene**:
+The drift checks over the curation lists: Tier 1 `unit-skill-hygiene` (hermetic — exclusion terms still name live upstream skills, no vendored fork shadows a promoted id, no `transform` returns to a mattpocock skill) and Tier 2 `just verify-skills` (live — every id advertised to Claude exactly once, every hidden id genuinely replaced by the plugin, every other agent still sees the full bundle). Deliberately not called a "health check": `martin.healthCheck` already owns that term for the macOS health report.
 
 **Enabled skill** vs **Discovered skill**:
 A *discovered* skill exists in the catalog (its source is wired up) but is not placed in any picker. An *enabled* skill is additionally surfaced into the picker target dirs and is selectable. Wiring a source discovers its skills; it does not enable them.
@@ -97,16 +96,10 @@ The human-facing device name in macOS Sharing/Finder — "Martin's Mac mini". De
 
 ## Flagged ambiguities
 
-- **"superpowers"** — overloaded between obra/superpowers (the Nix-managed source; canonical) and frad-dotclaude/superpowers (the plugin; a fork). Resolution: bare "superpowers" = obra; always qualify the plugin as "the superpowers plugin".
 - **"f"** — the host identity (flake attr ≡ OS `HostName`/`LocalHostName` ≡ personal handle), *not* the Unix user (`martinfan`) and *not* the display ComputerName ("Martin's Mac mini").
 - **"Gemini"** — formerly spanned every AI tooling surface at once (the vendored CLI `gemini-cli-preview`, a Zed favorite model, `GEMINI_*`/`GOOGLE_API_KEY` env, and a `⌃⌥⇧g` app-launcher hotkey) and was deliberately removed in full (see `docs/adr/0002`). Treat the reappearance of any Gemini surface as a regression, not a gap to fill.
 
 ## Example dialogue
-
-> **Dev:** Two `brainstorming` skills are showing up in the picker.
-> **Maintainer:** obra's `brainstorming` is enabled from the Nix source, and the superpowers plugin ships its own. We park the plugin's so only obra's surfaces.
-> **Dev:** What about the plugin's `writing-plans` and `executing-plans`?
-> **Maintainer:** Those stay live — we park only the plugin's `brainstorming`, not its whole skills dir. The Nix-managed obra source is filtered to `brainstorming`, so rejected workflow skills are not discovered there.
 
 > **Dev:** Should we package Dropbox as a `pkgs.martin.*` derivation like Drive and Raycast?
 > **Maintainer:** No — Dropbox is the deliberate exception (see `docs/adr/0005`). Its self-updater rewrites its own bundle and its server can force-deprecate old clients, so vendoring it into the read-only store fights the app on every update. Install it natively and let it self-update; re-adding a Nix scaffold is a regression, not a gap.

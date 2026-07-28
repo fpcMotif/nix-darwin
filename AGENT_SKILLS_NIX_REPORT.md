@@ -40,14 +40,12 @@ programs.agent-skills = {
 
   sources = {
     dotfiles-pi = filteredSource "dotfiles" "dot_pi/agent/skills"
-      "^(review|ralph-loop|web-browser)$";
+      "^(review|web-browser)$";
 
     mp-engineering = bucketSource "mattpocock-skills" "engineering";
     mp-productivity = bucketSource "mattpocock-skills" "productivity";
     mp-misc = bucketSource "mattpocock-skills" "misc";
     effect-ts = filteredSource "effect-ts-skills" "skills" null;
-    superpowers = filteredSource "superpowers" "skills"
-      "^(brainstorming)$";
   };
 
   skills = {
@@ -59,7 +57,6 @@ programs.agent-skills = {
         path = "review";
         packages = [ pkgs.git pkgs.gh pkgs.jq ];
       };
-      ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
       web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
     };
   };

@@ -76,6 +76,7 @@ check:
         '.#darwinConfigurations.f.system' \
         '.#checks.aarch64-darwin.unit-overlay' \
         '.#checks.aarch64-darwin.unit-skill-router' \
+        '.#checks.aarch64-darwin.unit-skill-hygiene' \
         '.#checks.aarch64-darwin.integration-configurations-eval'
 
 # Run the skill-router bun suite (spawn-seam gate) offline via the Nix sandbox.
@@ -102,6 +103,13 @@ dev-container:
 # `nix flake check` (which only proves the config declares the right values).
 verify-macos: _no-sudo
     bash scripts/verify-macos-settings.sh
+
+# Tier 2: read back the LIVE agent-skill surfaces and confirm every id is
+# advertised to Claude Code exactly once while the other eight picker dirs keep
+# the full bundle. Run after `just switch`. Non-hermetic (reads ~/.claude and
+# the plugin cache), so it is NOT part of `nix flake check`.
+verify-skills: _no-sudo
+    bash scripts/verify-agent-skills.sh
 
 # Garbage-collect old generations older than 30 days.
 gc:

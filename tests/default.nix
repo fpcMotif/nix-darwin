@@ -28,6 +28,7 @@ in
   unit-overlay = callTest ./unit/overlay-test.nix { };
   unit-format = callTest ./unit/format-test.nix { };
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
+  unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
 
   # Integration tests
   integration-configurations-eval =

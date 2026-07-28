@@ -35,69 +35,6 @@ let
 
   mkSkill = from: path: packages: { inherit from path packages; };
 
-  # Append-only `transform`s for two planning skills (wired in
-  # skills.explicit below). Each names the Karpathy principle the skill
-  # already embodies — so the skills compose instead of restating one
-  # another — and adds the one principle both under-emphasise:
-  # Goal-Driven Execution (close with a verifiable loop). `transform`
-  # receives the whole SKILL.md including frontmatter; we append after
-  # `original` so the YAML stays at the top (never prepend). Footer bodies
-  # sit at column 0 inside the '' blocks so Nix de-indentation can't
-  # silently reflow the embedded markdown.
-  appendKarpathy = body: { original, ... }: original + "\n\n" + body;
-
-  grillKarpathyFooter = ''
-    ## Karpathy alignment
-
-    This grilling *is* **Think Before Coding** — don't assume, surface confusion, present interpretations instead of silently picking one. Two reinforcements while you run it:
-
-    - When you give a question's recommended answer, also show the interpretations you chose between and why. Don't collapse to one silently.
-    - The confusion to surface is yours too. If the code contradicts what the user just told you, name the contradiction and stop — don't paper over it.
-
-    ## Close with verifiable goals
-
-    A session that ends in "shared understanding" but no checkable plan isn't finished — that's **Goal-Driven Execution**, the principle grilling alone skips. Before you stop, turn the agreed plan into success criteria the next agent can loop against:
-
-    ```
-    1. [step] -> verify: [check]
-    2. [step] -> verify: [check]
-    ```
-
-    Hand that block to the implementation skill (tdd, executing-plans). Strong criteria let it loop without you; "make it work" forces it back to ask.
-
-    ## Observable signals
-
-    You'll know this skill is working when:
-    - The user changes their mind mid-grilling — the questions found something they hadn't articulated.
-    - CONTEXT.md terms surface unchanged in later sessions; the vocabulary stuck.
-    - Implementation plans downstream contain fewer wrong assumptions that need walking back.
-  '';
-
-  deepenKarpathyFooter = ''
-    ## Karpathy alignment
-
-    The architecture vocabulary already encodes two Karpathy principles — name them so this skill composes with the others instead of restating them:
-
-    - **Simplicity First** is the seam rule. "One adapter = hypothetical seam, two = real" is just "no abstraction for single-use" — don't add a port until a second adapter earns it.
-    - **Surgical Changes** governs *execution*, not proposal. Propose freely; once the user approves a candidate, every changed line traces to that candidate. No drive-by refactors of adjacent code, no reopening what an ADR already settled.
-
-    ## Close with verifiable goals
-
-    "Deepen module X" becomes "tests green before and after" — **Goal-Driven Execution**. DEEPENING.md already says the interface is the test surface and old shallow-module tests become waste; state that as a loop before any edit:
-
-    ```
-    1. Characterise current behaviour with tests at the target interface -> verify: green on today's code
-    2. Deepen the module behind that interface                           -> verify: same tests stay green
-    3. Delete the superseded shallow-module tests                        -> verify: suite green, behaviour still covered
-    ```
-
-    ## Observable signals
-
-    You'll know this skill is working when:
-    - Every proposed candidate passes the deletion test — removing it makes the codebase clearly worse.
-    - No proposed seam ships with only one adapter; the second adapter earned it.
-    - Tests at the deepened interface survive subsequent internal refactors (they describe behaviour, not implementation).
-  '';
   # `link` makes every target a tree of `home.file` symlinks pointing at
   # the same /nix/store/...-agent-skills-bundle/<skill>/SKILL.md. Pi's
   # loader de-duplicates discovered skills by realpath, so identical
@@ -170,8 +107,14 @@ let
   # excluded per upstream CONTEXT.md. New upstream skills under any bucket
   # auto-load on the next `nix flake update mattpocock-skills`.
   mattpocockBuckets = [ "engineering" "productivity" "misc" ];
-  # Skills genuinely turned off — kept out of every picker.
-  disabledMattpocockSkills = [ "grill-me" ];
+  # Skills genuinely turned off. Kept out of every picker dir AND out of the
+  # Claude Code plugin surface — since mattpocock-skills@claude-plugins-official
+  # was installed, the plugin is the one route that can still reach us with an
+  # id this list refuses (see claudePrunePluginSkills / deniedPluginSkills).
+  disabledMattpocockSkills = [
+    "grill-me" # the `grilling` + `grill-with-docs` pairing is the tradeoff we want
+    "setup-matt-pocock-skills" # runtime installer that fights this Nix-managed setup
+  ];
   # Lean curation: niche / one-off skills trimmed from proactive discovery to
   # keep the model's auto-loaded skill catalog compact. Proactive (model)
   # discovery stays ON for the curated set — this only prunes the long tail so
@@ -180,43 +123,29 @@ let
   # drops their picker symlinks), grouped separately so the rationale
   # (signal/noise, not "broken") stays legible. Re-add an id to a bucket by
   # removing it here, or surface it on demand with `/<name>` once re-enabled.
+  # `caveman` and `zoom-out` used to sit here; upstream deleted both, so the
+  # entries excluded nothing — unit-skill-hygiene now fails on a dead term.
   leanExcludedMattpocockSkills = [
-    "caveman" # token-compression chat mode; niche
     "git-guardrails-claude-code" # one-time git-hook setup, not a recurring workflow
     "migrate-to-shoehorn" # @total-typescript/shoehorn-specific test migration
     "scaffold-exercises" # course / exercise authoring
-    "setup-matt-pocock-skills" # runtime installer that fights this Nix-managed setup
     "setup-pre-commit" # Husky / lint-staged JS setup, one-off
-    "zoom-out" # situational reflection; marginal proactive value
   ];
+  # Every id we refuse to carry, for the all-targets picker sweep. None is in
+  # the bundle, but the external `skills` CLI (~/.agents/.skill-lock.json)
+  # re-installs some as real dirs under ~/.agents/skills — exactly the leak
+  # these lists forbid — so the sweep covers the union, not just the disabled.
+  excludedSkillIds = disabledMattpocockSkills ++ leanExcludedMattpocockSkills;
   # Skills removed from the curated sources entirely. These should not be
   # merely disabled/catalogued; prune stale target copies after rebuilds.
-  removedSkillIds = [ "git-workflow" "lazygit" ];
+  removedSkillIds = [ "git-workflow" "lazygit" "ralph-loop" ];
   # Claude Code plugins disabled on the GLOBAL surface (CLI + Desktop) by
   # flipping their enabledPlugins flag off each rebuild — see
-  # claudeDisableGlobalMcpPlugins below. context7 is dropped outright; the
-  # code-context plugin's deepwiki + exa MCP servers are moved to per-project
-  # opt-in (templates/mcp/code-context.mcp.json, docs/adr/0003). claude.ai
-  # connectors are account-side and unaffected.
-  #
-  # gitflow + git extend the bundle's removedSkillIds intent to the plugin
-  # surface: removedSkillIds drops git-workflow/lazygit from the curated
-  # bundle, but those removals never reached the equivalent plugin skills.
-  # gitflow ships 6 git-flow automation skills (start/finish-{feature,hotfix,
-  # release}); git ships commit/commit-and-push/config-git/update-gitignore,
-  # which overlap the /lazygit workflow. Disabling both flips their ~10 skills
-  # out of Claude Code's always-on startup catalog via the same lever.
-  disabledClaudePlugins = [
-    "context7@claude-plugins-official"
-    "code-context@frad-dotclaude"
-    "gitflow@frad-dotclaude"
-    "git@frad-dotclaude"
-  ];
-  # NOT disabled — still enabled, just sourced via skills.explicit below so a
-  # Karpathy `transform` can be attached. They only leave bucket auto-discovery
-  # because a skill present in both the allowlist and `explicit` makes
-  # selectSkills throw on a duplicate id.
-  transformedMattpocockSkills = [ "grill-with-docs" "improve-codebase-architecture" ];
+  # claudeDisableGlobalMcpPlugins below. claude.ai connectors are
+  # account-side and unaffected. Currently empty — every plugin previously
+  # listed here has since been uninstalled outright instead of parked; add an
+  # id back to park (disable-but-keep-installed) rather than uninstall it.
+  disabledClaudePlugins = [ ];
   mpSources = listToAttrs (map
     (b: {
       name = "mp-${b}";
@@ -234,11 +163,51 @@ let
           (name: type:
             type == "directory"
             && builtins.pathExists (root + "/${name}/SKILL.md")
-            && !(builtins.elem name (disabledMattpocockSkills ++ transformedMattpocockSkills ++ leanExcludedMattpocockSkills))
+            && !(builtins.elem name excludedSkillIds)
           )
           entries);
     in
     lib.unique (lib.concatMap bucketSkillNames mattpocockBuckets);
+
+  # Claude Code sees each of these ids TWICE: once from ~/.claude/skills (this
+  # flake's bundle) and once from mattpocock-skills@claude-plugins-official.
+  # The PLUGIN copy wins on the Claude surface — it tracks upstream faster than
+  # the flake pin — so the bundle copy is switched off there with
+  # `skillOverrides: "off"`, the one first-class per-skill listing lever Claude
+  # Code has (it hides a skill from the model's catalog AND the `/` menu).
+  #
+  # Crucially that lever is a key in ~/.claude/settings.json, a file only Claude
+  # Code reads. Codex, Droid, OpenCode, Crush and Pi have no plugin system, so
+  # the de-duplication MUST NOT touch the bundle: they keep reading the full set
+  # out of their own picker dirs. Nothing is deleted; nothing else loses a skill.
+  #
+  # Derived from enabledMattpocockSkills rather than restated, so a new upstream
+  # bucket skill is auto-covered. The failure mode of deriving it is the flake
+  # pin running AHEAD of the plugin — an id would then be hidden with no
+  # replacement — which is why scripts/verify-agent-skills.sh asserts every
+  # hidden id is actually declared by the enabled plugin.
+  pluginProvidedSkillIds = enabledMattpocockSkills;
+  # Non-mattpocock ids Claude Code already gets from the account/harness side.
+  # `anthropic-skills:notebooklm` ships with the harness, has no local file and
+  # cannot be removed, so the hand-installed ~/.claude/skills/notebooklm copy is
+  # the one that yields. It stays on disk and stays visible to the other agents.
+  harnessProvidedSkillIds = [ "notebooklm" ];
+  claudeHiddenSkillIds = pluginProvidedSkillIds ++ harnessProvidedSkillIds;
+
+  # Plugin skills with NO bundle counterpart that must not be reachable at all.
+  # skillOverrides cannot touch these: Claude Code hard-codes its resolver to
+  # return "on" for any skill whose `source` is "plugin" (the short-circuit
+  # precedes both the qualified- and unqualified-name lookups, so no key
+  # spelling reaches it), and no settings key filters which of an installed
+  # plugin's skills load. Upstream documents this: "Plugin skills are not
+  # affected by skillOverrides. Manage those through /plugin instead."
+  #
+  # So they get two independent levers — claudePrunePluginSkills drops them from
+  # the cached plugin manifest (un-lists them outright), and a permissions.deny
+  # rule refuses execution. The manifest prune is re-applied every switch
+  # because a version bump writes a fresh cache dir; the deny rule is
+  # version-independent and covers the window in between.
+  deniedPluginSkills = map (id: "Skill(mattpocock-skills:${id})") disabledMattpocockSkills;
 
   # Diagnostic wrapper for Claude Code Stop hooks. Intercepts a plugin's
   # Stop hook invocation, captures stdin/stdout/stderr/exit-code/duration
@@ -302,24 +271,14 @@ let
   # global re-enable a one-line change.
   effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 
-  # obra/superpowers (the original; flat `skills/<name>/SKILL.md`). Only
-  # `brainstorming` is sourced from the Nix input. We intentionally do not
-  # discover the rest of the upstream catalog because disabled git/worktree
-  # workflow skills still show up in audits and picker metadata. New
-  # superpowers skills require an explicit regex/allowlist change.
-  superpowersSources = { superpowers = mkSource "superpowers" "skills" "^(brainstorming)$"; };
-  enabledSuperpowersSkills = [ "brainstorming" ];
-
-  # mattpocock/skills `in-progress/` bucket holds unpromoted skills. We pull in
-  # ONLY `teach` — a stateful /teach learning-workspace skill that is
-  # `disable-model-invocation: true` (slash-command only), bundling its
-  # *-FORMAT.md templates alongside SKILL.md. Same regex-restricted-source
-  # pattern as superpowers' brainstorming: the bucket also ships a `review`
-  # skill whose id collides with the dotfiles-pi `review` below, so an
-  # unrestricted source here would make discoverCatalog throw on the duplicate;
-  # `^(teach)$` keeps review and the half-baked writing-* skills out.
-  inProgressSources = { mp-in-progress = mkSource "mattpocock-skills" "skills/in-progress" "^(teach)$"; };
-  enabledInProgressSkills = [ "teach" ];
+  # There is deliberately no `in-progress/` source any more. It existed to pull
+  # `teach` out of that bucket; upstream has since promoted `teach` into
+  # `productivity/`, so the old `^teach$` regex matched nothing and `teach` now
+  # arrives through plain bucket auto-discovery from the same store root.
+  # Re-adding an in-progress source is a duplicate-id hazard — the bucket also
+  # ships a `review` that collides with the dotfiles-pi `review` below, and any
+  # id upstream later promotes would then be discovered twice, making
+  # discoverCatalog throw — so unit-skill-hygiene asserts it stays gone.
 in
 {
   imports = [ inputs.agent-skills.homeManagerModules.default ];
@@ -329,19 +288,52 @@ in
   # churn so macOS TCC and editor integrations don't re-prompt every switch.
   home.file =
     let
-      # Locally-authored jj skill (no dotfiles upstream yet). Installed via plain
-      # home.file symlinks rather than a programs.agent-skills `path` source: the
+      # Local skills (no dotfiles upstream). Installed via plain home.file
+      # symlinks rather than a programs.agent-skills `path` source: the
       # module CAN source local paths, but it wraps a `path` source in a
       # platform-stamped copy derivation and reads it back (IFD), which makes
       # `nix flake check` fail to evaluate the x86_64-linux hosts from darwin
       # ("platform mismatch"). A plain path symlink is platform-agnostic. The same
       # store dir is linked into every picker target; Pi's realpath de-dup
       # collapses them, exactly like agent-skills' `link` targets.
-      jjSkillFiles = listToAttrs (map
-        (dir: { name = "${dir}/jj"; value = { source = ./skills/jj; }; })
+      #   - jj — locally authored.
+      #   - setup-ts-deep-modules — vendored fork of the mattpocock-skills
+      #     in-progress skill, carrying the tsPreCompilationDeps fix its
+      #     dependency-cruiser.config.cjs template lacks. Upstream never
+      #     promoted it out of `in-progress/`, so unlike every other
+      #     mattpocock id it has no plugin copy to defer to — it is the one
+      #     skill here that is genuinely ours.
+      #
+      # Read from disk rather than a literal list so a new
+      # modules/home/skills/<id> dir cannot be silently left uninstalled;
+      # unit-skill-hygiene pins the resulting set.
+      localSkillIds = builtins.attrNames (lib.filterAttrs
+        (name: type:
+          type == "directory" && builtins.pathExists (./skills + "/${name}/SKILL.md"))
+        (builtins.readDir ./skills));
+      localSkillFiles = listToAttrs (lib.concatMap
+        (dir: map
+          (skill: { name = "${dir}/${skill}"; value = { source = ./skills + "/${skill}"; }; })
+          localSkillIds)
         (lib.attrValues skillTargetDirs));
     in
     {
+      # Contract between this module and scripts/verify-agent-skills.sh (Tier 2),
+      # so that script never restates the curation lists and can never drift
+      # from them. Agent-neutral location: it describes all nine picker dirs,
+      # not just Claude's. Regenerated every switch; never hand-edited.
+      ".config/agent-skills/manifest.json".source =
+        pkgs.writeText "agent-skills-manifest.json" (builtins.toJSON {
+          targetDirs = lib.attrValues skillTargetDirs;
+          bundled = enabledMattpocockSkills;
+          localSkills = localSkillIds;
+          claudeHidden = claudeHiddenSkillIds;
+          pluginProvided = pluginProvidedSkillIds;
+          excluded = lib.unique (excludedSkillIds ++ removedSkillIds);
+          deniedPluginSkills = disabledMattpocockSkills;
+          pluginId = "mattpocock-skills@claude-plugins-official";
+        });
+
       ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
       ".claude/CLAUDE.md".source = renderChezmoi (dotClaude + "/claude.md.tmpl");
       ".claude/statusline-command.sh" = {
@@ -352,7 +344,7 @@ in
         source = stopHookDebug;
         executable = true;
       };
-    } // jjSkillFiles;
+    } // localSkillFiles;
 
   # === Stop hook diagnostic instrumentation ===
   # Idempotently rewrites the 3 installed plugin Stop hook configs to
@@ -390,8 +382,7 @@ in
     }
 
     base="${homeDir}/.claude/plugins/cache"
-    wrap_stop_hook ralph-loop  "$base/claude-plugins-official/ralph-loop/1.0.0/hooks/hooks.json"
-    wrap_stop_hook codex       "$base/openai-codex/codex/1.0.4/hooks/hooks.json"
+    wrap_stop_hook codex "$base/openai-codex/codex/1.0.4/hooks/hooks.json"
   '';
 
   # Git-flow style automation was removed from the curated sources instead of
@@ -409,7 +400,11 @@ in
   # Surge ships its agent skill inside the app bundle. Keep live symlinks to the
   # bundle instead of copying it into the Nix store so Surge updates refresh it.
   # Surge.app is a macOS bundle; Linux hosts must not reference /Applications.
-  home.activation.surgeAgentSkillSymlinks = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "agent-skills" ] ''
+  # Anchored on linkGeneration: "agent-skills" names an activation node that
+  # only exists when some target uses `structure = "symlink-tree"`. Every target
+  # here is `link`, so that node is never created and hm's topoSort silently
+  # drops the edge, leaving this block unordered against the linking it depends on.
+  home.activation.surgeAgentSkillSymlinks = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "linkGeneration" ] ''
     source="/Applications/Surge.app/Contents/Resources/Skills/surge"
     if [ -d "$source" ] && [ -f "$source/SKILL.md" ]; then
       for dir in ${skillTargetDirsSh}; do
@@ -424,61 +419,113 @@ in
   '');
 
   # Claude can cache Anthropic-provided skills outside the Nix-managed skill
-  # targets. Keep the disabled skills (currently grill-me — grill-with-docs is
-  # preserved as the preferred planning skill) out of every picker source plus
-  # active Claude Desktop sessions and the skills-plugin cache.
-  home.activation.claudeDisableGrillSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    ${mkSkillTargetRm disabledMattpocockSkills}
-    ${mkSessionSweep {
-      ids = disabledMattpocockSkills;
-      cacheAction = ''
-        parent="$(${pkgs.coreutils}/bin/dirname "$dir")"
-        disabled="$parent/../skills-disabled"
-        mkdir -p "$disabled"
-        rm -rf -- "$disabled/$skill"
-        mv -- "$dir" "$disabled/$skill"
-      '';
-    }}
+  # targets, and the external `skills` CLI (~/.agents/.skill-lock.json) writes
+  # real dirs into ~/.agents/skills. Keep every excluded id — disabled AND
+  # lean-excluded, since both lists mean "we refuse to carry this" — out of all
+  # nine picker dirs, and park the genuinely-disabled ones out of active Claude
+  # Desktop sessions and the skills-plugin cache. (Name kept for continuity with
+  # docs/adr/0009; the sweep covers the whole excluded set, not just grill-me.)
+  #
+  # Anchored on linkGeneration, not writeBoundary: home-manager links the bundle
+  # in linkGeneration, so a sweep ordered only after writeBoundary can race and
+  # delete before the link that re-creates the id.
+  home.activation.claudeDisableGrillSkills = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+    if [ -n "''${DRY_RUN:-}" ]; then
+      echo "claude-disable-skills: would remove ${lib.escapeShellArgs excludedSkillIds} from every picker dir" >&2
+    else
+      ${mkSkillTargetRm excludedSkillIds}
+      ${mkSessionSweep {
+        ids = disabledMattpocockSkills;
+        cacheAction = ''
+          parent="$(${pkgs.coreutils}/bin/dirname "$dir")"
+          disabled="$parent/../skills-disabled"
+          mkdir -p "$disabled"
+          rm -rf -- "$disabled/$skill"
+          mv -- "$dir" "$disabled/$skill"
+        '';
+      }}
+    fi
   '';
 
-  # The official Anthropic `code-simplifier` plugin (claude-plugins-official)
-  # and frad-dotclaude's `refactor` plugin BOTH ship an agent named
-  # `code-simplifier`, so both surface (code-simplifier:code-simplifier vs
-  # refactor:code-simplifier). Keep the official one canonical and park ONLY
-  # the refactor plugin's duplicate agent — its `/refactor`, `/refactor-project`
-  # commands and `best-practices` skill have no official equivalent and stay
-  # live (separate `commands`/`skills` entries we never touch).
+  # === Claude-only skill de-duplication ===
+  # Same shape and same reasoning as claudeDisableGlobalMcpPlugins below:
+  # settings.json is seed-once-then-mutable, but these two keys are exactly the
+  # kind of "reproducible off switch" that must survive a UI toggle or a plugin
+  # refresh, so they are re-asserted every switch. Idempotent (only rewrites
+  # when a value actually changes) and runs after the seed so the file exists.
   #
-  # Two levers are needed because Claude discovers plugin agents BOTH ways:
-  # refactor's plugin.json lists the agent explicitly under `agents`, while the
-  # official plugin omits `agents` entirely yet its agent still loads — proving
-  # convention discovery of `agents/*.md`. So we (1) strip the explicit entry
-  # from plugin.json (backing up plugin.json.orig once, like claudeStopHookDebug)
-  # and (2) park agents/code-simplifier.md into a sibling agents-disabled/ dir
-  # (like the brainstorming block). Non-destructive, version-globbed, re-runs
-  # each switch so a plugin update that restores either lever is re-applied.
-  home.activation.claudeDisableRefactorPluginCodeSimplifier = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    for plugin_dir in "${homeDir}"/.claude/plugins/cache/frad-dotclaude/refactor/*; do
-      [ -d "$plugin_dir" ] || continue
-      manifest="$plugin_dir/.claude-plugin/plugin.json"
-
-      if [ -f "$manifest" ] && ${pkgs.jq}/bin/jq -e \
-          '[.agents[]? | select(endswith("code-simplifier.md"))] | any' "$manifest" >/dev/null 2>&1; then
-        [ -f "$manifest.orig" ] || cp "$manifest" "$manifest.orig"
-        tmp=$(mktemp)
-        ${pkgs.jq}/bin/jq \
-          '.agents |= map(select(endswith("code-simplifier.md") | not))' \
-          "$manifest" > "$tmp" && mv "$tmp" "$manifest"
-        echo "refactor-dedup: stripped code-simplifier agent from $manifest" >&2
+  #   skillOverrides   — "off" hides a FILESYSTEM skill from both the model's
+  #                      catalog and the `/` menu. Keyed by the skill's
+  #                      frontmatter `name` (== the directory name for every id
+  #                      here). Claude Code ignores it for plugin skills by
+  #                      design, which is precisely why it de-duplicates here
+  #                      instead of hiding both copies.
+  #   permissions.deny — the only version-independent lever that reaches a
+  #                      plugin's own skill. It blocks EXECUTION, not listing.
+  #
+  # Scope note: ~/.claude/settings.json is user-scope, and Claude Code's
+  # precedence is user < project < local < flag < policy, so a project-level
+  # `"on"` would win. Nothing in this repo sets one; verify-agent-skills.sh
+  # reports it if one appears.
+  home.activation.claudeSkillSurfaceDedup = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
+    target="${homeDir}/.claude/settings.json"
+    if [ ! -f "$target" ]; then
+      echo "claude-skill-dedup: missing $target, skipping" >&2
+    elif [ -n "''${DRY_RUN:-}" ]; then
+      echo "claude-skill-dedup: would hide ${toString (builtins.length claudeHiddenSkillIds)} duplicate skills and deny ${lib.concatStringsSep ", " deniedPluginSkills}" >&2
+    else
+      tmp=$(mktemp)
+      if ${pkgs.jq}/bin/jq \
+          --argjson hidden ${lib.escapeShellArg (builtins.toJSON claudeHiddenSkillIds)} \
+          --argjson denied ${lib.escapeShellArg (builtins.toJSON deniedPluginSkills)} '
+            .skillOverrides = ((.skillOverrides // {})
+              + ($hidden | map({ key: ., value: "off" }) | from_entries))
+            | .permissions = (.permissions // {})
+            | .permissions.deny = ((.permissions.deny // [])
+              + ($denied - (.permissions.deny // [])))
+          ' "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
+        mv -- "$tmp" "$target"
+        echo "claude-skill-dedup: hid ${toString (builtins.length claudeHiddenSkillIds)} duplicate skills in $target" >&2
+      else
+        rm -f -- "$tmp"
       fi
+    fi
+  '';
 
-      agent="$plugin_dir/agents/code-simplifier.md"
-      if [ -f "$agent" ]; then
-        disabled="$plugin_dir/agents-disabled"
-        mkdir -p "$disabled"
-        rm -rf -- "$disabled/code-simplifier.md"
-        mv -- "$agent" "$disabled/code-simplifier.md"
-        echo "refactor-dedup: parked $agent" >&2
+  # === Plugin-manifest prune (the only way to UN-LIST a plugin's skill) ===
+  # Claude Code has no setting that filters which of an installed plugin's
+  # skills load: `pluginConfigs` carries only MCP/userConfig, and the manifest's
+  # own `skills` array is an author-side path allowlist resolved at LOAD time.
+  # That last fact is the lever — prune the id out of the cached manifest and
+  # the skill is never registered, so it leaves the `/` menu and the model's
+  # catalog entirely. Pruning the manifest rather than deleting the skill dir
+  # avoids a "declared in manifest but not found" warning at load.
+  #
+  # The plugin cache is VERSION-KEYED (<marketplace>/<plugin>/<version>/) and
+  # `claude plugin update` rm -rf's the version dir and re-materialises it, so
+  # this prune does NOT survive a plugin update on its own. It is re-applied on
+  # every switch, and deniedPluginSkills covers the window in between by
+  # refusing execution. The glob covers every cached version, so an
+  # already-downloaded new version is pruned too.
+  home.activation.claudePrunePluginSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    cache="${homeDir}/.claude/plugins/cache/claude-plugins-official/mattpocock-skills"
+    for manifest in "$cache"/*/.claude-plugin/plugin.json; do
+      [ -f "$manifest" ] || continue
+      tmp=$(mktemp)
+      if ${pkgs.jq}/bin/jq \
+          --argjson ids ${lib.escapeShellArg (builtins.toJSON disabledMattpocockSkills)} '
+            .skills = ((.skills // [])
+              | map(select((split("/") | last) as $id | ($ids | index($id)) == null)))
+          ' "$manifest" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$manifest"; then
+        if [ -n "''${DRY_RUN:-}" ]; then
+          echo "claude-prune-plugin-skills: would drop ${lib.escapeShellArgs disabledMattpocockSkills} from $manifest" >&2
+          rm -f -- "$tmp"
+        else
+          mv -- "$tmp" "$manifest"
+          echo "claude-prune-plugin-skills: dropped ${lib.escapeShellArgs disabledMattpocockSkills} from $manifest" >&2
+        fi
+      else
+        rm -f -- "$tmp"
       fi
     done
   '';
@@ -494,17 +541,16 @@ in
     fi
   '';
 
-  # === Disable context7 / code-context on the global surface ===
+  # === Reproducible global-plugin-disable lever ===
   # settings.json is otherwise seed-once-then-mutable (above), but
   # enabledPlugins is exactly the kind of "reproducible disable" lever the
-  # grill-me / refactor-dedup blocks already use: flip the named plugins off on
-  # every rebuild so a UI re-enable or a plugin-cache refresh can't quietly
-  # bring back context7's MCP server or code-context's deepwiki/exa servers
-  # globally. Idempotent (only rewrites when a flag actually changes) and runs
-  # after the seed so the file exists. The plugins stay *installed* — projects
-  # opt back into deepwiki/exa via a local .mcp.json
-  # (templates/mcp/code-context.mcp.json). claude.ai connectors are account-side
-  # and untouched. See docs/adr/0003-scope-code-context-mcp-per-project.md.
+  # grill-me block already uses: flip any id listed in disabledClaudePlugins
+  # off on every rebuild so a UI re-enable or a plugin-cache refresh can't
+  # quietly bring a parked plugin's MCP server back globally. Idempotent
+  # (only rewrites when a flag actually changes) and runs after the seed so
+  # the file exists. claude.ai connectors are account-side and untouched.
+  # See docs/adr/0003-scope-code-context-mcp-per-project.md for the
+  # plugin-scoping precedent this lever was built for.
   home.activation.claudeDisableGlobalMcpPlugins = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
     target="${homeDir}/.claude/settings.json"
     if [ ! -f "$target" ]; then
@@ -562,17 +608,48 @@ in
     fi
   '';
 
+  # === MCP: register drafts (Drafts.app AppleScript bridge) ===
+  # Same mechanism and same store-path idempotency reasoning as
+  # claudeMcpFff above. The patched defaults (bulk tools gated behind
+  # DRAFTS_MCP_ALLOW_BULK=1, 20s osascript watchdog, 200-result cap) are
+  # baked into pkgs/drafts-mcp-server.nix, so no env is passed here.
+  home.activation.claudeMcpDrafts = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    claudeBin="${pkgs.claude-code}/bin/claude"
+    draftsBin="${pkgs.martin.drafts-mcp-server}/bin/drafts-mcp-server"
+    target="${homeDir}/.claude.json"
+
+    currentCmd=""
+    if [ -f "$target" ]; then
+      currentCmd=$(${pkgs.jq}/bin/jq -r '.mcpServers.drafts.command // empty' "$target" 2>/dev/null || true)
+    fi
+
+    if [ ! -x "$claudeBin" ]; then
+      echo "claude-mcp-drafts: claude CLI not found, skipping" >&2
+    elif [ "$currentCmd" = "$draftsBin" ]; then
+      :
+    elif [ -n "''${DRY_RUN:-}" ]; then
+      echo "claude-mcp-drafts: would (re)register drafts -> $draftsBin (was: ''${currentCmd:-none})" >&2
+    else
+      "$claudeBin" mcp remove -s user drafts >/dev/null 2>&1 || true
+      if "$claudeBin" mcp add -s user drafts -- "$draftsBin" >&2; then
+        echo "claude-mcp-drafts: registered drafts -> $draftsBin" >&2
+      else
+        echo "claude-mcp-drafts: failed to register drafts (see above)" >&2
+      fi
+    fi
+  '';
+
   # === Skills (was modules/home/skills.nix) ===
   programs.agent-skills = {
     enable = true;
 
     sources = {
       dotfiles-pi = mkSource "dotfiles" "dot_pi/agent/skills"
-        "^(review|ralph-loop|web-browser)$";
-    } // mpSources // effectSources // superpowersSources // inProgressSources;
+        "^(review|web-browser)$";
+    } // mpSources // effectSources;
 
     skills = {
-      enable = enabledMattpocockSkills ++ enabledSuperpowersSkills ++ enabledInProgressSkills;
+      enable = enabledMattpocockSkills;
       # effect-ts is no longer globally bundled. It was the one bundled skill
       # that is genuinely dependency-conditional: pure router noise in every
       # non-Effect repo, and version-blind vs the repo's installed `effect` in
@@ -586,22 +663,24 @@ in
         # Skills that need CLI deps symlinked into the bundle dir.
         # mattpocock skills inherit from user PATH (git/gh/jq/bun globally).
         review = mkSkill "dotfiles-pi" "review" [ pkgs.git pkgs.gh pkgs.jq ];
-        ralph-loop = mkSkill "dotfiles-pi" "ralph-loop" [ ];
         web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];
 
-        # Re-added from the engineering bucket (see disabledMattpocockSkills)
-        # so `transform` can append the Karpathy-alignment footer to each.
-        grill-with-docs = mkSkill "mp-engineering" "grill-with-docs" [ ] // {
-          transform = appendKarpathy grillKarpathyFooter;
-        };
-        improve-codebase-architecture = mkSkill "mp-engineering" "improve-codebase-architecture" [ ] // {
-          transform = appendKarpathy deepenKarpathyFooter;
-        };
+        # `grill-with-docs` and `improve-codebase-architecture` used to live
+        # here so a Nix `transform` could append a Karpathy-alignment footer to
+        # each. Both forks are retired: the plugin now supplies both ids, and a
+        # local fork would shadow the plugin copy and re-create the very
+        # duplicate this module removes (the fork of
+        # improve-codebase-architecture had also drifted onto a stale upstream
+        # body). They are back on plain bucket auto-discovery, so every non-
+        # Claude picker dir gets the untransformed upstream copy.
       };
     };
 
     targets = lib.mapAttrs (_: linkTarget) skillTargetDirs;
 
-    excludePatterns = [ ];
+    # Module default (`[ "/.system" ]`); an empty list would let a future
+    # `structure = "symlink-tree"` target rsync --delete over Codex's own
+    # `.system` dir. Every target is `link` today, so this is a latent guard.
+    excludePatterns = [ "/.system" ];
   };
 }

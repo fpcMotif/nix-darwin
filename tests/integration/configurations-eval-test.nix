@@ -161,11 +161,12 @@ let
             enabled = homePrograms.agent-skills.skills.enable;
             explicit = homePrograms.agent-skills.skills.explicit;
           in
-          builtins.hasAttr "grill-with-docs" explicit
+          builtins.elem "grill-with-docs" enabled
+          && !(builtins.hasAttr "grill-with-docs" explicit)
           && !(builtins.elem "grill-me" enabled)
           && !(builtins.hasAttr "grill-me" explicit)
         )
-        "${prefix} should expose grill-with-docs explicitly but not the older grill-me skill")
+        "${prefix} should carry grill-with-docs via plain bucket auto-discovery (the Karpathy fork is retired) and still refuse grill-me")
 
       (helpers.assertTest "${prefix}-agent-skills-removes-git-workflow"
         (
@@ -176,10 +177,6 @@ let
           && !(builtins.hasAttr "git-workflow" cfg.skills.explicit)
         )
         "${prefix} should remove git-workflow from discovery and the active skill bundle")
-
-      (helpers.assertTest "${prefix}-agent-skills-superpowers-brainstorming-only"
-        (homePrograms.agent-skills.sources.superpowers.filter.nameRegex == "^(brainstorming)$")
-        "${prefix} should not discover disabled superpowers workflow skills")
 
       (helpers.assertTest "${prefix}-agent-skills-effect-ts-devshell-scoped"
         (
@@ -201,24 +198,51 @@ let
         )
         "${prefix} should prune removed skills without mutating during Home Manager dry runs")
 
-      (helpers.assertTest "${prefix}-claude-refactor-code-simplifier-deduped"
-        (
-          let activation = homeActivation.claudeDisableRefactorPluginCodeSimplifier.data;
-          in
-          lib.hasInfix "frad-dotclaude/refactor" activation
-          && lib.hasInfix "code-simplifier.md" activation
-          && lib.hasInfix "agents-disabled" activation
-        )
-        "${prefix} should park the refactor plugin's duplicate code-simplifier agent, keeping the official one")
-
-      (helpers.assertTest "${prefix}-claude-disables-gitflow-git-plugins"
+      (helpers.assertTest "${prefix}-claude-global-mcp-plugin-disable-lever-wired"
         (
           let activation = homeActivation.claudeDisableGlobalMcpPlugins.data;
           in
-          lib.hasInfix "gitflow@frad-dotclaude" activation
-          && lib.hasInfix "git@frad-dotclaude" activation
+          lib.hasInfix "enabledPlugins" activation
+          && lib.hasInfix "reduce $ids[]" activation
         )
-        "${prefix} should disable the gitflow and git plugins on the global surface so their git-flow/commit skills leave Claude Code's startup catalog")
+        "${prefix} should keep the reproducible global-plugin-disable lever wired, even with no ids currently parked")
+
+      # The three assertions below pin the Claude-only de-duplication contract:
+      # hide the bundle copy from Claude (and ONLY Claude), un-list the refused
+      # plugin skills, and never let either lever reach the shared bundle that
+      # Codex/Droid/OpenCode/Crush read.
+      (helpers.assertTest "${prefix}-agent-skills-claude-dedup-wired"
+        (
+          let activation = homeActivation.claudeSkillSurfaceDedup.data;
+          in
+          lib.hasInfix "skillOverrides" activation
+          && lib.hasInfix ''"off"'' activation
+          && lib.hasInfix "permissions" activation
+          && lib.hasInfix "DRY_RUN" activation
+        )
+        "${prefix} should hide plugin-duplicated skills from Claude Code only, via settings.json skillOverrides")
+
+      (helpers.assertTest "${prefix}-claude-plugin-skill-prune-wired"
+        (
+          let activation = homeActivation.claudePrunePluginSkills.data;
+          in
+          lib.hasInfix "grill-me" activation
+          && lib.hasInfix "setup-matt-pocock-skills" activation
+          && lib.hasInfix ".claude-plugin/plugin.json" activation
+        )
+        "${prefix} should prune grill-me and setup-matt-pocock-skills out of the cached mattpocock-skills plugin manifest — skillOverrides cannot reach a plugin skill")
+
+      (helpers.assertTest "${prefix}-agent-skills-full-set-on-non-claude-targets"
+        (
+          let cfg = homePrograms.agent-skills;
+          in
+          builtins.elem "grilling" cfg.skills.enable
+          && builtins.elem "grill-with-docs" cfg.skills.enable
+          && builtins.elem "improve-codebase-architecture" cfg.skills.enable
+          && cfg.targets.agents.enable
+          && cfg.targets.codex.enable
+        )
+        "${prefix} must keep plugin-duplicated skills IN the bundle — Codex/Droid/OpenCode/Crush have no plugin system and read the picker dirs")
 
       (helpers.assertTest "${prefix}-agent-skills-agents-target"
         (homePrograms.agent-skills.targets.agents.enable == true)

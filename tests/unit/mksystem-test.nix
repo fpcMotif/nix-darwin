@@ -70,8 +70,11 @@ let
       "agent-skills Home Manager module should be enabled")
 
     (helpers.assertTest "grill-with-docs-skill-enabled"
-      (builtins.hasAttr "grill-with-docs" homeConfig.programs.agent-skills.skills.explicit)
-      "grill-with-docs should stay exposed as an explicit transformed Matt Pocock skill")
+      (
+        builtins.elem "grill-with-docs" homeConfig.programs.agent-skills.skills.enable
+        && !(builtins.hasAttr "grill-with-docs" homeConfig.programs.agent-skills.skills.explicit)
+      )
+      "grill-with-docs should come from plain bucket auto-discovery — the Karpathy fork was retired in favour of the plugin copy, and a local transform would shadow it")
 
     (helpers.assertTest "grill-me-skill-disabled"
       (
@@ -89,10 +92,6 @@ let
         && !(builtins.hasAttr "git-workflow" cfg.skills.explicit)
       )
       "git-workflow should be removed from the skill catalog and bundle, not just disabled")
-
-    (helpers.assertTest "superpowers-source-brainstorming-only"
-      (homeConfig.programs.agent-skills.sources.superpowers.filter.nameRegex == "^(brainstorming)$")
-      "Nix-managed superpowers should source only brainstorming")
 
     (helpers.assertTest "pi-skill-target-configured"
       (homeConfig.programs.agent-skills.targets.pi.dest == ".pi/agent/skills")

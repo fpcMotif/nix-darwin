@@ -261,11 +261,10 @@ programs.agent-skills = {
     mp-productivity = { input = "mattpocock-skills"; subdir = "skills/productivity"; };
     mp-misc         = { input = "mattpocock-skills"; subdir = "skills/misc"; };
     effect-ts       = { input = "effect-ts-skills";  subdir = "skills"; };
-    superpowers     = { input = "superpowers";       subdir = "skills"; filter.nameRegex = "^(brainstorming)$"; };
   };
 
   skills = {
-    enable = enabledMattpocockSkills ++ enabledSuperpowersSkills;
+    enable = enabledMattpocockSkills;
     enableAll = [ "effect-ts" ];
     explicit = {
       review = {
@@ -273,7 +272,6 @@ programs.agent-skills = {
         path = "review";
         packages = [ pkgs.git pkgs.gh pkgs.jq ];
       };
-      ralph-loop = { from = "dotfiles-pi"; path = "ralph-loop"; packages = [ ]; };
       web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
     };
   };
@@ -360,7 +358,7 @@ These are dimensions every reviewer asks about. State the position even when the
 |----------------------|------------------------------------------------------------------------------------------------|
 | Secrets management   | **None today.** No `sops-nix` / `agenix`. Secrets live outside the flake; revisit before adding any service that reads them. |
 | Formatter            | Wired through `flake.nix` (`formatter.<system>`). Run via `nix fmt`.                           |
-| Linting              | `nix flake check` runs `nixpkgs-fmt --check` via `tests/default.nix`, and gates the `tools/skill-router` bun suite offline through the `unit-skill-router` check (`tests/unit/skill-router-test.nix`) — the spawn-seam regression net (ADR-0006), run on both CI runners. `statix`/`deadnix` run advisorily via `just lint` (tools pinned in the repo dev shell, scoped by `statix.toml`); promote them to explicit checks once the existing findings are cleared. |
+| Linting              | `nix flake check` runs `nixpkgs-fmt --check` via `tests/default.nix`, and gates the `tools/skill-router` bun suite offline through the `unit-skill-router` check (`tests/unit/skill-router-test.nix`) — the spawn-seam regression net (ADR-0006), run on both CI runners. `unit-skill-hygiene` (`tests/unit/skill-hygiene-test.nix`) catches skill-curation drift: exclusion terms that no longer name a live upstream skill, a vendored fork shadowing a promoted upstream id, and any `transform` returning to a mattpocock skill. `statix`/`deadnix` run advisorily via `just lint` (tools pinned in the repo dev shell, scoped by `statix.toml`); promote them to explicit checks once the existing findings are cleared. |
 | Cross-platform purity | `integration-home-linux-purity` (`tests/integration/home-linux-purity-test.nix`, ADR-0008) asserts at eval time that no macOS-only paths/tools (`/Applications`, `~/Library`, `pbcopy`, `darwin-rebuild`, …) reach the Linux hosts' session vars, zsh config, or activation scripts. Darwin-only code in `modules/home` must sit behind `pkgs.stdenv.isDarwin`. |
 | CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin, x86_64 NixOS scaffolds (`wsl`, `x230`), and `vm-aarch64-utm` on macOS / Ubuntu runners, with `nix flake check` as the gate before config builds. Also builds `devShells` on both runners and the `dev-container` image for both Linux systems. |
 | Dev shells / direnv  | `devShells.<system>.default` is the repo maintainer shell (just, nixpkgs-fmt, statix, deadnix, shellcheck); the checked-in root `.envrc` (`use flake`) auto-enters it via direnv + nix-direnv. Per-project shells seed from `templates.dev-shell` (`nix flake init -t .#dev-shell`). |
@@ -525,6 +523,7 @@ Borrow patterns selectively. Do not copy Linux-specific NixOS concepts into nix-
 - Keep brew variants disabled unless explicitly testing an escape hatch.
 - Treat sample repos as references, never as active configuration.
 - Adding an agent-skills target enables rsync-with-delete on that directory; enable deliberately.
+- The agent-skill bundle is shared by nine picker dirs; only Claude Code has a plugin system. Where an installed Claude Code plugin supplies the same id as the bundle, de-duplicate **on the Claude surface only** — `skillOverrides: "off"` in `~/.claude/settings.json`, which no other agent reads. Never de-duplicate by dropping the id from the bundle: Codex, Droid, OpenCode, Crush and Pi have no plugin to fall back on. A plugin's *own* skill cannot be hidden this way (Claude Code ignores `skillOverrides` for `source: "plugin"`); un-listing one means pruning it from the cached plugin manifest every switch, backed by a `permissions.deny` rule for the window after a plugin update. Verify with `just verify-skills`.
 
 ## Maintaining this document
 

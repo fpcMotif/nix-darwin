@@ -2,6 +2,23 @@
 
 Status: refuted (not deferred — see "What would change this decision" for the one exception)
 
+> **Amended 2026-07-28 (superseded in part).** The decision below — keep the curation lists
+> hand-written rather than compiling one `skillPolicy` table — still stands, and this amendment
+> does not reopen it. Two premises it argues from have since changed:
+>
+> - `transformedMattpocockSkills` no longer exists. Installing
+>   `mattpocock-skills@claude-plugins-official` made the plugin the preferred source for
+>   `grill-with-docs` and `improve-codebase-architecture`, so both Karpathy `transform` closures
+>   were retired and the list was deleted. Q1's "transforms are Nix closures, not data" argument
+>   consequently lost its only concrete example — but Q1 does not depend on it: `skills.explicit`
+>   still carries per-skill CLI-dependency lists (`review`) that a status table cannot express.
+> - The lists are now **three**, not four: `disabledMattpocockSkills`,
+>   `leanExcludedMattpocockSkills`, `removedSkillIds`.
+>
+> The `DRY_RUN` asymmetry Q1 identified as the one genuine win has since been fixed.
+> `tests/unit/skill-hygiene-test.nix` now enforces that no `transform` returns to a mattpocock
+> skill without a deliberate decision.
+
 ## The candidate
 
 Handoff E (`skill-policy-table`, architecture review 2026-07-02) proposed collapsing

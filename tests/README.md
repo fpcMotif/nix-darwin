@@ -30,6 +30,7 @@ nix build .#checks.aarch64-darwin.unit-mksystem --no-link
 nix build .#checks.aarch64-darwin.unit-overlay --no-link
 nix build .#checks.aarch64-darwin.unit-format --no-link
 nix build .#checks.aarch64-darwin.unit-skill-router --no-link
+nix build .#checks.aarch64-darwin.unit-skill-hygiene --no-link
 nix build .#checks.aarch64-darwin.integration-configurations-eval --no-link
 nix build .#checks.aarch64-darwin.smoke-build-common --no-link
 nix build .#checks.aarch64-darwin.smoke-build-oh-my-pi --no-link
@@ -53,11 +54,15 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `unit-overlay`                      | `pkgs/default.nix` is a valid overlay and exposes the expected `pkgs.martin.*` attributes, descriptions, and CLI main programs. Darwin-only package evaluation is skipped on Linux. |
 | `unit-format`                       | `formatter.<system>` is configured as `nixpkgs-fmt`, evaluates, and all flake Nix files are formatted. |
 | `unit-skill-router`                 | Runs the `tools/skill-router` bun suite (`test/subprocess-gating.test.ts`) offline inside the Nix sandbox. Pins the spawn seam so `discover`/`load` never reach a real `bunx @tanstack/intent` subprocess unless package scope is explicitly requested (ADR-0006); the bundled `bunfig.toml` preload (`SKILL_ROUTER_NO_REAL_SPAWN`) makes any real spawn fail loud and offline. Uses the shipped canary Bun on Darwin, stock `pkgs.bun` on Linux. |
-| `integration-configurations-eval`   | The flake's Darwin/NixOS configs evaluate and keep expected user, host, pure-Nix dotfile, activation dry-run, required/forbidden toolchain, WSL, and agent-skills settings. |
+| `unit-skill-hygiene`                | Cross-source drift checks for the agent-skill curation lists: every exclusion term still names a live skill in the pinned `mattpocock-skills` buckets, no vendored fork under `modules/home/skills/` shadows a promoted upstream id, `cleanup.nix` still mirrors `skillTargetDirs`, and neither the retired Karpathy `transform`s nor the `mp-in-progress` source has crept back. Pure `readDir` — no IFD, so it evaluates the Linux hosts from Darwin. |
+| `integration-configurations-eval`   | The flake's Darwin/NixOS configs evaluate and keep expected user, host, pure-Nix dotfile, activation dry-run, required/forbidden toolchain, WSL, and agent-skills settings — including that Claude-only skill de-duplication is wired via `skillOverrides` and never by stripping ids from the shared bundle. |
 | `integration-darwin-settings`       | Darwin-only. Exact-value assertions for every `system.defaults` key plus sudo Touch ID, firewall, pmset power management, the skhd-stays-disabled guard (BetterMouse tap conflict), and the Gatekeeper guard; font-bundle membership + count; Rime/Squirrel and BetterMouse/BetterDisplay agent wiring. No-op skip on Linux. |
 
 Real-machine verification (Tier 2) lives outside the Nix checks in
-`scripts/verify-macos-settings.sh` (run via `just verify-macos`); the deferred
+`scripts/verify-macos-settings.sh` (run via `just verify-macos`) and
+`scripts/verify-agent-skills.sh` (run via `just verify-skills`, which reads the
+`~/.config/agent-skills/manifest.json` that `modules/home/claude.nix` emits on
+every switch, so it never restates the curation lists); the deferred
 VM tier (Tier 3) is designed in `docs/design/darwin-activation-vm-harness.md`.
 The overall strategy is recorded in
 `docs/adr/0004-macos-settings-testing-strategy.md`.
