@@ -214,7 +214,6 @@ in
       cat = "bat --paging=never";
       preview = "bat --style=numbers --color=always";
       find = "fd";
-      du = "dust";
       ps = "procs";
       top = "btm";
 
@@ -386,6 +385,27 @@ in
       grep() { rg "$@" }
       mgsearch() { mgrep search -c -m 20 "$@" }
       webai() { mgrep search -w -a "$@" }
+
+      # du routes to dust as a function, not an alias: `du = "dust"` made
+      # `du -sh` expand to `dust -sh`, and dust parses -h as --help (its -s
+      # is --apparent-size). Drop h from short-flag clusters (dust is
+      # human-readable by default) and map du's -s to dust's -d 0.
+      du() {
+        local -a args
+        local a
+        for a in "$@"; do
+          if [[ "$a" == -[a-zA-Z]* ]]; then
+            a="''${a//h/}"
+            if [[ "$a" == *s* ]]; then
+              a="''${a//s/}"
+              args+=(-d 0)
+            fi
+            [[ "$a" == "-" ]] && continue
+          fi
+          args+=("$a")
+        done
+        command dust "''${args[@]}"
+      }
 
       fif() {
         (( $# )) || return
