@@ -1,0 +1,4 @@
+
+## 2024-07-29 - Native Bash Regex for Multiline Variable Parsing
+**Learning:** Iterating over multiline strings in Bash by repeatedly spawning subprocesses (`grep | head | awk`) inside a loop introduces massive execution overhead (~3 process forks per loop iteration). Pure Bash read loops on large strings are also an anti-pattern. However, using the native Bash regex operator `=~` against strings already loaded into memory eliminates all subprocesses completely.
+**Action:** Next time I need to extract structured data from a multiline string variable inside a loop in a Bash script, I will use `[[ "$var" =~ regex ]]` and `${BASH_REMATCH[]}` to extract the values natively instead of piping to `grep`/`awk`/`sed`, provided it does not sacrifice readability. Note: for matching the start of a line in a multiline variable, use `([[:space:]]|^)` instead of just `^` due to older macOS bash versions.
