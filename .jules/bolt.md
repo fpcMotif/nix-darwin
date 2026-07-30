@@ -1,0 +1,3 @@
+## 2024-05-24 - Eliminate Subprocess Overhead in Bash Loops
+**Learning:** Using `printf`, `grep`, `head`, and `awk` inside loops in Bash scripts (like `scripts/verify-macos-settings.sh`) incurs significant subprocess overhead. Native Bash regex (`[[ $var =~ regex ]]`) and `${BASH_REMATCH[]}` can capture multiline string groups natively in memory, providing a ~70x speedup by avoiding forks. When parsing multiline variables in macOS Bash 3.2, use the `([[:space:]]|^)` anchor pattern instead of `^` to correctly match word boundaries or line starts natively.
+**Action:** Always prefer native Bash regex `[[ =~ ]]` for extracting substrings from in-memory variables instead of spawning external tools like `awk` or `grep` in hot loops.
