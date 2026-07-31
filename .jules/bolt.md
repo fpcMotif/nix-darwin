@@ -1,0 +1,3 @@
+## $(date +%Y-%m-%d) - jq `first()` function throws an error on empty streams
+**Learning:** In jq, the `first()` function throws a runtime error (`jq: error: first() requires at least one element`) if the input stream is completely empty (e.g., if no assets match a select filter). Because it throws an error instead of returning `null` or `empty`, using a `// ""` fallback after `first()` is effectively dead code, and jq will print an error to stderr.
+**Action:** When extracting the first element from a filtered stream with a fallback in jq, construct an array and access the first element (`[ .assets[].name | select(...) ][0] // ""`) instead of using `first()`. This safely evaluates to `null` (and then `""`) without throwing an exception.
