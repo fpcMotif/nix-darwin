@@ -1,0 +1,3 @@
+## 2024-06-03 - Subprocess pipeline overhead in shell scripts
+**Learning:** Shell scripts using standard multi-command pipelines (e.g., `grep | head | cut`) or subshells inside frequently called functions (like `au_current_version`) incur a measurable performance penalty due to process forks. Using native features of more powerful text processors (like `jq` or `sed`) can collapse multiple process spawns into one.
+**Action:** When working on performance optimizations in shell scripts, consolidate text processing logic into fewer commands (e.g., using `sed -n` with `/pattern/{actions;q}` or `jq` with `select` and `capture`) to avoid forking multiple binaries like `grep`, `awk`, and `head`. Ensure inline comments document the optimization.
