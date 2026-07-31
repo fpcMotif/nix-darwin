@@ -1,0 +1,32 @@
+# Reproducibly create/update the canonical triage labels from
+# .github/labels.yml, so the vocabulary in docs/agents/triage-labels.md is
+# actually instantiated in the tracker instead of only documented.
+#
+# Non-destructive: delete-other-labels defaults to false, so GitHub's stock
+# labels and any ad-hoc ones are left untouched. Runs on main only when the
+# label config (or this workflow) changes, plus manual dispatch for a first
+# sync without editing the config.
+name: label-sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/labels.yml
+      - .github/workflows/label-sync.yml
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  sync:
+    name: sync triage labels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync labels from .github/labels.yml
+        uses: EndBug/label-sync@v2
+        with:
+          config-file: .github/labels.yml

@@ -1,0 +1,21 @@
+# Canonical triage-role labels for this repo's issue tracker.
+# Mirrors docs/agents/triage-labels.md. Synced by
+# .github/workflows/label-sync.yml (EndBug/label-sync). Non-destructive:
+# delete-other-labels stays at its default (false), so GitHub's stock labels
+# and any ad-hoc ones are never removed. Edit a name/color/description here and
+# merge to main to update the live label.
+- name: needs-triage
+  color: "fbca04"
+  description: "Maintainer needs to evaluate this issue"
+- name: needs-info
+  color: "d4c5f9"
+  description: "Waiting on reporter for more information"
+- name: ready-for-agent
+  color: "0e8a16"
+  description: "Fully specified, ready for an AFK agent"
+- name: ready-for-human
+  color: "1d76db"
+  description: "Requires human implementation"
+- name: wontfix
+  color: "e6e6e6"
+  description: "Will not be actioned"
