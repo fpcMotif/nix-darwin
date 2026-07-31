@@ -63,7 +63,7 @@ expect_contains() { # label needle -- command...
     na "$label (could not read: ${*}; may need sudo)"
     return
   fi
-  if printf '%s' "$out" | grep -qF -- "$needle"; then
+  if [[ "$out" == *"$needle"* ]]; then
     ok "$label"
   else
     bad "$label: expected output to contain [$needle]"
@@ -112,11 +112,21 @@ if pm="$(pmset -g custom 2>/dev/null)"; then
     "hibernatemode 3" "standbydelayhigh 7200" "standbydelaylow 3600"; do
     key="${kv%% *}"
     val="${kv##* }"
-    line="$(printf '%s' "$pm" | grep -E "^[[:space:]]*${key}[[:space:]]+" | head -1)"
-    if [ -z "$line" ]; then
-      na "pmset ${key} not exposed on this hardware (Apple Silicon)"
+
+    # Use native bash matching and loop over lines to get the first match (like head -1)
+    re="^[[:space:]]*${key}[[:space:]]+([^[:space:]]+)"
+    found=""
+    while IFS= read -r line; do
+      if [[ "$line" =~ $re ]]; then
+        found="${BASH_REMATCH[1]}"
+        break
+      fi
+    done <<< "$pm"
+
+    if [ -n "$found" ]; then
+      expect "pmset ${key}" "$val" "$found"
     else
-      expect "pmset ${key}" "$val" "$(printf '%s' "$line" | awk '{print $2}')"
+      na "pmset ${key} not exposed on this hardware (Apple Silicon)"
     fi
   done
 else
@@ -177,11 +187,12 @@ sys_disabled="$(sudo -n launchctl print-disabled system 2>/dev/null || true)"
 
 check_disabled() { # label haystack domain-note
   local label="$1" haystack="$2" note="$3"
+  local re="\"$label\" => (true|disabled)"
   if [ -z "$haystack" ]; then
     na "$label ($note unreadable; may need sudo)"
-  elif printf '%s' "$haystack" | grep -Eq "\"$label\" => (true|disabled)"; then
+  elif [[ "$haystack" =~ $re ]]; then
     ok "$label is disabled"
-  elif printf '%s' "$haystack" | grep -qF "$label"; then
+  elif [[ "$haystack" == *"$label"* ]]; then
     na "$label present but not in disabled state"
   else
     na "$label not currently registered ($note)"
