@@ -2,7 +2,7 @@
 
 {
   imports = [
-    inputs.nixos-wsl.nixosModules.wsl
+    inputs.nixos-wsl.nixosModules.default
   ];
 
   # Borrowed from the Mitchell Hashimoto WSL reference: retain derivation
