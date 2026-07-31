@@ -1,0 +1,9 @@
+--- modules/home/lsp.nix
++++ modules/home/lsp.nix
+@@ -69,7 +69,7 @@
+     # === Swift / iOS ===
+-    ] ++ lib.optionals pkgs.stdenv.isDarwin [ sourcekit-lsp ] ++ [
++  ] ++ lib.optionals pkgs.stdenv.isDarwin [ sourcekit-lsp ] ++ [
+
+     # === Haskell ===
+     haskell-language-server
