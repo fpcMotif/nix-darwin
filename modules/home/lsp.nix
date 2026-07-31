@@ -41,7 +41,9 @@ let
   lspServers = with pkgs; [
     # === TypeScript / JavaScript — modern Rust/Go stack ===
     typescript-go # `tsgo --lsp` — TS 7 native LSP
+  ] ++ lib.optionals (pkgs.stdenv.hostPlatform.system != "aarch64-linux") [
     oxlint # `oxlint --lsp` — oxc lint LSP
+  ] ++ [
     vtsls # tsserver wrapper, opt-in fallback
     # Compat: `typescript-lsp@claude-plugins-official` plugin still
     # spawns `typescript-language-server`, and vtsls reads tsserver
@@ -67,7 +69,9 @@ let
     rust-analyzer
 
     # === Swift / iOS ===
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     sourcekit-lsp
+  ] ++ [
 
     # === Haskell ===
     haskell-language-server
