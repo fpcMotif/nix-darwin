@@ -30,17 +30,29 @@ else
   au_set_version "$FILE" "$latest"
 fi
 
-for asset in \
-  codex-aarch64-apple-darwin \
-  codex-x86_64-apple-darwin \
-  codex-aarch64-unknown-linux-musl \
+assets=(
+  codex-aarch64-apple-darwin
+  codex-x86_64-apple-darwin
+  codex-aarch64-unknown-linux-musl
   codex-x86_64-unknown-linux-musl
-do
+)
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+pids=()
+
+for asset in "${assets[@]}"; do
   url="https://github.com/openai/codex/releases/download/rust-v${latest}/${asset}.tar.gz"
-  # Capture into a var on its own line so a failed prefetch trips `set -e`
-  # instead of silently writing an empty hash via argument substitution.
-  sri=$(au_prefetch_sri "$url")
-  au_set_block_hash "$FILE" "asset = \"${asset}\";" "$sri"
+  (au_prefetch_sri "$url" > "$work/$asset") &
+  pids+=($!)
+done
+
+for pid in "${pids[@]}"; do
+  wait "$pid"
+done
+
+for asset in "${assets[@]}"; do
+  au_set_block_hash "$FILE" "asset = \"${asset}\";" "$(cat "$work/$asset")"
 done
 
 echo "codex pinned at $latest with re-verified asset hashes"
