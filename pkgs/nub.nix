@@ -21,8 +21,8 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   version = "canary";
 
   src = fetchurl {
-    url = "https://github.com/nubjs/nub/releases/download/v${finalAttrs.version}/nub-darwin-arm64.tar.gz";
-    hash = "";
+    url = "https://github.com/nubjs/nub/releases/download/${if lib.hasPrefix "canary" finalAttrs.version then "" else "v"}${finalAttrs.version}/nub-darwin-arm64.tar.gz";
+    hash = "sha256-EdO2H7/palBhBN/kIl0DZ3HxzbRRwX5aOcF7wrSHrdI=";
   };
 
   # Flat tarball (bin/nub, bin/nubx, runtime/); stay at the extraction root
