@@ -613,7 +613,7 @@ in
   # claudeMcpFff above. The patched defaults (bulk tools gated behind
   # DRAFTS_MCP_ALLOW_BULK=1, 20s osascript watchdog, 200-result cap) are
   # baked into pkgs/drafts-mcp-server.nix, so no env is passed here.
-  home.activation.claudeMcpDrafts = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.claudeMcpDrafts = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     claudeBin="${pkgs.claude-code}/bin/claude"
     draftsBin="${pkgs.martin.drafts-mcp-server}/bin/drafts-mcp-server"
     target="${homeDir}/.claude.json"
@@ -637,7 +637,7 @@ in
         echo "claude-mcp-drafts: failed to register drafts (see above)" >&2
       fi
     fi
-  '';
+  '');
 
   # === Skills (was modules/home/skills.nix) ===
   programs.agent-skills = {
