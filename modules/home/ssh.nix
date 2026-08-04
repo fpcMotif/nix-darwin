@@ -28,7 +28,8 @@
       Compression = false;
       ServerAliveInterval = 0;
       ServerAliveCountMax = 3;
-      HashKnownHosts = false;
+      # 🛡️ Sentinel: Mitigate network topography disclosure by hashing known_hosts
+      HashKnownHosts = true;
       UserKnownHostsFile = "~/.ssh/known_hosts";
       ControlMaster = "no";
       ControlPath = "~/.ssh/master-%r@%n:%p";
