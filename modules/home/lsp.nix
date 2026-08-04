@@ -66,11 +66,12 @@ let
     # === Rust ===
     rust-analyzer
 
-    # === Swift / iOS ===
-    sourcekit-lsp
-
     # === Haskell ===
     haskell-language-server
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
+    # === Swift / iOS ===
+    sourcekit-lsp
+  ] ++ [
 
     # === Python ===
     basedpyright # types + hover + definitions
