@@ -65,10 +65,10 @@ let
 
     # === Rust ===
     rust-analyzer
-
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     # === Swift / iOS ===
     sourcekit-lsp
-
+  ] ++ [
     # === Haskell ===
     haskell-language-server
 

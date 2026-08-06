@@ -10,3 +10,7 @@
 **Vulnerability:** CI failed on Linux because `drafts-mcp-server` (an AppleScript bridge) was being evaluated unconditionally.
 **Learning:** Home Manager configurations often mix platform-specific (Darwin/Linux) derivations. If a Darwin-only package is evaluated within an activation script block, it causes Nix to throw an evaluation error on Linux builds, even if the script would not run or execute the package.
 **Prevention:** When conditionally wrapping Home Manager activation DAG entries (like `lib.hm.dag.entryAfter`) for platform-specific tools, always wrap them in `lib.mkIf pkgs.stdenv.isDarwin` (or similar) to prevent Nix evaluation failures on unsupported platforms. Ensure the entire DAG function call and its arguments are enclosed in parentheses (e.g., `lib.mkIf ... (lib.hm.dag.entryAfter ...)`).
+## 2024-05-24 - Cross-Platform List Evaluation Failures
+**Vulnerability:** CI failed on Linux because `sourcekit-lsp` (Swift) was being evaluated unconditionally in a generic list.
+**Learning:** Home Manager lists (like packages or `lspServers`) that are shared across platforms cannot unconditionally include Darwin-only or failing-on-Linux packages. This triggers a Nix evaluation error across the whole environment on unsupported platforms.
+**Prevention:** Conditionally splice platform-specific packages into lists using `] ++ lib.optionals pkgs.stdenv.isDarwin [ ... ] ++ [`. Ensure you correctly close and reopen the array to avoid swallowing subsequent generic list elements into the conditional block.
