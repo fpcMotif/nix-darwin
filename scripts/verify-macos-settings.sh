@@ -63,7 +63,7 @@ expect_contains() { # label needle -- command...
     na "$label (could not read: ${*}; may need sudo)"
     return
   fi
-  if printf '%s' "$out" | grep -qF -- "$needle"; then
+  if [[ "$out" == *"$needle"* ]]; then
     ok "$label"
   else
     bad "$label: expected output to contain [$needle]"
@@ -112,11 +112,11 @@ if pm="$(pmset -g custom 2>/dev/null)"; then
     "hibernatemode 3" "standbydelayhigh 7200" "standbydelaylow 3600"; do
     key="${kv%% *}"
     val="${kv##* }"
-    line="$(printf '%s' "$pm" | grep -E "^[[:space:]]*${key}[[:space:]]+" | head -1)"
-    if [ -z "$line" ]; then
-      na "pmset ${key} not exposed on this hardware (Apple Silicon)"
+    regex=$'(^|\n)[[:space:]]*'"${key}"$'[[:space:]]+([^[:space:]]+)'
+    if [[ "$pm" =~ $regex ]]; then
+      expect "pmset ${key}" "$val" "${BASH_REMATCH[2]}"
     else
-      expect "pmset ${key}" "$val" "$(printf '%s' "$line" | awk '{print $2}')"
+      na "pmset ${key} not exposed on this hardware (Apple Silicon)"
     fi
   done
 else
@@ -158,13 +158,16 @@ fi
 [ -d "$HOME/Library/Rime" ] && ok "~/Library/Rime exists" || na "~/Library/Rime not synced yet"
 
 section "BetterMouse / BetterDisplay LaunchAgents"
+launchctl_out="$(launchctl list 2>/dev/null || true)"
+shopt -s nocasematch
 for agent in bettermouse betterdisplay; do
-  if launchctl list 2>/dev/null | grep -qi "$agent"; then
+  if [[ "$launchctl_out" == *"$agent"* ]]; then
     ok "$agent LaunchAgent is loaded"
   else
     na "$agent LaunchAgent not loaded (app may be quit)"
   fi
 done
+shopt -u nocasematch
 
 section "Background-churn suppression (CleanMyMac)"
 # CleanMyMac's HealthMonitor is a per-user (gui) label; its Agent is a
@@ -179,9 +182,9 @@ check_disabled() { # label haystack domain-note
   local label="$1" haystack="$2" note="$3"
   if [ -z "$haystack" ]; then
     na "$label ($note unreadable; may need sudo)"
-  elif printf '%s' "$haystack" | grep -Eq "\"$label\" => (true|disabled)"; then
+  elif [[ "$haystack" =~ \"$label\"[[:space:]]+=\>[[:space:]]+(true|disabled) ]]; then
     ok "$label is disabled"
-  elif printf '%s' "$haystack" | grep -qF "$label"; then
+  elif [[ "$haystack" == *"$label"* ]]; then
     na "$label present but not in disabled state"
   else
     na "$label not currently registered ($note)"
