@@ -121,7 +121,8 @@ if [ -d "$PLUGIN_CACHE" ]; then
     -exec jq -r '.skills[]? | split("/") | last' {} + 2>/dev/null | sort -u)
   for id in ${PLUGIN_PROVIDED[@]+"${PLUGIN_PROVIDED[@]}"}; do
     [ -n "$id" ] || continue
-    if printf '%s\n' "$declared" | grep -qx "$id"; then
+    regex=$'(^|\n)'"${id}"$'(\n|$)'
+    if [[ "$declared" =~ $regex ]]; then
       ok "$id is declared by the enabled plugin"
     else
       bad "$id is hidden from Claude but the plugin does not declare it -- the flake pin is ahead of the plugin, so this skill is now invisible"
