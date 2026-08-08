@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from collections import Counter
 
@@ -202,8 +203,8 @@ def text_preview(text, limit=160):
     if text is None:
         return ""
     value = str(text).replace("\r", " ").replace("\n", " ").replace("\t", " ")
-    while "  " in value:
-        value = value.replace("  ", " ")
+    # Optimized: Replaced O(n^2) whitespace collapse with O(n) regex substitution
+    value = re.sub(r'\s+', ' ', value)
     if len(value) <= limit:
         return value
     if limit <= 1:
