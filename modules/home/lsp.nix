@@ -67,7 +67,9 @@ let
     rust-analyzer
 
     # === Swift / iOS ===
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     sourcekit-lsp
+  ] ++ [
 
     # === Haskell ===
     haskell-language-server
