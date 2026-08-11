@@ -68,10 +68,10 @@ let
 
   ] ++ lib.optionals pkgs.stdenv.isDarwin [
     sourcekit-lsp # Swift / iOS
-
   ] ++ [
     # === Haskell ===
     haskell-language-server
+
     # === Python ===
     basedpyright # types + hover + definitions
     ruff # `ruff server` — lint + format
@@ -180,8 +180,7 @@ let
           ".css" = "css";
         };
       };
-    }
-    // lib.optionalAttrs pkgs.stdenv.isDarwin {
+    } // lib.optionalAttrs pkgs.stdenv.isDarwin {
       # Swift / iOS projects. Xcode remains the SDK owner; sourcekit-lsp is
       # the editor bridge.
       sourcekit = {
@@ -276,11 +275,10 @@ let
     [lsp.servers.rust]
     command = "rust-analyzer"
     extensions = [".rs"]
-'' + lib.optionalString pkgs.stdenv.isDarwin ''
+${lib.optionalString pkgs.stdenv.isDarwin ''
     [lsp.servers.sourcekit]
     command = "sourcekit-lsp"
-    extensions = [".swift"]
-'' + ''
+    extensions = [".swift"]''}
     [lsp.servers.haskell]
     command = "haskell-language-server-wrapper"
     args = ["--lsp"]
