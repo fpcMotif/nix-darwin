@@ -1,0 +1,3 @@
+## 2024-08-11 - Optimize string matching in macOS bash scripts
+**Learning:** Replacing subprocess pipelines like `echo "$var" | grep -qF "$needle"` with native Bash glob/regex matching significantly reduces execution time by avoiding subshell forks. On macOS-targeted scripts (Bash 3.2), parameter downcasing (`${var,,}`) is unavailable, so `shopt -s nocasematch` must be used for case-insensitive matching instead of spawning `grep -qi`.
+**Action:** Always prefer native Bash string matching (`[[ $a == *$b* ]]` or `=~`) over piping to `grep` or `awk` when writing or optimizing shell scripts, and use `shopt -s nocasematch` for portability to older Bash versions.
