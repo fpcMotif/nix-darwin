@@ -121,7 +121,7 @@ let
     # in (replaces the bun global install those patches kept dying in).
     # Registered with Claude Code via claudeMcpDrafts in claude.nix; Codex
     # points at the stable /etc/profiles/per-user path in ~/.codex/config.toml.
-    martin.drafts-mcp-server
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [ martin.drafts-mcp-server ] ++ [
     # martin.trail  # TEMP-DISABLED: trail.nix uses an eval-time `builtins.fetchGit`
     # of the PRIVATE repo, which fails under `sudo darwin-rebuild switch` (root has
     # neither your git CA certs nor your GitHub auth). Re-enable once trail fetches
