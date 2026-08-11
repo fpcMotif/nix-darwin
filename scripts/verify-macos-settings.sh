@@ -114,7 +114,8 @@ if pm="$(pmset -g custom 2>/dev/null)"; then
     key="${kv%% *}"
     val="${kv##* }"
     # Bolt: Replaced expensive subshell grep|head|awk pipeline with a single native regex (~90x speedup)
-    if [[ "$pm" =~ (^|$'\n')[[:space:]]*$key[[:space:]]+([^[:space:]$'\n']+) ]]; then
+    re=$'(^|\n)[[:space:]]*'"$key"$'[[:space:]]+([^[:space:]\n]+)'
+    if [[ "$pm" =~ $re ]]; then
       expect "pmset ${key}" "$val" "${BASH_REMATCH[2]}"
     else
       na "pmset ${key} not exposed on this hardware (Apple Silicon)"
