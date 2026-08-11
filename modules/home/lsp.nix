@@ -66,9 +66,9 @@ let
     # === Rust ===
     rust-analyzer
 
-    # === Swift / iOS ===
-    sourcekit-lsp
-
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
+    sourcekit-lsp # Swift / iOS
+  ] ++ [
     # === Haskell ===
     haskell-language-server
 
@@ -180,7 +180,7 @@ let
           ".css" = "css";
         };
       };
-
+    } // lib.optionalAttrs pkgs.stdenv.isDarwin {
       # Swift / iOS projects. Xcode remains the SDK owner; sourcekit-lsp is
       # the editor bridge.
       sourcekit = {
@@ -188,6 +188,7 @@ let
         args = [ ];
         extensionToLanguage = { ".swift" = "swift"; };
       };
+    } // {
 
       # Haskell. The wrapper selects the matching HLS binary for the project GHC.
       haskell = {
@@ -274,11 +275,10 @@ let
     [lsp.servers.rust]
     command = "rust-analyzer"
     extensions = [".rs"]
-
+${lib.optionalString pkgs.stdenv.isDarwin ''
     [lsp.servers.sourcekit]
     command = "sourcekit-lsp"
-    extensions = [".swift"]
-
+    extensions = [".swift"]''}
     [lsp.servers.haskell]
     command = "haskell-language-server-wrapper"
     args = ["--lsp"]
