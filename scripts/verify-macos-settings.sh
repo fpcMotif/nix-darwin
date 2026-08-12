@@ -63,7 +63,7 @@ expect_contains() { # label needle -- command...
     na "$label (could not read: ${*}; may need sudo)"
     return
   fi
-  if printf '%s' "$out" | grep -qF -- "$needle"; then
+  if [[ "$out" == *"$needle"* ]]; then
     ok "$label"
   else
     bad "$label: expected output to contain [$needle]"
@@ -181,7 +181,7 @@ check_disabled() { # label haystack domain-note
     na "$label ($note unreadable; may need sudo)"
   elif printf '%s' "$haystack" | grep -Eq "\"$label\" => (true|disabled)"; then
     ok "$label is disabled"
-  elif printf '%s' "$haystack" | grep -qF "$label"; then
+  elif [[ "$haystack" == *"$label"* ]]; then
     na "$label present but not in disabled state"
   else
     na "$label not currently registered ($note)"
