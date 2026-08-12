@@ -66,9 +66,6 @@ let
     # === Rust ===
     rust-analyzer
 
-    # === Swift / iOS ===
-    sourcekit-lsp
-
     # === Haskell ===
     haskell-language-server
 
@@ -81,6 +78,9 @@ let
 
     # === MCP bridge for desktop apps ===
     mcp-language-server # wraps any LSP as an MCP server
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
+    # === Swift / iOS ===
+    sourcekit-lsp
   ];
 
   # Common JS/TS extension → language-id map used by tsgo, oxlint, and
