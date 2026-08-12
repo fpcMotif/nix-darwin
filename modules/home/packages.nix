@@ -101,8 +101,7 @@ let
     fastlane
     xcodes
     xcbeautify
-    swiftformat
-    swiftlint
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [ swiftformat swiftlint ] ++ [
 
     # bun, canary channel. Replaces nixpkgs `bun` (removed from commonPackages)
     # because `bun upgrade` can't write into the read-only /nix/store.
