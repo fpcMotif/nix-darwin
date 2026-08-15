@@ -88,14 +88,34 @@ default: _no-sudo
 fix-daemon: _no-sudo _daemon
     @echo 'fix-daemon: nix-daemon is answering on /nix/var/nix/daemon-socket/socket.'
 
+# Re-prefetch every pin whose upstream URL carries no version. Those assets are
+# republished in place (bun's force-pushed `canary` tag, Apple's SF-Mono.dmg,
+# Google's GoogleDrive.dmg), so their recorded sha256 goes stale on upstream's
+# schedule and the stale hash fails the *whole* system build, not just that
+# package. tests/unit/rolling-pins-test.sh keeps this set honest.
+refresh-rolling: _no-sudo _daemon
+    @for s in update-bun-canary update-google-drive update-sf-mono; do \
+        echo "=== $s ==="; bash "scripts/$s.sh" || true; \
+    done
+
+# Shared failure hint. A fixed-output hash mismatch is almost always a rolling
+# pin drifting rather than anything wrong with the working tree, and the raw
+# nix output buries that under a wall of "Cannot build" cascades.
+_drift-hint:
+    @echo '' >&2; \
+    echo 'just: if the failure above is "hash mismatch in fixed-output derivation",' >&2; \
+    echo '  a rolling pin drifted — upstream republished the same URL. Recover with:' >&2; \
+    echo '      just refresh-rolling' >&2; \
+    echo '  then re-run. See PANIC.md section 8.' >&2
+
 # Build (no activate) the darwin system from the working tree. Use this
 # to dry-run a change before committing to a switch.
 build: _no-sudo _daemon _no-conflicts
-    darwin-rebuild build --flake .
+    @darwin-rebuild build --flake . || { just _drift-hint; exit 1; }
 
 # Activate the working-tree configuration (system + home-manager).
 switch: _no-sudo _daemon _no-conflicts
-    sudo darwin-rebuild switch --flake .
+    @sudo darwin-rebuild switch --flake . || { just _drift-hint; exit 1; }
 
 # Pull latest origin/main (rebase + autostash). Version/hash bumps that raced
 # an auto-update run resolve themselves to the newer side via the pkgnix
@@ -134,6 +154,7 @@ check:
         '.#darwinConfigurations.f.system' \
         '.#checks.aarch64-darwin.unit-overlay' \
         '.#checks.aarch64-darwin.unit-justfile' \
+        '.#checks.aarch64-darwin.unit-rolling-pins' \
         '.#checks.aarch64-darwin.unit-skill-router' \
         '.#checks.aarch64-darwin.unit-skill-hygiene' \
         '.#checks.aarch64-darwin.integration-configurations-eval'

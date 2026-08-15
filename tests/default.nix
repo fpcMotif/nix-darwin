@@ -31,6 +31,10 @@ in
     bash ${./unit/justfile-test.sh} ${../justfile}
     touch $out
   '';
+  unit-rolling-pins = pkgs.runCommand "unit-rolling-pins" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
+    bash ${./unit/rolling-pins-test.sh} ${../pkgs} ${../scripts}
+    touch $out
+  '';
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
 

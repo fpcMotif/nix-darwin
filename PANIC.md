@@ -188,3 +188,53 @@ bash scripts/update-droid.sh   # or whichever bumper failed
 
 The scripts bail loudly on parser anomalies; the error message names the
 expected pattern and the input that didn't match.
+
+## 8. `switch` dies with "hash mismatch in fixed-output derivation"
+
+Symptom: a switch that worked yesterday fails on a package you did not touch,
+followed by a cascade of `Cannot build` lines for everything downstream of it:
+
+```
+error: hash mismatch in fixed-output derivation '/nix/store/…-bun-darwin-aarch64.zip.drv':
+         specified: sha256-BDtiIIVVMgpx1IIj0rHevHn8aS6OtkLJrhvWSUW2bCI=
+            got:    sha256-FNlizVvP0TwsBBKY0ITEuJdvUd1aeJysxpSHf5I8KeA=
+error: Cannot build '…-home-manager-path.drv'. Reason: 1 dependency failed.
+…
+error: Cannot build '…-darwin-system-…drv'. Reason: 1 dependency failed.
+```
+
+Only the *first* error matters — everything after it is fallout from that one
+derivation, so read the top of the output, not the bottom.
+
+Cause: a **rolling pin**. A few packages are pinned to a URL that carries no
+version, and upstream republishes different bytes at the same address:
+
+| package | rolling URL |
+|---|---|
+| `pkgs/bun-canary-bin.nix` | bun force-pushes the `canary` tag in place |
+| `pkgs/sf-mono.nix` | Apple's `SF-Mono.dmg` |
+| `pkgs/google-drive.nix` | Google's `GoogleDrive.dmg` |
+
+When upstream republishes, the recorded sha256 is stale and the fixed-output
+derivation fails — and because these sit under `home-manager-path`, the stale
+hash takes down the **entire system build**, not just that one package.
+
+Repair:
+
+```bash
+just refresh-rolling
+```
+
+That re-prefetches every rolling URL and rewrites the hashes that actually
+moved (the updaters are hash-driven and no-op when the bytes are unchanged).
+Then re-run `just switch`.
+
+`tests/unit/rolling-pins-test.sh` fails the build if a package is pinned to an
+unversioned URL without a hash-driven `scripts/update-*.sh` behind it — a
+rolling pin with no updater can only be recovered by hand-editing a hash out of
+an error message, which is how this bites in the first place.
+
+A mismatch on a pin whose URL *does* carry a version is a different and more
+serious thing: that asset should have been immutable, so treat it as a possible
+integrity problem rather than routine drift, and check upstream before
+accepting the new bytes.
