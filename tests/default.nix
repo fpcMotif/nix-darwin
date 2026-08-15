@@ -27,6 +27,10 @@ in
   unit-mksystem = callTest ./unit/mksystem-test.nix { };
   unit-overlay = callTest ./unit/overlay-test.nix { };
   unit-format = callTest ./unit/format-test.nix { };
+  unit-justfile = pkgs.runCommand "unit-justfile" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
+    bash ${./unit/justfile-test.sh} ${../justfile}
+    touch $out
+  '';
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
 

@@ -26,17 +26,75 @@ _no-conflicts:
         exit 1; \
     fi
 
+# Refuse to build while macOS has booted the nix jobs out of launchd, and
+# repair them in place. Background Task Management (System Settings > General >
+# Login Items & Extensions, plus any "cleaner" utility that walks that list)
+# drops every org.nixos.* item at once — the plists and the store paths they
+# point at stay intact, only the launchd jobs are gone. Two of them hurt:
+#
+#   nix-daemon       every nix command dies with
+#                    "cannot connect to socket at '/nix/var/nix/daemon-socket/socket'"
+#   activate-system  never recreates /run/current-system, and macOS wipes /run
+#                    on every boot — so /run/current-system/sw/bin disappears and
+#                    `nix` and `darwin-rebuild` silently fall off PATH entirely.
+#
+# The daemon's socket *file* outlives the daemon, so probe it by connecting,
+# not with -S. Connect with `nc -U -w2`, never `nc -zU`: on macOS `-z` is
+# TCP/UDP scan mode and is silently a no-op against a -U socket, so `nc -zU`
+# exits non-zero even against a healthy daemon. That turned this preflight into
+# an unconditional sudo password prompt on every build which then always
+# reported "still down", because the verify loop reused the same broken probe.
+#
+# Only sudos when something is actually missing. Bootstrapping activate-system
+# re-runs the activation script (RunAtLoad), which is what restores
+# /run/current-system — exactly what a normal boot would have done.
+_daemon:
+    @up() { nc -U -w 2 /nix/var/nix/daemon-socket/socket </dev/null >/dev/null 2>&1; }; \
+    loaded() { launchctl print "system/org.nixos.$1" >/dev/null 2>&1; }; \
+    revive() { \
+        sudo launchctl enable "system/org.nixos.$1" 2>/dev/null || true; \
+        sudo launchctl bootstrap system "/Library/LaunchDaemons/org.nixos.$1.plist" 2>/dev/null || true; \
+    }; \
+    gone=''; \
+    up || gone="$gone nix-daemon"; \
+    { [ -e /run/current-system ] && loaded activate-system; } || gone="$gone activate-system"; \
+    for j in nix-gc nix-optimise nix-auto-switch; do \
+        loaded "$j" || gone="$gone $j"; \
+    done; \
+    [ -n "$gone" ] || exit 0; \
+    echo "just: macOS booted these nix launchd jobs out:$gone" >&2; \
+    echo 'just: re-bootstrapping them, needs sudo.' >&2; \
+    for j in $gone; do revive "$j"; done; \
+    for _ in 1 2 3 4 5 6 7 8 9 10; do \
+        if up && [ -e /run/current-system ]; then \
+            echo 'just: nix launchd jobs restored.' >&2; exit 0; \
+        fi; \
+        sleep 1; \
+    done; \
+    echo 'just: still broken after bootstrap. Background Task Management is holding a' >&2; \
+    echo '  "disallowed" approval for these items, and only the GUI clears that:' >&2; \
+    echo '  System Settings > General > Login Items & Extensions > Allow in the Background' >&2; \
+    echo '  enable every entry pointing at /Library/LaunchDaemons/org.nixos.*.plist' >&2; \
+    echo '  (they show up as "sh", plus "martin-auto-switch").' >&2; \
+    echo 'See PANIC.md section 6.' >&2; \
+    exit 1
+
 # Default: print available recipes.
 default: _no-sudo
     @just --list
 
+# Bring the nix daemon back after macOS boots it out of launchd. Safe to run
+# any time — a no-op when the daemon is already answering.
+fix-daemon: _no-sudo _daemon
+    @echo 'fix-daemon: nix-daemon is answering on /nix/var/nix/daemon-socket/socket.'
+
 # Build (no activate) the darwin system from the working tree. Use this
 # to dry-run a change before committing to a switch.
-build: _no-sudo _no-conflicts
+build: _no-sudo _daemon _no-conflicts
     darwin-rebuild build --flake .
 
 # Activate the working-tree configuration (system + home-manager).
-switch: _no-sudo _no-conflicts
+switch: _no-sudo _daemon _no-conflicts
     sudo darwin-rebuild switch --flake .
 
 # Pull latest origin/main (rebase + autostash). Version/hash bumps that raced
@@ -53,13 +111,13 @@ sync: _no-sudo
     @echo 'sync: clean.'
 
 # Bump every flake input to its latest revision, then activate.
-update-and-switch: _no-sudo
+update-and-switch: _no-sudo _daemon
     nix flake update
     sudo darwin-rebuild switch --flake .
 
 # Run every scripts/update-*.sh updater, then activate. This is what the
 # hourly auto-update GitHub workflow does, but on-demand.
-bump-and-switch: _no-sudo
+bump-and-switch: _no-sudo _daemon
     for s in scripts/update-*.sh; do echo "=== $s ==="; bash "$s" || true; done
     sudo darwin-rebuild switch --flake .
 
@@ -75,6 +133,7 @@ check:
     nix build --no-link \
         '.#darwinConfigurations.f.system' \
         '.#checks.aarch64-darwin.unit-overlay' \
+        '.#checks.aarch64-darwin.unit-justfile' \
         '.#checks.aarch64-darwin.unit-skill-router' \
         '.#checks.aarch64-darwin.unit-skill-hygiene' \
         '.#checks.aarch64-darwin.integration-configurations-eval'
