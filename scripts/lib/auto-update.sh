@@ -22,18 +22,33 @@ au_repo_root() {
   cd "$(dirname "${BASH_SOURCE[1]}")/.." > /dev/null && pwd
 }
 
+# One readable update line. Local terminals get color; redirected output stays
+# plain unless FORCE_COLOR is set. NO_COLOR always wins.
+au_report_change() {
+  local name=$1 old=$2 new=$3
+  if [ -z "${NO_COLOR:-}" ] \
+     && { [ -t 1 ] || [ "${FORCE_COLOR:-0}" != 0 ]; }; then
+    printf '\033[1;36m%s\033[0m  \033[33m%s\033[0m \033[1;35m-->\033[0m \033[1;32m%s\033[0m\n' \
+      "$name" "$old" "$new"
+  else
+    printf '%s  %s --> %s\n' "$name" "$old" "$new"
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # Version polling
 # ---------------------------------------------------------------------------
 
-# Latest GitHub release tag. Defaults to the latest STABLE release: GitHub
-# floats the newest full (non-prerelease) release to `.[0]` of /releases, so a
-# later-published alpha does NOT win — verified against openai/codex, where
-# `.[0]` is 0.135.0 even though 0.136.0-alpha.1 was published afterwards.
+# Latest GitHub release tag. Defaults to the latest STABLE release via the
+# /releases/latest endpoint, which is GitHub's own "newest non-draft,
+# non-prerelease" query. Do NOT go back to `/releases?per_page=1 | .[0]`:
+# that list is ordered by creation date across ALL release kinds, so a repo
+# publishing a rolling prerelease tag hijacks the bump — nubjs/nub floated its
+# `canary` tag to `.[0]` and the nightly rewrote nub.nix to version "canary"
+# (whose download URL 404s).
 #
 # Pass `prerelease` as the 3rd arg to instead take the newest release of ANY
-# kind (alpha/beta/rc), chosen by `published_at` so that ordering quirk doesn't
-# matter. Drafts are always skipped.
+# kind (alpha/beta/rc), chosen by `published_at`. Drafts are always skipped.
 #   au_latest_github_release <owner/repo> [strip-regex] [stable|prerelease]
 au_latest_github_release() {
   local repo=$1 strip=${2:-^v} channel=${3:-stable}
@@ -50,8 +65,8 @@ au_latest_github_release() {
           | jq -r '[.[] | select(.draft | not)] | sort_by(.published_at) | last | .tag_name // ""' \
           | sed "s|${strip}||")
   else
-    v=$(curl -fsSL ${auth[@]+"${auth[@]}"} "https://api.github.com/repos/${repo}/releases?per_page=1" \
-          | jq -r '.[0].tag_name // ""' | sed "s|${strip}||")
+    v=$(curl -fsSL ${auth[@]+"${auth[@]}"} "https://api.github.com/repos/${repo}/releases/latest" \
+          | jq -r '.tag_name // ""' | sed "s|${strip}||")
   fi
   [ -n "$v" ] && [ "$v" != "null" ] || {
     echo "au_latest_github_release: empty tag for ${repo}" >&2; return 1
@@ -192,21 +207,48 @@ au_set_version() {
   au_inplace_sed "$file" -e "$expr"
 }
 
+# Reject a hash that isn't a real SRI literal. Callers pass hashes as
+# `au_set_*_hash "$FILE" "$(au_prefetch_sri "$url")"`, and bash does NOT let
+# `set -e` fire when a command substitution used as an *argument* fails — so a
+# 404'd prefetch silently yields "". Without this check that empty string gets
+# written to the file and committed (this is exactly how pkgs/nub.nix ended up
+# with `hash = ""`).
+#   au_require_sri <hash> <context>
+au_require_sri() {
+  local hash=$1 ctx=$2
+  case "$hash" in
+    sha256-*|sha512-*) return 0 ;;
+  esac
+  echo "${ctx}: refusing to write non-SRI hash '${hash}' (prefetch likely failed)" >&2
+  return 1
+}
+
 # Replace the `hash = "..."` line that follows an anchor (e.g. an attribute
 # name like `"aarch64-darwin"` or a URL substring). The anchor and hash must
 # live in the same logical block (matched non-greedily by perl).
 #
+# The old value is matched with `[^"]*` (not `+`) so an already-empty
+# `hash = ""` is repairable rather than sticky. The post-check catches a silent
+# no-op, e.g. an anchor containing `${version}`, which perl's \Q..\E
+# interpolates away to nothing.
+#
 #   au_set_block_hash <file> <anchor> <new-hash>
 au_set_block_hash() {
   local file=$1 anchor=$2 hash=$3
+  au_require_sri "$hash" "au_set_block_hash($file)" || return 1
   perl -0777 -pi -e \
-    "s|(\\Q${anchor}\\E.*?hash\\s*=\\s*\")[^\"]+(\")|\${1}${hash}\${2}|s" \
+    "s|(\\Q${anchor}\\E.*?hash\\s*=\\s*\")[^\"]*(\")|\${1}${hash}\${2}|s" \
     "$file"
+  grep -qF "$hash" "$file" || {
+    echo "au_set_block_hash: anchor '${anchor}' matched nothing in ${file}" >&2
+    return 1
+  }
 }
 
 # Replace `npmDepsHash = "..."` (single occurrence per file expected).
 au_set_npm_deps_hash() {
   local file=$1 hash=$2
+  au_require_sri "$hash" "au_set_npm_deps_hash($file)" || return 1
   au_inplace_sed "$file" \
     -e "s|npmDepsHash = \"sha256-[^\"]*\"|npmDepsHash = \"${hash}\"|"
 }
@@ -225,12 +267,24 @@ au_build() {
   fi
 }
 
+# Build a Darwin-only package when running on Darwin. Linux CI still validates
+# its pin through the overlay checks; build.yml performs the real Darwin build.
+au_build_darwin() {
+  local attr=$1
+  if [ "$(uname -s)" != Darwin ]; then
+    echo "${attr}: Darwin build deferred to macOS CI"
+    return 0
+  fi
+  au_build "$attr"
+}
+
 # ---------------------------------------------------------------------------
 # Workflow-level invariant guard
 # ---------------------------------------------------------------------------
 
 # Fails the workflow if an updater left:
-#   - any FAKE placeholder hash in pkgs/, or
+#   - any FAKE placeholder hash in pkgs/,
+#   - any empty `hash = ""` (a prefetch that failed and was written anyway), or
 #   - any *.bak / *.bakN sed-shuffle artifact
 # Run this once after the updater loop, before peter-evans/create-pull-request.
 au_assert_clean() {
@@ -240,6 +294,13 @@ au_assert_clean() {
     echo "::error::FAKE placeholder hashes remain in pkgs/:" >&2
     { rg -n 'sha256-AAAAAAAA' pkgs/ 2>/dev/null \
        || grep -RInE 'sha256-AAAAAAAA' pkgs/ 2>/dev/null; } >&2
+    fail=1
+  fi
+  if rg -q '(hash|sha256|sha512|npmDepsHash|vendorHash|cargoHash) = ""' pkgs/ 2>/dev/null \
+     || grep -RIlE '(hash|sha256|sha512|npmDepsHash|vendorHash|cargoHash) = ""' pkgs/ 2>/dev/null | grep -q .; then
+    echo "::error::empty hash literals in pkgs/ (a prefetch failed):" >&2
+    { rg -n '(hash|sha256|sha512|npmDepsHash|vendorHash|cargoHash) = ""' pkgs/ 2>/dev/null \
+       || grep -RInE '(hash|sha256|sha512|npmDepsHash|vendorHash|cargoHash) = ""' pkgs/ 2>/dev/null; } >&2
     fail=1
   fi
   local stray
