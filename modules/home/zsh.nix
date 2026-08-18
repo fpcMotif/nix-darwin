@@ -264,8 +264,6 @@ in
       mgwa = "mgrep search -w -a";
       mgs = "mgrep search -s";
 
-      sudo = "sudo -E";
-
       npm = "bun";
       npx = "bunx";
       pnpm = "bun";
