@@ -1,10 +1,6 @@
 { lib, pkgs, ... }:
 
 let
-  cursorExtensions = [
-    "esbenp.prettier-vscode"
-    "ms-python.python"
-  ];
 
   # Cursor (like all VS Code forks) writes back to its own settings.json:
   # UI toggles, and atomic saves that rename a temp file over the target.
@@ -68,27 +64,4 @@ in
     fi
   '');
 
-  home.activation.cursorExtensions =
-    let
-      extensionArgs = lib.concatMapStringsSep " " lib.escapeShellArg cursorExtensions;
-    in
-    lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "cursorSettings" ] ''
-      cursor_cmd=""
-      if command -v cursor >/dev/null 2>&1; then
-        cursor_cmd="$(command -v cursor)"
-      elif [ -x "/Applications/Cursor.app/Contents/Resources/app/bin/cursor" ]; then
-        cursor_cmd="/Applications/Cursor.app/Contents/Resources/app/bin/cursor"
-      fi
-
-      if [ -z "$cursor_cmd" ]; then
-        echo "Cursor CLI not available, skipping extension sync."
-        exit 0
-      fi
-
-      for ext in ${extensionArgs}; do
-        if ! "$cursor_cmd" --install-extension "$ext" --force; then
-          echo "Cursor extension '$ext' could not be installed; continuing." >&2
-        fi
-      done
-    '');
 }
