@@ -264,7 +264,7 @@ in
       mgwa = "mgrep search -w -a";
       mgs = "mgrep search -s";
 
-      sudo = "sudo -E";
+      # 🛡️ Sentinel: Never globally alias sudo to sudo -E due to privilege escalation risks (LD_PRELOAD/PATH)
 
       npm = "bun";
       npx = "bunx";
