@@ -8,7 +8,7 @@
 #   * each flake configuration evaluates end-to-end (drvPath computable)
 #   * currentSystemUser flows into home-manager + system user options
 #   * agent-skills DSL is wired with the documented sources and targets
-#   * common packages (git, mgrep) are present in home.packages
+#   * common packages (git) are present in home.packages
 #   * migrated Home Manager program modules are enabled
 #   * darwin-only agent packages are gated to darwin
 #   * system-level zsh stays on (this IS owned by Nix, not unmanaged dotfiles)
@@ -91,10 +91,6 @@ let
         (hasHomePackage "git")
         "${prefix} Home Manager package list should include git")
 
-      (helpers.assertTest "${prefix}-has-mgrep-package"
-        (hasHomePackage "mgrep")
-        "${prefix} Home Manager package list should include mgrep")
-
       (helpers.assertTest "${prefix}-has-starship-package"
         (hasHomePackage "starship")
         "${prefix} Home Manager package list should include starship")
@@ -107,9 +103,9 @@ let
         (homePrograms.zsh.enable == true)
         "${prefix} Home Manager should own zsh config")
 
-      (helpers.assertTest "${prefix}-home-zsh-history-substring-enabled"
-        (homePrograms.zsh.historySubstringSearch.enable == true)
-        "${prefix} Home Manager should enable declarative history substring search")
+      (helpers.assertTest "${prefix}-home-zsh-history-substring-disabled"
+        (homePrograms.zsh.historySubstringSearch.enable == false)
+        "${prefix} Home Manager should not enable zsh-history-substring-search -- Up/Down uses the native zle prefix widget instead")
 
       (helpers.assertTest "${prefix}-home-zoxide-enabled"
         (homePrograms.zoxide.enable == true)
@@ -265,8 +261,8 @@ let
         "${prefix} should configure the native Crush skill target")
 
       (helpers.assertTest "${prefix}-agent-skills-factory-target"
-        (homePrograms.agent-skills.targets.factory.dest == ".factory/skills")
-        "${prefix} should configure the native Factory/Droid skill target")
+        (!(homePrograms.agent-skills.targets ? factory))
+        "${prefix} must not link skills into ~/.factory/skills — droid also scans ~/.agents/skills and flags every skill as a Duplicate skill diagnostic")
 
       (helpers.assertTest "${prefix}-agent-skills-opencode-target"
         (homePrograms.agent-skills.targets.opencode.dest == ".config/opencode/skills")
@@ -313,14 +309,28 @@ let
       (darwinConfig.system.primaryUser == user)
       "Darwin primary user should match ${user}")
 
-    (helpers.assertTest "darwin-bettermouse-profile-source"
+    # BetterMouse left Nix on 2026-08-17 and BetterDisplay on 2026-08-19, for
+    # the same reason: both ship Sparkle, which self-updated the writable
+    # /Applications copy this repo installed, so the pin silently stopped
+    # describing what was on disk. Both are GUI-managed now, and the whole
+    # `martin.mouseDisplay` -> `martin.display` module is gone. See
+    # docs/adr/0011-bettermouse-is-gui-managed-not-nix-managed.md and
+    # docs/adr/0012-betterdisplay-is-gui-managed-not-nix-managed.md.
+    (helpers.assertTest "darwin-bettermouse-not-nix-managed"
       (
-        let profile = toString darwinConfig.martin.mouseDisplay.bettermouse.profile;
-        in
-        profile == "/Users/${user}/MyRime-main/better_mouse_setting_bm_cfg_4958.plist"
-          && !(lib.hasInfix "/nix-config/personal-settings-main/" profile)
+        !(darwinConfig.martin ? mouseDisplay)
+          && !(lib.any (p: lib.getName p == "bettermouse")
+          darwinConfig.environment.systemPackages)
       )
-      "Darwin BetterMouse profile should point at the live imported settings source, not the removed nix-config/personal-settings-main tree")
+      "Darwin should not reintroduce BetterMouse as a Nix-managed app")
+
+    (helpers.assertTest "darwin-betterdisplay-not-nix-managed"
+      (
+        !(darwinConfig.martin ? display)
+          && !(lib.any (p: lib.getName p == "betterdisplay")
+          darwinConfig.environment.systemPackages)
+      )
+      "Darwin should not reintroduce BetterDisplay as a Nix-managed app")
 
     (helpers.assertTest "darwin-zsh-enabled"
       (darwinConfig.programs.zsh.enable == true)
@@ -493,7 +503,7 @@ let
           && darwinHome.home.file ? ".agents/skills/jj"
           && darwinHome.home.file ? ".config/crush/skills/jj"
           && darwinHome.home.file ? ".config/opencode/skills/jj"
-          && darwinHome.home.file ? ".factory/skills/jj"
+          && !(darwinHome.home.file ? ".factory/skills/jj")
           && darwinHome.home.file ? ".pi/agent/skills/jj"
       )
       "Darwin should install the locally-authored jj skill into the picker dirs")
@@ -513,6 +523,10 @@ let
     (helpers.assertTest "darwin-has-oh-my-pi"
       (hasPackage "oh-my-pi" darwinHome.home.packages)
       "Darwin Home Manager packages should include oh-my-pi")
+
+    (helpers.assertTest "darwin-registers-drafts-mcp"
+      (darwinHome.home.activation ? claudeMcpDrafts)
+      "Darwin Home Manager should register the Drafts MCP server")
 
     (helpers.assertTest "darwin-zed-uses-zed-nightly-bin"
       (
@@ -562,6 +576,10 @@ let
     (helpers.assertTest "linux-excludes-darwin-only-agent-packages"
       (!(hasPackage "sourcegraph-amp" wslHome.home.packages))
       "Linux Home Manager packages should not include Darwin-only agent packages")
+
+    (helpers.assertTest "linux-excludes-drafts-mcp-activation"
+      (!(wslHome.home.activation ? claudeMcpDrafts))
+      "Linux Home Manager should not force the Darwin-only Drafts MCP server")
 
     (helpers.assertTest "linux-zed-editor-disabled"
       (
