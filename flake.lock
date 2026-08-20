@@ -100,11 +100,11 @@
     "dotfiles": {
       "flake": false,
       "locked": {
-        "lastModified": 1777607957,
-        "narHash": "sha256-7urjzMKyWf2fwo+GJqOPZVdy9fOP+KnZ7cYaRp6Vj/A=",
+        "lastModified": 1787209956,
+        "narHash": "sha256-dSfNzcpnTHw0ymHz2801Vnrp9hHhXoc31dHBn8+W5Wo=",
         "owner": "fpcMotif",
         "repo": "dotfiles",
-        "rev": "06e3a6a1a5623c98417bdd65ce8598fa992fbf69",
+        "rev": "f2a28d30044d843df0cee55a89b890becfeebd35",
         "type": "github"
       },
       "original": {
