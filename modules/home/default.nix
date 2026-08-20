@@ -6,6 +6,7 @@
     ./packages.nix
     ./zsh.nix
     ./ai-cli.nix
+    ./pi.nix
     ./ai-model-routing.nix
     ./obsidian.nix
     ./tmux.nix

@@ -69,9 +69,6 @@ let
     # === Swift / iOS ===
     sourcekit-lsp
 
-    # === Haskell ===
-    haskell-language-server
-
     # === Python ===
     basedpyright # types + hover + definitions
     ruff # `ruff server` — lint + format
@@ -189,17 +186,6 @@ let
         extensionToLanguage = { ".swift" = "swift"; };
       };
 
-      # Haskell. The wrapper selects the matching HLS binary for the project GHC.
-      haskell = {
-        command = "haskell-language-server-wrapper";
-        args = [ "--lsp" ];
-        extensionToLanguage = {
-          ".hs" = "haskell";
-          ".lhs" = "haskell";
-          ".cabal" = "cabal";
-        };
-      };
-
       # Python — basedpyright shadows pyright (drop-in CLI-compatible).
       pyright = {
         command = "basedpyright-langserver";
@@ -278,11 +264,6 @@ let
     [lsp.servers.sourcekit]
     command = "sourcekit-lsp"
     extensions = [".swift"]
-
-    [lsp.servers.haskell]
-    command = "haskell-language-server-wrapper"
-    args = ["--lsp"]
-    extensions = [".hs", ".lhs", ".cabal"]
 
     [lsp.servers.pyright]
     command = "basedpyright-langserver"
