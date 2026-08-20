@@ -27,7 +27,7 @@ in
       ];
       description = ''
         Development/cache directories that should not feed Spotlight's content index.
-        Code search is handled by rg, ast-grep, fff/codedb, and mgrep instead.
+        Code search is handled by rg, ast-grep, and fff/codedb instead.
       '';
     };
   };

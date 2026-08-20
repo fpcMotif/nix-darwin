@@ -54,7 +54,7 @@ in
   # patch a custom icon into a read-only store path, and modules/home/zsh.nix
   # already expects real terminfo files under /Applications/kitty.app, so
   # place a *copy* of kitty.app in /Applications (same install_managed_app
-  # idea as modules/darwin/mouse-display.nix / modules/darwin/zed.nix, just
+  # idea as modules/darwin/display.nix / modules/darwin/zed.nix, just
   # run from home.activation since kitty is home-managed) and patch the icon
   # into that writable copy. Idempotent via the `.kitty.src` marker: re-copies
   # only when the underlying store path actually changes.
