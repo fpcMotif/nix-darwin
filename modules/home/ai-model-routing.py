@@ -6,10 +6,13 @@ re-asserts ONLY the routing-relevant keys, leaving app-managed state
 (timestamps, model caches, changelog versions) and unrelated user config
 untouched. A file is only rewritten when a routing key actually differs.
 
-Tiers
+Tiers (codex CLI + pi)
   DEEP  — gpt-5.5 @ xhigh (+ service_tier=fast)  — planning / demanding work
   SPARK — gpt-5.3-codex-spark @ medium           — everyday work; the default
           (low for the "smol" / recon roles)
+
+omp instead runs the gpt-5.6 codename pair + an off-sub advisor — see
+reconcile_omp().
 """
 
 import json
@@ -24,6 +27,94 @@ import yaml
 SPARK = "gpt-5.3-codex-spark"
 DEEP = "gpt-5.5"
 KIMI_K3 = "kimi-code/k3:max"
+
+# gpt-5.6 codename pair — omp only, both on the ChatGPT sub via openai-codex.
+# `max` is the ceiling: the catalog exposes low/medium/high/xhigh/max, there
+# is no `ultra`. Verify with `omp models openai-codex` before raising these.
+# As of 2026-08-15 `omp models openai-codex` (post-refresh) lists only
+# gpt-5.4-mini / gpt-5.5 / luna / terra — gpt-5.6-sol, gpt-5.3-codex-spark and
+# gpt-5.4 dropped off, likely gated by that account's free plan.
+# They are NOT gone globally: the Cursor provider still carries the whole
+# gpt-5.6 family (`cursor/gpt-5.6-sol-medium`, `-terra-*`, `-luna-*`) plus
+# 5.1–5.5 and the codex variants. Cursor is the route to sol while the codex
+# sub lacks it. Reasoning is baked into cursor slugs — no `:effort` suffix.
+LUNA = "openai-codex/gpt-5.6-luna"
+TERRA = "openai-codex/gpt-5.6-terra"
+
+# ── omp role routing ─────────────────────────────────────────────────────
+# 2026-08-15: openai-codex is 100% spent with ~26d to reset, so NO omp role
+# rides it right now. Load is spread across the three healthy subs by what
+# each one is cheap at — check `omp usage` before rebalancing:
+#
+#   Antigravity — Google bucket was 0% used and resets DAILY. Best home for
+#     the high-volume roles (recon + main loop). Its Claude route is the
+#     250K-context opus-4-6.
+#   Kimi — separate sub, its own ceiling, k3 is 1M-context with a real `max`
+#     thinking tier. Carries the delegated + demanding work.
+#   Cursor — two buckets: "Cursor Models" (generous) and "Other Models",
+#     a hard $20/mo cap that Claude/Gemini slugs bill against. Reserved for
+#     the advisory/review/design roles; deliberately NOT the main loop, which
+#     would drain $20 fast. Cursor bakes reasoning into the slug, so these
+#     take no `:effort` suffix.
+# Antigravity's gemini-3.7-flash rejects thinking level MINIMAL with a 400
+# ("not supported for this model") even though the catalog advertises it.
+# Verified 2026-08-15: :minimal 400s, :low/:medium/:high all return OK.
+# So these roles are pinned at :high — never at the low end where the request
+# can resolve to MINIMAL. Do not lower these without retesting.
+OMP_SMOL = "google-antigravity/gemini-3.7-flash:high"
+OMP_COMMIT = "google-antigravity/gemini-3.7-flash:high"
+OMP_DEFAULT = "google-antigravity/claude-opus-4-6:high"
+OMP_PLAN = "google-antigravity/claude-opus-4-6:high"
+# grok 4.6 tops out at `xhigh` — there is no `max` on this line, unlike the
+# claude/gpt slugs. Note reviewer and task are the same family by request, so
+# the review is not an independent-family check on the builder's output.
+OMP_TASK = "cursor/cursor-grok-4.6-high"
+OMP_SLOW = KIMI_K3
+OMP_DESIGNER = "google-antigravity/gemini-3.7-flash:high"
+OMP_REVIEWER = "cursor/cursor-grok-4.6-xhigh"
+
+# Advisor rides the same Antigravity opus as the main loop by request. Note
+# this is deliberately NOT an independent-family second opinion — it will
+# share the main loop's blind spots. It was on cursor/gpt-5.6-sol-medium,
+# which kept tripping the advisor's first-event timeout.
+ADVISOR = "google-antigravity/claude-opus-4-6:high"
+
+# Absent from the openai-codex catalog — pruned from enabledModels on every
+# run so they stop showing up in Ctrl+P and 400-ing on selection.
+OMP_RETIRED = [
+    "openai-codex/gpt-5.6-sol:max",
+    "openai-codex/gpt-5.6-sol:medium",
+    "openai-codex/gpt-5.3-codex-spark:medium",
+    "openai-codex/gpt-5.3-codex-spark:low",
+    "openai-codex/gpt-5.4:xhigh",
+]
+
+# Kept selectable in omp's Ctrl+P picker without owning the whole list.
+# 2026-08-15 `omp usage`: Cursor is healthy again (18.5% monthly), while
+# openai-codex is 100% spent on a free plan until it resets. Google
+# Antigravity sub is authenticated and has quota — added as another free
+# fallback route (also proxies Claude Opus, not just Gemini). Cursor's
+# catalog got gemini-3.7-flash first; Antigravity caught up in omp 17.3.2
+# (its route is the 1M-context one, vs cursor's 200K), so both are listed.
+OMP_PICKER = [
+    f"{TERRA}:max",
+    f"{TERRA}:medium",
+    f"{LUNA}:max",
+    ADVISOR,
+    OMP_REVIEWER,
+    OMP_DESIGNER,
+    OMP_TASK,
+    KIMI_K3,
+    "cursor/gpt-5.6-sol-xhigh",
+    "cursor/claude-opus-4-8-xhigh",
+    "cursor/claude-sonnet-5-high",
+    "kimi-code/k3:high",
+    "cursor/composer-2.5",
+    "cursor/gemini-3.7-flash-high",
+    "google-antigravity/claude-opus-4-6:high",
+    "google-antigravity/gemini-3.6-flash:high",
+    "google-antigravity/gemini-3.7-flash:high",
+]
 
 HOME = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(
     os.environ.get("HOME", str(Path.home()))
@@ -186,7 +277,14 @@ def reconcile_pi_agents() -> bool:
 
 # ── omp — ~/.omp/agent/config.yml ────────────────────────────────────────
 def reconcile_omp() -> bool:
-    """Assert modelRoles + task.agentModelOverrides; leave the rest alone."""
+    """Assert modelRoles + task.agentModelOverrides; leave the rest alone.
+
+    omp does not use the SPARK/DEEP two-tier split the other agents run on.
+    Because openai-codex is quota-dead (see the OMP_* block), every role is
+    pinned to a specific model on a healthy sub instead of a shared tier —
+    Antigravity for the high-volume roles, Kimi for delegated/demanding work,
+    Cursor for the advisory/review roles.
+    """
     path = HOME / ".omp/agent/config.yml"
     if not path.exists():
         log("omp: config.yml absent, skipping")
@@ -197,18 +295,26 @@ def reconcile_omp() -> bool:
     before = yaml.dump(data, **dump)
 
     roles = data.setdefault("modelRoles", {})
-    roles["default"] = f"openai-codex/{SPARK}:medium"
-    roles["smol"] = f"openai-codex/{SPARK}:low"
-    roles["commit"] = f"openai-codex/{SPARK}:medium"
-    roles["task"] = f"openai-codex/{DEEP}:xhigh"
-    roles["plan"] = f"openai-codex/{DEEP}:xhigh"
-    roles["slow"] = f"openai-codex/{DEEP}:xhigh"
-    roles["designer"] = f"openai-codex/{DEEP}:xhigh"
+    roles["default"] = OMP_DEFAULT
+    roles["task"] = OMP_TASK
+    roles["advisor"] = ADVISOR
+    roles["plan"] = OMP_PLAN
+    roles["designer"] = OMP_DESIGNER
+    roles["reviewer"] = OMP_REVIEWER
+    roles["smol"] = OMP_SMOL
+    roles["commit"] = OMP_COMMIT
+    roles["slow"] = OMP_SLOW
 
-    # Keep K3 selectable without changing the normal Codex role routing.
+    # Append-only for the picker, so hand-added models survive — but retired
+    # models get dropped, since leaving them listed just invites a 400.
     enabled = data.setdefault("enabledModels", [])
-    if KIMI_K3 not in enabled:
-        enabled.append(KIMI_K3)
+    for model in OMP_RETIRED:
+        if model in enabled:
+            enabled.remove(model)
+            log(f"omp: dropped retired model {model}")
+    for model in OMP_PICKER:
+        if model not in enabled:
+            enabled.append(model)
 
     overrides = data.setdefault("task", {}).setdefault("agentModelOverrides", {})
     overrides["quick_task"] = "pi/smol"
@@ -216,7 +322,7 @@ def reconcile_omp() -> bool:
     overrides["librarian"] = "pi/smol"
     overrides["task"] = "pi/task"
     overrides["plan"] = "pi/plan"
-    overrides["reviewer"] = "pi/slow"
+    overrides["reviewer"] = "pi/reviewer"
     overrides["designer"] = "pi/designer"
 
     after = yaml.dump(data, **dump)

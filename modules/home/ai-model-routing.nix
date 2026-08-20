@@ -8,6 +8,10 @@
 #   SPARK — gpt-5.3-codex-spark @ medium           — everyday work; the default
 #           (low for the "smol" / recon roles)
 #
+# omp is the exception: it runs the gpt-5.6 codename trio instead — terra:max
+# for the main loop, luna:max for delegated task subagents, sol for the
+# advisor (max) and the plan/review/design roles (medium).
+#
 # codex/pi/omp each rewrite their own config files at runtime (model caches,
 # changelog versions, in-session model switches), so Home Manager can't own
 # them as read-only store symlinks — a symlink would just fight the app.
