@@ -157,12 +157,14 @@ else
 fi
 [ -d "$HOME/Library/Rime" ] && ok "~/Library/Rime exists" || na "~/Library/Rime not synced yet"
 
-section "BetterMouse / BetterDisplay LaunchAgents"
+section "GUI-managed apps"
+# BetterMouse and BetterDisplay are deliberately not Nix-managed: both ship
+# Sparkle and self-update out from under a pin. See docs/adr/0011-* and 0012-*.
 for agent in bettermouse betterdisplay; do
   if launchctl list 2>/dev/null | grep -qi "$agent"; then
-    ok "$agent LaunchAgent is loaded"
+    bad "$agent LaunchAgent is loaded: these apps should be GUI-managed, not Nix-managed"
   else
-    na "$agent LaunchAgent not loaded (app may be quit)"
+    ok "$agent has no Nix LaunchAgent (GUI-managed, as intended)"
   fi
 done
 
