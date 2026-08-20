@@ -18,4 +18,4 @@ if [ "$before" = "$after" ]; then
   echo "flake-inputs: already current"
   exit 0
 fi
-echo "flake-inputs: lockfile updated"
+au_report_change flake-inputs "${before:0:12}" "${after:0:12}"

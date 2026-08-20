@@ -11,7 +11,6 @@ current=$(au_current_version "$FILE")
 if [ "$current" = "$latest" ]; then
   echo "mole already at $latest"; exit 0
 fi
-echo "mole: $current -> $latest"
 
 au_set_version "$FILE" "$latest"
 
@@ -27,5 +26,5 @@ au_set_block_hash "$FILE" "archive/refs/tags" "$(au_prefetch_unpacked_sri "$src_
 au_set_block_hash "$FILE" "/analyze-darwin-arm64"   "$(au_prefetch_sri        "$analyze_url")"
 au_set_block_hash "$FILE" "/status-darwin-arm64"    "$(au_prefetch_sri        "$status_url")"
 
-au_build .#martin.mole
-echo "mole bumped to $latest"
+au_build_darwin .#martin.mole
+au_report_change mole "$current" "$latest"

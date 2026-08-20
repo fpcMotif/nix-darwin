@@ -11,7 +11,6 @@ current=$(au_current_version "$FILE")
 if [ "$current" = "$latest" ]; then
   echo "hammerspoon already at $latest"; exit 0
 fi
-echo "hammerspoon: $current -> $latest"
 
 url="https://github.com/Hammerspoon/hammerspoon/releases/download/${latest}/Hammerspoon-${latest}.zip"
 sri=$(au_prefetch_sri "$url")
@@ -19,5 +18,5 @@ sri=$(au_prefetch_sri "$url")
 au_set_version "$FILE" "$latest"
 au_inplace_sed "$FILE" -e "s|hash = \"sha256-[^\"]*\"|hash = \"${sri}\"|"
 
-au_build .#martin.hammerspoon
-echo "hammerspoon bumped to $latest"
+au_build_darwin .#martin.hammerspoon
+au_report_change hammerspoon "$current" "$latest"

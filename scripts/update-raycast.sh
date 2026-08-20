@@ -12,7 +12,8 @@ cd "$(au_repo_root)"
 FILE="pkgs/raycast.nix"
 
 latest=$(
-  curl -fsSI "https://api.raycast.com/v2/download?build=universal" \
+  curl --http1.1 -fsSI --connect-timeout 10 --max-time 30 \
+    "https://api.raycast.com/v2/download?build=universal" \
     | tr -d '\r' \
     | grep -i '^location:' \
     | head -1 \
@@ -26,7 +27,6 @@ current=$(au_current_version "$FILE")
 if [ "$current" = "$latest" ]; then
   echo "raycast already at $latest"; exit 0
 fi
-echo "raycast: $current -> $latest"
 
 url="https://releases.raycast.com/releases/${latest}/download?build=universal"
 sri=$(au_prefetch_sri "$url")
@@ -34,5 +34,5 @@ sri=$(au_prefetch_sri "$url")
 au_set_version "$FILE" "$latest"
 au_inplace_sed "$FILE" -e "s|hash = \"sha256-[^\"]*\"|hash = \"${sri}\"|"
 
-au_build .#martin.raycast
-echo "raycast bumped to $latest"
+au_build_darwin .#martin.raycast
+au_report_change raycast "$current" "$latest"

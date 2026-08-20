@@ -22,7 +22,6 @@ current=$(au_current_version "$FILE")
 if [ "$current" = "$latest" ]; then
   echo "droid already at $latest"; exit 0
 fi
-echo "droid: $current -> $latest"
 
 au_set_version "$FILE" "$latest"
 
@@ -40,4 +39,4 @@ do
   au_set_block_hash "$FILE" "$pkg" "$sri"
 done
 
-echo "droid bumped to $latest"
+au_report_change droid "$current" "$latest"

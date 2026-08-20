@@ -31,8 +31,9 @@ case "$new_hash" in
 esac
 
 current_hash=$(grep -oE 'hash = "sha256-[^"]+"' "$FILE" | head -1 | cut -d'"' -f2)
+current_ver=$(au_current_version "$FILE")
 if [ "$new_hash" = "$current_hash" ]; then
-  echo "bun-canary already at $current_hash"; exit 0
+  echo "bun-canary already at $current_ver"; exit 0
 fi
 
 # Version is informational (the hash above is what gates idempotency).
@@ -52,12 +53,10 @@ if [ -z "$new_ver" ]; then
   new_ver="canary-${asset_date:-unknown}"
 fi
 
-echo "bun-canary: $current_hash -> $new_hash ($new_ver)"
 au_set_version "$FILE" "$new_ver"
 au_set_block_hash "$FILE" '"aarch64-darwin"' "$new_hash"
 
-# Cross-compiles nothing: on the Linux auto-update runner this darwin build
-# fails and is tolerated, leaving the version/hash edits to land in the PR;
-# build.yml validates the actual build. Locally (darwin) it builds for real.
-au_build .#legacyPackages.aarch64-darwin.martin.bun-canary-bin
-echo "bun-canary bumped to $new_ver"
+# Cross-compiles nothing: Linux defers this Darwin build; build.yml validates
+# it on macOS. Local Darwin runs build it here.
+au_build_darwin .#legacyPackages.aarch64-darwin.martin.bun-canary-bin
+au_report_change bun-canary "$current_ver" "$new_ver"

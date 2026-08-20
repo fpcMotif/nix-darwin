@@ -22,7 +22,6 @@ current=$(au_current_version "$FILE")
 if [ "$current" = "$latest" ]; then
   echo "squirrel already at $latest"; exit 0
 fi
-echo "squirrel: $current -> $latest"
 
 url="https://github.com/rime/squirrel/releases/download/${latest}/Squirrel-${latest}.pkg"
 sri=$(au_prefetch_sri "$url")
@@ -30,5 +29,5 @@ sri=$(au_prefetch_sri "$url")
 au_set_version "$FILE" "$latest"
 au_inplace_sed "$FILE" -e "s|hash = \"sha256-[^\"]*\"|hash = \"${sri}\"|"
 
-au_build .#martin.squirrel
-echo "squirrel bumped to $latest"
+au_build_darwin .#martin.squirrel
+au_report_change squirrel "$current" "$latest"

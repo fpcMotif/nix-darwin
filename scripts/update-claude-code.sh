@@ -11,4 +11,4 @@ if [ "$before" = "$after" ]; then
   echo "claude-code already at $after"
   exit 0
 fi
-echo "claude-code bumped: $before -> $after"
+au_report_change claude-code "$before" "$after"

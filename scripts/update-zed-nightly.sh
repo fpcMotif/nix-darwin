@@ -51,7 +51,6 @@ current=$(au_current_version "$FILE")
 if [ "$current" = "$latest" ]; then
   echo "zed-nightly already at $latest"; exit 0
 fi
-echo "zed-nightly: $current -> $latest"
 
 # Prefetch into an explicit variable BEFORE mutating the Nix file. A
 # command substitution passed straight into au_set_block_hash would, under
@@ -69,5 +68,5 @@ esac
 au_set_version "$FILE" "$latest"
 au_set_block_hash "$FILE" '"aarch64-darwin"' "$hash_aarch64"
 
-au_build .#legacyPackages.aarch64-darwin.martin.zed-nightly-bin
-echo "zed-nightly bumped to $latest"
+au_build_darwin .#legacyPackages.aarch64-darwin.martin.zed-nightly-bin
+au_report_change zed-nightly "$current" "$latest"

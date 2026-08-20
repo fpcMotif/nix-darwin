@@ -6,9 +6,15 @@
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
+before=$(nix eval --raw .#crush.version 2>/dev/null \
+         || nix eval --raw .#crush.name)
 nix flake update nur 2>&1 | tail -10
 au_build .#crush
 
-ver=$(nix eval --raw .#crush.version 2>/dev/null \
-       || nix eval --raw .#crush.name)
-echo "crush refreshed via Charm NUR at ${ver}"
+after=$(nix eval --raw .#crush.version 2>/dev/null \
+        || nix eval --raw .#crush.name)
+if [ "$before" = "$after" ]; then
+  echo "crush already at $after"
+else
+  au_report_change crush "$before" "$after"
+fi

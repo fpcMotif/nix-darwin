@@ -17,7 +17,6 @@ current=$(au_current_version "$FILE_CLI")
 if [ "$current" = "$latest" ]; then
   echo "opencode already at $latest"; exit 0
 fi
-echo "opencode: $current -> $latest"
 
 au_set_version "$FILE_CLI" "$latest"
 au_set_version "$FILE_ELECTRON" "$latest"
@@ -69,5 +68,5 @@ for asset in "${!electron_assets[@]}"; do
 done
 
 au_build .#martin.opencode
-au_build .#martin.opencode-electron
-echo "opencode bumped to $latest"
+au_build_darwin .#martin.opencode-electron
+au_report_change opencode "$current" "$latest"

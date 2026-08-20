@@ -24,7 +24,6 @@ current=$(au_current_version "$FILE")
 if [ "$current" = "$latest" ]; then
   echo "pi-coding-agent already at $latest"; exit 0
 fi
-echo "pi-coding-agent: $current -> $latest"
 
 url="https://github.com/badlogic/pi-mono/releases/download/v${latest}/pi-darwin-arm64.tar.gz"
 sri=$(au_prefetch_sri "$url")
@@ -32,5 +31,5 @@ sri=$(au_prefetch_sri "$url")
 au_set_version "$FILE" "$latest"
 au_inplace_sed "$FILE" -e "s|hash = \"sha256-[^\"]*\"|hash = \"${sri}\"|"
 
-au_build .#martin.pi-coding-agent
-echo "pi-coding-agent bumped to $latest"
+au_build_darwin .#martin.pi-coding-agent
+au_report_change pi-coding-agent "$current" "$latest"

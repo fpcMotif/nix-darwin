@@ -26,7 +26,6 @@ current=$(au_current_version "$FILE")
 if [ "$current" = "$latest" ]; then
   echo "codex already at $latest — re-verifying asset hashes (prereleases re-publish in place)"
 else
-  echo "codex: $current -> $latest"
   au_set_version "$FILE" "$latest"
 fi
 
@@ -43,4 +42,8 @@ do
   au_set_block_hash "$FILE" "asset = \"${asset}\";" "$sri"
 done
 
-echo "codex pinned at $latest with re-verified asset hashes"
+if [ "$current" = "$latest" ]; then
+  echo "codex pinned at $latest with re-verified asset hashes"
+else
+  au_report_change codex "$current" "$latest"
+fi
