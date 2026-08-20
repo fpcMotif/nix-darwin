@@ -62,6 +62,15 @@ let
   skillTargetDirsSh = lib.concatMapStringsSep " " (d: ''"${homeDir}/${d}"'')
     (lib.attrValues skillTargetDirs);
 
+  # Dirs that actually receive skill links. Droid scans BOTH its native
+  # ~/.factory/skills AND the shared ~/.agents/skills (a hardcoded
+  # `.factory/.factory-dev/.agents/.agent` compat list — no setting turns it
+  # off) and enforces unique skill names, so linking the bundle into both
+  # dirs surfaced every skill as a "Duplicate skill" diagnostic in its TUI.
+  # Droid gets everything via ~/.agents/skills; the factory dir stays in
+  # skillTargetDirs only so the sweeps keep pruning stale copies there.
+  skillLinkDirs = removeAttrs skillTargetDirs [ "factory" ];
+
   # Remove a skill's copy from every picker target dir.
   mkSkillTargetRm = ids: ''
     for dir in ${skillTargetDirsSh}; do
@@ -315,7 +324,7 @@ in
         (dir: map
           (skill: { name = "${dir}/${skill}"; value = { source = ./skills + "/${skill}"; }; })
           localSkillIds)
-        (lib.attrValues skillTargetDirs));
+        (lib.attrValues skillLinkDirs));
     in
     {
       # Contract between this module and scripts/verify-agent-skills.sh (Tier 2),
@@ -613,7 +622,7 @@ in
   # claudeMcpFff above. The patched defaults (bulk tools gated behind
   # DRAFTS_MCP_ALLOW_BULK=1, 20s osascript watchdog, 200-result cap) are
   # baked into pkgs/drafts-mcp-server.nix, so no env is passed here.
-  home.activation.claudeMcpDrafts = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.claudeMcpDrafts = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     claudeBin="${pkgs.claude-code}/bin/claude"
     draftsBin="${pkgs.martin.drafts-mcp-server}/bin/drafts-mcp-server"
     target="${homeDir}/.claude.json"
@@ -637,7 +646,7 @@ in
         echo "claude-mcp-drafts: failed to register drafts (see above)" >&2
       fi
     fi
-  '';
+  '');
 
   # === Skills (was modules/home/skills.nix) ===
   programs.agent-skills = {
@@ -646,10 +655,12 @@ in
     sources = {
       dotfiles-pi = mkSource "dotfiles" "dot_pi/agent/skills"
         "^(review|web-browser)$";
+      archify = mkSource "archify" "." null;
+      better-github-skill = mkSource "better-github-skill" "." null;
     } // mpSources // effectSources;
 
     skills = {
-      enable = enabledMattpocockSkills;
+      enable = enabledMattpocockSkills ++ [ "archify" "better-github-skill" ];
       # effect-ts is no longer globally bundled. It was the one bundled skill
       # that is genuinely dependency-conditional: pure router noise in every
       # non-Effect repo, and version-blind vs the repo's installed `effect` in
@@ -676,7 +687,7 @@ in
       };
     };
 
-    targets = lib.mapAttrs (_: linkTarget) skillTargetDirs;
+    targets = lib.mapAttrs (_: linkTarget) skillLinkDirs;
 
     # Module default (`[ "/.system" ]`); an empty list would let a future
     # `structure = "symlink-tree"` target rsync --delete over Codex's own
