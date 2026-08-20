@@ -1,6 +1,6 @@
 { config, lib, pkgs, currentSystemUser, currentSystemUserHome, ... }:
 
-# Unattended `darwin-rebuild switch` to the latest origin/main. The hourly
+# Unattended `darwin-rebuild switch` to the latest origin/main. The daily
 # auto-update workflow keeps origin/main current; this daemon is what actually
 # lands those bumps on THIS machine without a manual `just switch`.
 #
@@ -8,9 +8,9 @@
 #   * Builds straight from `refs/remotes/origin/main` (a pinned rev), so the
 #     local working tree is never touched — no merge, no clobber of uncommitted
 #     work or local-only commits, no fight with the autoresearch loop.
-#   * `git fetch` runs as the repo owner (keeps .git user-owned and reuses the
-#     user's gitconfig, incl. the http.sslCAInfo cert pin); only the rebuild
-#     runs as root.
+#   * `git fetch` and `git archive` run as the repo owner. Root evaluates an
+#     exact archived snapshot, never the user-owned Git directory. This avoids
+#     Nix/libgit2's cross-owner rejection.
 #   * A last-applied-rev marker makes a run a no-op when origin hasn't moved.
 #   * RunAtLoad = false: a switch reloads launchd daemons, so running at load
 #     would recurse. The calendar interval is the only trigger.
@@ -22,7 +22,7 @@ let
 
   switchScript = pkgs.writeShellApplication {
     name = "martin-auto-switch";
-    runtimeInputs = [ pkgs.git pkgs.nix pkgs.coreutils ];
+    runtimeInputs = [ pkgs.git pkgs.nix pkgs.coreutils pkgs.gnutar ];
     text = ''
       # darwin-rebuild + the nix daemon tooling live on the system profile.
       export PATH="/run/current-system/sw/bin:/nix/var/nix/profiles/default/bin:$PATH"
@@ -53,9 +53,20 @@ let
         echo "already applied origin/main=$rev; skip"; exit 0
       fi
 
-      echo "switching $attr to origin/main $rev"
+      snapshot=$(mktemp -d "$state/snapshot.XXXXXX")
+      cleanup() { rm -rf -- "$snapshot"; }
+      trap cleanup EXIT INT TERM
+
+      # Nix runs below as root. Feeding it the user-owned Git checkout makes
+      # libgit2 reject the repo. Archive the exact fetched revision instead.
+      if ! /usr/bin/sudo -H -u "$user" git -C "$repo" archive --format=tar "$rev" \
+           | tar -xf - -C "$snapshot"; then
+        echo "could not archive origin/main=$rev; skip"; exit 1
+      fi
+
+      echo "switching $attr to origin/main $rev from archived snapshot"
       if darwin-rebuild switch \
-           --flake "git+file://$repo?ref=refs/remotes/origin/main&rev=$rev#$attr"; then
+           --flake "$snapshot#$attr"; then
         printf '%s\n' "$rev" > "$state/last-rev"
         echo "switch OK -> $rev"
       else

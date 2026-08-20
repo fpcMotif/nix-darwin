@@ -98,8 +98,8 @@ let
       "Oh My Pi skill target should be configured explicitly")
 
     (helpers.assertTest "factory-skill-target-configured"
-      (homeConfig.programs.agent-skills.targets.factory.dest == ".factory/skills")
-      "Factory/Droid skill target should be configured explicitly")
+      (!(homeConfig.programs.agent-skills.targets ? factory))
+      "Factory/Droid must not get a skill link target — droid also scans ~/.agents/skills and would report every skill as a duplicate")
 
     (helpers.assertTest "crush-skill-target-configured"
       (homeConfig.programs.agent-skills.targets.crush.dest == ".config/crush/skills")
@@ -131,6 +131,19 @@ let
     (helpers.assertTest "darwin-nix-flakes-enabled"
       (builtins.elem "flakes" darwinConfig.nix.settings.experimental-features)
       "Darwin nix settings should enable flakes")
+
+    (helpers.assertTest "darwin-nix-substituters-exclude-garnix"
+      (!(builtins.elem "https://cache.garnix.io" darwinConfig.nix.settings.substituters))
+      "Darwin Nix substituters should exclude unavailable Garnix")
+
+    (helpers.assertTest "darwin-pi-extension-auto-update"
+      (
+        let agent = homeConfig.launchd.agents.pi-extension-update.config;
+        in agent.StartCalendarInterval.Hour == 6
+          && agent.StartCalendarInterval.Minute == 15
+          && agent.RunAtLoad == false
+      )
+      "Darwin should update mutable Pi extensions daily after the Nix auto-switch")
 
     (helpers.assertTest "darwin-system-packages-include-raycast"
       (hasPackage "raycast" darwinConfig.environment.systemPackages)

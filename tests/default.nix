@@ -27,6 +27,12 @@ in
   unit-mksystem = callTest ./unit/mksystem-test.nix { };
   unit-overlay = callTest ./unit/overlay-test.nix { };
   unit-format = callTest ./unit/format-test.nix { };
+  unit-auto-update = pkgs.runCommand "unit-auto-update" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
+    bash ${./unit/auto-update-test.sh} \
+      ${../scripts/lib/auto-update.sh} \
+      ${../modules/darwin/auto-switch.nix}
+    touch $out
+  '';
   unit-justfile = pkgs.runCommand "unit-justfile" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
     bash ${./unit/justfile-test.sh} ${../justfile}
     touch $out
@@ -86,13 +92,6 @@ in
         touch $out
       '';
 
-
-  # Smoke builds: verify these derivations actually build correctly.
-  smoke-build-common = pkgs.runCommand "smoke-build-common" { } ''
-    echo "Building mgrep as a common package smoke test..."
-    ${pkgs.mgrep}/bin/mgrep --version
-    touch $out
-  '';
 
   smoke-build-oh-my-pi = pkgs.runCommand "smoke-build-oh-my-pi" { } (
     if pkgs.stdenv.isDarwin then ''

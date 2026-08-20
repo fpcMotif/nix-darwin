@@ -40,7 +40,6 @@ jobs:
             '.#checks.x86_64-linux.integration-configurations-eval' \
             '.#checks.x86_64-linux.integration-home-linux-purity' \
             '.#checks.x86_64-linux.integration-darwin-settings' \
-            '.#checks.x86_64-linux.smoke-build-common' \
             '.#checks.x86_64-linux.smoke-build-oh-my-pi' \
             '.#checks.x86_64-linux.smoke-build-toolchain'
 
@@ -73,7 +72,6 @@ jobs:
             '.#checks.aarch64-darwin.integration-configurations-eval' \
             '.#checks.aarch64-darwin.integration-home-linux-purity' \
             '.#checks.aarch64-darwin.integration-darwin-settings' \
-            '.#checks.aarch64-darwin.smoke-build-common' \
             '.#checks.aarch64-darwin.smoke-build-oh-my-pi' \
             '.#checks.aarch64-darwin.smoke-build-toolchain'
 

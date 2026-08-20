@@ -69,7 +69,6 @@ in
     "/usr/local/bin"
     "$HOME/bin"
     "$HOME/.bun/bin"
-    "$HOME/.ghcup/bin"
     "$HOME/.elixir-install/installs/otp/27.3.4/bin"
     "$HOME/.elixir-install/installs/elixir/1.18.4-otp-27/bin"
     "$HOME/.cargo/bin"
@@ -159,19 +158,17 @@ in
   programs.zsh = {
     enable = true;
     enableCompletion = true;
+    completionInit = ''
+      fpath=($HOME/.zsh/completions $fpath)
+      autoload -U compinit && compinit
+    '';
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
-    historySubstringSearch = {
-      enable = true;
-      searchUpKey = [
-        "^[[A"
-        "^P"
-      ];
-      searchDownKey = [
-        "^[[B"
-        "^N"
-      ];
-    };
+    # Up/Down history search is the native zle prefix widget (bound in
+    # initContent), not zsh-history-substring-search: the plugin matches
+    # anywhere in the line and splits the query on spaces into `a*b*` globs,
+    # so `git p` hits `git commit -p`. Ctrl-R (fzf) covers fuzzy search.
+    historySubstringSearch.enable = false;
     defaultKeymap = "emacs";
 
     history = {
@@ -257,13 +254,6 @@ in
       gpn = "ghostty-pane";
       pymobiledevice3 = "source ~/.venv/bin/activate && python -m pymobiledevice3";
 
-      mg = "mgrep search";
-      mgc = "mgrep search -c";
-      mga = "mgrep search -a";
-      mgw = "mgrep search -w";
-      mgwa = "mgrep search -w -a";
-      mgs = "mgrep search -s";
-
       sudo = "sudo -E";
 
       npm = "bun";
@@ -335,7 +325,6 @@ in
       unsetopt NOMATCH AUTO_REMOVE_SLASH
 
       KEYTIMEOUT=1
-      HISTORY_SUBSTRING_SEARCH_PREFIXED=1
 
       [[ -f "$_ZSH_CONFIG_DIR/.secret" ]] && source "$_ZSH_CONFIG_DIR/.secret"
 
@@ -357,6 +346,40 @@ in
 
       zmodload zsh/complist
       autoload -Uz edit-command-line; zle -N edit-command-line
+
+      # Type a prefix (e.g. `git `) and press up: cycles only history entries
+      # that literally START with it, keeping the typed prefix and parking the
+      # cursor at end of line. Inside a multiline buffer up/down still move by
+      # line. Both ^[[A and ^[OA are bound so it works in normal and
+      # application cursor-key mode.
+      zmodload -i zsh/terminfo 2>/dev/null
+      autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+      zle -N up-line-or-beginning-search
+      zle -N down-line-or-beginning-search
+
+      # The emacs keymap leaves Delete/Home/End/PageUp/PageDown unbound. zle
+      # then fails to match the `^[[3` prefix, discards it, and self-inserts the
+      # trailing `~` -- which is why fn-Delete typed a literal ~ instead of
+      # deleting. Bind the terminfo capability plus the raw xterm sequences,
+      # since Ghostty/tmux/ssh switch between normal and application cursor mode.
+      _bindk() {
+        local widget=$1 k
+        shift
+        for k in "$@"; do [[ -n $k ]] && bindkey -- "$k" "$widget"; done
+      }
+      _bindk up-line-or-beginning-search    "''${terminfo[kcuu1]}" '^[[A' '^[OA' '^P'
+      _bindk down-line-or-beginning-search  "''${terminfo[kcud1]}" '^[[B' '^[OB' '^N'
+      _bindk delete-char                    "''${terminfo[kdch1]}" '^[[3~'
+      _bindk beginning-of-line              "''${terminfo[khome]}" '^[[H' '^[OH' '^[[1~'
+      _bindk end-of-line                    "''${terminfo[kend]}"  '^[[F' '^[OF' '^[[4~'
+      _bindk beginning-of-buffer-or-history "''${terminfo[kpp]}"   '^[[5~'
+      _bindk end-of-buffer-or-history       "''${terminfo[knp]}"   '^[[6~'
+      _bindk reverse-menu-complete          "''${terminfo[kcbt]}"  '^[[Z'
+      _bindk backward-word                  '^[[1;5D' '^[[1;3D' '^[^[[D'
+      _bindk forward-word                   '^[[1;5C' '^[[1;3C' '^[^[[C'
+      _bindk kill-word                      '^[[3;5~' '^[[3;3~'
+      _bindk backward-kill-word             '^[^?'
+      unset -f _bindk
       zstyle ":completion:*:*:*:*:*" menu select
       zstyle ":completion:*" use-cache yes
       zstyle ":completion:*" special-dirs true
@@ -383,8 +406,6 @@ in
       }
 
       grep() { rg "$@" }
-      mgsearch() { mgrep search -c -m 20 "$@" }
-      webai() { mgrep search -w -a "$@" }
 
       # du routes to dust as a function, not an alias: `du = "dust"` made
       # `du -sh` expand to `dust -sh`, and dust parses -h as --help (its -s
@@ -488,14 +509,9 @@ in
       }
 
       [ -s "$BUN_INSTALL/_bun" ] && source "$BUN_INSTALL/_bun"
-      [ -f "''${GHCUP_INSTALL_BASE_PREFIX:=$HOME}/.ghcup/env" ] && source "''${GHCUP_INSTALL_BASE_PREFIX:=$HOME}/.ghcup/env"
       [[ "$TERM_PROGRAM" == "kiro" ]] && . "$(kiro --locate-shell-integration-path zsh)"
       (( $+commands[mole] )) && eval "$(mole completion zsh)"
       [[ -f "$HOME/.local/try.rb" ]] && eval "$(ruby ~/.local/try.rb init ~/src/tries)"
-
-      if [[ -x "$HOME/.local/bin/update-ai-tools" ]]; then
-        ("$HOME/.local/bin/update-ai-tools" --check >/dev/null 2>&1 &)
-      fi
 
       [[ -r $_ZSH_CONFIG_DIR/cmux.zsh ]] && source $_ZSH_CONFIG_DIR/cmux.zsh
 
@@ -544,12 +560,6 @@ in
           tips+=(
             "[AI] Claude has %F{cyan}agent-teams%f experimental feature enabled -- great for complex multi-step tasks."
             "[AI] Run %F{green}cc%f for Claude with skip-permissions, %F{green}cofficial%f for clean env."
-          )
-        fi
-        if (( $+commands[mgrep] )); then
-          tips+=(
-            "[mgrep] Run %F{green}mg 'query'%f for semantic code search, %F{green}mgw%f for web search."
-            "[mgrep] Use %F{green}webai 'topic'%f for web search + AI summary."
           )
         fi
         if (( $+commands[ast-grep] )); then

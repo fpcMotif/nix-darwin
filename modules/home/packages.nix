@@ -20,7 +20,6 @@ let
     zoxide
     fzf
     ast-grep
-    mgrep
     martin.fff-mcp
 
     # Git and version control.
@@ -74,17 +73,10 @@ let
     gofumpt
     golangci-lint
 
-    # Haskell.
-    ghc
-    cabal-install
-    fourmolu
-    hlint
-    ghcid
-
     # All language servers live in ./lsp.nix — including typescript-go
     # (it's both compiler and `tsgo --lsp` server), oxlint, vtsls,
     # vue/astro/svelte/tailwind/emmet servers, gopls, rust-analyzer,
-    # sourcekit-lsp, haskell-language-server, basedpyright, ruff,
+    # sourcekit-lsp, basedpyright, ruff,
     # lua-language-server, mcp-language-server.
     cmake
     tree-sitter
@@ -122,11 +114,6 @@ let
     # Registered with Claude Code via claudeMcpDrafts in claude.nix; Codex
     # points at the stable /etc/profiles/per-user path in ~/.codex/config.toml.
     martin.drafts-mcp-server
-    # martin.trail  # TEMP-DISABLED: trail.nix uses an eval-time `builtins.fetchGit`
-    # of the PRIVATE repo, which fails under `sudo darwin-rebuild switch` (root has
-    # neither your git CA certs nor your GitHub auth). Re-enable once trail fetches
-    # without per-user creds — e.g. nix `access-tokens` set system-wide + a github:
-    # fetcher, a public repo, or install it via `uv` from ~/devv/trail instead.
     # zed-editor itself is installed by programs.zed-editor.enable in zed.nix.
   ];
 in
