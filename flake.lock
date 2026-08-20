@@ -24,6 +24,38 @@
         "type": "github"
       }
     },
+    "archify": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786981632,
+        "narHash": "sha256-v0IhuDYWCU2WJeqZ73I7ZbHrAAYjlhz3fbLPj+SD5wQ=",
+        "owner": "tt-a1i",
+        "repo": "archify",
+        "rev": "e1ac748f19cf805e44bf74fb93c796662152e273",
+        "type": "github"
+      },
+      "original": {
+        "owner": "tt-a1i",
+        "repo": "archify",
+        "type": "github"
+      }
+    },
+    "better-github-skill": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1786927835,
+        "narHash": "sha256-3SStYLVG0ekhrvrwRQyDHMqYdyZuf0looaK1dJW7XO8=",
+        "owner": "AVGVSTVS96",
+        "repo": "better-github-skill",
+        "rev": "be00903d489baee08a3fd8475979f48b24620e09",
+        "type": "github"
+      },
+      "original": {
+        "owner": "AVGVSTVS96",
+        "repo": "better-github-skill",
+        "type": "github"
+      }
+    },
     "claude-code": {
       "inputs": {
         "flake-utils": "flake-utils",
@@ -32,11 +64,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784948311,
-        "narHash": "sha256-zXmyx6HuIjH0RQPV4VjVAXQttLyLDk55x9c3NmDke8c=",
+        "lastModified": 1785285785,
+        "narHash": "sha256-r1cMlvXjRVKe+uQ/GKwy4TpionpmbNgksFP2758D/MM=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "0d3cd1d6260b6f0ed232224c274c565407446fa1",
+        "rev": "da78262708d858861afbe1f68ea65fedda4054c4",
         "type": "github"
       },
       "original": {
@@ -52,11 +84,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784500460,
-        "narHash": "sha256-UvORnAxTRHax7RG74W8Z2t4GvIkX6AjJ5kk0QlwZomo=",
+        "lastModified": 1785389976,
+        "narHash": "sha256-0tLW8Ff5yt8AH97jw4ZpFJ0OCJ122zIlgWGDmOfU/VU=",
         "owner": "nix-darwin",
         "repo": "nix-darwin",
-        "rev": "57a3171f94705599a2499248ca5758d5eb47c0e0",
+        "rev": "15abb8c98f336cd8bd840d71059adebabe60bf04",
         "type": "github"
       },
       "original": {
@@ -160,11 +192,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1785168662,
-        "narHash": "sha256-kGJTc0oEUQuEwV66lSlMxYtOEtpk9N/HS43k+rFAvs8=",
+        "lastModified": 1785531816,
+        "narHash": "sha256-vkMnV0JIyw+g/NmcfoajlGaAO+9a0ezia+FZohQJrik=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "cbb77679b3d992c8b62f884cd3a84af534a28621",
+        "rev": "bf9ce9fec78f95f374e8dd3b503863a3ec128ebe",
         "type": "github"
       },
       "original": {
@@ -176,11 +208,11 @@
     "mattpocock-skills": {
       "flake": false,
       "locked": {
-        "lastModified": 1784629731,
-        "narHash": "sha256-o/H9s3t6ahBqFwpkOMBOTwpsvb33pgvpI9n0PA+uLYM=",
+        "lastModified": 1785230297,
+        "narHash": "sha256-dQtG6usJWlg/FqTajrjcs8GSdymH92WsgLiUaCfvKPA=",
         "owner": "mattpocock",
         "repo": "skills",
-        "rev": "ed37663cc5fbef691ddfecd080dff42f7e7e350d",
+        "rev": "2ab958093e83e0ec752e6c1c5932da465bf23e0c",
         "type": "github"
       },
       "original": {
@@ -214,11 +246,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1785141334,
-        "narHash": "sha256-kh35kIx7el4Jk8Ki3BH9/Pn1eZYSYLJ6LMALos0zOy0=",
+        "lastModified": 1785542685,
+        "narHash": "sha256-sjfvXMbG5pCFgpvw2OZAFcZiTvrppCWvnB6cuGrSY08=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "38a4887411571457d700c51c64a6e49ead2ed5ab",
+        "rev": "f8e81fc7eb063db454f563cdd596fb96a5ad1497",
         "type": "github"
       },
       "original": {
@@ -236,11 +268,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1785217582,
-        "narHash": "sha256-hiac5U74lFyBgEr1BGCxug5USIvjJEymCWMAMOsYNqQ=",
+        "lastModified": 1785643447,
+        "narHash": "sha256-FKLS3PW1X3dbIVEmJLvlfs0uVcwK7HpeKyS+BynWg6w=",
         "owner": "nix-community",
         "repo": "NUR",
-        "rev": "8e573bf1226bfd7e3fdb3ba3930cee7717a49ba0",
+        "rev": "3b0b0162f2045ea65e783e150c2037f5ae1841e5",
         "type": "github"
       },
       "original": {
@@ -252,6 +284,8 @@
     "root": {
       "inputs": {
         "agent-skills": "agent-skills",
+        "archify": "archify",
+        "better-github-skill": "better-github-skill",
         "claude-code": "claude-code",
         "darwin": "darwin",
         "dotfiles": "dotfiles",
