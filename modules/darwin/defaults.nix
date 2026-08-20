@@ -38,6 +38,12 @@
         AppleAccentColor = 6;
         AppleScrollerPagingBehavior = true;
         AppleWindowTabbingMode = "always";
+        # Double-click window, in seconds. macOS ships 0.5; the System Settings
+        # slider bottoms out at 0.15, where a double-click has to land inside
+        # 150ms or the OS delivers two separate single clicks instead. Pinned
+        # here because nothing else in this repo owned it and it had drifted to
+        # the fast extreme by hand.
+        "com.apple.mouse.doubleClickThreshold" = 0.5;
       };
 
       "com.apple.CrashReporter" = {
