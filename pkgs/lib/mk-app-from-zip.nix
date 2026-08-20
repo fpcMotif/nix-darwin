@@ -1,8 +1,8 @@
 # Build a macOS .app bundle that ships as a flat .zip release asset.
-# Two callers (BetterMouse, Hammerspoon) follow the same shape:
+# Hammerspoon follows this shape:
 #   fetch zip → unzip into a tempdir → find the .app → copy to $out/Applications.
 #
-# Callers pass `appName` (e.g. "BetterMouse.app") and the standard derivation
+# Callers pass `appName` (e.g. "Hammerspoon.app") and the standard derivation
 # attrs. Anything not consumed here is passed through to mkDerivation.
 { stdenvNoCC, unzip }:
 

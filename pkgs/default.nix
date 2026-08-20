@@ -14,7 +14,6 @@ final: _prev:
     hammerspoon = final.callPackage ./hammerspoon.nix { };
     raycast = final.callPackage ./raycast.nix { };
 
-    bettermouse = final.callPackage ./bettermouse.nix { };
     mole = final.callPackage ./mole.nix { };
     sf-mono = final.callPackage ./sf-mono.nix { };
     sf-symbols = final.callPackage ./sf-symbols.nix { };
@@ -31,7 +30,5 @@ final: _prev:
     opencode = final.callPackage ./opencode.nix { };
     opencode-electron = final.callPackage ./opencode-electron.nix { };
     zed-nightly-bin = final.callPackage ./zed-nightly-bin.nix { };
-
-    trail = final.callPackage ./trail.nix { };
   };
 }
