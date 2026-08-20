@@ -174,7 +174,6 @@ modules/darwin/
 ├── hammerspoon.nix          # managed Hammerspoon init.lua
 ├── health-check.nix         # best-effort daily macOS health report LaunchAgent
 ├── linux-builder.nix        # opt-in aarch64-linux builder VM (UTM/dev-container builds)
-├── mouse-display.nix        # BetterMouse + BetterDisplay apps and seed config
 ├── nix.nix                  # flakes / nix-command / trusted users / GC + scheduled store optimise
 ├── rime.nix                 # Squirrel app link + MyRime-main sync
 ├── security.nix             # Touch ID sudo, firewall, Gatekeeper/quarantine posture

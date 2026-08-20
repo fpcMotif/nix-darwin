@@ -1,0 +1,605 @@
+<title>The 8904/8905 Split</title>
+<style>
+  :root {
+    --ground:      #EEF1F5;
+    --surface:     #FFFFFF;
+    --surface-alt: #F6F8FB;
+    --ink:         #11151B;
+    --ink-soft:    #39424F;
+    --muted:       #5F6A7A;
+    --rule:        #D3DAE4;
+    --rule-soft:   #E4E9F0;
+    --accent:      #2B47A8;
+    --accent-soft: #E6EAF8;
+    --crit:        #9E3227;
+    --crit-soft:   #F7E7E4;
+    --warn:        #8A5A0C;
+    --warn-soft:   #F9EEDC;
+    --ok:          #2A6349;
+    --ok-soft:     #E2F0E8;
+
+    --mono: "SF Mono", "Fira Code", "MapleMono NF CN", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0E1116;
+      --surface:     #161A21;
+      --surface-alt: #1B2029;
+      --ink:         #E9EDF3;
+      --ink-soft:    #BFC8D4;
+      --muted:       #8B96A6;
+      --rule:        #2B323D;
+      --rule-soft:   #232932;
+      --accent:      #8AA5F2;
+      --accent-soft: #1C2440;
+      --crit:        #E98276;
+      --crit-soft:   #33201D;
+      --warn:        #DCA950;
+      --warn-soft:   #302516;
+      --ok:          #78C49C;
+      --ok-soft:     #172A22;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #0E1116;
+    --surface:     #161A21;
+    --surface-alt: #1B2029;
+    --ink:         #E9EDF3;
+    --ink-soft:    #BFC8D4;
+    --muted:       #8B96A6;
+    --rule:        #2B323D;
+    --rule-soft:   #232932;
+    --accent:      #8AA5F2;
+    --accent-soft: #1C2440;
+    --crit:        #E98276;
+    --crit-soft:   #33201D;
+    --warn:        #DCA950;
+    --warn-soft:   #302516;
+    --ok:          #78C49C;
+    --ok-soft:     #172A22;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: clamp(2rem, 5vw, 4.5rem) clamp(1.1rem, 4vw, 2.5rem) 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.25rem;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead { display: flex; flex-direction: column; gap: 1.15rem; }
+
+  .stamp {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.1rem;
+    align-items: center;
+  }
+
+  .stamp .tag {
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    padding: 0.12rem 0.42rem;
+  }
+
+  h1 {
+    font-family: var(--sans);
+    font-size: clamp(2rem, 5.5vw, 3.15rem);
+    line-height: 1.04;
+    letter-spacing: -0.032em;
+    font-weight: 700;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    font-size: clamp(1.02rem, 2.2vw, 1.18rem);
+    line-height: 1.55;
+    color: var(--ink-soft);
+    margin: 0;
+    max-width: 46rem;
+  }
+
+  .masthead-rule { height: 2px; background: var(--ink); opacity: 0.85; }
+
+  /* ---------- verdict pair ---------- */
+
+  .verdicts { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+
+  .verdict {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--vc, var(--accent));
+    border-radius: 3px;
+    padding: 1.25rem 1.35rem 1.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .verdict.is-click { --vc: var(--warn); }
+  .verdict.is-nix   { --vc: var(--crit); }
+
+  .verdict .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--vc, var(--accent));
+  }
+  .verdict h3 { margin: 0; font-size: 1.12rem; letter-spacing: -0.015em; line-height: 1.3; }
+  .verdict p  { margin: 0; font-size: 0.93rem; color: var(--ink-soft); }
+
+  /* ---------- sections ---------- */
+
+  section { display: flex; flex-direction: column; gap: 1.15rem; }
+
+  h2 {
+    font-size: 1.55rem;
+    letter-spacing: -0.022em;
+    line-height: 1.2;
+    margin: 0;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--rule);
+    text-wrap: balance;
+  }
+
+  h3.sub { margin: 0; font-size: 1.05rem; letter-spacing: -0.012em; }
+
+  p { margin: 0; max-width: 46rem; }
+
+  .lede { color: var(--ink-soft); }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.855em;
+    background: var(--surface-alt);
+    border: 1px solid var(--rule-soft);
+    border-radius: 3px;
+    padding: 0.08em 0.34em;
+    word-break: break-word;
+  }
+
+  /* ---------- witness table ---------- */
+
+  .scroller { overflow-x: auto; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; min-width: 34rem; }
+
+  th, td { text-align: left; padding: 0.7rem 1rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  thead th {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-alt);
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.src { font-family: var(--mono); font-size: 0.8rem; color: var(--ink-soft); word-break: break-all; }
+
+  .ver {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+  .ver.pinned { color: var(--ok); }
+  .ver.drift  { color: var(--crit); }
+
+  .note { font-size: 0.85rem; color: var(--muted); }
+
+  /* ---------- defect chain ---------- */
+
+  .defects { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--rule); }
+
+  .defect {
+    display: grid;
+    grid-template-columns: 3.1rem 1fr;
+    gap: 0 1.15rem;
+    padding: 1.4rem 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .defect .num {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+  }
+
+  .defect .body { display: flex; flex-direction: column; gap: 0.6rem; min-width: 0; }
+  .defect h3 { margin: 0; font-size: 1.08rem; letter-spacing: -0.014em; line-height: 1.35; }
+  .defect p { font-size: 0.95rem; color: var(--ink-soft); }
+
+  pre {
+    margin: 0;
+    background: var(--surface-alt);
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 3px;
+    padding: 0.85rem 1rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.65;
+    color: var(--ink);
+  }
+  pre code { background: none; border: none; padding: 0; font-size: inherit; }
+
+  .callout {
+    background: var(--crit-soft);
+    border: 1px solid var(--crit);
+    border-radius: 3px;
+    padding: 0.9rem 1.1rem;
+    font-size: 0.92rem;
+    color: var(--ink);
+  }
+  .callout strong { color: var(--crit); }
+
+  /* ---------- ledger ---------- */
+
+  .ledger { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--rule); }
+
+  .row {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    gap: 0.35rem 1.1rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+    align-items: baseline;
+  }
+
+  .row .verb {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    padding: 0.16rem 0.4rem;
+    border-radius: 2px;
+    justify-self: start;
+    white-space: nowrap;
+  }
+  .verb.del  { background: var(--crit-soft); color: var(--crit); }
+  .verb.add  { background: var(--ok-soft);   color: var(--ok); }
+  .verb.edit { background: var(--accent-soft); color: var(--accent); }
+  .verb.keep { background: var(--warn-soft); color: var(--warn); }
+
+  .row .what { font-family: var(--mono); font-size: 0.83rem; word-break: break-all; }
+  .row .why  { grid-column: 2; font-size: 0.88rem; color: var(--muted); }
+
+  /* ---------- next steps ---------- */
+
+  ol.steps, ul.plain { margin: 0; padding-left: 1.3rem; display: flex; flex-direction: column; gap: 0.7rem; }
+  ol.steps li, ul.plain li { padding-left: 0.2rem; }
+  ol.steps li::marker { font-family: var(--mono); font-weight: 700; color: var(--accent); }
+
+  .caveat {
+    background: var(--warn-soft);
+    border-left: 3px solid var(--warn);
+    border-radius: 0 3px 3px 0;
+    padding: 0.95rem 1.15rem;
+    font-size: 0.92rem;
+  }
+  .caveat strong { color: var(--warn); }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 1.15rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.2rem;
+  }
+
+  @media (max-width: 34rem) {
+    .defect { grid-template-columns: 1fr; gap: 0.5rem; }
+    .row { grid-template-columns: 1fr; }
+    .row .why { grid-column: 1; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="stamp">
+      <span class="tag">Post-mortem</span>
+      <span>2026-08-17</span>
+      <span>host <strong>f</strong> &middot; darwin</span>
+      <span>ADR 0011</span>
+    </div>
+    <h1>Two builds of one app, and neither knew about the other</h1>
+    <p class="standfirst">
+      The complaint was that mouse clicks felt wrong. The investigation turned up two unrelated causes:
+      a macOS setting sitting at the fast extreme of its slider, and a Nix-managed app that had quietly
+      floated off its pin four days earlier. This is what happened and what changed.
+    </p>
+    <div class="masthead-rule"></div>
+  </header>
+
+  <div class="verdicts">
+    <div class="verdict is-click">
+      <span class="eyebrow">Cause of the symptom</span>
+      <h3>Double-click window was 150&nbsp;ms</h3>
+      <p>
+        <code>com.apple.mouse.doubleClickThreshold</code> was <strong>0.15</strong> against a macOS default of
+        <strong>0.5</strong>. Miss that window and the OS delivers two single clicks instead of a double-click.
+        No module owned the key, so nothing put it back.
+      </p>
+    </div>
+    <div class="verdict is-nix">
+      <span class="eyebrow">Cause of the update nagging</span>
+      <h3>Sparkle rewrote the pinned bundle</h3>
+      <p>
+        BetterMouse self-updated the writable <code>/Applications</code> copy from build 8904 to 8905.
+        The activation guard couldn't see it, so every later rebuild was a no-op against a bundle that
+        no longer matched the flake.
+      </p>
+    </div>
+  </div>
+
+  <section>
+    <h2>Three sources, two answers</h2>
+    <p class="lede">
+      Every place that could report a BetterMouse version was asked. They did not agree, and the copy
+      holding the event tap was not the copy the LaunchAgent pointed at.
+    </p>
+
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Source of truth</th>
+            <th scope="col">Reported</th>
+            <th scope="col">What it actually is</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="src">pkgs/bettermouse.nix</td>
+            <td class="ver pinned">1.6.8904</td>
+            <td>The pin. What the flake promises is installed.</td>
+          </tr>
+          <tr>
+            <td class="src">/Applications/.bettermouse.src</td>
+            <td class="ver pinned">8904</td>
+            <td>Marker symlink &rarr; <code>hxbffr3xq561p50vxr7vsji2x8xvsddq</code>. Records the source, not the result.</td>
+          </tr>
+          <tr>
+            <td class="src">/Applications/BetterMouse.app</td>
+            <td class="ver drift">8905</td>
+            <td>Rewritten in place by Sparkle. The LaunchAgent's target.</td>
+          </tr>
+          <tr>
+            <td class="src">/Applications/Nix&nbsp;Apps/BetterMouse.app</td>
+            <td class="ver pinned">8904</td>
+            <td>Second copy, same bundle id. <strong>This is the one that was running.</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="note">
+      Both bundles claim <code>CFBundleIdentifier = com.naotanhaocan.BetterMouse</code>, share one preferences
+      file, and compete for one Accessibility grant.
+    </p>
+  </section>
+
+  <section>
+    <h2>How the pin came undone</h2>
+    <p class="lede">
+      Three defects, each harmless alone. The first created the opening, the second made it invisible,
+      and the third cancelled the safeguard that the whole module was built around.
+    </p>
+
+    <div class="defects">
+
+      <article class="defect">
+        <div class="num">1</div>
+        <div class="body">
+          <h3>The module made the bundle writable</h3>
+          <p>
+            <code>install_managed_app</code> ran <code>chmod -R u+w</code> on the <code>/Applications</code> copy so a
+            later version bump could replace it. That same write bit is exactly what Sparkle needs to update
+            an app in place — and Sparkle was on, with <code>SUEnableAutomaticChecks</code> and
+            <code>SUAutomaticallyUpdate</code> both set to <code>1</code>, checking daily.
+          </p>
+        </div>
+      </article>
+
+      <article class="defect">
+        <div class="num">2</div>
+        <div class="body">
+          <h3>The re-copy guard compared the wrong thing</h3>
+          <p>Activation decided whether to reinstall using this test:</p>
+          <pre><code>[ ! -e "$dst" ] || [ "$(readlink "$marker" 2>/dev/null)" != "$pkg" ]</code></pre>
+          <p>
+            The marker tracks the <em>source store path</em>. It never looks at the installed bundle. After Sparkle
+            rewrote the app, the marker still pointed at the 8904 store path and <code>$dst</code> still existed —
+            so the condition was false, the re-copy was skipped, and the drift became permanent. In-place
+            mutation is the one failure mode this guard structurally cannot detect.
+          </p>
+        </div>
+      </article>
+
+      <article class="defect">
+        <div class="num">3</div>
+        <div class="body">
+          <h3>A second copy defeated the store-path workaround</h3>
+          <p>
+            The module's central comment explains why the app is copied to <code>/Applications</code> at all:
+            granting Accessibility to a <em>store</em> path stamps a kernel <code>com.apple.macl</code> xattr that makes
+            the bundle undeletable even by root, which aborts <code>nix.gc</code> for the entire store.
+          </p>
+          <p>
+            But the package was also in <code>environment.systemPackages</code>, which publishes
+            <code>/Applications/Nix&nbsp;Apps/BetterMouse.app</code>. With two bundles sharing one id, LaunchServices
+            resolved <code>open -g /Applications/BetterMouse.app</code> to the store-backed copy — and that is the
+            copy that got the Accessibility grant.
+          </p>
+          <div class="callout">
+            <strong>Confirmed on disk.</strong> <code>com.apple.macl</code> is present on
+            <code>/Applications/Nix&nbsp;Apps/BetterMouse.app</code>. The exact breakage the module was written to
+            prevent had already happened, caused by the module's own package list.
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>Why BetterMouse stops being Nix-managed</h2>
+    <p class="lede">
+      Fixing the guard would close defect 2 and leave the structural problem intact. Four properties of this
+      app fight declarative packaging, and any one of them is disqualifying.
+    </p>
+    <ul class="plain">
+      <li>
+        <strong>It self-updates by design.</strong> Sparkle runs with automatic check and automatic install both on.
+        Any writable copy gets rewritten; the alternative is disabling the updater and hand-bumping a paid app
+        built to stay current.
+      </li>
+      <li>
+        <strong>Its permissions are path-bound.</strong> An event-tap app is useless without Accessibility and Input
+        Monitoring, those grants attach to a specific bundle path, and every version bump moves the store path.
+      </li>
+      <li>
+        <strong>Granting that permission poisons the store.</strong> <code>com.apple.macl</code> on a store path breaks
+        garbage collection globally. The <code>/Applications</code>-copy workaround exists only to dodge this, and sits
+        one stray <code>systemPackages</code> entry away from failing — as it just did.
+      </li>
+      <li>
+        <strong>There is no real release channel.</strong> No GitHub releases; the bumper scraped a WordPress RSS feed
+        that mixes BetterMouse and thePadToo posts, and had already needed one fix for that.
+      </li>
+    </ul>
+    <p>
+      So BetterMouse joins Dropbox (ADR 0005) as a deliberate exception to the pure-Nix-first policy. It is
+      installed and updated entirely through its own GUI, and there is nothing left about it in the flake.
+    </p>
+  </section>
+
+  <section>
+    <h2>What changed in the repo</h2>
+
+    <div class="ledger">
+      <div class="row">
+        <span class="verb del">Deleted</span>
+        <span class="what">pkgs/bettermouse.nix</span>
+        <span class="why">The derivation and its pin.</span>
+      </div>
+      <div class="row">
+        <span class="verb del">Deleted</span>
+        <span class="what">scripts/update-bettermouse.sh</span>
+        <span class="why">The RSS-scraping version bumper.</span>
+      </div>
+      <div class="row">
+        <span class="verb del">Deleted</span>
+        <span class="what">modules/darwin/mouse-display.nix</span>
+        <span class="why">Replaced — the module no longer manages a mouse.</span>
+      </div>
+      <div class="row">
+        <span class="verb add">Added</span>
+        <span class="what">modules/darwin/display.nix</span>
+        <span class="why"><code>martin.display</code>, BetterDisplay only, plus one-shot cleanup of the marker and seed stamp Nix left behind.</span>
+      </div>
+      <div class="row">
+        <span class="verb add">Added</span>
+        <span class="what">docs/adr/0011-bettermouse-is-gui-managed-not-nix-managed.md</span>
+        <span class="why">The decision record this page summarizes.</span>
+      </div>
+      <div class="row">
+        <span class="verb edit">Edited</span>
+        <span class="what">modules/darwin/defaults.nix</span>
+        <span class="why">Pins <code>com.apple.mouse.doubleClickThreshold = 0.5</code> under <code>CustomUserPreferences.NSGlobalDomain</code>, with a matching entry in the settings spec table.</span>
+      </div>
+      <div class="row">
+        <span class="verb edit">Edited</span>
+        <span class="what">tests/integration/*.nix</span>
+        <span class="why">Two guards: <code>darwin-settings-no-bettermouse-agent</code> and <code>darwin-bettermouse-not-nix-managed</code>. Re-adding the scaffold is a regression, not a gap.</span>
+      </div>
+      <div class="row">
+        <span class="verb keep">Kept</span>
+        <span class="what">/Applications/BetterMouse.app</span>
+        <span class="why">Deliberately left on disk — it is the GUI install now, and deleting it takes the Accessibility and Input-Monitoring grants with it.</span>
+      </div>
+      <div class="row">
+        <span class="verb keep">Kept</span>
+        <span class="what">Sparkle auto-update</span>
+        <span class="why">Left enabled. Updating BetterMouse is the app's own job now.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What still needs a human</h2>
+    <ol class="steps">
+      <li>
+        Run <code>just switch</code>. It needs interactive sudo, so it can't be driven from an agent session.
+        That is what removes the <code>bettermouse</code> LaunchAgent, drops
+        <code>/Applications/Nix&nbsp;Apps/BetterMouse.app</code>, and applies the double-click fix.
+      </li>
+      <li>
+        Log out and back in, or reboot. The double-click threshold and the LaunchAgent change are both
+        read at login.
+      </li>
+      <li>
+        Open <strong>System Settings &rarr; Privacy &amp; Security &rarr; Accessibility</strong> and
+        <strong>Input Monitoring</strong>. Two BetterMouse entries at different paths are likely; remove them
+        both and re-grant the one at <code>/Applications/BetterMouse.app</code>.
+      </li>
+      <li>
+        If GC or activation ever fails to remove the old store-backed bundle, clear the xattr first:
+        <code>sudo xattr -rc "/Applications/Nix Apps/BetterMouse.app"</code>.
+      </li>
+    </ol>
+
+    <div class="caveat">
+      <strong>Not verified here.</strong> The <code>nix-daemon</code> is not running on this machine, so
+      <code>nix eval</code> and <code>just build</code> could not be executed. Every changed Nix file was
+      parse-checked clean with <code>nix-instantiate --parse</code>, but a full evaluation of
+      <code>darwinConfigurations.f</code> has not been run — do that before switching.
+    </div>
+  </section>
+
+  <footer>
+    <span>Post-mortem &middot; host f</span>
+    <span>2026-08-17</span>
+    <span>ADR 0011</span>
+    <span>supersedes martin.mouseDisplay</span>
+  </footer>
+
+</div>

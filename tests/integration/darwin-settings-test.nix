@@ -138,6 +138,10 @@ let
     AppleAccentColor = 6;
     AppleScrollerPagingBehavior = true;
     AppleWindowTabbingMode = "always";
+    # macOS ships 0.5s. The System Settings slider bottoms out at 0.15s, where a
+    # double-click must land inside 150ms or the OS delivers two single clicks.
+    # Pinned after the machine was found sitting at the fast extreme by hand.
+    "com.apple.mouse.doubleClickThreshold" = 0.5;
   };
 
   expectedDesktopServices = {
@@ -278,11 +282,21 @@ let
 
   rimeChecks = [
     (expectValue "rime-enabled" cfg.martin.rime.enable true)
+    (expectValue "rime-manage-app-disabled" cfg.martin.rime.manageApp false)
+    # Host "f" runs a manually-built, patched Squirrel fork (~/devv/squirrel),
+    # so martin.rime.manageApp = false keeps nix-darwin from installing the
+    # vanilla pkgs.martin.squirrel build over it. That drops squirrel from
+    # systemPackages and skips the whole copy-into-/Library/Input-Methods
+    # block in postActivation -- both asserted absent below, not present.
     (helpers.assertTest "darwin-settings-rime-squirrel-package"
-      (hasPackage "squirrel" cfg.environment.systemPackages)
-      "rime should install the Squirrel input method into systemPackages")
-    (expectActivation "rime-input-methods-dir" "/Library/Input Methods")
-    (expectActivation "rime-squirrel-link" "Squirrel.app")
+      (!(hasPackage "squirrel" cfg.environment.systemPackages))
+      "rime should not force-install the Squirrel input method package while manageApp is disabled")
+    (helpers.assertTest "darwin-settings-rime-app-not-managed"
+      (
+        !(lib.hasInfix "/Library/Input Methods" postActivation)
+        && !(lib.hasInfix "Squirrel.app" postActivation)
+      )
+      "rime should not touch /Library/Input Methods or Squirrel.app in postActivation while manageApp is disabled")
     (helpers.assertTest "darwin-settings-rime-user-config-sync"
       (
         let act = home.home.activation.rimeUserConfig.data;
@@ -291,32 +305,22 @@ let
       "rime should rsync the MyRime-main tree into ~/Library/Rime on activation")
   ];
 
-  mouseDisplayChecks =
+  # Neither BetterMouse nor BetterDisplay is Nix-managed any more: both ship
+  # Sparkle, which self-updates the writable /Applications copy out from under
+  # the pin. These guards keep the scaffolding from being re-added by reflex.
+  # See docs/adr/0011-bettermouse-is-gui-managed-not-nix-managed.md and
+  # docs/adr/0012-betterdisplay-is-gui-managed-not-nix-managed.md.
+  displayChecks =
     let
       agents = home.launchd.agents;
-      argsHaveApp = agent: appName:
-        lib.any (a: lib.hasInfix appName a) agent.config.ProgramArguments;
-      backgroundLaunch = agent:
-        agent.config.RunAtLoad == true
-        && builtins.elem "/usr/bin/open" agent.config.ProgramArguments
-        && builtins.elem "-g" agent.config.ProgramArguments;
     in
     [
-      (expectValue "mouse-display-enabled" cfg.martin.mouseDisplay.enable true)
-      (helpers.assertTest "darwin-settings-betterdisplay-agent"
-        (
-          (agents ? betterdisplay)
-          && backgroundLaunch agents.betterdisplay
-          && argsHaveApp agents.betterdisplay "BetterDisplay.app"
-        )
-        "BetterDisplay should be a background (open -g) LaunchAgent that runs at load")
-      (helpers.assertTest "darwin-settings-bettermouse-agent"
-        (
-          (agents ? bettermouse)
-          && backgroundLaunch agents.bettermouse
-          && argsHaveApp agents.bettermouse "BetterMouse.app"
-        )
-        "BetterMouse should be a background (open -g) LaunchAgent that runs at load")
+      (helpers.assertTest "darwin-settings-no-betterdisplay-agent"
+        (!(agents ? betterdisplay))
+        "BetterDisplay should have no LaunchAgent: it is managed through its own GUI, not Nix")
+      (helpers.assertTest "darwin-settings-no-bettermouse-agent"
+        (!(agents ? bettermouse))
+        "BetterMouse should have no LaunchAgent: it is managed through its own GUI, not Nix")
     ];
 
   checks =
@@ -327,6 +331,6 @@ let
     ++ powerManagementChecks
     ++ fontChecks
     ++ rimeChecks
-    ++ mouseDisplayChecks;
+    ++ displayChecks;
 in
 helpers.testSuite "darwin-settings" checks

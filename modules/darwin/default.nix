@@ -9,12 +9,12 @@
     ./baseline-activation.nix
     ./background-services.nix
     ./brew-variants.nix
+    ./default-apps.nix
     ./defaults.nix
     ./fonts.nix
     ./hammerspoon.nix
     ./health-check.nix
     ./linux-builder.nix
-    ./mouse-display.nix
     ./nix.nix
     ./rime.nix
     ./security.nix

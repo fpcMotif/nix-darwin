@@ -24,14 +24,19 @@
     hammerspoon.enable = true;
     healthCheck.enable = true;
 
-    mouseDisplay = {
-      enable = true;
-      bettermouse.profile = "${currentSystemUserHome}/MyRime-main/better_mouse_setting_bm_cfg_4958.plist";
-    };
+    # BetterMouse and BetterDisplay are intentionally absent: both are
+    # GUI-managed, not Nix-managed. See
+    # docs/adr/0011-bettermouse-is-gui-managed-not-nix-managed.md and
+    # docs/adr/0012-betterdisplay-is-gui-managed-not-nix-managed.md.
 
     rime = {
       enable = true;
       config = "${currentSystemUserHome}/MyRime-main";
+      # Squirrel.app is a patched fork (~/devv/squirrel, Liquid Glass panel),
+      # built + installed manually and rarely (yearly-ish, on upstream
+      # releases). Keep nix-darwin from overwriting it with the vanilla
+      # pkgs.martin.squirrel build on every switch.
+      manageApp = false;
     };
 
     spotlight.enable = true;
