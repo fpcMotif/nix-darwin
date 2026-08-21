@@ -122,7 +122,12 @@ let
   # id this list refuses (see claudePrunePluginSkills / deniedPluginSkills).
   disabledMattpocockSkills = [
     "grill-me" # the `grilling` + `grill-with-docs` pairing is the tradeoff we want
-    "setup-matt-pocock-skills" # runtime installer that fights this Nix-managed setup
+    # setup-matt-pocock-skills was excluded here as a "runtime installer that
+    # fights this Nix-managed setup". Re-enabled 2026-08-20: it writes only
+    # per-repo files — docs/agents/{issue-tracker,domain,triage-labels}.md and
+    # an `## Agent skills` block in the repo's CLAUDE.md/AGENTS.md — and never
+    # touches ~/.claude or the bundle, so it does not contend with this module.
+    # to-spec / to-tickets / triage are unusable without the config it writes.
   ];
   # Lean curation: niche / one-off skills trimmed from proactive discovery to
   # keep the model's auto-loaded skill catalog compact. Proactive (model)
@@ -155,6 +160,212 @@ let
   # listed here has since been uninstalled outright instead of parked; add an
   # id back to park (disable-but-keep-installed) rather than uninstall it.
   disabledClaudePlugins = [ ];
+
+  # === permissions: nix-owned, authoritative ===
+  # Transcribed verbatim from the live ~/.claude/settings.json on 2026-08-21
+  # (110/5/27 allow/deny/ask rules, defaultMode bypassPermissions), INCLUDING
+  # its current allow/deny split: rm -rf /, rm -rf ~, git push --force, .env/
+  # .pem reads, shell rc read+write, and ~/Library/** all live in `allow`
+  # below — only ~/.ssh, ~/.aws, ~/.gnupg and Keychains are denied. That is
+  # the live file's actual categorization as of this date, kept as-is by
+  # explicit choice rather than "corrected" into claudeDenyRules; see the
+  # comment above that list. The seed (settings.json.tmpl) only ever runs on
+  # a machine with NO settings.json, so none of this was reproducible before:
+  # a fresh host got 13 allow rules and nothing guarding ~/.ssh.
+  #
+  # claudePermissionsAssert below now re-writes these four keys on every switch,
+  # so they survive a `/permissions` edit, a UI toggle, or a wiped settings.json.
+  # AUTHORITATIVE: a rule added at runtime and not listed here is dropped on the
+  # next switch. Add it here instead — that is the point of the block.
+  #
+  # Rule semantics (docs/en/permissions): evaluated deny → ask → allow, first
+  # match wins, and specificity does NOT reorder them. So a deny beats an allow
+  # for the same path, and an ask beats a more specific allow.
+  claudeAllowRules = [
+    "Bash(cliproxyapi -codex-login)"
+    "Bash(cliproxyapi:*)"
+    "Bash(lsof:*)"
+    "Bash(xargs kill -9)"
+    "Bash(nix:*)"
+    "Bash(nix-build:*)"
+    "Bash(nix-shell:*)"
+    "Bash(darwin-rebuild:*)"
+    "Bash(home-manager:*)"
+    "Bash(just:*)"
+    "Bash(make:*)"
+    "Bash(cargo:*)"
+    "Bash(rustc:*)"
+    "Bash(rustup:*)"
+    "Bash(rustfmt:*)"
+    "Bash(bun:*)"
+    "Bash(bunx:*)"
+    "Bash(pnpm:*)"
+    "Bash(node:*)"
+    "Bash(tsx:*)"
+    "Bash(tsc:*)"
+    "Bash(deno:*)"
+    "Bash(biome:*)"
+    "Bash(prettier:*)"
+    "Bash(eslint:*)"
+    "Bash(vitest:*)"
+    "Bash(uv:*)"
+    "Bash(uvx:*)"
+    "Bash(python3:*)"
+    "Bash(ruff:*)"
+    "Bash(pytest:*)"
+    "Bash(mypy:*)"
+    "Bash(pyright:*)"
+    "Bash(go:*)"
+    "Bash(gofmt:*)"
+    "Bash(swift:*)"
+    "Bash(swiftc:*)"
+    "Bash(xcrun:*)"
+    "Bash(fd:*)"
+    "Bash(eza:*)"
+    "Bash(bat:*)"
+    "Bash(rg:*)"
+    "Bash(dust:*)"
+    "Bash(procs:*)"
+    "Bash(btm:*)"
+    "Bash(delta:*)"
+    "Bash(zoxide:*)"
+    "Bash(jq:*)"
+    "Bash(yq:*)"
+    "Bash(ast-grep:*)"
+    "Bash(sg:*)"
+    "Bash(codedb:*)"
+    "Bash(gh:*)"
+    "Bash(git status:*)"
+    "Bash(git diff:*)"
+    "Bash(git log:*)"
+    "Bash(git show:*)"
+    "Bash(git branch:*)"
+    "Bash(git stash list)"
+    "Bash(mkdir:*)"
+    "Bash(ln:*)"
+    "Read(~/.claude/**)"
+    "Edit(~/.claude/**)"
+    "Write(~/.claude/**)"
+    "Read(~/.agents/**)"
+    "mcp__fff__find_files"
+    "mcp__fff__grep"
+    "mcp__fff__multi_grep"
+
+    # Mirrors the live settings.json's `allow` list verbatim from here down —
+    # these are the entries a stricter config would put in claudeDenyRules
+    # (see the comment there), but live keeps them here, so this does too.
+    "Bash(rm -rf /)"
+    "Bash(rm -rf /*)"
+    "Bash(rm -rf ~)"
+    "Bash(rm -rf ~/*)"
+    "Bash(git push --force:*)"
+    "Bash(git push -f:*)"
+    "Read(**/.env)"
+    "Read(**/.env.*)"
+    "Read(**/*.pem)"
+    "Read(~/.netrc)"
+    "Read(~/.npmrc)"
+    "Read(~/.pypirc)"
+    "Read(~/.docker/config.json)"
+    "Read(~/.config/gh/**)"
+    "Read(~/.claude.json)"
+    "Read(~/Library/Application Support/Claude/config.json)"
+    "Read(~/Library/**)"
+    "Read(~/.claude/projects/**/*.jsonl)"
+    "Read(~/.claude/sessions/**)"
+    "Read(~/.claude/session-env/**)"
+    "Read(~/.claude/history.jsonl)"
+    "Read(~/.zshrc)"
+    "Read(~/.zshenv)"
+    "Read(~/.zprofile)"
+    "Read(~/.bashrc)"
+    "Read(~/.bash_profile)"
+    "Read(~/.zsh_history)"
+    "Read(~/.bash_history)"
+    "Read(~/.viminfo)"
+    "Read(~/.zsh_sessions/**)"
+    "Edit(~/.zshrc)"
+    "Write(~/.zshrc)"
+    "Edit(~/.zshenv)"
+    "Write(~/.zshenv)"
+    "Edit(~/.zprofile)"
+    "Write(~/.zprofile)"
+    "Edit(~/.bashrc)"
+    "Write(~/.bashrc)"
+    "Edit(~/.bash_profile)"
+    "Write(~/.bash_profile)"
+  ];
+
+  # Minimal deny list, kept intentionally short to mirror the live
+  # ~/.claude/settings.json verbatim (2026-08-21): only credential-bearing
+  # directories are denied here. Everything a stricter config would also deny
+  # — rm -rf /, rm -rf ~, git push --force, .env/.pem reads, shell rc
+  # read+write, ~/Library/** — sits in claudeAllowRules above instead, by
+  # explicit choice, even though defaultMode is bypassPermissions and none of
+  # it is gated by a prompt as a result. grill-me is folded in via
+  # deniedPluginSkills below, not restated here.
+  #
+  # ~/.claude/managed-settings-privacy.json, which used to be this list's
+  # source, is a file Claude Code does NOT read (the real managed path is
+  # /Library/Application Support/ClaudeCode/managed-settings.json — the
+  # shipped binary has 30 references to that name and none to the privacy
+  # one); it is inert and can be deleted.
+  claudeDenyRules = [
+    "Read(~/.ssh/**)"
+    "Read(~/.aws/**)"
+    "Read(~/.gnupg/**)"
+    "Read(~/Library/Keychains/**)"
+    "Edit(~/Library/**)"
+    "Write(~/Library/**)"
+  ];
+
+  # Prompt-before-touching, for the home dirs outside a normal working tree.
+  # Written by Claude Code itself when a directory-access prompt is answered
+  # (hence the Read/Edit/Write triple per dir); pinned here so a fresh machine
+  # inherits the same boundary instead of re-learning it one prompt at a time.
+  # Note these mostly go quiet under defaultMode bypassPermissions, which skips
+  # prompts — they are the fallback for any session started in another mode.
+  claudeAskRules = [
+    "Read(~/Applications/**)"
+    "Edit(~/Applications/**)"
+    "Write(~/Applications/**)"
+    "Read(~/Documents/**)"
+    "Edit(~/Documents/**)"
+    "Write(~/Documents/**)"
+    "Read(~/Downloads/**)"
+    "Edit(~/Downloads/**)"
+    "Write(~/Downloads/**)"
+    "Read(~/Movies/**)"
+    "Edit(~/Movies/**)"
+    "Write(~/Movies/**)"
+    "Read(~/Music/**)"
+    "Edit(~/Music/**)"
+    "Write(~/Music/**)"
+    "Read(~/Pictures/**)"
+    "Edit(~/Pictures/**)"
+    "Write(~/Pictures/**)"
+    "Read(~/Public/**)"
+    "Edit(~/Public/**)"
+    "Write(~/Public/**)"
+    "Read(~/.*)"
+    "Edit(~/.*)"
+    "Write(~/.*)"
+    "Read(~/*.*)"
+    "Edit(~/*.*)"
+    "Write(~/*.*)"
+  ];
+
+  # The exact object merged over `.permissions` each switch. deny appends
+  # deniedPluginSkills rather than restating it, so this block and
+  # claudeSkillSurfaceDedup can never disagree about grill-me and fight each
+  # other into a rewrite-every-switch loop.
+  claudePermissions = {
+    defaultMode = "bypassPermissions";
+    allow = claudeAllowRules;
+    deny = lib.unique (claudeDenyRules ++ deniedPluginSkills);
+    ask = claudeAskRules;
+  };
+
   mpSources = listToAttrs (map
     (b: {
       name = "mp-${b}";
@@ -217,59 +428,6 @@ let
   # because a version bump writes a fresh cache dir; the deny rule is
   # version-independent and covers the window in between.
   deniedPluginSkills = map (id: "Skill(mattpocock-skills:${id})") disabledMattpocockSkills;
-
-  # Diagnostic wrapper for Claude Code Stop hooks. Intercepts a plugin's
-  # Stop hook invocation, captures stdin/stdout/stderr/exit-code/duration
-  # to ~/.claude/debug-logs/stop-hooks.log, then forwards everything
-  # transparently so plugin behaviour is unchanged.
-  #
-  # Used to diagnose "Stop hook error: Failed with non-blocking status
-  # code: No stderr output" — pinpoints which plugin hook silently exits
-  # non-zero. Activated by claudeStopHookDebug below, which rewrites the
-  # 3 installed plugin Stop hook configs to dispatch through this script.
-  stopHookDebug = pkgs.writeShellScript "stop-hook-debug" ''
-    set -uo pipefail
-
-    LOG_DIR="''${CLAUDE_STOP_HOOK_LOG_DIR:-$HOME/.claude/debug-logs}"
-    mkdir -p "$LOG_DIR"
-    LOG_FILE="$LOG_DIR/stop-hooks.log"
-
-    HOOK_ID="''${1:-unknown}"
-    shift || true
-
-    STDIN_FILE=$(mktemp -t claude-stop-stdin.XXXXXX)
-    STDOUT_FILE=$(mktemp -t claude-stop-stdout.XXXXXX)
-    STDERR_FILE=$(mktemp -t claude-stop-stderr.XXXXXX)
-    trap 'rm -f "$STDIN_FILE" "$STDOUT_FILE" "$STDERR_FILE"' EXIT
-
-    cat > "$STDIN_FILE"
-
-    START_NS=$(${pkgs.coreutils}/bin/date +%s%N)
-    "$@" < "$STDIN_FILE" > "$STDOUT_FILE" 2> "$STDERR_FILE"
-    EXIT_CODE=$?
-    END_NS=$(${pkgs.coreutils}/bin/date +%s%N)
-    DURATION_MS=$(( (END_NS - START_NS) / 1000000 ))
-
-    {
-      printf '===== %s hook=%s exit=%d duration=%dms\n' \
-        "$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)" \
-        "$HOOK_ID" "$EXIT_CODE" "$DURATION_MS"
-      printf -- '--- CWD: %s\n' "$PWD"
-      printf -- '--- COMMAND: %s\n' "$*"
-      printf -- '--- STDIN (%d bytes):\n' "$(${pkgs.coreutils}/bin/wc -c < "$STDIN_FILE")"
-      ${pkgs.coreutils}/bin/head -c 8192 "$STDIN_FILE"; printf '\n'
-      printf -- '--- STDOUT (%d bytes):\n' "$(${pkgs.coreutils}/bin/wc -c < "$STDOUT_FILE")"
-      ${pkgs.coreutils}/bin/head -c 8192 "$STDOUT_FILE"; printf '\n'
-      printf -- '--- STDERR (%d bytes):\n' "$(${pkgs.coreutils}/bin/wc -c < "$STDERR_FILE")"
-      ${pkgs.coreutils}/bin/head -c 8192 "$STDERR_FILE"; printf '\n'
-      printf '===== end\n\n'
-    } >> "$LOG_FILE"
-
-    ${pkgs.coreutils}/bin/cat "$STDOUT_FILE"
-    ${pkgs.coreutils}/bin/cat "$STDERR_FILE" >&2
-
-    exit "$EXIT_CODE"
-  '';
 
   # Effect-TS/skills. Upstream publishes flat under `skills/<name>/SKILL.md`
   # (currently just `effect-ts`). This source stays DEFINED but is no longer
@@ -349,50 +507,7 @@ in
         source = dotClaude + "/executable_statusline-command.sh";
         executable = true;
       };
-      ".claude/hooks/stop-hook-debug.sh" = {
-        source = stopHookDebug;
-        executable = true;
-      };
     } // localSkillFiles;
-
-  # === Stop hook diagnostic instrumentation ===
-  # Idempotently rewrites the 3 installed plugin Stop hook configs to
-  # dispatch through stop-hook-debug.sh, which logs stdin/stdout/stderr/
-  # exit-code to ~/.claude/debug-logs/stop-hooks.log. Original commands
-  # are preserved in a sibling `.orig` file the first time we touch them
-  # so they can be restored (`mv hooks.json.orig hooks.json`) when
-  # diagnosis is done and this block is removed.
-  #
-  # Re-runs on every `darwin-rebuild switch`. Plugin updates that
-  # refresh the cached hooks.json will revert the wrapping; next switch
-  # re-applies it.
-  home.activation.claudeStopHookDebug = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    wrap_stop_hook() {
-      local hook_id="$1" file="$2"
-      [ -f "$file" ] || { echo "stop-hook-debug: missing $file, skipping" >&2; return 0; }
-
-      # Already wrapped? `any` over all entries (not just [0]) avoids
-      # re-wrap stacking if a plugin update reorders Stop hook entries.
-      if ${pkgs.jq}/bin/jq -e --arg w "stop-hook-debug.sh" \
-          '[.hooks.Stop[]?.hooks[]?.command | contains($w)] | any' "$file" >/dev/null 2>&1; then
-        return 0
-      fi
-
-      [ -f "$file.orig" ] || cp "$file" "$file.orig"
-
-      local tmp
-      tmp=$(mktemp)
-      ${pkgs.jq}/bin/jq \
-        --arg wrapper "${homeDir}/.claude/hooks/stop-hook-debug.sh" \
-        --arg hookid "$hook_id" \
-        '.hooks.Stop |= map(.hooks |= map(.command = ($wrapper + " " + $hookid + " " + .command)))' \
-        "$file" > "$tmp" && mv "$tmp" "$file"
-      echo "stop-hook-debug: wrapped $hook_id ($file)" >&2
-    }
-
-    base="${homeDir}/.claude/plugins/cache"
-    wrap_stop_hook codex "$base/openai-codex/codex/1.0.4/hooks/hooks.json"
-  '';
 
   # Git-flow style automation was removed from the curated sources instead of
   # parked. Delete any stale mirrors or cached session copies left by earlier
@@ -476,7 +591,12 @@ in
   # precedence is user < project < local < flag < policy, so a project-level
   # `"on"` would win. Nothing in this repo sets one; verify-agent-skills.sh
   # reports it if one appears.
-  home.activation.claudeSkillSurfaceDedup = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
+  # Ordered after claudePermissionsAssert, not just the seed: that block owns
+  # `permissions.deny` outright, so this one must run on the already-asserted
+  # list. Its deny half is a no-op in steady state (claudePermissions folds
+  # deniedPluginSkills in) and survives only as the guard for the window where
+  # a hand-edit strips the Skill rule mid-cycle.
+  home.activation.claudeSkillSurfaceDedup = lib.hm.dag.entryAfter [ "claudePermissionsAssert" ] ''
     target="${homeDir}/.claude/settings.json"
     if [ ! -f "$target" ]; then
       echo "claude-skill-dedup: missing $target, skipping" >&2
@@ -547,6 +667,38 @@ in
     target="${homeDir}/.claude/settings.json"
     if [ ! -e "$target" ]; then
       run install -m 0644 ${renderChezmoi (dotClaude + "/settings.json.tmpl")} "$target"
+    fi
+  '';
+
+  # === permissions: re-asserted every switch ===
+  # Same seed-once-then-own-a-few-keys shape as claudeSkillSurfaceDedup and
+  # claudeDisableGlobalMcpPlugins, but AUTHORITATIVE rather than additive: the
+  # four keys in claudePermissions are set to the nix value, so a rule added by
+  # hand or by a `/permissions` click is reverted on the next switch. That is
+  # deliberate — an additive merge lets the live file accumulate rules nix can
+  # never reproduce, which is exactly the drift this block exists to end.
+  #
+  # `.permissions + $perms` rather than `.permissions = $perms`: it overwrites
+  # only the four keys we declare and preserves any sibling key Claude Code
+  # adds later (additionalDirectories, disableBypassPermissionsMode, …) instead
+  # of silently deleting it.
+  home.activation.claudePermissionsAssert = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
+    target="${homeDir}/.claude/settings.json"
+    if [ ! -f "$target" ]; then
+      echo "claude-permissions: missing $target, skipping" >&2
+    elif [ -n "''${DRY_RUN:-}" ]; then
+      echo "claude-permissions: would assert ${toString (builtins.length claudePermissions.allow)} allow / ${toString (builtins.length claudePermissions.deny)} deny / ${toString (builtins.length claudePermissions.ask)} ask rules, defaultMode ${claudePermissions.defaultMode}" >&2
+    else
+      tmp=$(mktemp)
+      if ${pkgs.jq}/bin/jq \
+          --argjson perms ${lib.escapeShellArg (builtins.toJSON claudePermissions)} \
+          '.permissions = ((.permissions // {}) + $perms)' \
+          "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
+        mv -- "$tmp" "$target"
+        echo "claude-permissions: re-asserted permissions in $target" >&2
+      else
+        rm -f -- "$tmp"
+      fi
     fi
   '';
 

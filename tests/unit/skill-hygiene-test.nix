@@ -25,7 +25,7 @@ let
   upstreamIds = lib.unique (lib.concatMap bucketIds [ "engineering" "productivity" "misc" ]);
 
   # RESTATED, not imported — must match modules/home/claude.nix by hand.
-  disabled = [ "grill-me" "setup-matt-pocock-skills" ];
+  disabled = [ "grill-me" ];
   leanExcluded = [
     "git-guardrails-claude-code"
     "migrate-to-shoehorn"

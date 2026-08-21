@@ -203,6 +203,31 @@ let
         )
         "${prefix} should keep the reproducible global-plugin-disable lever wired, even with no ids currently parked")
 
+      # Permissions are nix-owned and AUTHORITATIVE: the live settings.json had
+      # drifted to 68/47/45 rules against a 13/0/0 seed, so a fresh host got no
+      # ~/.ssh deny at all. Pin the three properties that make it reproducible.
+      (helpers.assertTest "${prefix}-claude-permissions-asserted"
+        (
+          let activation = homeActivation.claudePermissionsAssert.data;
+          in
+          # The security boundary that still bites under bypassPermissions.
+          lib.hasInfix ''Read(~/.ssh/**)'' activation
+          && lib.hasInfix ''"defaultMode":"bypassPermissions"'' activation
+          # `+` not `=`: overwrite the declared keys, keep sibling keys Claude
+          # Code may add later (additionalDirectories, …).
+          && lib.hasInfix "((.permissions // {}) + $perms)" activation
+          && lib.hasInfix "DRY_RUN" activation
+        )
+        "${prefix} should re-assert the nix-owned permission rules on every switch, not just seed them once")
+
+      # The deny key has exactly one writer in steady state. If the dedup block
+      # stopped running after the assert block, the two would disagree about
+      # grill-me and rewrite settings.json on every single switch, forever.
+      (helpers.assertTest "${prefix}-claude-permissions-single-deny-writer"
+        (homeActivation.claudeSkillSurfaceDedup.data or null != null
+          && builtins.elem "claudePermissionsAssert" homeActivation.claudeSkillSurfaceDedup.after)
+        "${prefix} should order the skill-dedup deny append after the authoritative permissions assert")
+
       # The three assertions below pin the Claude-only de-duplication contract:
       # hide the bundle copy from Claude (and ONLY Claude), un-list the refused
       # plugin skills, and never let either lever reach the shared bundle that
@@ -223,10 +248,10 @@ let
           let activation = homeActivation.claudePrunePluginSkills.data;
           in
           lib.hasInfix "grill-me" activation
-          && lib.hasInfix "setup-matt-pocock-skills" activation
+          && !(lib.hasInfix "setup-matt-pocock-skills" activation)
           && lib.hasInfix ".claude-plugin/plugin.json" activation
         )
-        "${prefix} should prune grill-me and setup-matt-pocock-skills out of the cached mattpocock-skills plugin manifest — skillOverrides cannot reach a plugin skill")
+        "${prefix} should prune grill-me out of the cached mattpocock-skills plugin manifest — skillOverrides cannot reach a plugin skill — while leaving setup-matt-pocock-skills reachable")
 
       (helpers.assertTest "${prefix}-agent-skills-full-set-on-non-claude-targets"
         (
