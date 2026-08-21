@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from collections import Counter
+import re
 
 
 KNOWN_TYPES = {
@@ -201,9 +202,8 @@ def queue_prompt(record):
 def text_preview(text, limit=160):
     if text is None:
         return ""
-    value = str(text).replace("\r", " ").replace("\n", " ").replace("\t", " ")
-    while "  " in value:
-        value = value.replace("  ", " ")
+    # ⚡ Bolt: Use regex to prevent O(n²) worst-case when collapsing whitespace
+    value = re.sub(r'\s+', ' ', str(text))
     if len(value) <= limit:
         return value
     if limit <= 1:
