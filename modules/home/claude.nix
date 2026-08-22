@@ -189,7 +189,9 @@ let
     "Bash(nix:*)"
     "Bash(nix-build:*)"
     "Bash(nix-shell:*)"
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     "Bash(darwin-rebuild:*)"
+  ] ++ [
     "Bash(home-manager:*)"
     "Bash(just:*)"
     "Bash(make:*)"
@@ -219,7 +221,9 @@ let
     "Bash(gofmt:*)"
     "Bash(swift:*)"
     "Bash(swiftc:*)"
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     "Bash(xcrun:*)"
+  ] ++ [
     "Bash(fd:*)"
     "Bash(eza:*)"
     "Bash(bat:*)"
@@ -269,8 +273,10 @@ let
     "Read(~/.docker/config.json)"
     "Read(~/.config/gh/**)"
     "Read(~/.claude.json)"
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     "Read(~/Library/Application Support/Claude/config.json)"
     "Read(~/Library/**)"
+  ] ++ [
     "Read(~/.claude/projects/**/*.jsonl)"
     "Read(~/.claude/sessions/**)"
     "Read(~/.claude/session-env/**)"
@@ -325,10 +331,11 @@ let
   # inherits the same boundary instead of re-learning it one prompt at a time.
   # Note these mostly go quiet under defaultMode bypassPermissions, which skips
   # prompts — they are the fallback for any session started in another mode.
-  claudeAskRules = [
+  claudeAskRules = lib.optionals pkgs.stdenv.isDarwin [
     "Read(~/Applications/**)"
     "Edit(~/Applications/**)"
     "Write(~/Applications/**)"
+  ] ++ [
     "Read(~/Documents/**)"
     "Edit(~/Documents/**)"
     "Write(~/Documents/**)"
