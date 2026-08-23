@@ -36,7 +36,7 @@ let
   sources = {
     "aarch64-darwin" = {
       url = "https://github.com/oven-sh/bun/releases/download/canary/bun-darwin-aarch64.zip";
-      hash = "sha256-0BG9P9OQwmfDw26ILdtgxvwz0E0A0CVe8Km1t1NmDqE=";
+      hash = "sha256-5uTeai1IJOo2U5h/VoDVYVQdBIp9iaGriiurcOyI3Fs=";
     };
   };
 
