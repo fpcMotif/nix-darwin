@@ -189,8 +189,10 @@ let
     "Bash(nix:*)"
     "Bash(nix-build:*)"
     "Bash(nix-shell:*)"
-    "Bash(darwin-rebuild:*)"
     "Bash(home-manager:*)"
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
+    "Bash(darwin-rebuild:*)"
+  ] ++ [
     "Bash(just:*)"
     "Bash(make:*)"
     "Bash(cargo:*)"
@@ -219,7 +221,9 @@ let
     "Bash(gofmt:*)"
     "Bash(swift:*)"
     "Bash(swiftc:*)"
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     "Bash(xcrun:*)"
+  ] ++ [
     "Bash(fd:*)"
     "Bash(eza:*)"
     "Bash(bat:*)"
@@ -269,8 +273,10 @@ let
     "Read(~/.docker/config.json)"
     "Read(~/.config/gh/**)"
     "Read(~/.claude.json)"
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     "Read(~/Library/Application Support/Claude/config.json)"
     "Read(~/Library/**)"
+  ] ++ [
     "Read(~/.claude/projects/**/*.jsonl)"
     "Read(~/.claude/sessions/**)"
     "Read(~/.claude/session-env/**)"
@@ -314,6 +320,7 @@ let
     "Read(~/.ssh/**)"
     "Read(~/.aws/**)"
     "Read(~/.gnupg/**)"
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     "Read(~/Library/Keychains/**)"
     "Edit(~/Library/**)"
     "Write(~/Library/**)"
@@ -326,10 +333,12 @@ let
   # Note these mostly go quiet under defaultMode bypassPermissions, which skips
   # prompts — they are the fallback for any session started in another mode.
   claudeAskRules = [
+    "Read(~/Documents/**)"
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     "Read(~/Applications/**)"
     "Edit(~/Applications/**)"
     "Write(~/Applications/**)"
-    "Read(~/Documents/**)"
+  ] ++ [
     "Edit(~/Documents/**)"
     "Write(~/Documents/**)"
     "Read(~/Downloads/**)"
