@@ -273,8 +273,10 @@ let
     "Read(~/.docker/config.json)"
     "Read(~/.config/gh/**)"
     "Read(~/.claude.json)"
+  ] ++ lib.optionals pkgs.stdenv.isDarwin [
     "Read(~/Library/Application Support/Claude/config.json)"
     "Read(~/Library/**)"
+  ] ++ [
     "Read(~/.claude/projects/**/*.jsonl)"
     "Read(~/.claude/sessions/**)"
     "Read(~/.claude/session-env/**)"
