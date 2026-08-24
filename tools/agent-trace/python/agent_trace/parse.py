@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from collections import Counter
 
@@ -198,12 +199,12 @@ def queue_prompt(record):
     return None
 
 
+WHITESPACE_RE = re.compile(r'\s+')
+
 def text_preview(text, limit=160):
     if text is None:
         return ""
-    value = str(text).replace("\r", " ").replace("\n", " ").replace("\t", " ")
-    while "  " in value:
-        value = value.replace("  ", " ")
+    value = WHITESPACE_RE.sub(' ', str(text))
     if len(value) <= limit:
         return value
     if limit <= 1:
