@@ -12,6 +12,8 @@
 #   * migrated Home Manager program modules are enabled
 #   * darwin-only agent packages are gated to darwin
 #   * system-level zsh stays on (this IS owned by Nix, not unmanaged dotfiles)
+#   * the martin.shell.search plane is on by default (^G chords, fzf-git-sh
+#     packaged) and its Ghostty keybind veneer appears only on darwin
 { pkgs
 , lib
 , evalScope ? "auto"
@@ -71,15 +73,17 @@ let
   # configuration; these only cover the off/derivation side of the toggle.
   zshViOff = (import ../lib/zsh-module-eval.nix { inherit pkgs lib; }) { viMode = false; };
   zshViOn = (import ../lib/zsh-module-eval.nix { inherit pkgs lib; }) { };
+  zshSearchOff = (import ../lib/zsh-module-eval.nix { inherit pkgs lib; }) { searchEnable = false; };
+  zshDirJumpNull = (import ../lib/zsh-module-eval.nix { inherit pkgs lib; }) { dirJumpNull = true; };
 
   viModeToggleChecks = [
     (helpers.assertTest "home-zsh-vi-mode-off-default-keymap-emacs"
       (zshViOff.programs.zsh.defaultKeymap == "emacs")
       "Disabling martin.shell.viMode must restore the emacs default keymap")
 
-    (helpers.assertTest "home-zsh-vi-mode-off-plugins-empty"
-      (zshViOff.programs.zsh.plugins == [ ])
-      "Disabling martin.shell.viMode must drop the plugin list entirely")
+    (helpers.assertTest "home-zsh-vi-mode-off-no-plugin"
+      (!(lib.any (p: p.name == "zsh-vi-mode") zshViOff.programs.zsh.plugins))
+      "Disabling martin.shell.viMode must drop the zsh-vi-mode plugin")
 
     (helpers.assertTest "home-zsh-vi-mode-off-no-zvm-wiring"
       (!(lib.hasInfix "ZVM_INIT_MODE" zshViOff.programs.zsh.initContent))
@@ -89,6 +93,32 @@ let
       (zshViOn.programs.zsh.defaultKeymap == "viins"
         && builtins.length zshViOn.programs.zsh.plugins == 1)
       "Default-evaluated module must land in viins with exactly the zsh-vi-mode plugin (runtime wiring is the unit seam's job)")
+  ];
+
+  # Same seam, second plane: martin.shell.search. Proves the toggle drops
+  # every trace of the search machinery and that per-key nulls remove only
+  # their own chord.
+  searchToggleChecks = [
+    (helpers.assertTest "home-zsh-search-off-no-stty"
+      (!(lib.hasInfix "stty -ixon" zshSearchOff.programs.zsh.initContent))
+      "Disabling martin.shell.search must drop the stty -ixon preamble")
+
+    (helpers.assertTest "home-zsh-search-off-no-widgets"
+      (!(lib.hasInfix "martin-content-search" zshSearchOff.programs.zsh.initContent))
+      "Disabling martin.shell.search must leave no content-search widgets behind")
+
+    (helpers.assertTest "home-zsh-search-off-no-plugin-or-package"
+      (!(lib.any (p: p.name == "fzf-git-sh") zshSearchOff.programs.zsh.plugins)
+        && !(hasPackage "fzf-git-sh" (zshSearchOff.home.packages or [ ])))
+      "Disabling martin.shell.search must drop fzf-git-sh from both plugins and home.packages")
+    (helpers.assertTest "home-zsh-search-null-dirjump-chord-gone"
+      (!(lib.hasInfix "'^Gd'" zshDirJumpNull.programs.zsh.initContent)
+        && lib.hasInfix "'^Gf'" zshDirJumpNull.programs.zsh.initContent)
+      "Setting martin.shell.search.keys.dirJump to null must remove only the ^Gd chord")
+
+    (helpers.assertTest "home-zsh-search-default-stty-present"
+      (lib.hasInfix "stty -ixon" zshViOn.programs.zsh.initContent)
+      "The default evaluation must keep the search-plane stty -ixon preamble")
   ];
 
   homeChecks = prefix: homeConfig: expectedHomeDirectory:
@@ -364,6 +394,42 @@ let
           && desktopOk
         )
         "${prefix} LSP activation scripts should respect Home Manager dry runs without exiting activation")
+
+      (helpers.assertTest "${prefix}-home-zsh-search-baseline"
+        (homeConfig.martin.shell.search.enable == true
+          && homeConfig.martin.shell.search.prefix == "^G"
+          && homeConfig.martin.shell.search.keys.contentSearch == "f"
+          && homeConfig.martin.shell.search.keys.dirJump == "d"
+          && homeConfig.martin.shell.search.keys.processKill == "k")
+        "${prefix} Home Manager should enable martin.shell.search with the documented ^G chord set")
+
+      (helpers.assertTest "${prefix}-home-fzf-git-sh-packaged"
+        (hasHomePackage "fzf-git-sh")
+        "${prefix} Home Manager should package fzf-git-sh for the search plane")
+
+      (helpers.assertTest "${prefix}-home-ghostty-keybinds-unique"
+        (
+          let
+            keybindTriggers = map
+              (line: lib.head (lib.splitString "=" (lib.removePrefix "keybind = " line)))
+              (lib.filter (lib.hasPrefix "keybind = ")
+                (lib.splitString "\n" homeXdg.configFile."ghostty/config".text));
+          in
+          (builtins.length (lib.unique keybindTriggers)) == builtins.length keybindTriggers
+        )
+        "${prefix} Ghostty keybind triggers must be globally unique -- a future group collision must fail the build, not steal a chord silently")
+
+      (helpers.assertTest "${prefix}-home-ghostty-search-veneer"
+        (
+          let text = homeXdg.configFile."ghostty/config".text;
+          in if prefix == "darwin" then
+            lib.all (t: lib.hasInfix "keybind = ${t}=text:" text)
+              [ "cmd+f" "cmd+j" "cmd+shift+k" "cmd+b" ]
+          else
+            !(lib.any (t: lib.hasInfix "keybind = ${t}=text:" text)
+              [ "cmd+f" "cmd+j" "cmd+shift+k" "cmd+b" ])
+        )
+        "${prefix} Ghostty config must carry the search keybind veneer exactly on darwin and nowhere else")
     ];
 
   darwinChecks = [
@@ -604,7 +670,7 @@ let
     (helpers.assertTest "darwin-zed-settings-force-managed"
       (darwinHome.xdg.configFile."zed/settings.json".force == true)
       "Darwin Home Manager should force-manage Zed settings so an equivalent regular file cannot block activation")
-  ] ++ viModeToggleChecks ++ (homeChecks "darwin" darwinHome "/Users/${user}");
+  ] ++ viModeToggleChecks ++ searchToggleChecks ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
   nixosChecks = [
     (toplevelEvaluatesOnNative "wsl" "x86_64-linux" wslConfig)
@@ -664,6 +730,7 @@ let
       "Linux Home Manager package lists must never include the Darwin-only zed-nightly-bin")
   ]
   ++ viModeToggleChecks
+  ++ searchToggleChecks
   ++ (homeChecks "wsl" wslHome "/home/${user}")
   ++ (homeChecks "x230" x230Home "/home/${user}")
   ++ (homeChecks "vm-aarch64-utm" vmHome "/home/${user}");

@@ -4,6 +4,7 @@ let
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
 
   viMode = config.martin.shell.viMode;
+  search = config.martin.shell.search;
 
   # Plugin cursor names -> the ZVM_*_MODE_CURSOR codes they map to.
   viCursorCode = {
@@ -111,10 +112,74 @@ in
       '';
     };
   };
+  # Prompt search plane -- see CONTEXT.md "Prompt search plane". The prefix
+  # is a chord over zsh's ZLE, so it works identically in Ghostty, kitty,
+  # tmux, and over ssh. martin.terminal.ghostty.search (opt-in) only TYPES
+  # the same chords; this module owns their meaning.
+
+
+  options.martin.shell.search = {
+    enable = lib.mkEnableOption "the prompt search plane: a ^G-prefixed zsh key plane over the fzf pickers" // {
+      default = true;
+    };
+
+    prefix = lib.mkOption {
+      type = lib.types.str;
+      default = "^G";
+      description = ''
+        Search-plane prefix in two-character caret form ("^G"). It is
+        explicitly removed from every keymap the plane binds, keeping it a
+        PURE prefix: with KEYTIMEOUT=1 an ambiguously bound prefix makes
+        two-key chords untypable.
+      '';
+    };
+
+    gitObjects.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Source fzf-git.sh and install its ^G CTRL-key plane (files,
+        branches, tags, remotes, hashes, stashes, reflogs, each-ref,
+        worktrees). Upstream also self-binds plain-letter fallback forms;
+        this module strips those back out so the namespace split holds:
+        CTRL-key belongs to upstream, plain letters to this repo.
+      '';
+    };
+
+    keys = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          contentSearch = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = "f";
+            description = "Letter for the ripgrep content picker (inserts the path at cursor); null unbinds.";
+          };
+
+          dirJump = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = "d";
+            description = "Letter for the zoxide interactive directory jump; null unbinds.";
+          };
+
+          processKill = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = "k";
+            description = "Letter for the process kill picker; null unbinds.";
+          };
+        };
+      };
+      default = { };
+      description = "Plain letters under the prefix for this repo's pickers.";
+    };
+  };
 
   # Everything below is configuration; the module also declares options
   # above, so the module system requires this explicit `config` attribute.
   config = {
+    home.packages = lib.optionals (search.enable && search.gitObjects.enable) [
+      pkgs.fzf-git-sh
+    ];
+
     home.sessionVariables = {
       EDITOR = "nvim";
       VISUAL = "nvim";
@@ -431,6 +496,23 @@ in
         # register into a hook that has already run. The plain user init below
         # is the default-order (1000) member of this merge.
         (lib.mkOrder 880 ''
+          # ── martin.shell.search: prompt search plane ──
+          ${lib.optionalString search.enable ''
+            # Free ^S/^Q from terminal flow control so fzf-git.sh's stash
+            # picker (^G^S) works; upstream requirement, no downside today.
+            # Interactive guard: zshrc fragments can run with stdin off a tty.
+            [[ -o interactive ]] && command stty -ixon 2>/dev/null || :
+          ''}
+          ${lib.optionalString (search.enable && search.gitObjects.enable) ''
+            source "${pkgs.fzf-git-sh}/share/fzf-git-sh/fzf-git.sh"
+            # Upstream binds at source time; zsh-vi-mode resets keymaps after
+            # that, so re-register its init to run INSIDE the plugin's hook.
+            # Registered BEFORE _martin_zle_binds_vi below, which then binds
+            # this repo's plain letters -- configured letters win collisions
+            # by hook ordering (upstream's own '^g<letter>' fallback forms).
+            zvm_after_init_commands+=( _martin_fzf_git_rebind )
+          ''}
+
           ${lib.concatStringsSep "\n"
             (lib.optionals viMode.enable (
               [
@@ -460,6 +542,60 @@ in
           autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
           zle -N up-line-or-beginning-search
           zle -N down-line-or-beginning-search
+
+          ${lib.optionalString (search.enable && search.gitObjects.enable) ''
+            # Re-run fzf-git.sh's own installer after zsh-vi-mode's keymap
+            # reset. stderr is silenced: under vi mode upstream also binds
+            # into the emacs keymap, which may not exist post-reset.
+            _martin_fzf_git_rebind() {
+              (( $+functions[__fzf_git_init] )) || return
+              __fzf_git_init files branches tags remotes hashes stashes lreflogs each_ref worktrees '?list_bindings' 2>/dev/null
+            }
+          ''}
+
+          ${lib.optionalString search.enable ''
+            # Prompt search plane widgets, two behavioral classes.
+            # Insert-into-buffer: content search pastes the selected path at
+            # the cursor; the rest of the typed line stays untouched, and a
+            # cancel is a no-op on the buffer. Run-and-restore: dir jump /
+            # process kill take their side effect, then zle -I discards any
+            # stray child output before reset-prompt redraws the prompt with
+            # the half-typed line intact. The pickers themselves are fif,
+            # fkill and zoxide unchanged -- this adds keys, not behavior.
+            martin-content-search-widget() {
+              local query sel
+              # Seed the query from the word before the cursor; ZLE cannot
+              # nest vared for an interactive fallback, so with nothing typed
+              # there we hint and return instead of blocking.
+              query="''${LBUFFER##*[[:space:]]}"
+              if [[ -z $query ]]; then
+                zle -M 'search plane: type a search term first, then press the chord again'
+                return
+              fi
+              sel=$(fif "$query")
+              zle -I
+              [[ -n "$sel" ]] && LBUFFER+="$sel"
+              zle reset-prompt
+            }
+
+            martin-dir-jump-widget() {
+              local dir
+              dir=$(command zoxide query -i)
+              zle -I
+              [[ -n "$dir" ]] && builtin cd "$dir"
+              zle reset-prompt
+            }
+
+            martin-process-kill-widget() {
+              fkill
+              zle -I
+              zle reset-prompt
+            }
+
+            zle -N martin-content-search-widget
+            zle -N martin-dir-jump-widget
+            zle -N martin-process-kill-widget
+          ''}
 
           # Every keybinding this repo owns, placed into EXPLICIT keymaps.
           # In emacs mode they land in the only interactive keymap there is;
@@ -498,6 +634,52 @@ in
             _bindk forward-word                   "$kms" '^[[1;5C' '^[[1;3C' '^[^[[C'
             _bindk kill-word                      "$kms" '^[[3;5~' '^[[3;3~'
             _bindk backward-kill-word             "$kms" '^[^?'
+
+            ${lib.optionalString search.enable (
+              lib.concatStringsSep "\n" (
+                [
+                  "local m"
+                  "# martin.shell.search -- chords first: zvm_bindkey raw-binds the full"
+                  "# two-key chord AND registers the chord's first key as its NEX"
+                  "# readkeys handler. THEN strip the prefix from every keymap so the"
+                  "# FINAL state is a pure prefix: the chords keep working through zsh's"
+                  "# own multi-key sequences, zsh waits indefinitely for the second key,"
+                  "# and this config's KEYTIMEOUT=1 never races the plane."
+                ]
+                ++ lib.optionals (search.keys.contentSearch != null) [
+                  "_bindk martin-content-search-widget \"$kms\" '${search.prefix}${search.keys.contentSearch}'"
+                ]
+                ++ lib.optionals (search.keys.dirJump != null) [
+                  "_bindk martin-dir-jump-widget \"$kms\" '${search.prefix}${search.keys.dirJump}'"
+                ]
+                ++ lib.optionals (search.keys.processKill != null) [
+                  "_bindk martin-process-kill-widget \"$kms\" '${search.prefix}${search.keys.processKill}'"
+                ]
+                ++ [
+                  "for m in \${(s.:.)kms}; do bindkey -rM \"$m\" -- '${search.prefix}' 2>/dev/null; done"
+                ]
+                ++ lib.optionals search.gitObjects.enable (
+                  let
+                    configuredKeys = lib.filter (k: k != null) [
+                      search.keys.contentSearch
+                      search.keys.dirJump
+                      search.keys.processKill
+                    ];
+                    # Initials of every upstream object type; configured repo
+                    # letters are re-bound right above, the rest must go or
+                    # upstream keeps owning half the plain-letter space.
+                    upstreamLetters = lib.subtractLists configuredKeys
+                      [ "f" "b" "t" "r" "h" "s" "l" "e" "w" ];
+                  in [
+                    "# fzf-git.sh also self-binds PLAIN-letter fallbacks; take the plain"
+                    "# half back so the split holds by construction: CTRL-key upstream,"
+                    "# plain letters this repo ('?' help stays -- it lists upstream's plane)."
+                    "for m in \${(s.:.)kms}; do for k in ${lib.concatStringsSep " " upstreamLetters}; do bindkey -rM \"$m\" -- '${search.prefix}'\"$k\" 2>/dev/null; done; done"
+                  ]
+                )
+              )
+            )}
+
             unset -f _bindk
 
             if [[ $kms != emacs ]]; then
@@ -642,24 +824,9 @@ in
                 --preview 'rg --ignore-case --pretty --context 10 -- "$FIF_QUERY" {}'
           }
 
-          fgb() {
-            local branches branch
-            branches=$(git branch --all | grep -v 'HEAD') &&
-            branch=$(echo "$branches" | fzf --prompt='󱔎 ' --height 50% --layout=reverse --border \
-              --preview "git log --oneline --graph --date=short --color=always --pretty='format:%C(auto)%h %C(magenta)%ad %C(cyan)%an %Creset%s' {1} | head -n 20") &&
-            git checkout "$(echo "$branch" | sed 's/.* //; s#remotes/[^/]*/##')"
-          }
 
-          fgl() {
-            git log --graph --color=always --format="%C(auto)%h%d %s %C(black)%C(bold)%cr" "$@" |
-            fzf --prompt='󰊚 ' --ansi --no-sort --reverse --tiebreak=index --bind=ctrl-s:toggle-sort \
-              --bind "ctrl-m:execute:
-                (grep -o '[a-f0-9]\{7\}' | head -1 |
-                xargs -I % sh -c 'git show --color=always % | less -R') << 'FZF-EOF'
-                {}
-          FZF-EOF" \
-              --preview "grep -o '[a-f0-9]\{7\}' <<< {} | xargs git show --color=always"
-          }
+          # fgb/fgl are retired: fzf-git.sh (search plane, ^G^B / ^G^L)
+          # replaces them with previews, multi-select, and nine object types.
 
           fkill() {
             local pid
@@ -737,8 +904,8 @@ in
               tips+=(
                 "[fzf] Press %F{yellow}CTRL-T%f to search files and paste the path to the command line."
                 "[fzf] Press %F{yellow}ALT-C%f to fuzzy-search subdirectories and cd into one instantly."
-                "[fzf] Run %F{green}fkill%f to interactively find and kill a process by name."
-                "[fzf] Run %F{green}fif <keyword>%f to search file contents interactively across the current directory."
+                "[fzf] Press %F{yellow}^G k%f to find and kill a process by name (fkill)."
+                "[fzf] Press %F{yellow}^G f%f to search file contents interactively (fif) -- type the search term first."
               )
             fi
             if (( $+commands[fd] )); then
@@ -773,8 +940,7 @@ in
             fi
             if (( $+commands[git] )); then
               tips+=(
-                "[Git] Use %F{green}fgb%f for interactive branch switching with a live commit preview."
-                "[Git] Run %F{green}fgl%f for an interactive git log -- select a commit to view its diff."
+                "[Git] Press %F{yellow}^G^B%f to pick a branch interactively -- %F{green}^G ?%f lists the full git-object plane."
                 "[Git] Use %F{green}gpf%f (push --force-with-lease) for a safer force push."
               )
             fi

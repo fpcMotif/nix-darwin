@@ -169,6 +169,7 @@
 
       splits.enable = true;
       tabs.enable = true;
+      search.enable = true;
     };
   };
 }

@@ -32,6 +32,11 @@ Vi keybindings for zsh's line editor (ZLE), provided by the `zsh-vi-mode` plugin
 _Avoid_: calling tmux copy-mode, Zed's `vim_mode`, or an AI CLI TUI's vim mode "vi mode" without a qualifier.
 
 
+**Prompt search plane**:
+The zsh-owned, prefix-chord key plane over the fzf pickers (`^G` + key, behind `martin.shell.search` in `modules/home/zsh.nix`): ripgrep content search, zoxide directory jump, and process kill on plain-letter chords; fzf-git.sh's git-object pickers on ctrl chords. The optional Ghostty cmd-key layer (`martin.terminal.ghostty.search`) only *types* those chords — it is a veneer over the one definition, never a second one.
+_Avoid_: calling it a hotkey plane — that term is reserved for the retired skhd global-shortcut layer.
+
+
 **Manual-only app**:
 An app that may be installed or launched manually while its background launchd helpers are kept out of the baseline. Manual-only means user-initiated use is preserved; always-on helper behavior is not.
 _Avoid_: disabled app, uninstalled app.

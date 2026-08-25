@@ -44,26 +44,35 @@ in
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
 
-  # Tier-1 hermetic check for martin.shell.viMode: assembles the zshrc in
-  # home-manager's real section order, loads it in a sandboxed zsh, and
-  # asserts on the post-load keymap tables -- ^R/^T/alt-c fzf widgets in BOTH
-  # viins and vicmd, prefix-history Up/Down, fn-Delete, Home/End/PgUp/PgDn,
-  # the keepEmacsKeys set in viins, v -> edit-command-line in vicmd. This is
-  # the regression gate for "enabling vi mode ate fzf ^R". See issue #328.
+  # Tier-1 hermetic check for martin.shell.viMode + martin.shell.search:
+  # assembles the zshrc in home-manager's real section order, loads it in a
+  # sandboxed zsh, and asserts on the post-load keymap tables -- ^R/^T/alt-c
+  # fzf widgets in BOTH viins and vicmd, prefix-history Up/Down, fn-Delete,
+  # Home/End/PgUp/PgDn, the keepEmacsKeys set in viins, v -> edit-command-line
+  # in vicmd (#328); plus the ^G search plane -- repo chords, upstream ctrl
+  # chords, prefix purity, per-key nulls, full disablement (#329). Three
+  # scenarios run against three independently evaluated initContents.
   unit-zsh-vi-mode =
     let
-      zshCfg = (import ./lib/zsh-module-eval.nix { inherit pkgs lib; }) { };
-      initContentFile =
-        pkgs.writeText "unit-zsh-vi-mode-initContent" zshCfg.programs.zsh.initContent;
+      zshEval = overrides: (import ./lib/zsh-module-eval.nix { inherit pkgs lib; }) overrides;
+      mkInit = name: overrides:
+        pkgs.writeText "unit-zsh-vi-mode-initContent-${name}"
+          (zshEval overrides).programs.zsh.initContent;
+      run = scenario: initFile: fzfGitArg: ''
+        SCENARIO=${scenario} bash ${./unit/zsh-vi-mode-test.sh} ${initFile} \
+          ${pkgs.zsh-vi-mode} ${pkgs.fzf} \
+          ${pkgs.zsh-autosuggestions} ${pkgs.zsh-syntax-highlighting} \
+          ${fzfGitArg}
+      '';
     in
     pkgs.runCommand "unit-zsh-vi-mode"
       {
         nativeBuildInputs = [ pkgs.bash pkgs.zsh pkgs.gnugrep ];
       }
       ''
-        bash ${./unit/zsh-vi-mode-test.sh} ${initContentFile} \
-          ${pkgs.zsh-vi-mode} ${pkgs.fzf} \
-          ${pkgs.zsh-autosuggestions} ${pkgs.zsh-syntax-highlighting}
+        ${run "default" (mkInit "default" { }) "${pkgs.fzf-git-sh}"}
+        ${run "null-dirjump" (mkInit "null-dirjump" { dirJumpNull = true; }) "${pkgs.fzf-git-sh}"}
+        ${run "off" (mkInit "off" { searchEnable = false; }) ""}
         touch $out
       '';
 

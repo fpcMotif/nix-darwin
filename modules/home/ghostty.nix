@@ -126,6 +126,62 @@ let
     "keybind = cmd+shift+right=next_tab"
   ];
 
+  # Search veneer: convert the martin.shell.search "^X" prefix into its
+  # control byte so Ghostty literally types the chord the zsh widgets bind.
+  ctrlByteHex = c:
+    let
+      code = builtins.substring 0 1 c;
+      # "@".."_" map to control bytes 0x00–0x1f; "?" is DEL (0x7f).
+      ctrl = lib.listToAttrs (lib.imap0
+        (i: ch: lib.nameValuePair ch (lib.fixedWidthString 2 "0" (lib.toHexString i)))
+        (lib.stringToCharacters "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"));
+      specials = {
+        "?" = "7f";
+      };
+    in
+    if builtins.hasAttr code ctrl then ctrl.${code}
+    else if builtins.hasAttr code specials then specials.${code}
+    else null;
+
+  prefixBytes = prefix:
+    if !(lib.hasPrefix "^" prefix) || lib.stringLength prefix != 2 then
+      builtins.throw "martin.shell.search.prefix must be a two-character caret form like \"^G\" (got ${toString prefix})"
+    else
+      "\\x" + ctrlByteHex (lib.substring 1 2 prefix);
+
+  searchKeybinds =
+    let
+      search = config.martin.shell.search;
+      enabled = cfg.search.enable && search.enable;
+      bytes = if enabled then prefixBytes search.prefix else "";
+      # Ghostty config has no trailing comments -- each comment is its own
+      # line above its keybind.
+      line = chord: suffix: comment:
+        [
+          "# ${comment}"
+          "keybind = ${chord}=text:${bytes}${suffix}"
+        ];
+    in
+    if !enabled then [ ]
+    else
+      [ "# Search — types the prompt search plane chords (zsh owns the meaning)" ]
+      ++ lib.optionals (search.keys.contentSearch != null)
+        (line "cmd+f" "${search.keys.contentSearch}" "${search.prefix} ${search.keys.contentSearch} — ripgrep content search")
+      ++ lib.optionals (search.keys.dirJump != null)
+        (line "cmd+j" "${search.keys.dirJump}" "${search.prefix} ${search.keys.dirJump} — zoxide directory jump")
+      ++ lib.optionals (search.keys.processKill != null)
+        (line "cmd+shift+k" "${search.keys.processKill}" "${search.prefix} ${search.keys.processKill} — process kill")
+      ++ lib.optionals search.gitObjects.enable
+        (line "cmd+b" "\\x02" "${search.prefix} ^B — git branches");
+
+  # Join non-empty keybind groups with a blank separator line.
+  joinGroups = groups:
+    let
+      present = builtins.filter (g: g != [ ]) groups;
+      go = acc: g: acc ++ lib.optionals (acc != [ ]) [ "" ] ++ g;
+    in
+    builtins.foldl' go [ ] present;
+
   section = title: lines:
     if lines == [ ] then [ ] else [ "# ── ${title} ──" ] ++ lines ++ [ "" ];
 
@@ -144,7 +200,7 @@ let
     ++ section "Scrollback" scrollbackLines
     ++ section "Shell integration" shellLines
     ++ section "Quick terminal" quickTermLines
-    ++ section "Keybinds" (splitKeybinds ++ lib.optional (splitKeybinds != [ ] && tabKeybinds != [ ]) "" ++ tabKeybinds)
+    ++ section "Keybinds" (joinGroups [ splitKeybinds tabKeybinds searchKeybinds ])
   );
 in
 {
@@ -396,6 +452,8 @@ in
     splits.enable = lib.mkEnableOption "cmd+d/cmd+shift+d split keybinds plus cmd+alt+arrow navigation and cmd+ctrl+arrow resize";
 
     tabs.enable = lib.mkEnableOption "cmd+shift+left/right tab navigation keybinds";
+
+    search.enable = lib.mkEnableOption "cmd-key search veneer that types the martin.shell.search prompt chords (cmd+f content, cmd+j dirs, cmd+shift+k kill, cmd+b git branches)";
   };
 
   config = lib.mkIf cfg.enable {

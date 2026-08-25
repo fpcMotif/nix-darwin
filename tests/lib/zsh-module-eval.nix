@@ -14,7 +14,7 @@
 # platform, unlike full-host evaluations (see the agent-skills IFD caveat in
 # tests/integration/configurations-eval-test.nix).
 { pkgs, lib }:
-{ viMode ? null }:
+{ viMode ? null, searchEnable ? null, dirJumpNull ? false }:
 
 (lib.evalModules {
   modules =
@@ -82,5 +82,11 @@
     ]
     ++ lib.optionals (viMode != null) [
       { martin.shell.viMode.enable = lib.mkForce viMode; }
+    ]
+    ++ lib.optionals (searchEnable != null) [
+      { martin.shell.search.enable = lib.mkForce searchEnable; }
+    ]
+    ++ lib.optionals dirJumpNull [
+      { martin.shell.search.keys.dirJump = lib.mkForce null; }
     ];
 }).config

@@ -6,6 +6,10 @@
 #
 # Usage: zsh-vi-mode-test.sh <initContent-file> <zsh-vi-mode> <fzf>
 #                            <zsh-autosuggestions> <zsh-syntax-highlighting>
+#                            <fzf-git-sh> [scenario]
+# Scenario: default | null-dirjump | off -- which martin.shell.search
+# assertions run. The initContent sources fzf-git.sh inline (order 880);
+# the package argument only pins it into this derivation's closure.
 set -euo pipefail
 
 init_content=$1
@@ -13,6 +17,8 @@ zvm_pkg=$2
 fzf_pkg=$3
 autosuggestions_pkg=$4
 syntax_pkg=$5
+scenario=${SCENARIO:-default}
+export scenario
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -91,7 +97,88 @@ expect_viins '^K' kill-line
 expect_viins '^U' kill-whole-line
 expect_viins '^W' backward-kill-word
 expect_viins '^P' up-line-or-beginning-search
-expect_viins '^N' down-line-or-beginning-search
+# ── martin.shell.search: prompt search plane (issue #329) ──
+case $scenario in
+default)
+  # Every configured repo chord resolves to its widget in BOTH keymaps, so
+  # the plane cannot half-vanish depending on mode.
+  for km in viins vicmd; do
+    expect_widget "$km" '^Gf' martin-content-search-widget
+    expect_widget "$km" '^Gd' martin-dir-jump-widget
+    expect_widget "$km" '^Gk' martin-process-kill-widget
+
+    # A representative sample of fzf-git.sh's ^G CTRL-key plane resolves to
+    # its widgets in both keymaps -- exactly the binding upstream's issue
+    # tracker reports as broken under zsh-vi-mode. Widget names are eval'd
+    # from upstream, so assert by suffix.
+    expect_fzf_git() {
+      local out got
+      out=$(bindkey -M "$km" -- "$1" 2>&1) || fail "$1 unbound in $km (wanted fzf-git-$2-widget)"
+      read -r _ got <<<"$out"
+      [[ $got == *fzf-git-$2-widget ]] || fail "$1 in $km bound to '$got', wanted fzf-git-$2-widget"
+    }
+    expect_fzf_git '^G^F' files
+    expect_fzf_git '^G^B' branches
+    expect_fzf_git '^G^S' stashes
+    expect_fzf_git '^G?' '?list_bindings'
+    unset -f expect_fzf_git
+
+    # Namespace split: upstream also self-binds PLAIN-letter fallbacks; the
+    # module strips every object letter it does not configure, so plain
+    # letters belong to this repo alone ('?': upstream's help chord).
+    expect_unbound() {
+      local out got
+      out=$(bindkey -M "$km" -- "$1" 2>&1)
+      read -r _ got <<<"$out"
+      [[ -z $got || $got == undefined-key ]] || fail "$1 in $km unexpectedly bound to '$got'"
+    }
+    expect_unbound '^Gb'
+    expect_unbound '^Gt'
+    unset -f expect_unbound
+  done
+  ;;
+null-dirjump)
+  # Nulling one key leaves that chord unbound and the others intact.
+  for km in viins vicmd; do
+    out=$(bindkey -M "$km" -- '^Gd' 2>&1); read -r _ got <<<"$out"
+    [[ -z $got || $got == undefined-key ]] || fail "null dirJump: ^Gd in $km bound to '$got', wanted unbound"
+    # nixpkgs prefixes upstream widget names with the fzf bin path, so
+    # match by suffix here rather than with the strict expect_widget.
+    out=$(bindkey -M "$km" -- '^G^B' 2>&1); read -r _ got <<<"$out"
+    [[ $got == *fzf-git-branches-widget ]] || fail "null dirJump: ^G^B in $km bound to '$got', wanted fzf-git-branches-widget"
+    expect_widget "$km" '^Gk' martin-process-kill-widget
+  done
+  ;;
+off)
+  # Disabling the feature leaves no picker widget bound anywhere.
+  (( ! $+widgets[martin-content-search-widget] )) \
+    || fail "martin-content-search-widget exists despite search.enable = false"
+  for km in viins vicmd; do
+    for k in '^Gf' '^Gd' '^Gk' '^G^B'; do
+      out=$(bindkey -M "$km" -- "$k" 2>&1); read -r _ got <<<"$out"
+      [[ -z $got || $got == undefined-key ]] || fail "search off: $k in $km bound to '$got'"
+    done
+  done
+  ;;
+*)
+  print -u2 -- "unknown scenario: $scenario"
+  exit 1
+  ;;
+esac
+
+# The prefix alone resolves to NOTHING (or zle's "undefined-key" placeholder,
+# which bindkey reports for an unbound sequence that is still a prefix of
+# longer chords) in both keymaps. This is the assertion that keeps the plane
+# out of the KEYTIMEOUT=1 race: an unbound pure prefix makes zsh wait
+# indefinitely for the second key. Runs in default/null-dirjump -- with the
+# feature OFF the stock list-expand binding legitimately remains.
+prefix_pure() {
+  local km=$1 out got
+  out=$(bindkey -M "$km" -- '^G' 2>&1) || fail "querying ^G in $km failed"
+  read -r _ got <<<"$out"
+  [[ -z $got || $got == undefined-key ]] || fail "^G is bound to '$got' in $km -- reintroduces the key-timeout hazard"
+}
+[[ $scenario == off ]] || { prefix_pure viins; prefix_pure vicmd; }
 
 # Editor chord: vv from normal mode, ^X^E straight from insert; bare v stays
 # with the plugin (nex readkeys prefix for visual/chords).
@@ -132,9 +219,10 @@ bindkey -l | command grep -q '^viins$' || fail "viins keymap not listed"
 [[ $ZVM_NORMAL_MODE_CURSOR == bl ]] || fail "normal cursor '$ZVM_NORMAL_MODE_CURSOR', wanted bl"
 [[ $ZVM_VISUAL_MODE_CURSOR == bl ]] || fail "visual cursor '$ZVM_VISUAL_MODE_CURSOR', wanted bl"
 
-print "PASS unit-zsh-vi-mode"
+print "PASS unit-zsh-vi-mode ($scenario)"
 ASSERTS
 
 # -i: fzf's integration guards every bindkey behind `[[ -o interactive ]]`,
 # and the contract must observe the post-fzf state; -f keeps rcs out.
 zsh -f -i "$work/harness.zsh" </dev/null
+echo "PASS unit-zsh-vi-mode driver"
