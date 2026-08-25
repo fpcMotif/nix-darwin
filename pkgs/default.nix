@@ -24,10 +24,11 @@ final: _prev:
   # Drop this override once nixpkgs' own package sets a jemalloc flag.
   tmux =
     if final.stdenv.hostPlatform.isDarwin then
-      _prev.tmux.overrideAttrs (old: {
-        buildInputs = (old.buildInputs or [ ]) ++ [ final.jemalloc ];
-        configureFlags = (old.configureFlags or [ ]) ++ [ "--enable-jemalloc" ];
-      })
+      _prev.tmux.overrideAttrs
+        (old: {
+          buildInputs = (old.buildInputs or [ ]) ++ [ final.jemalloc ];
+          configureFlags = (old.configureFlags or [ ]) ++ [ "--enable-jemalloc" ];
+        })
     else
       _prev.tmux;
 
