@@ -153,26 +153,28 @@ let
     let
       search = config.martin.shell.search;
       enabled = cfg.search.enable && search.enable;
-      bytes = if enabled then prefixBytes search.prefix else "";
       # Ghostty config has no trailing comments -- each comment is its own
-      # line above its keybind.
-      line = chord: suffix: comment:
+      # line above its keybind. Bytes are per-line: the repo chords follow
+      # martin.shell.search.prefix; the git-branches chord types upstream's
+      # own permanently-^G sequence and must NOT follow that option.
+      line = bytes: chord: suffix: comment:
         [
           "# ${comment}"
           "keybind = ${chord}=text:${bytes}${suffix}"
         ];
+      pfx = if enabled then prefixBytes search.prefix else "";
     in
     if !enabled then [ ]
     else
       [ "# Search — types the prompt search plane chords (zsh owns the meaning)" ]
       ++ lib.optionals (search.keys.contentSearch != null)
-        (line "cmd+f" "${search.keys.contentSearch}" "${search.prefix} ${search.keys.contentSearch} — ripgrep content search")
+        (line pfx "cmd+f" "${search.keys.contentSearch}" "${search.prefix} ${search.keys.contentSearch} — ripgrep content search")
       ++ lib.optionals (search.keys.dirJump != null)
-        (line "cmd+j" "${search.keys.dirJump}" "${search.prefix} ${search.keys.dirJump} — zoxide directory jump")
+        (line pfx "cmd+j" "${search.keys.dirJump}" "${search.prefix} ${search.keys.dirJump} — zoxide directory jump")
       ++ lib.optionals (search.keys.processKill != null)
-        (line "cmd+shift+k" "${search.keys.processKill}" "${search.prefix} ${search.keys.processKill} — process kill")
+        (line pfx "cmd+shift+k" "${search.keys.processKill}" "${search.prefix} ${search.keys.processKill} — process kill")
       ++ lib.optionals search.gitObjects.enable
-        (line "cmd+b" "\\x02" "${search.prefix} ^B — git branches");
+        (line "" "cmd+b" "\\x07\\x02" "^G ^B — git branches (upstream owns ^G)");
 
   # Join non-empty keybind groups with a blank separator line.
   joinGroups = groups:

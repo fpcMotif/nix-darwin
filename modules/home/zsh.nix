@@ -6,6 +6,11 @@ let
   viMode = config.martin.shell.viMode;
   search = config.martin.shell.search;
 
+  # The upstream fzf-git.sh half of the plane: sourced, re-registered after
+  # zsh-vi-mode's keymap reset, and packaged. Everything it gates shares one
+  # reason, so the predicate is spelled once.
+  gitPlaneOn = search.enable && search.gitObjects.enable;
+
   # Plugin cursor names -> the ZVM_*_MODE_CURSOR codes they map to.
   viCursorCode = {
     block = "bl";
@@ -176,7 +181,7 @@ in
   # Everything below is configuration; the module also declares options
   # above, so the module system requires this explicit `config` attribute.
   config = {
-    home.packages = lib.optionals (search.enable && search.gitObjects.enable) [
+    home.packages = lib.optionals gitPlaneOn [
       pkgs.fzf-git-sh
     ];
 
@@ -496,14 +501,13 @@ in
         # register into a hook that has already run. The plain user init below
         # is the default-order (1000) member of this merge.
         (lib.mkOrder 880 ''
-          # ── martin.shell.search: prompt search plane ──
-          ${lib.optionalString search.enable ''
+          ${lib.optionalString gitPlaneOn ''
             # Free ^S/^Q from terminal flow control so fzf-git.sh's stash
             # picker (^G^S) works; upstream requirement, no downside today.
             # Interactive guard: zshrc fragments can run with stdin off a tty.
             [[ -o interactive ]] && command stty -ixon 2>/dev/null || :
           ''}
-          ${lib.optionalString (search.enable && search.gitObjects.enable) ''
+          ${lib.optionalString gitPlaneOn ''
             source "${pkgs.fzf-git-sh}/share/fzf-git-sh/fzf-git.sh"
             # Upstream binds at source time; zsh-vi-mode resets keymaps after
             # that, so re-register its init to run INSIDE the plugin's hook.
@@ -543,7 +547,7 @@ in
           zle -N up-line-or-beginning-search
           zle -N down-line-or-beginning-search
 
-          ${lib.optionalString (search.enable && search.gitObjects.enable) ''
+          ${lib.optionalString gitPlaneOn ''
             # Re-run fzf-git.sh's own installer after zsh-vi-mode's keymap
             # reset. stderr is silenced: under vi mode upstream also binds
             # into the emacs keymap, which may not exist post-reset.
@@ -904,8 +908,10 @@ in
               tips+=(
                 "[fzf] Press %F{yellow}CTRL-T%f to search files and paste the path to the command line."
                 "[fzf] Press %F{yellow}ALT-C%f to fuzzy-search subdirectories and cd into one instantly."
-                "[fzf] Press %F{yellow}^G k%f to find and kill a process by name (fkill)."
-                "[fzf] Press %F{yellow}^G f%f to search file contents interactively (fif) -- type the search term first."
+                ${lib.optionalString (search.enable && search.keys.processKill != null)
+                  "\"[fzf] Press %F{yellow}${search.prefix} ${search.keys.processKill}%f to find and kill a process by name (fkill).\""}
+                ${lib.optionalString (search.enable && search.keys.contentSearch != null)
+                  "\"[fzf] Press %F{yellow}${search.prefix} ${search.keys.contentSearch}%f to search file contents interactively (fif) -- type the search term first.\""}
               )
             fi
             if (( $+commands[fd] )); then
@@ -940,7 +946,10 @@ in
             fi
             if (( $+commands[git] )); then
               tips+=(
-                "[Git] Press %F{yellow}^G^B%f to pick a branch interactively -- %F{green}^G ?%f lists the full git-object plane."
+                # Upstream owns ^G permanently, so this chord text is not an
+                # option copy -- it only exists when the git half is installed.
+                ${lib.optionalString gitPlaneOn
+                  "\"[Git] Press %F{yellow}^G^B%f to pick a branch interactively -- %F{green}^G ?%f lists the full git-object plane.\""}
                 "[Git] Use %F{green}gpf%f (push --force-with-lease) for a safer force push."
               )
             fi

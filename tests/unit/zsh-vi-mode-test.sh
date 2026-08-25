@@ -4,12 +4,13 @@
 # keymap tables -- what each key resolves to after everything has loaded --
 # rather than on zshrc source text or closure membership.
 #
-# Usage: zsh-vi-mode-test.sh <initContent-file> <zsh-vi-mode> <fzf>
-#                            <zsh-autosuggestions> <zsh-syntax-highlighting>
-#                            <fzf-git-sh> [scenario]
-# Scenario: default | null-dirjump | off -- which martin.shell.search
-# assertions run. The initContent sources fzf-git.sh inline (order 880);
-# the package argument only pins it into this derivation's closure.
+# Usage: SCENARIO=<name> zsh-vi-mode-test.sh <initContent-file> <zsh-vi-mode>
+#                            <fzf> <zsh-autosuggestions> <zsh-syntax-highlighting>
+#                            [fzf-git-sh]
+# SCENARIO (env, default "default"): default | null-dirjump | off -- which
+# martin.shell.search assertions run. The initContent sources fzf-git.sh
+# inline (order 880); the package argument only pins it into this
+# derivation's closure -- the script itself never reads it.
 set -euo pipefail
 
 init_content=$1
@@ -17,6 +18,7 @@ zvm_pkg=$2
 fzf_pkg=$3
 autosuggestions_pkg=$4
 syntax_pkg=$5
+fzf_git_pkg=${6:-}   # unused in-body; see closure note above
 scenario=${SCENARIO:-default}
 export scenario
 
@@ -97,6 +99,8 @@ expect_viins '^K' kill-line
 expect_viins '^U' kill-whole-line
 expect_viins '^W' backward-kill-word
 expect_viins '^P' up-line-or-beginning-search
+expect_viins '^N' down-line-or-beginning-search
+
 # ── martin.shell.search: prompt search plane (issue #329) ──
 case $scenario in
 default)
