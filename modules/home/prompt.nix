@@ -227,6 +227,7 @@ in
             {
               error_symbol = "[❯](bold red) ";
               success_symbol = "[❯](bold green) ";
+              vimcmd_symbol = "[❮](bold blue) ";
             };
 
         git_branch.disabled = true;

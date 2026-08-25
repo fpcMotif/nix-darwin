@@ -44,6 +44,29 @@ in
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
 
+  # Tier-1 hermetic check for martin.shell.viMode: assembles the zshrc in
+  # home-manager's real section order, loads it in a sandboxed zsh, and
+  # asserts on the post-load keymap tables -- ^R/^T/alt-c fzf widgets in BOTH
+  # viins and vicmd, prefix-history Up/Down, fn-Delete, Home/End/PgUp/PgDn,
+  # the keepEmacsKeys set in viins, v -> edit-command-line in vicmd. This is
+  # the regression gate for "enabling vi mode ate fzf ^R". See issue #328.
+  unit-zsh-vi-mode =
+    let
+      zshCfg = (import ./lib/zsh-module-eval.nix { inherit pkgs lib; }) { };
+      initContentFile =
+        pkgs.writeText "unit-zsh-vi-mode-initContent" zshCfg.programs.zsh.initContent;
+    in
+    pkgs.runCommand "unit-zsh-vi-mode"
+      {
+        nativeBuildInputs = [ pkgs.bash pkgs.zsh pkgs.gnugrep ];
+      }
+      ''
+        bash ${./unit/zsh-vi-mode-test.sh} ${initContentFile} \
+          ${pkgs.zsh-vi-mode} ${pkgs.fzf} \
+          ${pkgs.zsh-autosuggestions} ${pkgs.zsh-syntax-highlighting}
+        touch $out
+      '';
+
   # Integration tests
   integration-configurations-eval =
     if pkgs.stdenv.hostPlatform.isDarwin then

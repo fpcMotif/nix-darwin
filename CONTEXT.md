@@ -27,6 +27,11 @@ The preferred coding-layout control path: split, move between, resize, and equal
 _Avoid_: treating every window split as a Finder/Dock/Spaces concern; most coding splits belong inside the terminal session.
 
 
+**Prompt vi mode**:
+Vi keybindings for zsh's line editor (ZLE), provided by the `zsh-vi-mode` plugin behind `martin.shell.viMode` in `modules/home/zsh.nix`. It governs the input line only: normal/insert modes, motions, text objects, surround, per-mode cursor shape. Distinct surfaces keep their own names: tmux copy-mode (`mode-keys vi`, scrollback selection), Zed's `vim_mode` (editor), and the vim modes built into AI CLI TUIs.
+_Avoid_: calling tmux copy-mode, Zed's `vim_mode`, or an AI CLI TUI's vim mode "vi mode" without a qualifier.
+
+
 **Manual-only app**:
 An app that may be installed or launched manually while its background launchd helpers are kept out of the baseline. Manual-only means user-initiated use is preserved; always-on helper behavior is not.
 _Avoid_: disabled app, uninstalled app.

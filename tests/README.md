@@ -9,12 +9,14 @@ Lightweight test suite for this flake. Wired into `flake.nix` as
 tests/
 |-- default.nix                              # entry point, builds the check set
 |-- lib/
-|   `-- assertions.nix                       # tiny assertTest / testSuite helpers
+|   |-- assertions.nix                       # tiny assertTest / testSuite helpers
+|   `-- zsh-module-eval.nix                  # evaluates modules/home/zsh.nix standalone for cheap toggles
 |-- unit/
 |   |-- mksystem-test.nix                    # lib/mkSystem.nix shape and current host contract
 |   |-- overlay-test.nix                     # pkgs/default.nix overlay, attrs, metadata
 |   |-- format-test.nix                      # formatter wiring and nixpkgs-fmt check
-|   `-- skill-router-test.nix                # runs the tools/skill-router bun suite offline (spawn-seam gate)
+|   |-- skill-router-test.nix                # runs the tools/skill-router bun suite offline (spawn-seam gate)
+|   `-- zsh-vi-mode-test.sh                  # martin.shell.viMode keymap contract in a sandboxed zsh
 `-- integration/
     `-- configurations-eval-test.nix         # current darwin/nixos configs and module outputs
 ```
@@ -50,6 +52,7 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `smoke-build-oh-my-pi`              | Darwin-only Oh My Pi package exposes an executable `omp` wrapper and skips on Linux. |
 | `smoke-build-toolchain`             | Required Prek, Oxlint/Oxfmt, Tsgolint, Tsgo, Uv, and Ruff commands exist, plus the shipped canary Bun (and its `bunx` symlink) on Darwin. |
 | `unit-auto-update`                  | Colored update summaries and the ownership-safe archived auto-switch source. |
+| `unit-zsh-vi-mode`                  | Loads the rendered zshrc (home-manager section order emulated) in a sandboxed zsh and asserts the post-load keymap tables: fzf ^R/^T/alt-c widgets in BOTH viins and vicmd, prefix-history Up/Down, fn-Delete/Home/End/PageUp/PageDown/Shift-Tab, the keepEmacsKeys set in viins, v -> edit-command-line in vicmd, plugin widgets present, autosuggestions still wired. The regression gate for "enabling vi mode ate fzf ^R" (#328). |
 | `unit-mksystem`                     | `lib/mkSystem.nix` shape plus current user, host platform, Home Manager, host module, and skill-target wiring. |
 | `unit-overlay`                      | `pkgs/default.nix` is a valid overlay and exposes the expected `pkgs.martin.*` attributes, descriptions, and CLI main programs. Darwin-only package evaluation is skipped on Linux. |
 | `unit-format`                       | `formatter.<system>` is configured as `nixpkgs-fmt`, evaluates, and all flake Nix files are formatted. |

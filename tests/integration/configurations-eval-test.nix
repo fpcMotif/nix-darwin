@@ -64,6 +64,33 @@ let
   hasPackage = name: packages:
     lib.any (pkg: lib.getName pkg == name) packages;
 
+  # Standalone re-evaluation of modules/home/zsh.nix with martin.shell.viMode
+  # toggled (see tests/lib/zsh-module-eval.nix): proves the escape hatch
+  # restores today's emacs shape without paying for a second full-host
+  # evaluation. The enabled-path assertions below still read the REAL host
+  # configuration; these only cover the off/derivation side of the toggle.
+  zshViOff = (import ../lib/zsh-module-eval.nix { inherit pkgs lib; }) { viMode = false; };
+  zshViOn = (import ../lib/zsh-module-eval.nix { inherit pkgs lib; }) { };
+
+  viModeToggleChecks = [
+    (helpers.assertTest "home-zsh-vi-mode-off-default-keymap-emacs"
+      (zshViOff.programs.zsh.defaultKeymap == "emacs")
+      "Disabling martin.shell.viMode must restore the emacs default keymap")
+
+    (helpers.assertTest "home-zsh-vi-mode-off-plugins-empty"
+      (zshViOff.programs.zsh.plugins == [ ])
+      "Disabling martin.shell.viMode must drop the plugin list entirely")
+
+    (helpers.assertTest "home-zsh-vi-mode-off-no-zvm-wiring"
+      (!(lib.hasInfix "ZVM_INIT_MODE" zshViOff.programs.zsh.initContent))
+      "Disabling martin.shell.viMode must leave no ZVM_* wiring behind")
+
+    (helpers.assertTest "home-zsh-vi-mode-on-plugin-single-and-keymap"
+      (zshViOn.programs.zsh.defaultKeymap == "viins"
+        && builtins.length zshViOn.programs.zsh.plugins == 1)
+      "Default-evaluated module must land in viins with exactly the zsh-vi-mode plugin (runtime wiring is the unit seam's job)")
+  ];
+
   homeChecks = prefix: homeConfig: expectedHomeDirectory:
     let
       homeData = homeConfig.home;
@@ -106,6 +133,20 @@ let
       (helpers.assertTest "${prefix}-home-zsh-history-substring-disabled"
         (homePrograms.zsh.historySubstringSearch.enable == false)
         "${prefix} Home Manager should not enable zsh-history-substring-search -- Up/Down uses the native zle prefix widget instead")
+
+      (helpers.assertTest "${prefix}-home-zsh-vi-mode-enabled"
+        (homeConfig.martin.shell.viMode.enable == true)
+        "${prefix} Home Manager should enable martin.shell.viMode (vi editing at the prompt)")
+
+      (helpers.assertTest "${prefix}-home-zsh-vi-mode-default-keymap-viins"
+        (homePrograms.zsh.defaultKeymap == "viins")
+        "${prefix} Home Manager should land zsh in viins when vi mode is enabled")
+
+      (helpers.assertTest "${prefix}-home-zsh-vi-mode-plugin-wired"
+        (lib.any
+          (p: p.name == "zsh-vi-mode" && p.file == "share/zsh-vi-mode/zsh-vi-mode.plugin.zsh")
+          homePrograms.zsh.plugins)
+        "${prefix} Home Manager should source zsh-vi-mode via programs.zsh.plugins")
 
       (helpers.assertTest "${prefix}-home-zoxide-enabled"
         (homePrograms.zoxide.enable == true)
@@ -563,7 +604,7 @@ let
     (helpers.assertTest "darwin-zed-settings-force-managed"
       (darwinHome.xdg.configFile."zed/settings.json".force == true)
       "Darwin Home Manager should force-manage Zed settings so an equivalent regular file cannot block activation")
-  ] ++ (homeChecks "darwin" darwinHome "/Users/${user}");
+  ] ++ viModeToggleChecks ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
   nixosChecks = [
     (toplevelEvaluatesOnNative "wsl" "x86_64-linux" wslConfig)
@@ -622,6 +663,7 @@ let
       )
       "Linux Home Manager package lists must never include the Darwin-only zed-nightly-bin")
   ]
+  ++ viModeToggleChecks
   ++ (homeChecks "wsl" wslHome "/home/${user}")
   ++ (homeChecks "x230" x230Home "/home/${user}")
   ++ (homeChecks "vm-aarch64-utm" vmHome "/home/${user}");
