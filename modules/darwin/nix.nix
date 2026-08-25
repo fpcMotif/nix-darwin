@@ -47,16 +47,25 @@
     keep-derivations = true;
   };
 
+  # Twice-daily (~every 12h) instead of weekly: bounds store growth faster.
+  # Retention stays at 14d (not `-d`) so a broken switch always has a rollback
+  # target — see PANIC.md.
   nix.gc = {
     automatic = true;
-    interval = { Weekday = 0; Hour = 4; Minute = 30; };
+    interval = [
+      { Hour = 4; Minute = 30; }
+      { Hour = 16; Minute = 30; }
+    ];
     options = "--delete-older-than 14d";
   };
 
-  # Scheduled `nix store optimise` (hardlink deduplication), run after the
-  # weekly GC so it only deduplicates what survived collection.
+  # Scheduled `nix store optimise` (hardlink deduplication), run an hour after
+  # each GC so it only deduplicates what survived collection.
   nix.optimise = {
     automatic = true;
-    interval = { Weekday = 0; Hour = 5; Minute = 30; };
+    interval = [
+      { Hour = 5; Minute = 30; }
+      { Hour = 17; Minute = 30; }
+    ];
   };
 }
