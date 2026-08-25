@@ -18,7 +18,7 @@ in
   home.file.".local/bin/opencode".source =
     pkgs.martin.opencode + "/bin/opencode";
 
-  home.file.".local/bin/opencode-electron" = lib.mkIf pkgs.stdenv.isDarwin {
+  home.file.".local/bin/opencode-electron" = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     source = pkgs.martin.opencode-electron + "/bin/opencode-electron";
   };
 

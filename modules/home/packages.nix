@@ -1,7 +1,7 @@
 { lib, pkgs, ... }:
 
 let
-  inherit (pkgs.stdenv) isDarwin;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
 
   commonPackages = with pkgs; [
     # File ops and viewing.

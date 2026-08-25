@@ -58,7 +58,7 @@ in
   # run from home.activation since kitty is home-managed) and patch the icon
   # into that writable copy. Idempotent via the `.kitty.src` marker: re-copies
   # only when the underlying store path actually changes.
-  home.activation.kittyApp = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.kittyApp = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     kitty_src="${pkgs.kitty}/Applications/kitty.app"
     kitty_dst="/Applications/kitty.app"
     kitty_marker="/Applications/.kitty.src"

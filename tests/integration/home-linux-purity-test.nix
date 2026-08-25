@@ -3,7 +3,7 @@
 # modules/home is imported by every host — the active Mac AND the staged
 # Linux scaffolds (wsl, x230, vm-aarch64-utm). macOS-only filesystem paths
 # (/Applications bundles, ~/Library trees) and macOS-only commands must be
-# gated behind `pkgs.stdenv.isDarwin` so they never reach a Linux host's
+# gated behind `pkgs.stdenv.hostPlatform.isDarwin` so they never reach a Linux host's
 # session environment, shell config, or activation scripts.
 #
 # Pure eval-level assertions (no builds): each surface below is the merged
@@ -68,7 +68,7 @@ let
         let offenders = offendersIn text;
         in helpers.assertTest "${prefix}-no-darwin-leak-${surface}"
           (offenders == [ ])
-          "${prefix} ${surface} leaks Darwin-only content into a Linux host: ${lib.concatStringsSep ", " offenders}. Gate it behind pkgs.stdenv.isDarwin in modules/home.")
+          "${prefix} ${surface} leaks Darwin-only content into a Linux host: ${lib.concatStringsSep ", " offenders}. Gate it behind pkgs.stdenv.hostPlatform.isDarwin in modules/home.")
       surfaces;
 in
 helpers.testSuite "home-linux-purity" (

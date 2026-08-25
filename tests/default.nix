@@ -46,7 +46,7 @@ in
 
   # Integration tests
   integration-configurations-eval =
-    if pkgs.stdenv.isDarwin then
+    if pkgs.stdenv.hostPlatform.isDarwin then
       callTest ./integration/configurations-eval-test.nix
         {
           evalScope = "darwin";
@@ -65,7 +65,7 @@ in
   # builder (agent-skills resolves its bundle via import-from-derivation), so
   # this is a no-op skip on Darwin; CI runs it on the x86_64-linux builder.
   integration-home-linux-purity =
-    if pkgs.stdenv.isDarwin then
+    if pkgs.stdenv.hostPlatform.isDarwin then
       pkgs.runCommand "integration-home-linux-purity-skipped" { } ''
         echo "Skipping Linux-only home purity test on ${system}"
         touch $out
@@ -81,7 +81,7 @@ in
   # macOS settings have no meaning on the NixOS hosts, so this is a no-op skip
   # off-darwin (the CI matrix still runs it on its native macOS builder).
   integration-darwin-settings =
-    if pkgs.stdenv.isDarwin then
+    if pkgs.stdenv.hostPlatform.isDarwin then
       callTest ./integration/darwin-settings-test.nix
         {
           darwinConfigurationInput = self.darwinConfigurations."f";
@@ -94,7 +94,7 @@ in
 
 
   smoke-build-oh-my-pi = pkgs.runCommand "smoke-build-oh-my-pi" { } (
-    if pkgs.stdenv.isDarwin then ''
+    if pkgs.stdenv.hostPlatform.isDarwin then ''
       echo "Building oh-my-pi as a Darwin smoke test..."
       test -x ${pkgs.martin.oh-my-pi}/bin/omp
       touch $out
@@ -117,7 +117,7 @@ in
     ''
     # bun is shipped as the canary prebuilt (aarch64-darwin only), so validate
     # the binary that is actually installed rather than stock nixpkgs `bun`.
-    + lib.optionalString pkgs.stdenv.isDarwin ''
+    + lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
       ${lib.getExe pkgs.martin.bun-canary-bin} --version
       test -L ${pkgs.martin.bun-canary-bin}/bin/bunx
     ''

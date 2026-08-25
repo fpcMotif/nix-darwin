@@ -28,7 +28,7 @@ let
   user = "martinfan";
   selectedScope =
     if evalScope == "auto" then
-      (if pkgs.stdenv.isDarwin then "darwin" else "nixos")
+      (if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "nixos")
     else evalScope;
 
   darwinConfiguration = if selectedScope == "darwin" then darwinConfigurationInput else null;

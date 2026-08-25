@@ -48,7 +48,7 @@ in
   # the .app bundle, so this whole sync is Darwin-only. A Linux host must not
   # grow a ~/Library tree; revisit with XDG paths if Cursor joins the Linux
   # profile.
-  home.activation.cursorSettings = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.cursorSettings = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     cursorUserDir="$HOME/Library/Application Support/Cursor/User"
     mkdir -p "$cursorUserDir"
 

@@ -89,7 +89,7 @@ let
   # (claudeDisableGrillSkills); they differ only in that cache action.
   # Claude Desktop's session store lives under macOS's ~/Library, so the sweep
   # is empty on Linux — callers still run their portable mkSkillTargetRm part.
-  mkSessionSweep = { ids, cacheAction }: lib.optionalString pkgs.stdenv.isDarwin ''
+  mkSessionSweep = { ids, cacheAction }: lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
     sessions="${homeDir}/Library/Application Support/Claude/local-agent-mode-sessions"
     if [ -d "$sessions" ]; then
       for skill in ${lib.escapeShellArgs ids}; do
@@ -528,7 +528,7 @@ in
   # only exists when some target uses `structure = "symlink-tree"`. Every target
   # here is `link`, so that node is never created and hm's topoSort silently
   # drops the edge, leaving this block unordered against the linking it depends on.
-  home.activation.surgeAgentSkillSymlinks = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+  home.activation.surgeAgentSkillSymlinks = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "linkGeneration" ] ''
     source="/Applications/Surge.app/Contents/Resources/Skills/surge"
     if [ -d "$source" ] && [ -f "$source/SKILL.md" ]; then
       for dir in ${skillTargetDirsSh}; do
@@ -774,7 +774,7 @@ in
   # claudeMcpFff above. The patched defaults (bulk tools gated behind
   # DRAFTS_MCP_ALLOW_BULK=1, 20s osascript watchdog, 200-result cap) are
   # baked into pkgs/drafts-mcp-server.nix, so no env is passed here.
-  home.activation.claudeMcpDrafts = lib.mkIf pkgs.stdenv.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.claudeMcpDrafts = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     claudeBin="${pkgs.claude-code}/bin/claude"
     draftsBin="${pkgs.martin.drafts-mcp-server}/bin/drafts-mcp-server"
     target="${homeDir}/.claude.json"

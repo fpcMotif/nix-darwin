@@ -318,7 +318,7 @@ in
   # `lsp-<lang>` entries without losing surrounding preferences.
   # Darwin only; Linux configs should not create a no-op macOS path.
   home.activation.claudeDesktopMcpScaffold =
-    lib.mkIf pkgs.stdenv.isDarwin (
+    lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (
       hm.dag.entryAfter [ "writeBoundary" ] ''
         target="${homeDir}/Library/Application Support/Claude/claude_desktop_config.json"
 

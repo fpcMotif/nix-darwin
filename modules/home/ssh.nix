@@ -37,6 +37,6 @@
 
     # OrbStack is a macOS container/VM runtime; its ssh include has no Linux
     # counterpart.
-    includes = lib.optionals pkgs.stdenv.isDarwin [ "~/.orbstack/ssh/config" ];
+    includes = lib.optionals pkgs.stdenv.hostPlatform.isDarwin [ "~/.orbstack/ssh/config" ];
   };
 }

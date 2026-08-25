@@ -400,10 +400,10 @@ in
 
   config = lib.mkIf cfg.enable {
     home.packages =
-      lib.optionals (pkgs.stdenv.isDarwin && hasPackage "ghostty-bin") [
+      lib.optionals (pkgs.stdenv.hostPlatform.isDarwin && hasPackage "ghostty-bin") [
         pkgs.ghostty-bin
       ]
-      ++ lib.optionals (!pkgs.stdenv.isDarwin && hasPackage "ghostty") [
+      ++ lib.optionals (!pkgs.stdenv.hostPlatform.isDarwin && hasPackage "ghostty") [
         pkgs.ghostty.terminfo
       ];
 

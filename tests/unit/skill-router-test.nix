@@ -20,7 +20,7 @@
 let
   # Match modules/home/skill-router.nix: the shipped Bun is the prebuilt canary
   # on Darwin (aarch64-darwin only), stock nixpkgs `bun` everywhere else.
-  bun = if pkgs.stdenv.isDarwin then pkgs.martin.bun-canary-bin else pkgs.bun;
+  bun = if pkgs.stdenv.hostPlatform.isDarwin then pkgs.martin.bun-canary-bin else pkgs.bun;
 
   # The flake source already excludes node_modules (.gitignore); drop it again
   # so the check can never depend on a populated node_modules. The suite imports

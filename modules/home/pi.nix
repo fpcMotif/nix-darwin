@@ -20,7 +20,7 @@ let
   };
 in
 {
-  config = lib.mkIf pkgs.stdenv.isDarwin {
+  config = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     launchd.agents.pi-extension-update = {
       enable = true;
       config = {

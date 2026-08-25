@@ -3,6 +3,6 @@
 {
   _module.args.currentSystemUser = "martinfan";
   _module.args.currentSystemUserHome =
-    if pkgs.stdenv.isDarwin then "/Users/martinfan" else "/home/martinfan";
+    if pkgs.stdenv.hostPlatform.isDarwin then "/Users/martinfan" else "/home/martinfan";
   imports = [ ./modules/home ];
 }
