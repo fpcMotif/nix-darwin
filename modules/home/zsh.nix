@@ -254,8 +254,6 @@ in
       gpn = "ghostty-pane";
       pymobiledevice3 = "source ~/.venv/bin/activate && python -m pymobiledevice3";
 
-      sudo = "sudo -E";
-
       npm = "bun";
       npx = "bunx";
       pnpm = "bun";
