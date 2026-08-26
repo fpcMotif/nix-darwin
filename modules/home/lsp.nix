@@ -26,8 +26,12 @@
 #                     rare projects that need tsserver plugins not yet
 #                     supported by tsgo. Opt-in via per-project .lsp.json.
 #
-# Vite framework support: vue/astro/svelte LSPs cover SFCs; emmet covers
-# HTML completion; tailwind handles utility-class intellisense.
+# Vite framework support: astro/svelte LSPs cover SFCs; emmet covers
+# HTML completion; tailwind handles utility-class intellisense. Vue SFCs
+# get oxlint diagnostics only — vue-language-server is deliberately not
+# installed (nixpkgs builds it via pnpm, and neither has an aarch64-darwin
+# binary in cache.nixos.org, so it compiled locally on every bump). Opt in
+# per project with templates/lsp-overrides/vite-vue.lsp.json.
 #
 # Versions are pinned by the flake; clients just call the binary name.
 # Project-level `.lsp.json` and devShell flakes shadow at the project
@@ -54,7 +58,6 @@ let
     # tsserver (and everything else here) for vtsls/tsls consumers.
     (lib.lowPrio typescript)
     typescript-language-server
-    vue-language-server # Vue SFCs (Vite + Vue)
     astro-language-server # Astro components (Vite-based)
     svelte-language-server # Svelte (Vite-based)
     tailwindcss-language-server # Utility-class intellisense
@@ -147,13 +150,6 @@ let
         isLinter = true;
       };
 
-      # Vite + Vue Single-File Components.
-      vue = {
-        command = "vue-language-server";
-        args = [ "--stdio" ];
-        extensionToLanguage = { ".vue" = "vue"; };
-      };
-
       # Astro components.
       astro = {
         command = "astro-language-server";
@@ -232,11 +228,6 @@ let
     args = ["--lsp"]
     extensions = [${jsAndVueExtsToml}]
     is_linter = true
-
-    [lsp.servers.vue]
-    command = "vue-language-server"
-    args = ["--stdio"]
-    extensions = [".vue"]
 
     [lsp.servers.astro]
     command = "astro-language-server"

@@ -39,8 +39,12 @@ let
     # bun comes from `martin.bun-canary-bin` (canary channel) in darwinPackages
     # below — nixpkgs `bun` would collide on $out/bin/bun, so it's not listed.
     # node runtime only (no bundled npm — we use bun). Pinned to the newest
-    # LTS-line runtime; _26 = 26.5.0 is darwin-cached as of 2026-07 (was
-    # uncached at 26.3.1, which forced the old _24 pin).
+    # LTS-line runtime; _26 is the deliberate floor and does NOT get downgraded
+    # to dodge a cold cache. When a bump lands a node the darwin jobset hasn't
+    # built yet (26.3.1, then 26.7.0 as of 2026-08), `just switch` compiles Node
+    # from source — the fix is to hold nixpkgs on a rev whose node is already
+    # substitutable, not to drop a major. See the cadence guard in
+    # scripts/update-flake-inputs.sh.
     nodejs-slim_26
     # Frontend and SSO/OIDC helpers. OXC is the formatter/linter stack;
     # oxlint lives in ./lsp.nix because it also runs as an LSP server.
