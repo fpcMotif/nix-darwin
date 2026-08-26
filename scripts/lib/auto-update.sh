@@ -69,10 +69,13 @@ au_today_weekday() {
 # Prints one input name per line. Cadence day -> everything; any other day
 # -> everything minus the heavy set. Unknown inputs always survive: adding
 # a new flake input can never silently fall out of the nightly.
-# Set AU_FORCE_FULL_BUMP=1 to bump everything regardless of weekday.
+# Set AU_FORCE_FULL_BUMP=1 (or true) to bump everything regardless of weekday.
 au_inputs_to_bump() {
   local day=$1; shift
-  if [ "${AU_FORCE_FULL_BUMP:-0}" = 1 ] || [ "$day" = "$AU_CADENCE_DAY" ]; then
+  case "${AU_FORCE_FULL_BUMP:-0}" in
+    1|true) printf '%s\n' "$@"; return 0 ;;
+  esac
+  if [ "$day" = "$AU_CADENCE_DAY" ]; then
     printf '%s\n' "$@"
     return 0
   fi

@@ -73,10 +73,13 @@ for day in 1 2 3 4 5 6 7; do
     || fail "unknown input dropped on day $day: $got"
 done
 
-# Escape hatch: force a full bump regardless of weekday.
+# Escape hatch: force a full bump regardless of weekday (accepts 1 or true,
+# the latter being what GitHub Actions boolean inputs deliver).
 got=$(AU_FORCE_FULL_BUMP=1 au_inputs_to_bump "$other_day" $sample | sort | tr '\n' ' ')
 want=$(printf '%s\n' $sample | sort | tr '\n' ' ')
 [ "$got" = "$want" ] || fail "force-full-bump did not restore the heavy set: $got"
+got=$(AU_FORCE_FULL_BUMP=true au_inputs_to_bump "$other_day" $sample | sort | tr '\n' ' ')
+[ "$got" = "$want" ] || fail "force-full-bump=true did not restore the heavy set: $got"
 
 # Mode reporter used by the workflow's PR title/body.
 mode=$(au_bump_mode "$AU_CADENCE_DAY")
