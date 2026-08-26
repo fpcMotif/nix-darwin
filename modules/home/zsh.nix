@@ -431,13 +431,10 @@ in
         gpn = "ghostty-pane";
         pymobiledevice3 = "source ~/.venv/bin/activate && python -m pymobiledevice3";
 
-        sudo = "sudo -E";
-
         npm = "bun";
         npx = "bunx";
         pnpm = "bun";
         p = "bun";
-        pn = "pnpm";
         oc = "opencode";
 
         cct = "cmux claude-teams --dangerously-skip-permissions";
