@@ -280,7 +280,7 @@ let
     command = "lua-language-server"
     extensions = [".lua"]
     # --- end managed block ---
-  '');
+  '';
 in
 {
   home.packages = lspServers;
@@ -309,7 +309,7 @@ in
       ${pkgs.coreutils}/bin/cat ${codexLspToml} >> "$target"
       echo "codex-lsp: appended managed [lsp] block to $target" >&2
     fi
-  '');
+  '';
 
   # === Claude Desktop / Codex App: ensure mcpServers key exists ===
   # We don't pre-bake per-workspace LSP→MCP bridges — that's per-project
