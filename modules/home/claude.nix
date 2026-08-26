@@ -161,6 +161,32 @@ let
   # id back to park (disable-but-keep-installed) rather than uninstall it.
   disabledClaudePlugins = [ ];
 
+  # === auto-memory: nix-owned off switch ===
+  # Claude Code writes and consolidates its own memory files under
+  # ~/.claude/projects/<sanitized-cwd>/memory/. Memory here is hand-curated,
+  # so both halves of the feature are pinned off:
+  #
+  #   autoMemoryEnabled — the feature as a whole. When false Claude neither
+  #                       READS nor writes that directory, so MEMORY.md stops
+  #                       being injected into context as well; anything that
+  #                       must stay loaded belongs in ~/.claude/CLAUDE.md,
+  #                       which is read independently of this key.
+  #   autoDreamEnabled  — background consolidation ("dreaming"). Moot while
+  #                       auto-memory is off, but it resolves independently
+  #                       (unset falls back to a server-side gate), so it is
+  #                       set explicitly rather than left to inherit whatever
+  #                       that gate defaults to.
+  #
+  # Nothing is deleted: the existing memory dirs stay on disk, they just stop
+  # being read or appended to. Re-asserted every switch by
+  # claudeMemorySettingsAssert below for the same reason as enabledPlugins —
+  # both are one keystroke away in the in-app toggle (`tengu_auto_memory_toggled`
+  # writes the key straight back), and a flip back on silently resumes writing.
+  claudeMemorySettings = {
+    autoMemoryEnabled = false;
+    autoDreamEnabled = false;
+  };
+
   # === permissions: nix-owned, authoritative ===
   # Transcribed verbatim from the live ~/.claude/settings.json on 2026-08-21
   # (110/5/27 allow/deny/ask rules, defaultMode bypassPermissions), INCLUDING
@@ -521,21 +547,39 @@ in
     fi
   '';
 
-  # Surge ships its agent skill inside the app bundle. Keep live symlinks to the
-  # bundle instead of copying it into the Nix store so Surge updates refresh it.
+  # Surge ships its agent skill inside the app bundle, so it is never copied
+  # into the Nix store — Surge updates have to refresh it in place.
   # Surge.app is a macOS bundle; Linux hosts must not reference /Applications.
+  #
+  # The bundled frontmatter declares `name: Surge`. Claude Code tolerates that,
+  # Pi does not: it rejects any id outside [a-z0-9-] ("name contains invalid
+  # characters") and drops the skill entirely. So the bundle is restaged into
+  # ONE normalized copy that every picker dir then symlinks, rather than nine
+  # copies — Pi's skill loader de-duplicates by realpath alone
+  # (`if (realPathSet.has(realPath)) continue;`, checked before the name-collision
+  # branch), so nine copies would report as an eight-way collision while nine
+  # symlinks to one path collapse silently. Restaged on every activation, which
+  # is what keeps it tracking Surge upgrades; only the frontmatter `name:` line
+  # is rewritten, and the substitution is idempotent if upstream ever lowercases it.
+  #
   # Anchored on linkGeneration: "agent-skills" names an activation node that
   # only exists when some target uses `structure = "symlink-tree"`. Every target
   # here is `link`, so that node is never created and hm's topoSort silently
   # drops the edge, leaving this block unordered against the linking it depends on.
   home.activation.surgeAgentSkillSymlinks = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "linkGeneration" ] ''
     source="/Applications/Surge.app/Contents/Resources/Skills/surge"
+    staged="${homeDir}/.cache/agent-skills/surge"
     if [ -d "$source" ] && [ -f "$source/SKILL.md" ]; then
+      ${pkgs.coreutils}/bin/mkdir -p "${homeDir}/.cache/agent-skills"
+      ${pkgs.coreutils}/bin/rm -rf -- "$staged"
+      ${pkgs.coreutils}/bin/cp -R -- "$source" "$staged"
+      ${pkgs.coreutils}/bin/chmod -R u+w -- "$staged"
+      ${pkgs.gnused}/bin/sed -i '1,/^---$/s/^name:[[:space:]].*/name: surge/' "$staged/SKILL.md"
       for dir in ${skillTargetDirsSh}; do
         ${pkgs.coreutils}/bin/mkdir -p "$dir"
         target="$dir/surge"
         ${pkgs.coreutils}/bin/rm -rf -- "$target"
-        ${pkgs.coreutils}/bin/ln -s -- "$source" "$target"
+        ${pkgs.coreutils}/bin/ln -s -- "$staged" "$target"
       done
     else
       echo "surge-agent-skill: missing $source, skipping" >&2
@@ -724,6 +768,35 @@ in
           "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
         mv -- "$tmp" "$target"
         echo "claude-disable-mcp-plugins: disabled ${lib.concatStringsSep ", " disabledClaudePlugins}" >&2
+      else
+        rm -f -- "$tmp"
+      fi
+    fi
+  '';
+
+  # === Reproducible auto-memory off switch ===
+  # Third instance of the seed-once-then-own-a-few-keys shape (see
+  # claudeSkillSurfaceDedup and claudeDisableGlobalMcpPlugins): authoritative
+  # over exactly the keys in claudeMemorySettings, additive over the rest of
+  # the file, and idempotent — it only rewrites when a value actually differs.
+  # Runs after the seed so the file exists on a fresh host.
+  home.activation.claudeMemorySettingsAssert = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
+    target="${homeDir}/.claude/settings.json"
+    if [ ! -f "$target" ]; then
+      echo "claude-memory-settings: missing $target, skipping" >&2
+    else
+      tmp=$(mktemp)
+      if ${pkgs.jq}/bin/jq \
+          --argjson keys ${lib.escapeShellArg (builtins.toJSON claudeMemorySettings)} \
+          '. + $keys' \
+          "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
+        if [ -n "''${DRY_RUN:-}" ]; then
+          echo "claude-memory-settings: would pin ${lib.concatStringsSep ", " (lib.mapAttrsToList (k: v: "${k}=${lib.boolToString v}") claudeMemorySettings)} in $target" >&2
+          rm -f -- "$tmp"
+        else
+          mv -- "$tmp" "$target"
+          echo "claude-memory-settings: pinned auto-memory and auto-dream off in $target" >&2
+        fi
       else
         rm -f -- "$tmp"
       fi
