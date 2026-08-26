@@ -17,6 +17,14 @@
   # 🛡️ Sentinel: Restrict sudo execution to wheel group for defense in depth
   security.sudo.execWheelOnly = true;
 
+  # 🛡️ Sentinel: harden SSH defaults in case any host ever turns the service
+  # on. mkDefault so a host that genuinely needs different settings can still
+  # override them explicitly.
+  services.openssh.settings = {
+    PermitRootLogin = lib.mkDefault "no";
+    PasswordAuthentication = lib.mkDefault false;
+  };
+
   # Keep CLI tools predictable across NixOS hosts and WSL.
   environment = {
     localBinInPath = true;
