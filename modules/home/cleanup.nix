@@ -51,6 +51,9 @@
     for f in "$HOME"/.config/zsh/.zcompdump.* "$HOME"/.config/crush/crush.json.bak.*; do
       [ -e "$f" ] && rm -f -- "$f"
     done
+    for f in "$HOME"/result "$HOME"/result-*; do
+      [ -L "$f" ] && rm -f -- "$f"
+    done
 
     # === Nix-owned agent-skill picker dirs ===
     # `programs.agent-skills` (modules/home/claude.nix) exposes every skill
