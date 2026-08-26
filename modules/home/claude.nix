@@ -6,26 +6,10 @@
 # history.jsonl, file-history/, paste-cache/, projects/, ...) is left
 # untouched on purpose.
 #
-# Files declared here are byte-identical to their counterparts in the
-# `dotfiles` flake input, so the dotfiles repo remains the cross-tool
-# upstream — chezmoi can still render them on hosts that don't run
-# this flake. Nix just installs them as read-only store symlinks.
-
 let
   inherit (lib) optionalAttrs listToAttrs;
 
-  dotClaude = inputs.dotfiles + "/dot_claude";
   homeDir = config.home.homeDirectory;
-
-  # The dotfiles repo uses chezmoi `{{ .chezmoi.homeDir }}` interpolation
-  # in settings.json.tmpl. Render it at eval time with a one-token substitution.
-  renderChezmoi = src: pkgs.writeText (baseNameOf (toString src)) (
-    builtins.replaceStrings
-      [ "{{ .chezmoi.homeDir }}" ]
-      [ homeDir ]
-      (builtins.readFile src)
-  );
-
   mkSource = input: subdir: nameRegex: {
     inherit input subdir;
     filter = { maxDepth = 1; }
@@ -482,6 +466,64 @@ let
   # ships a `review` that collides with the dotfiles-pi `review` below, and any
   # id upstream later promotes would then be discovered twice, making
   # discoverCatalog throw — so unit-skill-hygiene asserts it stays gone.
+
+  claudeSettingsSeed = pkgs.writeText "claude-settings-seed.json" (builtins.toJSON {
+    env = {
+      API_TIMEOUT_MS = "3000000";
+      ENABLE_LSP_TOOL = "1";
+      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
+      CLAUDE_CODE_NEW_INIT = "1";
+      CLAUDE_CODE_NO_FLICKER = "1";
+      CLAUDE_CODE_SIMPLE_SYSTEM_PROMPT = "1";
+      CLAUDE_CODE_FORK_SUBAGENT = "1";
+      CLAUDE_AUTO_BACKGROUND_TASKS = "1";
+      CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING = "1";
+      ENABLE_PROMPT_CACHING_1H = "1";
+      CLAUDE_CODE_MAX_OUTPUT_TOKENS = "64000";
+    };
+    permissions = claudePermissions;
+    model = "opus";
+    enabledMcpjsonServers = [ "qmd" ];
+    statusLine = {
+      type = "command";
+      command = "bash ${homeDir}/.claude/statusline-command.sh";
+    };
+    enabledPlugins = {
+      "swift-lsp@claude-plugins-official" = true;
+      "rust-analyzer-lsp@claude-plugins-official" = true;
+      "gopls-lsp@claude-plugins-official" = true;
+      "code-simplifier@claude-plugins-official" = true;
+      "code-review@claude-plugins-official" = true;
+      "ralph-loop@claude-plugins-official" = true;
+      "expert-lsp@elixir-expert" = true;
+      "typescript-lsp@claude-plugins-official" = true;
+      "context7@claude-plugins-official" = true;
+      "skill-creator@claude-plugins-official" = true;
+      "claude-md-management@claude-plugins-official" = true;
+      "git@frad-dotclaude" = true;
+      "gitflow@frad-dotclaude" = true;
+      "github@frad-dotclaude" = true;
+      "superpowers@frad-dotclaude" = true;
+      "refactor@frad-dotclaude" = true;
+      "code-context@frad-dotclaude" = true;
+    };
+    extraKnownMarketplaces = {
+      "frad-dotclaude" = {
+        source = {
+          source = "github";
+          repo = "FradSer/dotclaude";
+        };
+        autoUpdate = true;
+      };
+    };
+    autoMemoryEnabled = false;
+    autoDreamEnabled = false;
+    worktree = claudeWorktreeSettings;
+    skipDangerousModePermissionPrompt = true;
+    effortLevel = "xhigh";
+    inputNeededNotifEnabled = true;
+    agentPushNotifEnabled = true;
+  });
 in
 {
   imports = [ inputs.agent-skills.homeManagerModules.default ];
@@ -540,7 +582,7 @@ in
       ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
       ".claude/CLAUDE.md".source = ./claude/CLAUDE.md;
       ".claude/statusline-command.sh" = {
-        source = dotClaude + "/executable_statusline-command.sh";
+        source = ./claude/statusline-command.sh;
         executable = true;
       };
     } // localSkillFiles;
@@ -717,10 +759,11 @@ in
   # Claude rewrites theme, env vars, and plugin state into this file at
   # runtime, so a hard symlink would fight the app. Seed once on first
   # rebuild, then leave alone — same pattern as opencode.nix.
+
   home.activation.claudeSettingsSeed = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     target="${homeDir}/.claude/settings.json"
     if [ ! -e "$target" ]; then
-      run install -m 0644 ${renderChezmoi (dotClaude + "/settings.json.tmpl")} "$target"
+      run install -m 0644 ${claudeSettingsSeed} "$target"
     fi
   '';
 

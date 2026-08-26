@@ -229,7 +229,7 @@ CLAUDE_MD="${HOME}/.claude/CLAUDE.md"
 if [ -f "$CLAUDE_MD" ]; then
   claude_md_content=$(cat "$CLAUDE_MD")
   banned_found=0
-  for term in gemini deepwiki codedb mgrep lazygit deep-research; do
+  for term in gemini deepwiki codedb mgrep lazygit deep-research chezmoi; do
     if printf '%s\n' "$claude_md_content" | grep -qi "$term"; then
       bad "banned term '$term' found in $CLAUDE_MD"
       banned_found=1

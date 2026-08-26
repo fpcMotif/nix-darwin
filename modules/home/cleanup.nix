@@ -29,7 +29,7 @@
     remove_legacy_path "$HOME/.local/bin/claude"
     remove_legacy_path "$HOME/.local/bin/droid"
 
-    # Pre-Nix imperative drift in ~/.claude/ (chezmoi-rendered or hand-placed).
+    # Pre-Nix imperative drift in ~/.claude/ (unmanaged or hand-placed).
     # Nix now owns these as read-only symlinks; remove the stale flat files
     # so home.file activation can claim the paths without conflict.
     # NOTE: settings.json is intentionally NOT cleared — Claude mutates it
@@ -47,8 +47,6 @@
     remove_legacy_path "$HOME/.config/ghostty/themes/rose-pine-moon"
     remove_legacy_path "$HOME/.config/ghostty/unmanaged-backups"
     remove_legacy_path "$HOME/.config/zsh/.zcompdump"
-    remove_legacy_path "$HOME/.config/chezmoi"
-    remove_legacy_path "$HOME/.zshrc.pre-chezmoi.bak"
     remove_legacy_path "$HOME/.config/crush/crush.json.bak"
     for f in "$HOME"/.config/zsh/.zcompdump.* "$HOME"/.config/crush/crush.json.bak.*; do
       [ -e "$f" ] && rm -f -- "$f"

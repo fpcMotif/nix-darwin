@@ -25,6 +25,7 @@ banned_terms=(
   "mgrep"
   "lazygit"
   "deep-research"
+  "chezmoi"
 )
 
 for term in "${banned_terms[@]}"; do
