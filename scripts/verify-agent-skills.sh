@@ -224,6 +224,36 @@ done
 ok "dangling-symlink sweep completed"
 
 # ---------------------------------------------------------------------------
+section "9. Global CLAUDE.md hygiene (real tools only, dead tools removed)"
+CLAUDE_MD="${HOME}/.claude/CLAUDE.md"
+if [ -f "$CLAUDE_MD" ]; then
+  claude_md_content=$(cat "$CLAUDE_MD")
+  banned_found=0
+  for term in gemini deepwiki codedb mgrep lazygit deep-research; do
+    if printf '%s\n' "$claude_md_content" | grep -qi "$term"; then
+      bad "banned term '$term' found in $CLAUDE_MD"
+      banned_found=1
+    fi
+  done
+  [ "$banned_found" -eq 0 ] && ok "no dead/banned tools found in $CLAUDE_MD"
+
+  tools_missing=0
+  for tool in fd rg bat eza dust procs btm xh delta hyperfine fff; do
+    if ! printf '%s\n' "$claude_md_content" | grep -q "\b$tool\b"; then
+      bad "required tool '$tool' not mentioned in $CLAUDE_MD"
+      tools_missing=1
+    fi
+  done
+  if ! printf '%s\n' "$claude_md_content" | grep -q "ast-grep" && ! printf '%s\n' "$claude_md_content" | grep -q "\bsg\b"; then
+    bad "ast-grep/sg not mentioned in $CLAUDE_MD"
+    tools_missing=1
+  fi
+  [ "$tools_missing" -eq 0 ] && ok "all required modern tools present in $CLAUDE_MD"
+else
+  na "$CLAUDE_MD does not exist"
+fi
+
+# ---------------------------------------------------------------------------
 printf '\n%s: %d passed, %d failed, %d skipped\n' \
   "$(basename "$0")" "$pass" "$fail" "$skip"
 [ "$fail" -eq 0 ]

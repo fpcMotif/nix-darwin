@@ -18,8 +18,7 @@ let
   homeDir = config.home.homeDirectory;
 
   # The dotfiles repo uses chezmoi `{{ .chezmoi.homeDir }}` interpolation
-  # in two files (CLAUDE.md, settings.json.tmpl). Render them at eval
-  # time with a one-token substitution.
+  # in settings.json.tmpl. Render it at eval time with a one-token substitution.
   renderChezmoi = src: pkgs.writeText (baseNameOf (toString src)) (
     builtins.replaceStrings
       [ "{{ .chezmoi.homeDir }}" ]
@@ -185,6 +184,17 @@ let
   claudeMemorySettings = {
     autoMemoryEnabled = false;
     autoDreamEnabled = false;
+  };
+
+  # === worktree: nix-owned symlink dirs ===
+  # Claude Code worktrees symlink these directories back to the main
+  # checkout instead of duplicating them per worktree (docs/en/worktrees).
+  # User-scope on purpose — applies to every repo's worktrees; repos without
+  # the dirs (this one included) are unaffected. `sparsePaths`, the other
+  # half of the same feature, is deliberately NOT set here: it is a per-repo
+  # monorepo optimization and belongs in that repo's own .claude/settings.json.
+  claudeWorktreeSettings = {
+    symlinkDirectories = [ "node_modules" ".cache" ];
   };
 
   # === permissions: nix-owned, authoritative ===
@@ -528,7 +538,7 @@ in
         });
 
       ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
-      ".claude/CLAUDE.md".source = renderChezmoi (dotClaude + "/claude.md.tmpl");
+      ".claude/CLAUDE.md".source = ./claude/CLAUDE.md;
       ".claude/statusline-command.sh" = {
         source = dotClaude + "/executable_statusline-command.sh";
         executable = true;
@@ -796,6 +806,37 @@ in
         else
           mv -- "$tmp" "$target"
           echo "claude-memory-settings: pinned auto-memory and auto-dream off in $target" >&2
+        fi
+      else
+        rm -f -- "$tmp"
+      fi
+    fi
+  '';
+
+  # === Reproducible worktree settings ===
+  # Fourth instance of the seed-once-then-own-a-few-keys shape (see
+  # claudeSkillSurfaceDedup, claudeDisableGlobalMcpPlugins,
+  # claudeMemorySettingsAssert): authoritative over exactly the keys in
+  # claudeWorktreeSettings, additive over any sibling key under .worktree
+  # (baseRef, bgIsolation) so a runtime toggle survives. Idempotent — only
+  # rewrites when a value actually differs. Runs after the seed so the file
+  # exists on a fresh host.
+  home.activation.claudeWorktreeSettingsAssert = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
+    target="${homeDir}/.claude/settings.json"
+    if [ ! -f "$target" ]; then
+      echo "claude-worktree-settings: missing $target, skipping" >&2
+    else
+      tmp=$(mktemp)
+      if ${pkgs.jq}/bin/jq \
+          --argjson wt ${lib.escapeShellArg (builtins.toJSON claudeWorktreeSettings)} \
+          '.worktree = ((.worktree // {}) + $wt)' \
+          "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
+        if [ -n "''${DRY_RUN:-}" ]; then
+          echo "claude-worktree-settings: would pin worktree.symlinkDirectories in $target" >&2
+          rm -f -- "$tmp"
+        else
+          mv -- "$tmp" "$target"
+          echo "claude-worktree-settings: pinned worktree.symlinkDirectories in $target" >&2
         fi
       else
         rm -f -- "$tmp"

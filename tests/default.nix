@@ -44,6 +44,12 @@ in
     bash ${./unit/rolling-pins-test.sh} ${../pkgs} ${../scripts}
     touch $out
   '';
+  unit-claude-md = pkgs.runCommand "unit-claude-md" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
+    bash ${./unit/claude-md-test.sh} \
+      ${../modules/home/claude/CLAUDE.md} \
+      ${../modules/home/claude.nix}
+    touch $out
+  '';
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
 

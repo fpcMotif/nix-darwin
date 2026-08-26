@@ -53,6 +53,7 @@ let
     jwt-cli
     step-cli
     xh
+    hyperfine
 
     neovim
     gnupg
