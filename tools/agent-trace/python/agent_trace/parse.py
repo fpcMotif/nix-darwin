@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from collections import Counter
 
@@ -201,9 +202,10 @@ def queue_prompt(record):
 def text_preview(text, limit=160):
     if text is None:
         return ""
-    value = str(text).replace("\r", " ").replace("\n", " ").replace("\t", " ")
-    while "  " in value:
-        value = value.replace("  ", " ")
+    # Single-pass whitespace collapse. The old two-step form (replace CR/LF/TAB
+    # then repeatedly replace "  " with " ") was O(n^2) on strings with many
+    # runs of whitespace. \s covers CR/LF/TAB/space in one linear pass.
+    value = re.sub(r"\s+", " ", str(text))
     if len(value) <= limit:
         return value
     if limit <= 1:
