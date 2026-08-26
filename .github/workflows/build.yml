@@ -35,6 +35,7 @@ jobs:
           nix build --no-link --show-trace --print-build-logs \
             '.#checks.x86_64-linux.smoke' \
             '.#checks.x86_64-linux.unit-mksystem' \
+            '.#checks.x86_64-linux.unit-auto-update' \
             '.#checks.x86_64-linux.unit-overlay' \
             '.#checks.x86_64-linux.unit-format' \
             '.#checks.x86_64-linux.integration-configurations-eval' \
@@ -79,6 +80,17 @@ jobs:
         run: |
           nix build --no-link --show-trace \
             '.#devShells.aarch64-darwin.default'
+
+      - name: Guard — no source builds outside vendored derivations
+        # Issue #336. Runs BEFORE the full system build so a nixpkgs revision
+        # without darwin cache coverage fails in seconds, not after a half-hour
+        # macOS compile. Hard failure: the nightly PR's auto-merge cannot fire
+        # past a red required check. Also runnable locally against a
+        # hand-edited lock:
+        #   bash scripts/lib/auto-update.sh guard-source-builds
+        run: |
+          bash scripts/lib/auto-update.sh guard-source-builds \
+            .#darwinConfigurations.f.system
 
       - name: Build darwinConfigurations.f
         run: |

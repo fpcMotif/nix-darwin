@@ -136,8 +136,10 @@ update-and-switch: _no-sudo _daemon
     sudo darwin-rebuild switch --flake .
 
 # Run every scripts/update-*.sh updater, then activate. This is what the
-# hourly auto-update GitHub workflow does, but on-demand.
+# nightly auto-update GitHub workflow does, but on-demand. Forces the full
+# bump: an explicit human invocation wants fresh nixpkgs too (issue #336).
 bump-and-switch: _no-sudo _daemon
+    export AU_FORCE_FULL_BUMP=1
     for s in scripts/update-*.sh; do echo "=== $s ==="; bash "$s" || true; done
     sudo darwin-rebuild switch --flake .
 
@@ -154,6 +156,7 @@ check:
         '.#darwinConfigurations.f.system' \
         '.#checks.aarch64-darwin.unit-overlay' \
         '.#checks.aarch64-darwin.unit-justfile' \
+        '.#checks.aarch64-darwin.unit-auto-update' \
         '.#checks.aarch64-darwin.unit-rolling-pins' \
         '.#checks.aarch64-darwin.unit-skill-router' \
         '.#checks.aarch64-darwin.unit-skill-hygiene' \

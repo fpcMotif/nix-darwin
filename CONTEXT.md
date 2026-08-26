@@ -92,6 +92,28 @@ _Avoid_: conflating it with a model used only over its API, or with a GUI app la
 Use of an AI model purely over its provider API from inside an editor or agent — e.g. a Zed `agent_servers` favorite model plus the provider's `*_API_KEY` env. There is no binary and nothing on the build path.
 _Avoid_: assuming API-only model access implies an installed CLI for that provider.
 
+### Auto-update cadence
+
+**Heavy input**:
+A flake input whose bump rehashes a large share of the Darwin baseline closure. The set is `nixpkgs` and `nur` (the latter for lock-churn containment, not because it compiles anything — Crush is a prebuilt-tarball repack). Heavy inputs move only on the cadence day, enforced by `AU_HEAVY_INPUTS`/`au_inputs_to_bump` in `scripts/lib/auto-update.sh`.
+_Avoid_: justifying `nur`'s heaviness on compile grounds, or hand-listing heavy inputs outside the library.
+
+**Light input**:
+Every other top-level flake input, bumped nightly by the auto-update workflow — chiefly the vendored agent CLIs the operator tracks daily.
+_Avoid_: enumerating light inputs anywhere; the set is always "everything minus the heavy set", computed from live flake metadata.
+
+**Cadence day**:
+The ISO weekday (Monday, evaluated on the runner's UTC clock) on which heavy inputs are allowed to move. A single constant (`AU_CADENCE_DAY`) beside the heavy set; overridable per-run via `AU_WEEKDAY_OVERRIDE` and bypassable with `AU_FORCE_FULL_BUMP=1`.
+_Avoid_: expressing the cadence rule as a workflow YAML conditional — it must stay runnable locally.
+
+**Glue derivation**:
+A profile, activation, or generated-config derivation present in every build plan that rebuilds in milliseconds (home-manager profiles and file trees, user environment, system etc, activation scripts, top-level system derivation, generated LSP config files). The source-build guard never counts glue as a source build.
+_Avoid_: treating an unfamiliar plan entry as glue without naming it; unknown entries fail the guard until classified.
+
+**Vendored derivation**:
+A package defined in this repo under `pkgs/` and built from vendored sources or lockfiles (drafts-mcp-server, sourcegraph-amp, the agent CLI repacks). No binary cache will ever hold them; they always build locally by design and are exempt from the source-build guard. The exemption list is derived from `pkgs/*.nix` pnames at run time, so it cannot name packages that no longer exist.
+_Avoid_: maintaining a hand-written exemption list, or confusing "vendored" (always local builds, seconds to minutes) with "glue" (trivial derivations every rebuild has).
+
 ### Hosts & identity
 
 **f**:

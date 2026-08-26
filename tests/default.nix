@@ -30,7 +30,10 @@ in
   unit-auto-update = pkgs.runCommand "unit-auto-update" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
     bash ${./unit/auto-update-test.sh} \
       ${../scripts/lib/auto-update.sh} \
-      ${../modules/darwin/auto-switch.nix}
+      ${../modules/darwin/auto-switch.nix} \
+      ${../pkgs} \
+      ${../scripts} \
+      ${../.github}
     touch $out
   '';
   unit-justfile = pkgs.runCommand "unit-justfile" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
