@@ -28,11 +28,11 @@
     "archify": {
       "flake": false,
       "locked": {
-        "lastModified": 1787813363,
-        "narHash": "sha256-7+jRALjRNADoZpEKIR782BIf/8an1QpdIYPJFLMKtF8=",
+        "lastModified": 1787896898,
+        "narHash": "sha256-+v1taBFPv6uFsitP0o3L60KPU59iKM+SA87r4d92O30=",
         "owner": "tt-a1i",
         "repo": "archify",
-        "rev": "9a5060566c832832fb843e457e58c8ee6bac82fd",
+        "rev": "12106be58b34f94b108ab30f6ac0eb37c16a8f71",
         "type": "github"
       },
       "original": {
@@ -87,11 +87,11 @@
         "systems": "systems_2"
       },
       "locked": {
-        "lastModified": 1787789419,
-        "narHash": "sha256-GjUH/k03ZGL6DpvEz34EbpTzIiIHHVEKWjNlOKU/0V4=",
+        "lastModified": 1787884211,
+        "narHash": "sha256-xNVPBUPNTst0qce4ZHMWabA6saGUsjM2H/m4LXvfMPs=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "803370e6c9745a37a9e5aaaf8a3cf87ee03625cd",
+        "rev": "3c503d54da2f313752e10ce5e7637ee26a6eaa8f",
         "type": "github"
       },
       "original": {
@@ -139,11 +139,11 @@
     "effect-ts-skills": {
       "flake": false,
       "locked": {
-        "lastModified": 1786406003,
-        "narHash": "sha256-jBUJzjTg7hrR33L7FD2YY3qSjYprj5lluzst1L0P+g4=",
+        "lastModified": 1787863561,
+        "narHash": "sha256-n3L+ge1t0WPKNJpTvJqK/9X5L+7GSpBY28fSZ20b1kw=",
         "owner": "Effect-TS",
         "repo": "skills",
-        "rev": "28822c9e19998876a6b0e0d97877442012ed4391",
+        "rev": "2309e6f27d9955b434c0e3f394b945c136e89fd2",
         "type": "github"
       },
       "original": {
