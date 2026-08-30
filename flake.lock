@@ -28,11 +28,11 @@
     "archify": {
       "flake": false,
       "locked": {
-        "lastModified": 1787942735,
-        "narHash": "sha256-JwwepXMnpQRCQRsZ0LepGMc0mBCnHsn/rAYut9SQ6F0=",
+        "lastModified": 1788070195,
+        "narHash": "sha256-/VGSgYne9wOS18aDHMlb2sBYzMtk1jZ7j4XIwTLbj3k=",
         "owner": "tt-a1i",
         "repo": "archify",
-        "rev": "0853a805003514776bef3593ecca091409828902",
+        "rev": "4ac500a498267f18bda42b3c82b51edb8f9c1baf",
         "type": "github"
       },
       "original": {
