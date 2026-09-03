@@ -213,8 +213,6 @@ version, and upstream republishes different bytes at the same address:
 |---|---|
 | `pkgs/bun-canary-bin.nix` | bun force-pushes the `canary` tag in place |
 | `pkgs/sf-mono.nix` | Apple's `SF-Mono.dmg` |
-| `pkgs/google-drive.nix` | Google's `GoogleDrive.dmg` |
-
 When upstream republishes, the recorded sha256 is stale and the fixed-output
 derivation fails — and because these sit under `home-manager-path`, the stale
 hash takes down the **entire system build**, not just that one package.

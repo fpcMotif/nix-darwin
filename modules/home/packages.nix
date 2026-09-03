@@ -90,8 +90,6 @@ let
   ];
 
   darwinPackages = with pkgs; [
-    # Darwin-only GUI apps and Apple-platform CLIs.
-    martin.raycast
     # iOS / Apple platform CLIs. Xcode itself stays Apple-managed; these are
     # the shell tools around project generation, signing flows, and CI logs.
     cocoapods
@@ -107,7 +105,6 @@ let
     martin.sourcegraph-amp
     martin.droid
     martin.opencode
-    martin.opencode-electron
     martin.mole
     codex
     nur.repos.charmbracelet.crush

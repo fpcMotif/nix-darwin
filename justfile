@@ -89,12 +89,12 @@ fix-daemon: _no-sudo _daemon
     @echo 'fix-daemon: nix-daemon is answering on /nix/var/nix/daemon-socket/socket.'
 
 # Re-prefetch every pin whose upstream URL carries no version. Those assets are
-# republished in place (bun's force-pushed `canary` tag, Apple's SF-Mono.dmg,
-# Google's GoogleDrive.dmg), so their recorded sha256 goes stale on upstream's
-# schedule and the stale hash fails the *whole* system build, not just that
-# package. tests/unit/rolling-pins-test.sh keeps this set honest.
+# republished in place (bun's force-pushed `canary` tag, Apple's SF-Mono.dmg),
+# so their recorded sha256 goes stale on upstream's schedule and the stale hash
+# fails the *whole* system build, not just that package.
+# tests/unit/rolling-pins-test.sh keeps this set honest.
 refresh-rolling: _no-sudo _daemon
-    @for s in update-bun-canary update-google-drive update-sf-mono; do \
+    @for s in update-bun-canary update-sf-mono; do \
         echo "=== $s ==="; bash "scripts/$s.sh" || true; \
     done
 

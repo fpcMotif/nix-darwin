@@ -222,15 +222,6 @@ in
       "/etc/profiles/per-user/$USER/bin"
       "/run/current-system/sw/bin"
       "/nix/var/nix/profiles/default/bin"
-      # Kimi Code's own binary. Must win over $HOME/.local/bin, which still
-      # holds an unrelated `uv tool install kimi-cli` shim (also named
-      # `kimi`) — see kimi-legacy rename below. Kimi Code's installer tries
-      # to self-add this dir to PATH by appending to ~/.zshrc, but that's a
-      # home-manager-generated file (read-only nix store symlink), so its
-      # `_update_path` step always fails with "Permission denied"; declaring
-      # it here is what makes that step a no-op instead (already-in-PATH
-      # short-circuit) on future `kimi update` runs.
-      "$HOME/.kimi-code/bin"
       "$HOME/.local/bin"
       "/usr/local/bin"
       "$HOME/bin"

@@ -10,8 +10,6 @@
 
   environment.systemPackages = [
     pkgs.duti
-    pkgs.martin.google-drive
-    pkgs.martin.raycast
   ];
 
   martin = {
@@ -24,10 +22,9 @@
     hammerspoon.enable = true;
     healthCheck.enable = true;
 
-    # BetterMouse and BetterDisplay are intentionally absent: both are
-    # GUI-managed, not Nix-managed. See
-    # docs/adr/0011-bettermouse-is-gui-managed-not-nix-managed.md and
-    # docs/adr/0012-betterdisplay-is-gui-managed-not-nix-managed.md.
+    # BetterMouse, BetterDisplay, Google Drive, Raycast, and Dropbox are
+    # intentionally absent: all are GUI-managed / natively-installed, not
+    # Nix-managed. See docs/adr/0005, 0011, 0012, 0013.
 
     rime = {
       enable = true;

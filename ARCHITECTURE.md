@@ -94,7 +94,7 @@ Shared modules consume `currentSystemUser` instead of hard-coding `martinfan`. T
 ```nix
 final: prev: {
   martin = {
-    # amp, pi, oh-my-pi, drive, raycast, ...
+    # amp, pi, oh-my-pi, hammerspoon, ...
   };
 }
 ```
@@ -320,7 +320,7 @@ Default policy: **pure Nix first.**
 
 - **CLI / dev tools** → `modules/home/packages.nix`.
 - **Mac GUI apps Martin owns or vendors** → custom derivations in `pkgs/`, exposed as `pkgs.martin.<name>`, declared on the Darwin host where appropriate.
-- **System-level Mac apps currently in scope** — Google Drive, Raycast — declared on the Darwin host via `pkgs.martin.*`. Anything not yet packaged as a derivation is tracked as an explicit gap until it has one; brew is **not** a fallback. (Dropbox is a deliberate exception: it is installed natively, not Nix-vendored — see `docs/adr/0005`.)
+- **GUI apps with native updaters / privileged helpers** — Google Drive, Raycast, Dropbox, BetterMouse, BetterDisplay — are installed natively via GUI / self-updater and deliberately not Nix-vendored (see `docs/adr/0005`, `0011`, `0012`, `0013`).
 - **Agent / dev tooling** — Amp, Pi, Oh My Pi — packaged in `pkgs/` as custom derivations.
 
 A tool should never be installed simultaneously through Nix and a brew variant unless it is a temporary migration step; record the migration intent in the same commit if so.
@@ -328,9 +328,6 @@ A tool should never be installed simultaneously through Nix and a brew variant u
 ### Pinning policy for vendored Mac apps
 
 Fixed-output derivations under `pkgs.martin.*` must point at **immutable bytes**, not a "latest" alias, so CI does not break every time upstream rotates a release. Each derivation pins both `version = "X.Y.Z"` and a versioned URL — bumps become explicit reviewable changes, and a future hash mismatch signals real upstream tampering rather than a routine release.
-
-Known irreducibility: Google does not publish versioned `.dmg` URLs for Drive for Desktop. `pkgs/google-drive.nix` keeps the `dl.google.com/drive-file-stream/GoogleDrive.dmg` URL, sets `version` to the current release for visibility, and accepts manual hash bumps as the cost of doing business. Adding a new vendored app under `pkgs.martin.*`: prefer a versioned URL; fall back to the Google Drive pattern only if upstream genuinely doesn't expose one, and record why in a comment on the derivation.
-
 ## Homebrew family policy
 
 Brew-family tools are real Darwin options but stay dormant by default:

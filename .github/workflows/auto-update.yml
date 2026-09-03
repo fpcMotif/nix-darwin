@@ -123,8 +123,8 @@ jobs:
               (nixpkgs → codex / node toolchain, darwin,
               home-manager, agent-skills, claude-code, NUR/crush, dotfiles, …)
             - vendored derivations under `pkgs/`: codex (prerelease channel),
-              bun-canary-bin, sourcegraph-amp (amp), opencode (cli + electron),
-              pi-coding-agent, oh-my-pi, google-drive, zed-nightly-bin.
+              bun-canary-bin, sourcegraph-amp (amp), opencode (cli),
+              pi-coding-agent, oh-my-pi, zed-nightly-bin.
 
             Each updater is allowed to fail individually; partial bumps still
             land in this PR. Two hard guards prevent broken state from being

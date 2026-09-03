@@ -6,7 +6,7 @@
 }:
 
 let
-  version = "0.210.0";
+  version = "0.211.0";
 
   # Factory publishes per-platform binary-only npm packages. These URLs are pinned to
   # a released build and mapped by system so we install the correct native executable
@@ -14,7 +14,7 @@ let
   sources = {
     "aarch64-darwin" = {
       url = "https://registry.npmjs.org/@factory/cli-darwin-arm64/-/cli-darwin-arm64-${version}.tgz";
-      hash = "sha256-pOU9EEVPXn5W5FzjRtQhaPrsAXcDbKaDQSoRv15mUBM=";
+      hash = "sha256-NRqjQm/BKjQNekWEFvP9uzcNyqoDIOJK215ppVwxqSU=";
     };
     "x86_64-darwin" = {
       url = "https://registry.npmjs.org/@factory/cli-darwin-x64-baseline/-/cli-darwin-x64-baseline-${version}.tgz";

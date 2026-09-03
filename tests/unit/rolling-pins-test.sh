@@ -22,7 +22,6 @@ scripts_dir=$2
 declared_rolling() {
   case "$1" in
     bun-canary-bin.nix) echo "update-bun-canary.sh" ;;
-    google-drive.nix)   echo "update-google-drive.sh" ;;
     sf-mono.nix)        echo "update-sf-mono.sh" ;;
     *)                  echo "" ;;
   esac
@@ -65,7 +64,7 @@ done
 
 # Every declared entry must still correspond to a real rolling pin, so the list
 # cannot rot into fiction after a package switches to a versioned URL.
-for base in bun-canary-bin.nix google-drive.nix sf-mono.nix; do
+for base in bun-canary-bin.nix sf-mono.nix; do
   [ -f "$pkgs_dir/$base" ] || { echo "rolling-pins: declared ${base} no longer exists" >&2; fail=1; }
 done
 

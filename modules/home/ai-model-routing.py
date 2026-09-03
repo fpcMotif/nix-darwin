@@ -26,7 +26,6 @@ import yaml
 # ── tiers ────────────────────────────────────────────────────────────────
 SPARK = "gpt-5.3-codex-spark"
 DEEP = "gpt-5.5"
-KIMI_K3 = "kimi-code/k3:max"
 
 # gpt-5.6 codename pair — omp only, both on the ChatGPT sub via openai-codex.
 # `max` is the ceiling: the catalog exposes low/medium/high/xhigh/max, there
@@ -49,8 +48,6 @@ TERRA = "openai-codex/gpt-5.6-terra"
 #   Antigravity — Google bucket was 0% used and resets DAILY. Best home for
 #     the high-volume roles (recon + main loop). Its Claude route is the
 #     250K-context opus-4-6.
-#   Kimi — separate sub, its own ceiling, k3 is 1M-context with a real `max`
-#     thinking tier. Carries the delegated + demanding work.
 #   Cursor — two buckets: "Cursor Models" (generous) and "Other Models",
 #     a hard $20/mo cap that Claude/Gemini slugs bill against. Reserved for
 #     the advisory/review/design roles; deliberately NOT the main loop, which
@@ -61,18 +58,17 @@ TERRA = "openai-codex/gpt-5.6-terra"
 # Verified 2026-08-15: :minimal 400s, :low/:medium/:high all return OK.
 # So these roles are pinned at :high — never at the low end where the request
 # can resolve to MINIMAL. Do not lower these without retesting.
-OMP_SMOL = "google-antigravity/gemini-3.7-flash:high"
-OMP_COMMIT = "google-antigravity/gemini-3.7-flash:high"
-OMP_DEFAULT = "google-antigravity/claude-opus-4-6:high"
+OMP_SMOL = "google-antigravity/gemini-3.8-flash:high"
+OMP_COMMIT = "google-antigravity/gemini-3.8-flash:high"
+OMP_DEFAULT = "google-antigravity/gemini-3.8-flash:high"
 OMP_PLAN = "google-antigravity/claude-opus-4-6:high"
 # grok 4.6 tops out at `xhigh` — there is no `max` on this line, unlike the
 # claude/gpt slugs. Note reviewer and task are the same family by request, so
 # the review is not an independent-family check on the builder's output.
 OMP_TASK = "cursor/cursor-grok-4.6-high"
-OMP_SLOW = KIMI_K3
-OMP_DESIGNER = "google-antigravity/gemini-3.7-flash:high"
+OMP_SLOW = "google-antigravity/claude-opus-4-6:high"
+OMP_DESIGNER = "google-antigravity/gemini-3.8-flash:high"
 OMP_REVIEWER = "cursor/cursor-grok-4.6-xhigh"
-
 # Advisor rides the same Antigravity opus as the main loop by request. Note
 # this is deliberately NOT an independent-family second opinion — it will
 # share the main loop's blind spots. It was on cursor/gpt-5.6-sol-medium,
@@ -80,13 +76,23 @@ OMP_REVIEWER = "cursor/cursor-grok-4.6-xhigh"
 ADVISOR = "google-antigravity/claude-opus-4-6:high"
 
 # Absent from the openai-codex catalog — pruned from enabledModels on every
-# run so they stop showing up in Ctrl+P and 400-ing on selection.
 OMP_RETIRED = [
     "openai-codex/gpt-5.6-sol:max",
     "openai-codex/gpt-5.6-sol:medium",
     "openai-codex/gpt-5.3-codex-spark:medium",
     "openai-codex/gpt-5.3-codex-spark:low",
     "openai-codex/gpt-5.4:xhigh",
+    "kimi-code/k3:max",
+    "kimi-code/k3:high",
+    "kimi-code/k3",
+    "kimi-code/k3-256k",
+    "kimi-code/kimi-for-coding",
+    "kimi-code/kimi-for-coding-highspeed",
+    "kimi-code/kimi-k2",
+    "kimi-code/kimi-k2-turbo-preview",
+    "kimi-code/kimi-k2.5:medium",
+    "kimi-code/kimi-k2.5",
+    "kimi-code/kimi-k2.7-code",
 ]
 
 # Kept selectable in omp's Ctrl+P picker without owning the whole list.
@@ -104,16 +110,17 @@ OMP_PICKER = [
     OMP_REVIEWER,
     OMP_DESIGNER,
     OMP_TASK,
-    KIMI_K3,
     "cursor/gpt-5.6-sol-xhigh",
     "cursor/claude-opus-4-8-xhigh",
     "cursor/claude-sonnet-5-high",
-    "kimi-code/k3:high",
     "cursor/composer-2.5",
     "cursor/gemini-3.7-flash-high",
     "google-antigravity/claude-opus-4-6:high",
     "google-antigravity/gemini-3.6-flash:high",
     "google-antigravity/gemini-3.7-flash:high",
+    "cursor/gemini-3.8-flash-high",
+    "google-antigravity/gemini-3.8-flash:high",
+    "google-antigravity/gemini-3.8-flash:medium",
 ]
 
 HOME = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(
@@ -306,16 +313,15 @@ def reconcile_omp() -> bool:
     roles["slow"] = OMP_SLOW
 
     # Append-only for the picker, so hand-added models survive — but retired
-    # models get dropped, since leaving them listed just invites a 400.
-    enabled = data.setdefault("enabledModels", [])
-    for model in OMP_RETIRED:
-        if model in enabled:
-            enabled.remove(model)
-            log(f"omp: dropped retired model {model}")
+    # and unwanted models (like kimi-code) get dropped.
+    enabled = [
+        m for m in data.setdefault("enabledModels", [])
+        if not m.startswith("kimi-code/") and m not in OMP_RETIRED
+    ]
     for model in OMP_PICKER:
-        if model not in enabled:
+        if model not in enabled and not model.startswith("kimi-code/"):
             enabled.append(model)
-
+    data["enabledModels"] = enabled
     overrides = data.setdefault("task", {}).setdefault("agentModelOverrides", {})
     overrides["quick_task"] = "pi/smol"
     overrides["explore"] = "pi/smol"

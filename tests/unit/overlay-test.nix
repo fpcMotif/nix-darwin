@@ -19,9 +19,7 @@ let
 
   expected = [
     "bun-canary-bin"
-    "google-drive"
     "hammerspoon"
-    "raycast"
     "oh-my-pi"
     "pi-coding-agent"
     "sourcegraph-amp"
@@ -42,11 +40,9 @@ let
   # we settle for "attribute exists" instead of evaluating the derivation.
   darwinOnly = [
     "bun-canary-bin"
-    "google-drive"
     "hammerspoon"
     "oh-my-pi"
     "pi-coding-agent"
-    "raycast"
     "sourcegraph-amp"
   ];
 in

@@ -4,7 +4,7 @@
 # Apple serves the font from a rolling, unversioned .dmg URL, so the pinned
 # sha256 goes stale the moment they republish — and a stale fixed-output hash
 # fails the whole `darwin-rebuild switch`, not just this package. The pin is
-# therefore HASH-driven, exactly like pkgs/google-drive.nix: re-prefetch the
+# therefore HASH-driven, like pkgs/bun-canary-bin.nix: re-prefetch the
 # URL, diff the sha256 against the current derivation, rewrite only when the
 # bytes actually moved.
 . "$(dirname "$0")/lib/auto-update.sh"

@@ -37,10 +37,7 @@ final: _prev:
   martin = {
     mkAppFromZip = final.callPackage ./lib/mk-app-from-zip.nix { };
 
-    google-drive = final.callPackage ./google-drive.nix { };
     hammerspoon = final.callPackage ./hammerspoon.nix { };
-    raycast = final.callPackage ./raycast.nix { };
-
     mole = final.callPackage ./mole.nix { };
     sf-mono = final.callPackage ./sf-mono.nix { };
     sf-symbols = final.callPackage ./sf-symbols.nix { };
@@ -55,7 +52,6 @@ final: _prev:
     sourcegraph-amp = final.callPackage ./sourcegraph-amp.nix { };
     droid = final.callPackage ./droid.nix { };
     opencode = final.callPackage ./opencode.nix { };
-    opencode-electron = final.callPackage ./opencode-electron.nix { };
     zed-nightly-bin = final.callPackage ./zed-nightly-bin.nix { };
   };
 }

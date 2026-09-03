@@ -145,9 +145,9 @@ let
       )
       "Darwin should update mutable Pi extensions daily after the Nix auto-switch")
 
-    (helpers.assertTest "darwin-system-packages-include-raycast"
-      (hasPackage "raycast" darwinConfig.environment.systemPackages)
-      "Darwin host should include the Raycast system package")
+    (helpers.assertTest "darwin-system-packages-include-duti"
+      (hasPackage "duti" darwinConfig.environment.systemPackages)
+      "Darwin host should include the duti system package")
 
     (helpers.assertTest "darwin-home-packages-include-swiftlint"
       (hasPackage "swiftlint" homeConfig.home.packages)

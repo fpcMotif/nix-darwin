@@ -133,7 +133,7 @@ The human-facing device name in macOS Sharing/Finder — "Martin's Mac mini". De
 
 ## Example dialogue
 
-> **Dev:** Should we package Dropbox as a `pkgs.martin.*` derivation like Drive and Raycast?
-> **Maintainer:** No — Dropbox is the deliberate exception (see `docs/adr/0005`). Its self-updater rewrites its own bundle and its server can force-deprecate old clients, so vendoring it into the read-only store fights the app on every update. Install it natively and let it self-update; re-adding a Nix scaffold is a regression, not a gap.
+> **Dev:** Should we package Dropbox, Google Drive, or Raycast as `pkgs.martin.*` derivations?
+> **Maintainer:** No — Dropbox, Google Drive, Raycast, BetterMouse, and BetterDisplay are deliberate GUI-managed exceptions (see `docs/adr/0005`, `0011`, `0012`, `0013`). Their self-updaters, system extensions, and privileged helpers fight read-only Nix store paths. Install them natively and let them self-update; re-adding a Nix scaffold is a regression, not a gap.
 > **Dev:** Is the macOS health report a monitoring stack?
 > **Maintainer:** No. It is a local snapshot for maintenance evidence, so it belongs in the baseline without adding remote telemetry.
