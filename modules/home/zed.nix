@@ -89,13 +89,29 @@
         light = "One Light";
         dark = "One Dark";
       };
-      vim_mode = true;
+      vim_mode = false;
       ui_font_size = 16;
       buffer_font_size = 15;
       buffer_font_family = "JetBrains Mono";
       autosave = "on_focus_change";
       format_on_save = "on";
       tab_size = 2;
+
+      cli_default_open_behavior = "existing_window";
+      diff_view_style = "unified";
+      auto_update_extensions = {
+        oxc = true;
+      };
+
+      context_servers = {
+        mcp-server-context7 = {
+          enabled = true;
+          remote = false;
+          settings = {
+            context7_api_key = "";
+          };
+        };
+      };
 
       agent_servers = {
         pi-acp = {
@@ -109,16 +125,124 @@
         codex-acp.type = "registry";
         claude-acp.type = "registry";
         amp-acp.type = "registry";
+        factory-droid.type = "registry";
       };
 
-      project_panel.dock = "left";
-      outline_panel.dock = "left";
-      collaboration_panel.dock = "left";
-      git_panel.dock = "left";
+      project_panel.dock = "right";
+      outline_panel.dock = "right";
+      collaboration_panel.dock = "right";
+      git_panel.dock = "right";
+
       agent = {
-        dock = "right";
-        favorite_models = [ ];
+        dock = "left";
+        single_file_review = true;
+        thinking_display = "preview";
+        default_profile = "write";
+
+        favorite_models = [
+          {
+            provider = "openai-subscribed";
+            model = "gpt-5.3-codex";
+            enable_thinking = true;
+            effort = "xhigh";
+          }
+          {
+            provider = "openai-subscribed";
+            model = "gpt-5.5";
+            enable_thinking = true;
+            effort = "xhigh";
+          }
+          {
+            provider = "zed.dev";
+            model = "claude-fable-5";
+            enable_thinking = true;
+            effort = "max";
+          }
+        ];
+
+        default_model = {
+          provider = "zed.dev";
+          model = "claude-fable-5";
+          enable_thinking = true;
+          effort = "max";
+        };
+
         model_parameters = [ ];
+
+        tool_permissions = {
+          default = "allow";
+          tools = {
+            terminal.default = "allow";
+            edit_file.default = "allow";
+            write_file.default = "allow";
+            delete_path.default = "allow";
+            move_path.default = "allow";
+            copy_path.default = "allow";
+            create_directory.default = "allow";
+            fetch.default = "allow";
+            search_web.default = "allow";
+          };
+        };
+
+        sandbox_permissions = {
+          allow_unsandboxed = true;
+          allow_all_hosts = true;
+          allow_fs_write_all = true;
+          warn_ntfs_grants = false;
+        };
+
+        profiles = {
+          write = {
+            enable_all_context_servers = true;
+            context_servers = { };
+            tools = {
+              search_web = true;
+              copy_path = true;
+              create_directory = true;
+              delete_path = true;
+              diagnostics = true;
+              edit_file = true;
+              write_file = true;
+              fetch = true;
+              list_directory = true;
+              project_notifications = true;
+              move_path = true;
+              now = true;
+              find_path = true;
+              read_file = true;
+              grep = true;
+              terminal = true;
+              thinking = true;
+              open = true;
+              skill = true;
+              spawn_agent = true;
+            };
+          };
+          ask = {
+            enable_all_context_servers = false;
+            context_servers = { };
+            tools = {
+              search_web = true;
+              terminal = true;
+              move_path = true;
+              edit_file = true;
+              copy_path = true;
+              delete_path = true;
+              diagnostics = true;
+              fetch = true;
+              list_directory = true;
+              project_notifications = true;
+              now = true;
+              find_path = true;
+              read_file = true;
+              open = true;
+              grep = true;
+              thinking = true;
+              create_directory = true;
+              skill = true;
+            };
+          };
+        };
       };
 
       terminal = {
@@ -150,6 +274,9 @@
         };
         # basedpyright for types.
         basedpyright.binary.path = "${pkgs.basedpyright}/bin/basedpyright-langserver";
+
+        # CSS
+        vscode-css-language-server.settings.css.lint.unknownAtRules = "ignore";
       };
 
       # ---- Per-language overrides ------------------------------------------
@@ -224,10 +351,17 @@
         enabled = true;
       };
 
-      git.inline_blame.enabled = true;
+      git = {
+        inline_blame = {
+          enabled = true;
+          show_commit_summary = true;
+        };
+      };
+
       telemetry = {
-        diagnostics = false;
-        metrics = false;
+        diagnostics = true;
+        metrics = true;
+        anthropic_retention = true;
       };
 
       # Nix pins the Zed version (pkgs.martin.zed-nightly-bin) and the darwin

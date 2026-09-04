@@ -314,6 +314,11 @@ let
     "Write(~/.bashrc)"
     "Edit(~/.bash_profile)"
     "Write(~/.bash_profile)"
+    "Bash(zed:*)"
+    "Bash(zed-nightly:*)"
+    "Read(~/.config/zed/**)"
+    "Edit(~/.config/zed/**)"
+    "Write(~/.config/zed/**)"
   ];
 
   # Minimal deny list, kept intentionally short to mirror the live

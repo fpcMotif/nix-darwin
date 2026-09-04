@@ -3,7 +3,7 @@
 ## Identity
 
 - **User**: f
-- **Primary tools**: Claude Code (Opus), Droid (Factory), OpenCode
+- **Primary tools**: Claude Code (Opus), Droid (Factory), OpenCode, Zed
 - **Package managers**: bun/bunx (never npm/npx), pnpm, uv (Python), cargo (Rust)
 - **Terminal**: Ghostty + Kitty | Shell: Zsh | Prompt: Starship
 
