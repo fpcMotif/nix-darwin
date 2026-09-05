@@ -28,11 +28,11 @@
     "archify": {
       "flake": false,
       "locked": {
-        "lastModified": 1788312290,
-        "narHash": "sha256-BH4GflfrIncpcCQVfGY2z9WNLhfIH3fV26jb/YtYHj8=",
+        "lastModified": 1788581961,
+        "narHash": "sha256-Kreng0t1rIsQ2UQfasLCUriGZO4kq81TKhJgN+IOqgQ=",
         "owner": "tt-a1i",
         "repo": "archify",
-        "rev": "06dd052602dd9a369e4d034e24faef0917b5a60c",
+        "rev": "d8e4daf2610d512821365f41b139d874b29efe81",
         "type": "github"
       },
       "original": {
@@ -87,11 +87,11 @@
         "systems": "systems_2"
       },
       "locked": {
-        "lastModified": 1788480218,
-        "narHash": "sha256-KAYzNrvsTQyXTzFckqobhCydzBwW/preXBCxAKb4e6U=",
+        "lastModified": 1788552094,
+        "narHash": "sha256-fdD1tF+RjJME8DRMI/dz2lBuFQ8SvyPCF8tVVZ02OvQ=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "cf835bf360e67ac461e08ba18154e9527c29cd8e",
+        "rev": "ac5abfc00fe9226e9d116f8e2fbb69ae26775ea3",
         "type": "github"
       },
       "original": {
@@ -213,11 +213,11 @@
     "mattpocock-skills": {
       "flake": false,
       "locked": {
-        "lastModified": 1787581197,
-        "narHash": "sha256-N5tpUIHO2VFeJntBTl6/VLDIVpqoshwFxNJlfXXUwsQ=",
+        "lastModified": 1788511407,
+        "narHash": "sha256-dF5i37jHnqfcXD1IRSVzSSm/pfCYSUmOsEhhs5Zx340=",
         "owner": "mattpocock",
         "repo": "skills",
-        "rev": "6654f6b60cd9d5be8b54c6fafe44346dabeb3b76",
+        "rev": "3cca18b368ae95cdbdebbff572ccafa662551015",
         "type": "github"
       },
       "original": {
