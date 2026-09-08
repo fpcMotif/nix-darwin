@@ -463,6 +463,7 @@ let
   # global re-enable a one-line change.
   effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 
+
   # There is deliberately no `in-progress/` source any more. It existed to pull
   # `teach` out of that bucket; upstream has since promoted `teach` into
   # `productivity/`, so the old `^teach$` regex matched nothing and `teach` now
@@ -485,6 +486,24 @@ let
       CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING = "1";
       ENABLE_PROMPT_CACHING_1H = "1";
       CLAUDE_CODE_MAX_OUTPUT_TOKENS = "64000";
+      # Code search routing: rg defaults for agent shells only (6 threads,
+      # 240-column cap, node_modules excluded) and the read-guard threshold.
+      # A 200-line file costs about what one denied round trip costs, so the
+      # guard only pays for itself above ~300 lines.
+      RIPGREP_CONFIG_PATH = "${homeDir}/.config/ripgrep/agent-config";
+      READ_GUARD_MAX_LINES = "300";
+    };
+    # Seed-only wiring for the three search hooks (home.file above ships the
+    # scripts). The live settings.json already carries these; a fresh machine
+    # gets them from here.
+    hooks = {
+      PreToolUse = [
+        { matcher = "Read"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/read-guard.sh"; } ]; }
+        { matcher = "Bash"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/search-guard.sh"; } ]; }
+      ];
+      SessionStart = [
+        { matcher = ""; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/search-warmup.sh"; } ]; }
+      ];
     };
     permissions = claudePermissions;
     model = "opus";
@@ -590,6 +609,17 @@ in
         source = ./claude/statusline-command.sh;
         executable = true;
       };
+
+      # Code search routing (CLAUDE.md "Code search routing" section). The
+      # three hooks are wired in settings.json (seed below; live file is
+      # mutable). Evidence file is what the section cites.
+      ".claude/search-eval.md".source = ./claude/search-eval.md;
+      ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
+      ".claude/hooks/read-guard.sh" = { source = ./claude/hooks/read-guard.sh; executable = true; };
+      ".claude/hooks/search-warmup.sh" = { source = ./claude/hooks/search-warmup.sh; executable = true; };
+      ".local/bin/tg" = { source = ./claude/bin/tg; executable = true; };
+      ".local/bin/rw" = { source = ./claude/bin/rw; executable = true; };
+      ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
     } // localSkillFiles;
 
   # Git-flow style automation was removed from the curated sources instead of

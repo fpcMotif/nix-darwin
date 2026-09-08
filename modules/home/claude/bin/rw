@@ -1,0 +1,9 @@
+#!/bin/bash
+# rw — ripwire for agents: per-repo cache, node_modules excluded, XML legend comments stripped (~70% fewer bytes).
+# Usage: rw [DIR] --verb=... ; DIR defaults to the git toplevel of $PWD. Exit code is ripwire's (gates keep working).
+set -uo pipefail
+if [ $# -gt 0 ] && [ -d "$1" ]; then dir="$1"; shift; else dir="$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"; fi
+dir="$(cd "$dir" && pwd -P)"
+name="$(basename "$dir")-$(printf '%s' "$dir" | shasum | cut -c1-8)"
+cachedir="${RIPWIRE_CACHE_DIR:-$HOME/.cache/ripwire}"; mkdir -p "$cachedir"
+ripwire "$dir" --cache="$cachedir/$name.bin" --exclude=node_modules "$@" 2> >(grep -v 'parser-version' >&2) | perl -0pe 's/<!--.*?-->//gs; s/\n{2,}/\n/g'

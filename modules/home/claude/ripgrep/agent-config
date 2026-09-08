@@ -1,0 +1,10 @@
+# ripgrep config for coding-agent shells only (set RIPGREP_CONFIG_PATH in Claude Code's env, not in ~/.zshrc).
+# Measured on M4 Pro / APFS, 65k-file tree: 14 threads = 1.75 s, 6 threads = 0.82 s (syscall contention).
+--threads=6
+# Minified/bundled lines spill 30-300 KB into context; cut them (preview keeps the match visible).
+--max-columns=240
+--max-columns-preview
+# The umbrella dir is not a git repo, so node_modules is not ignored there (19k files).
+--glob=!node_modules
+--glob=!.tgrep
+--glob=!*.snapshot
