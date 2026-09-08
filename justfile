@@ -146,7 +146,7 @@ bump-and-switch: _no-sudo _daemon
 # Show drift between binaries currently on PATH and the versions pinned
 # in the flake. Useful when a CLI prints "newer version available".
 drift:
-    @for b in amp opencode droid codex gemini pi omp; do \
+    @for b in amp opencode droid codex pi omp; do \
         printf '%-10s %s\n' "$b" "$(readlink -f ~/.nix-profile/bin/$b 2>/dev/null | sed -E 's|.*-([0-9][^/]*)/bin.*|\1|')"; \
     done
 
