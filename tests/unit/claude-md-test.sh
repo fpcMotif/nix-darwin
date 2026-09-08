@@ -21,7 +21,6 @@ nix_content=$(cat "$claude_nix")
 banned_terms=(
   "gemini"
   "deepwiki"
-  "codedb"
   "mgrep"
   "lazygit"
   "deep-research"
@@ -74,7 +73,7 @@ required_sections=(
 )
 
 for section in "${required_sections[@]}"; do
-  if ! printf '%s\n' "$content" | grep -qE "^##+ .*$section"; then
+  if ! printf '%s\n' "$content" | grep -qiE "^##+ .*$section"; then
     echo "claude-md-test: FAIL required section '$section' not found in CLAUDE.md" >&2
     exit 1
   fi

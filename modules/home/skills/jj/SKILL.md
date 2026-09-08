@@ -36,6 +36,7 @@ already produce syntax-highlighted hunks.
 | Make an existing commit the working copy | `jj edit <rev>` |
 | Move `@`'s changes into its parent (amend) | `jj squash` |
 | Drop a commit | `jj abandon <rev>` |
+| Restore files from a revision | `jj restore --from <rev> [paths]` |
 | Undo the last operation | `jj undo` (then `jj op log` / `jj op restore`) |
 
 `jj new` then editing files is the normal way to begin work: do the edits, then
@@ -77,14 +78,21 @@ hunks.
 | List bookmarks | `jj bookmark list` (alias `jj b l`) |
 | Create a bookmark at a rev | `jj bookmark create <name> -r <rev>` |
 | Move a bookmark | `jj bookmark move <name> --to <rev>` (or `set -r`) |
+| Move bookmark sideways/backwards | `jj bookmark move <name> --to <rev> --allow-backwards` |
 | Fetch from remotes | `jj git fetch` |
 | Push a bookmark | `jj git push --bookmark <name>` |
 | Create a bookmark for `@` and push | `jj git push -c @` |
+| Initialize in existing git repo | `jj git init --colocate` |
 | Import/export refs after raw git use | `jj git import` / `jj git export` |
 
-When co-located with git (`.git` present), jj and git share the same commits;
-run `jj git import` if you used a `git` command directly so jj sees the change.
-
+When co-located with git (`.git` present), jj and git share the same commits:
+- Initialize an existing git repo with `jj git init --colocate`.
+- In colocated workspaces, `jj git export` is automatic (no-op). Commits made in jj
+  immediately reflect in git history; run `git checkout <branch>` if git's HEAD is
+  detached and you want git tools to track the branch.
+- When rewriting/splitting a branch or updating a bookmark to a non-descendant commit,
+  pass `--allow-backwards` to `jj bookmark move`.
+- Run `jj git import` if you used a `git` command directly so jj sees external changes.
 ## Revsets (the query language)
 
 `@` working copy · `@-` parent · `@--` grandparent · `root()` · `trunk()`
