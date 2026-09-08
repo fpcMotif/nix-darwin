@@ -463,6 +463,82 @@ let
   # global re-enable a one-line change.
   effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 
+  # pstack (Lauren Tan's Cursor plugin, cursor/plugins/pstack) through
+  # michael-denyer/pstack-claude, the Claude Code port that keeps all 23
+  # principles and re-applies its documented substitutions on every upstream
+  # sync. Installed as plain skills, not as a plugin, so the plugin-only
+  # spellings are rewritten at build time (pstackTransform): plugin-namespaced
+  # agent ids become the bare ids ~/.claude/agents registers, Claude model
+  # slugs become the Agent tool's aliases, and `plugin-dev:skill-development`
+  # becomes the skill-creator installed here.
+  # Scope: only what nothing installed here already does. poteto-mode (the
+  # router), its principles, and the orchestration skills it routes to.
+  # Everything with an installed equivalent is left out and poteto-mode's
+  # trigger lines are pointed at the equivalent instead (pstackTransform):
+  #   tdd, teach          mattpocock tdd, teach
+  #   deslop              simplify (built-in)
+  #   no-comments         the CLAUDE.md Code Quality comment rule
+  #   technical-writing   CLAUDE.md Writing Style + mattpocock writing-for-agents
+  #   bro                 mattpocock wait-what
+  #   blast-radius        ripwire --edit-check (ripwire-change-check)
+  #   setup-pstack        hand-written ~/.claude/pstack-models.md
+  # Also out: bot tooling (make-bot-ui, automate-me), transcript mining
+  # (recall), reflect, typescript-best-practices, and the port's PR extras
+  # (babysit would collide with the brooklyn id; fix-ci and friends duplicate
+  # better-github-skill). The source regex keeps unselected ids out of
+  # discoverCatalog, which throws on a duplicate id.
+  pstackSkillsRoot = inputs.pstack-claude + "/plugins/pstack/skills";
+  pstackPrinciples = builtins.filter (lib.hasPrefix "principle-")
+    (builtins.attrNames (builtins.readDir pstackSkillsRoot));
+  pstackSkills = [
+    "poteto-mode" "how" "why" "architect" "arena" "swarm" "interrogate"
+    "figure-it-out" "unslop" "show-me-your-work"
+    "create-verification-skill" "maintain-verification-skill"
+  ] ++ pstackPrinciples;
+  # pstack's own `tdd` and `teach` are not installed: the mattpocock ids exist
+  # already. poteto-mode gets one trigger line that names the installed `tdd`
+  # and when to reach it, so the routing is explicit rather than a lucky
+  # name match. One id, one skill.
+  pstackTddTrigger = "- Test-first work, or a bug with a cheap local test target → the **tdd** skill (`/tdd`). It is the mattpocock skill installed here: one red-green slice at a time, tests at seams, and the failing run quoted before the fix.\n";
+  pstackModelsIntro = "Role defaults. The Agent tool's `model` parameter takes an alias: `fable` is Fable 5.1, `opus` is Opus 5, `sonnet` is Sonnet 5, `haiku` is Haiku 4.5. A matching role line in `~/.claude/pstack-models.md` overrides each at runtime.";
+  pstackTransform = id: { original, dependencies }:
+    let
+      body = lib.replaceStrings
+        [ "\"pstack:poteto-agent\""
+          "Plugin agents register under the plugin namespace; the bare name `poteto-agent` errors."
+          "plugin-dev:skill-development"
+          "- Before commit → the **deslop** skill (`/deslop`).\n"
+          "- Before review → the **no-comments** skill (`/no-comments`).\n"
+          "- Docs, RFCs, readmes, PR descriptions, commit messages → the **technical-writing** skill (`/technical-writing`) for structure and sentence discipline, on top of **unslop**.\n"
+          "Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in `~/.claude/pstack-models.md` overrides each at runtime; see `/setup-pstack`."
+          "`/setup-pstack`"
+          "claude-opus-5" "claude-opus-4-8" "claude-opus-4-6"
+          "claude-fable-5" "claude-sonnet-5" "claude-sonnet-4-6" "claude-haiku-4-5" ]
+        [ "\"poteto-agent\""
+          "The agent lives in `~/.claude/agents`, so the bare name resolves."
+          "skill-creator"
+          (pstackTddTrigger + "- Before commit → the **simplify** skill (`/simplify`).\n")
+          "- Before review → sweep comments to the Code Quality rule in CLAUDE.md: a comment only for what the code cannot say.\n"
+          "- Docs, RFCs, readmes, PR descriptions, commit messages → the Writing Style section of CLAUDE.md, on top of **unslop**. Agent-facing docs → the **writing-for-agents** skill.\n"
+          pstackModelsIntro
+          "`~/.claude/pstack-models.md`"
+          "opus" "opus" "opus"
+          "fable" "sonnet" "sonnet" "haiku" ]
+        original;
+      nixNote = ''
+
+        ## Nix install
+
+        This skill lives in a read-only Nix store, so `scripts/` cannot install its own `node_modules`. Before the first `orch` or `watch-pr` call, copy it somewhere writable: `cp -RL ~/.claude/skills/poteto-mode/scripts /tmp/pstack-scripts && cd /tmp/pstack-scripts && bun install`, then run the tools from there.
+      '';
+    in body + lib.optionalString (id == "poteto-mode") nixNote;
+  pstackSources = {
+    pstack = mkSource "pstack-claude" "plugins/pstack/skills"
+      "^(${lib.concatStringsSep "|" pstackSkills})$";
+  };
+  pstackExplicit = listToAttrs (map
+    (id: { name = id; value = mkSkill "pstack" id [ ] // { transform = pstackTransform id; }; })
+    pstackSkills);
 
   # There is deliberately no `in-progress/` source any more. It existed to pull
   # `teach` out of that bucket; upstream has since promoted `teach` into
@@ -614,6 +690,10 @@ in
       # three hooks are wired in settings.json (seed below; live file is
       # mutable). Evidence file is what the section cites.
       ".claude/search-eval.md".source = ./claude/search-eval.md;
+
+      # pstack subagent (see pstackSkills). A skills tree carries no agents;
+      # Claude Code reads user agents from ~/.claude/agents by bare name.
+      ".claude/agents/poteto-agent.md".source = inputs.pstack-claude + "/plugins/pstack/agents/poteto-agent.md";
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
       ".claude/hooks/read-guard.sh" = { source = ./claude/hooks/read-guard.sh; executable = true; };
       ".claude/hooks/search-warmup.sh" = { source = ./claude/hooks/search-warmup.sh; executable = true; };
@@ -1001,7 +1081,7 @@ in
         "^(review|web-browser)$";
       archify = mkSource "archify" "." null;
       better-github-skill = mkSource "better-github-skill" "." null;
-    } // mpSources // effectSources;
+    } // mpSources // effectSources // pstackSources;
 
     skills = {
       enable = enabledMattpocockSkills ++ [ "archify" "better-github-skill" ];
@@ -1019,6 +1099,7 @@ in
         # mattpocock skills inherit from user PATH (git/gh/jq/bun globally).
         review = mkSkill "dotfiles-pi" "review" [ pkgs.git pkgs.gh pkgs.jq ];
         web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];
+      } // pstackExplicit // {
 
         # `grill-with-docs` and `improve-codebase-architecture` used to live
         # here so a Nix `transform` could append a Karpathy-alignment footer to

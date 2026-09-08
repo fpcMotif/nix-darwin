@@ -286,6 +286,22 @@
         "type": "github"
       }
     },
+    "pstack-claude": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788826015,
+        "narHash": "sha256-cH75UW02Gt+8lT2Ag18Qm/Y00q7JVKfOKJXV+lRYdOQ=",
+        "owner": "michael-denyer",
+        "repo": "pstack-claude",
+        "rev": "a0a531f0e341144d12f0a26218b295ad5e8453a1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "michael-denyer",
+        "repo": "pstack-claude",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "agent-skills": "agent-skills",
@@ -299,7 +315,8 @@
         "mattpocock-skills": "mattpocock-skills",
         "nixos-wsl": "nixos-wsl",
         "nixpkgs": "nixpkgs",
-        "nur": "nur"
+        "nur": "nur",
+        "pstack-claude": "pstack-claude"
       }
     },
     "systems": {
