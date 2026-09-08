@@ -21,7 +21,7 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 - [Workflows](#workflows)
 - [Dev environments: shells, templates, containers](#dev-environments-shells-templates-containers)
 - [Linux / Omakub plan](#linux--omakub-plan)
-- [WSL, X230, and VM scaffolds](#wsl-x230-and-vm-scaffolds)
+- [X230 and VM scaffolds](#x230-and-vm-scaffolds)
 - [Reference repositories](#reference-repositories)
 - [Guardrails](#guardrails)
 - [Maintaining this document](#maintaining-this-document)
@@ -31,7 +31,7 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 
 1. **Active — `darwinConfigurations.f`.** Apple Silicon (`aarch64-darwin`), nix-darwin. Primary place to make this repo excellent. Intel Macs are out of scope.
 2. **Future — `homeConfigurations.martinfan-omakub`.** Planned Home Manager profile for Ubuntu/Omakub (<https://omakub.org/>). Documentation/design target only; no flake output yet.
-3. **Inactive scaffolds — `nixosConfigurations.wsl`, `nixosConfigurations.x230`, `nixosConfigurations.vm-aarch64-utm`.** Kept for future NixOS/WSL/VM experimentation. Not production until evaluated on real Nix systems.
+3. **Inactive scaffolds — `nixosConfigurations.x230`, `nixosConfigurations.vm-aarch64-utm`.** Kept for future NixOS/VM experimentation. Not production until evaluated on real Nix systems.
 
 ## Repository layout
 
@@ -41,7 +41,6 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 ├── lib/mkSystem.nix          # shared Darwin/NixOS system constructor
 ├── hosts/
 │   ├── darwin/default.nix    # f host layer (active)
-│   ├── wsl/default.nix       # NixOS-WSL scaffold (inactive)
 │   ├── x230/default.nix      # ThinkPad scaffold (inactive)
 │   └── vm-aarch64-utm/       # UTM/QEMU aarch64 VM scaffold (inactive)
 ├── modules/
@@ -66,7 +65,7 @@ This repository is Martin's cross-platform Nix configuration. The Mac is the act
 ## Composition model
 
 `flake.nix` declares hosts once in `hostDefinitions`, keyed by the
-public flake attribute (`f`, `wsl`, `x230`, `vm-aarch64-utm`). Each
+public flake attribute (`f`, `x230`, `vm-aarch64-utm`). Each
 entry records the target family, platform triple, and host module.
 `lib/mkSystem.nix` is the central constructor. Each system supplies
 four facts:
@@ -356,7 +355,7 @@ These are dimensions every reviewer asks about. State the position even when the
 | Formatter            | Wired through `flake.nix` (`formatter.<system>`). Run via `nix fmt`.                           |
 | Linting              | `nix flake check` runs `nixpkgs-fmt --check` via `tests/default.nix`, and gates the `tools/skill-router` bun suite offline through the `unit-skill-router` check (`tests/unit/skill-router-test.nix`) — the spawn-seam regression net (ADR-0006), run on both CI runners. `unit-skill-hygiene` (`tests/unit/skill-hygiene-test.nix`) catches skill-curation drift: exclusion terms that no longer name a live upstream skill, a vendored fork shadowing a promoted upstream id, and any `transform` returning to a mattpocock skill. `statix`/`deadnix` run advisorily via `just lint` (tools pinned in the repo dev shell, scoped by `statix.toml`); promote them to explicit checks once the existing findings are cleared. |
 | Cross-platform purity | `integration-home-linux-purity` (`tests/integration/home-linux-purity-test.nix`, ADR-0008) asserts at eval time that no macOS-only paths/tools (`/Applications`, `~/Library`, `pbcopy`, `darwin-rebuild`, …) reach the Linux hosts' session vars, zsh config, or activation scripts. Darwin-only code in `modules/home` must sit behind `pkgs.stdenv.isDarwin`. |
-| CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin, x86_64 NixOS scaffolds (`wsl`, `x230`), and `vm-aarch64-utm` on macOS / Ubuntu runners, with `nix flake check` as the gate before config builds. Also builds `devShells` on both runners and the `dev-container` image for both Linux systems. |
+| CI                   | GitHub Actions (`.github/workflows/build.yml`): builds active Darwin, the x86_64 NixOS scaffold (`x230`), and `vm-aarch64-utm` on macOS / Ubuntu runners, with `nix flake check` as the gate before config builds. Also builds `devShells` on both runners and the `dev-container` image for both Linux systems. |
 | Dev shells / direnv  | `devShells.<system>.default` is the repo maintainer shell (just, nixpkgs-fmt, statix, deadnix, shellcheck); the checked-in root `.envrc` (`use flake`) auto-enters it via direnv + nix-direnv. Per-project shells seed from `templates.dev-shell` (`nix flake init -t .#dev-shell`). |
 
 When any row changes, update this table in the same PR.
@@ -478,16 +477,15 @@ Do not add that output until these are settled:
 
 Until then, Omakub is a design target documented here only.
 
-## WSL, X230, and VM scaffolds
+## X230 and VM scaffolds
 
-`wsl`, `x230`, and `vm-aarch64-utm` remain in the flake as inactive NixOS scaffolds. They are useful for future experimentation — Windows-app testing, NixOS-on-laptop experiments, and a UTM/QEMU guest path — but they are lower priority than Mac and future Omakub.
+`x230` and `vm-aarch64-utm` remain in the flake as inactive NixOS scaffolds. They are useful for future experimentation — NixOS-on-laptop experiments and a UTM/QEMU guest path — but they are lower priority than Mac and future Omakub.
 
 The VM scaffold is intentionally adapted from `references/nixos-config-mitchellh/`, which is the primary reference for VM-machine shape in this repo. Local comparison trees may be reviewed for ideas, but VM-machine defaults should prefer the senior/reference implementation unless a local requirement overrides it. The current VM assumes an Apple Silicon host with an ARM64 UTM/QEMU guest, UEFI boot, and labelled `nixos`/`boot` filesystems.
 
 Build checks:
 
 ```bash
-nix build .#nixosConfigurations.wsl.config.system.build.toplevel
 nix build .#nixosConfigurations.x230.config.system.build.toplevel
 nix build .#nixosConfigurations.vm-aarch64-utm.config.system.build.toplevel
 ```

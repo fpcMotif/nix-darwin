@@ -1,7 +1,7 @@
 # Integration test: the shared Home Manager profile must stay portable.
 #
 # modules/home is imported by every host — the active Mac AND the staged
-# Linux scaffolds (wsl, x230, vm-aarch64-utm). macOS-only filesystem paths
+# Linux scaffolds (x230, vm-aarch64-utm). macOS-only filesystem paths
 # (/Applications bundles, ~/Library trees) and macOS-only commands must be
 # gated behind `pkgs.stdenv.hostPlatform.isDarwin` so they never reach a Linux host's
 # session environment, shell config, or activation scripts.
@@ -10,7 +10,6 @@
 # option value a Linux host would actually receive.
 { pkgs
 , lib
-, wslConfigurationInput
 , x230ConfigurationInput
 , vmConfigurationInput
 , ...
@@ -41,9 +40,9 @@ let
 
   # includeActivation: forcing home.activation bodies makes agent-skills
   # resolve its bundle via import-from-derivation, which only builds on the
-  # configuration's own platform. The CI builder is x86_64-linux, so wsl/x230
-  # get the activation surface and the aarch64 VM is checked on its pure
-  # (string-option) surfaces only — the modules are shared, so wsl/x230
+  # configuration's own platform. The CI builder is x86_64-linux, so x230
+  # gets the activation surface and the aarch64 VM is checked on its pure
+  # (string-option) surfaces only — the modules are shared, so x230
   # activation coverage extends to it.
   hostChecks = prefix: includeActivation: configuration:
     let
@@ -72,7 +71,6 @@ let
       surfaces;
 in
 helpers.testSuite "home-linux-purity" (
-  hostChecks "wsl" true wslConfigurationInput
-  ++ hostChecks "x230" true x230ConfigurationInput
+  hostChecks "x230" true x230ConfigurationInput
   ++ hostChecks "vm-aarch64-utm" false vmConfigurationInput
 )

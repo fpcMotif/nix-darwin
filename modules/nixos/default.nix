@@ -25,7 +25,7 @@
     PasswordAuthentication = lib.mkDefault false;
   };
 
-  # Keep CLI tools predictable across NixOS hosts and WSL.
+  # Keep CLI tools predictable across NixOS hosts.
   environment = {
     localBinInPath = true;
     pathsToLink = [ "/share/zsh" ];

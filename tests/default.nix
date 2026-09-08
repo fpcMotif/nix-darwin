@@ -96,7 +96,6 @@ in
     else
       callTest ./integration/configurations-eval-test.nix {
         evalScope = "nixos";
-        wslConfigurationInput = self.nixosConfigurations.wsl;
         x230ConfigurationInput = self.nixosConfigurations.x230;
         vmConfigurationInput = self.nixosConfigurations.vm-aarch64-utm;
       };
@@ -113,7 +112,6 @@ in
       ''
     else
       callTest ./integration/home-linux-purity-test.nix {
-        wslConfigurationInput = self.nixosConfigurations.wsl;
         x230ConfigurationInput = self.nixosConfigurations.x230;
         vmConfigurationInput = self.nixosConfigurations.vm-aarch64-utm;
       };

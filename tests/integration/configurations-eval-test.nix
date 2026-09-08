@@ -18,7 +18,6 @@
 , lib
 , evalScope ? "auto"
 , darwinConfigurationInput ? null
-, wslConfigurationInput ? null
 , x230ConfigurationInput ? null
 , vmConfigurationInput ? null
 , ...
@@ -37,13 +36,10 @@ let
   darwinConfig = if darwinConfiguration != null then darwinConfiguration.config else null;
   darwinSystem = if darwinConfiguration != null then darwinConfiguration.system else null;
   darwinHome = if darwinConfig != null then darwinConfig.home-manager.users.${user} else null;
-  wslConfiguration = if selectedScope == "nixos" then wslConfigurationInput else null;
   x230Configuration = if selectedScope == "nixos" then x230ConfigurationInput else null;
   vmConfiguration = if selectedScope == "nixos" then vmConfigurationInput else null;
-  wslConfig = if wslConfiguration != null then wslConfiguration.config else null;
   x230Config = if x230Configuration != null then x230Configuration.config else null;
   vmConfig = if vmConfiguration != null then vmConfiguration.config else null;
-  wslHome = if wslConfig != null then wslConfig.home-manager.users.${user} else null;
   x230Home = if x230Config != null then x230Config.home-manager.users.${user} else null;
   vmHome = if vmConfig != null then vmConfig.home-manager.users.${user} else null;
 
@@ -673,21 +669,8 @@ let
   ] ++ viModeToggleChecks ++ searchToggleChecks ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
   nixosChecks = [
-    (toplevelEvaluatesOnNative "wsl" "x86_64-linux" wslConfig)
     (toplevelEvaluatesOnNative "x230" "x86_64-linux" x230Config)
     (toplevelEvaluatesOnNative "vm-aarch64-utm" "aarch64-linux" vmConfig)
-
-    (helpers.assertTest "wsl-host-name"
-      (wslConfig.networking.hostName == "wsl")
-      "WSL host name should remain wsl")
-
-    (helpers.assertTest "wsl-default-user"
-      (wslConfig.wsl.defaultUser == user)
-      "WSL default user should come from currentSystemUser")
-
-    (helpers.assertTest "wsl-zsh-enabled"
-      (wslConfig.programs.zsh.enable == true)
-      "WSL/NixOS should enable zsh at the system level")
 
     (helpers.assertTest "x230-host-name"
       (x230Config.networking.hostName == "x230")
@@ -706,32 +689,29 @@ let
       "aarch64 UTM VM should enable zsh at the system level")
 
     (helpers.assertTest "linux-excludes-darwin-only-agent-packages"
-      (!(hasPackage "sourcegraph-amp" wslHome.home.packages))
+      (!(hasPackage "sourcegraph-amp" x230Home.home.packages))
       "Linux Home Manager packages should not include Darwin-only agent packages")
 
     (helpers.assertTest "linux-excludes-drafts-mcp-activation"
-      (!(wslHome.home.activation ? claudeMcpDrafts))
+      (!(x230Home.home.activation ? claudeMcpDrafts))
       "Linux Home Manager should not force the Darwin-only Drafts MCP server")
 
     (helpers.assertTest "linux-zed-editor-disabled"
       (
-        wslHome.programs.zed-editor.enable == false
-          && x230Home.programs.zed-editor.enable == false
+        x230Home.programs.zed-editor.enable == false
           && vmHome.programs.zed-editor.enable == false
       )
       "Linux Home Manager should leave programs.zed-editor off — zed-nightly-bin is Darwin-only")
 
     (helpers.assertTest "linux-excludes-zed-nightly-bin-package"
       (
-        !(hasPackage "zed-nightly-bin" wslHome.home.packages)
-          && !(hasPackage "zed-nightly-bin" x230Home.home.packages)
+        !(hasPackage "zed-nightly-bin" x230Home.home.packages)
           && !(hasPackage "zed-nightly-bin" vmHome.home.packages)
       )
       "Linux Home Manager package lists must never include the Darwin-only zed-nightly-bin")
   ]
   ++ viModeToggleChecks
   ++ searchToggleChecks
-  ++ (homeChecks "wsl" wslHome "/home/${user}")
   ++ (homeChecks "x230" x230Home "/home/${user}")
   ++ (homeChecks "vm-aarch64-utm" vmHome "/home/${user}");
 

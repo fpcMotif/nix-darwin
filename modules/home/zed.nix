@@ -14,7 +14,7 @@
 # Platform: `zed-nightly-bin` only ships aarch64-darwin .dmg artifacts (Zed's
 # nightly host has no Linux build, and the flake's supportedSystems list
 # intentionally drops x86_64-darwin), so this module is gated to Darwin via
-# `lib.mkIf`. On Linux (WSL / x230 / vm-aarch64-utm) the config collapses to
+# `lib.mkIf`. On Linux (x230 / vm-aarch64-utm) the config collapses to
 # `{}` and Home Manager never reaches for a derivation that would throw on
 # `home.packages` materialization. Re-enable per-host with a Linux-capable
 # package (e.g. `pkgs.zed-editor` from nixpkgs) if a Linux Zed becomes useful.
