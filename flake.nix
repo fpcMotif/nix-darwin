@@ -59,6 +59,11 @@
       url = "github:AVGVSTVS96/better-github-skill";
       flake = false;
     };
+
+    pstack-claude = {
+      url = "github:michael-denyer/pstack-claude";
+      flake = false;
+    };
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:

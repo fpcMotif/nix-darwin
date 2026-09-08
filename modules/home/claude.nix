@@ -463,6 +463,180 @@ let
   # global re-enable a one-line change.
   effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 
+  # pstack (Lauren Tan's Cursor plugin, cursor/plugins/pstack) through
+  # michael-denyer/pstack-claude, the Claude Code port that keeps all 23
+  # principles and re-applies its documented substitutions on every upstream
+  # sync. Installed as plain skills, not as a plugin, so the plugin-only
+  # spellings are rewritten at build time (pstackTransform): the
+  # plugin-namespaced agent id becomes the bare id ~/.claude/agents registers,
+  # Claude model slugs become the Agent tool's aliases, and
+  # `plugin-dev:skill-development` becomes writing-for-agents, the authoring
+  # reference in this bundle (ADR-0008 keeps skill-creator off the global
+  # catalog).
+  #
+  # Scope: only what nothing installed here already does. poteto-mode (the
+  # router), the orchestration skills it routes to, and its principles as ONE
+  # module (pstack-principles, built below from the 23 upstream leaves: 23
+  # shallow catalog entries become one deep one). Everything with an installed
+  # equivalent is left out and poteto-mode is pointed at the equivalent:
+  #   tdd, teach          mattpocock tdd, teach
+  #   deslop              simplify (built-in)
+  #   no-comments         the CLAUDE.md Code Quality comment rule
+  #   technical-writing   CLAUDE.md Writing Style + mattpocock writing-for-agents
+  #   bro                 mattpocock wait-what
+  #   blast-radius        ripwire --edit-check (ripwire-change-check)
+  #   setup-pstack        hand-written ~/.claude/pstack-models.md
+  #   Prototype playbook  mattpocock prototype
+  #   verify (no skill)   dotfiles web-browser, or the harness's browser tools
+  # Also out: bot tooling (make-bot-ui, automate-me), transcript mining
+  # (recall), reflect, typescript-best-practices, and the port's PR extras
+  # (babysit would collide with the brooklyn id; fix-ci and friends duplicate
+  # better-github-skill). The source regex keeps unselected ids out of
+  # discoverCatalog, which throws on a duplicate id.
+  pstackSkillsRoot = inputs.pstack-claude + "/plugins/pstack/skills";
+  pstackPrinciples = builtins.filter (lib.hasPrefix "principle-")
+    (builtins.attrNames (builtins.readDir pstackSkillsRoot));
+  pstackSkills = [
+    "poteto-mode" "how" "why" "architect" "arena" "swarm" "interrogate"
+    "figure-it-out" "unslop" "show-me-your-work"
+    "create-verification-skill" "maintain-verification-skill"
+  ];
+
+  # Names the playbooks and references still use for skills that are not
+  # installed. The module only rewrites SKILL.md, so poteto-mode carries this
+  # table and every playbook resolves through it. Keep the trigger-line
+  # rewrites in pstackTransform in step with it.
+  pstackAliases = [
+    { name = "`verify`"; use = "the **web-browser** skill, or the harness's browser and simulator tools"; }
+    { name = "`/deslop`"; use = "the **simplify** skill (`/simplify`)"; }
+    { name = "`/no-comments`"; use = "the Code Quality comment rule in CLAUDE.md: a comment only for what the code cannot say"; }
+    { name = "`/technical-writing`"; use = "the Writing Style section of CLAUDE.md; agent-facing docs follow the **writing-for-agents** skill"; }
+    { name = "the bundled `babysit` skill"; use = "the Babysit playbook; no babysit skill is installed"; }
+    { name = "`/tdd`"; use = "the mattpocock **tdd** skill: red-green slices, tests at seams"; }
+    { name = "`plugin-dev:skill-development`, `skill-creator`"; use = "the **writing-for-agents** skill"; }
+    { name = "`~/.claude/pstack-models.md`"; use = "installed by nix; the role sheet every Models section defers to, and the one place to change a model"; }
+    { name = "a leaf `principle-*` skill"; use = "the matching section of the **pstack-principles** skill"; }
+  ];
+  pstackPotetoAppendix = ''
+
+    ## Names used in the playbooks
+
+    The playbooks and references name skills from the original plugin. Each resolves here as follows.
+
+  '' + lib.concatMapStringsSep "\n" (a: "- ${a.name} → ${a.use}") pstackAliases + ''
+
+
+    ## Nix install
+
+    This skill lives in a read-only Nix store, so `scripts/` cannot install its own `node_modules`. Before the first `orch` or `watch-pr` call, copy it somewhere writable: `cp -RL ~/.claude/skills/poteto-mode/scripts /tmp/pstack-scripts && cd /tmp/pstack-scripts && bun install`, then run the tools from there.
+  '';
+  pstackTddTrigger = "- Test-first work, or a bug with a cheap local test target → the **tdd** skill (`/tdd`). It is the mattpocock skill installed here: one red-green slice at a time, tests at seams, and the failing run quoted before the fix.\n";
+  pstackModelsIntro = "Role defaults. The Agent tool's `model` parameter takes an alias: `fable` is Fable 5.1, `opus` is Opus 5, `sonnet` is Sonnet 5, `haiku` is Haiku 4.5. `~/.claude/pstack-models.md` is installed by nix with every role and overrides each line below; change a model there, not here.";
+  pstackTransform = id: { original, dependencies }:
+    let
+      body = lib.replaceStrings
+        [ "\"pstack:poteto-agent\""
+          "Plugin agents register under the plugin namespace; the bare name `poteto-agent` errors."
+          "plugin-dev:skill-development"
+          "- Before commit → the **deslop** skill (`/deslop`).\n"
+          "- Before review → the **no-comments** skill (`/no-comments`).\n"
+          "- Docs, RFCs, readmes, PR descriptions, commit messages → the **technical-writing** skill (`/technical-writing`) for structure and sentence discipline, on top of **unslop**.\n"
+          "- Shipping UI / IDE / CLI → the driver skill (`run` for CLIs/TUIs, `verify` for UIs). Both ship as Claude Code built-ins."
+          "Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide."
+          "(\"prototype\", \"mock it up\", \"try this layout\", \"sketch it to decide\"). `playbooks/prototype.md`."
+          "- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`."
+          "Read the leaf skill in full for any principle you apply. Each entry names when it applies."
+          "Cite only principles whose leaf SKILL.md you read this session."
+          "Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in `~/.claude/pstack-models.md` overrides each at runtime; see `/setup-pstack`."
+          "`/setup-pstack`"
+          "claude-opus-5" "claude-opus-4-8" "claude-opus-4-6"
+          "claude-fable-5" "claude-sonnet-5" "claude-sonnet-4-6" "claude-haiku-4-5" ]
+        [ "\"poteto-agent\""
+          "The agent lives in `~/.claude/agents`, so the bare name resolves."
+          "writing-for-agents"
+          (pstackTddTrigger + "- Before commit → the **simplify** skill (`/simplify`).\n")
+          "- Before review → sweep comments to the Code Quality rule in CLAUDE.md: a comment only for what the code cannot say.\n"
+          "- Docs, RFCs, readmes, PR descriptions, commit messages → the Writing Style section of CLAUDE.md, on top of **unslop**. Agent-facing docs → the **writing-for-agents** skill.\n"
+          "- Shipping UI / IDE / CLI → the driver skill: `run` (a Claude Code built-in) for CLIs and TUIs; for UIs the **web-browser** skill or the harness's browser and simulator tools, which the playbooks call `verify`."
+          "Sketch it via the **prototype** skill (`/prototype`) and let the result decide."
+          "(\"prototype\", \"mock it up\", \"try this layout\", \"sketch it to decide\"). Route: the **prototype** skill (`/prototype`), which keeps the sketch as a primary source on a `prototype/<name>` branch."
+          "- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`. A bug that resists a first look builds its red loop with the **diagnosing-bugs** skill first, then the regression test with **tdd**."
+          "Every **principle-…** id below is a section of the **pstack-principles** skill. Read that section in full for any principle you apply. Each entry names when it applies."
+          "Cite only principles whose section you read this session."
+          pstackModelsIntro
+          "`~/.claude/pstack-models.md`"
+          "opus" "opus" "opus"
+          "fable" "sonnet" "sonnet" "haiku" ]
+        original;
+    in body + lib.optionalString (id == "poteto-mode") pstackPotetoAppendix;
+
+  # The 23 principle leaves as one module. Each leaf's body (frontmatter
+  # dropped, sibling links turned into section anchors) becomes a section
+  # headed by its upstream id, so poteto-mode's index bullets still name the
+  # exact id. Built from the input at eval time, so upstream edits flow through.
+  pstackPrincipleSections = lib.concatMapStringsSep "\n" (id:
+    let
+      raw = builtins.readFile (pstackSkillsRoot + "/${id}/SKILL.md");
+      leafBody = lib.concatStringsSep "\n---\n" (lib.drop 1 (lib.splitString "\n---\n" raw));
+      linked = lib.replaceStrings [ "(../principle-" "/SKILL.md)" ] [ "(#principle-" ")" ] leafBody;
+    in "## ${id}\n${linked}") pstackPrinciples;
+  pstackPrinciplesSkill = ''
+    ---
+    name: pstack-principles
+    description: pstack's 23 engineering principles as sections (laziness protocol, prove it works, model the domain, guard the context window, and more). Read a section when poteto-mode's Principles index names its id.
+    ---
+
+    # pstack principles
+
+    One section per principle, headed by its upstream id. poteto-mode's Principles index says when each applies.
+
+  '' + pstackPrincipleSections;
+
+  # One role sheet, nix-owned. pstack's own contract: a matching role line in
+  # ~/.claude/pstack-models.md overrides the default each skill's Models
+  # section states. Shipping every role here makes the sheet the single place
+  # model routing lives at runtime; the sections stay as upstream documents
+  # them. Tiering is deliberate: a role's default model does the work, the
+  # hardest changes in any role go to strongest judgment.
+  pstackModelRoles = [
+    { role = "feature, refactoring"; models = "opus"; }
+    { role = "bug-fix"; models = "fable"; }
+    { role = "perf-issue"; models = "fable"; }
+    { role = "hillclimb"; models = "fable"; }
+    { role = "judgment and prose"; models = "opus"; }
+    { role = "strongest judgment"; models = "fable"; }
+    { role = "how explorer"; models = "opus"; }
+    { role = "how explainer"; models = "opus"; }
+    { role = "why investigators"; models = "opus"; }
+    { role = "why synthesizer"; models = "opus"; }
+    { role = "arena runners"; models = "opus, fable, sonnet"; }
+    { role = "arena cross-judge pool"; models = "opus, fable, sonnet"; }
+    { role = "swarm workers"; models = "opus"; }
+    { role = "architect runners"; models = "opus, fable, sonnet"; }
+    { role = "interrogate reviewers"; models = "opus, fable, sonnet"; }
+  ];
+  pstackModelsSheet = pkgs.writeText "pstack-models.md" (''
+    # pstack model configuration
+
+    Nix-owned: modules/home/claude.nix, pstackModelRoles. One line per pstack role; each overrides the default the skill's Models section states. Values are the Agent tool's aliases: fable is Fable 5.1, opus is Opus 5, sonnet is Sonnet 5, haiku is Haiku 4.5. The hardest changes in any role go to the strongest judgment model.
+
+  '' + lib.concatMapStringsSep "\n" (r: "${r.role}: ${r.models}") pstackModelRoles + "\n");
+
+  pstackSources = {
+    pstack = mkSource "pstack-claude" "plugins/pstack/skills"
+      "^(${lib.concatStringsSep "|" pstackSkills})$";
+  };
+  pstackExplicit = listToAttrs (map
+    (id: { name = id; value = mkSkill "pstack" id [ ] // { transform = pstackTransform id; }; })
+    pstackSkills) // {
+    pstack-principles = mkSkill "pstack" "principle-laziness-protocol" [ ]
+      // { transform = { original, dependencies }: pstackPrinciplesSkill; };
+  };
+  pstackAgentFile = name: pkgs.writeText name (lib.replaceStrings
+    [ "Navigate to a leaf `principle-*` skill whenever you apply that principle." ]
+    [ "Read the matching section of the `pstack-principles` skill whenever you apply a principle." ]
+    (builtins.readFile (inputs.pstack-claude + "/plugins/pstack/agents/${name}")));
+
   # There is deliberately no `in-progress/` source any more. It existed to pull
   # `teach` out of that bucket; upstream has since promoted `teach` into
   # `productivity/`, so the old `^teach$` regex matched nothing and `teach` now
@@ -485,6 +659,24 @@ let
       CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING = "1";
       ENABLE_PROMPT_CACHING_1H = "1";
       CLAUDE_CODE_MAX_OUTPUT_TOKENS = "64000";
+      # Code search routing: rg defaults for agent shells only (6 threads,
+      # 240-column cap, node_modules excluded) and the read-guard threshold.
+      # A 200-line file costs about what one denied round trip costs, so the
+      # guard only pays for itself above ~300 lines.
+      RIPGREP_CONFIG_PATH = "${homeDir}/.config/ripgrep/agent-config";
+      READ_GUARD_MAX_LINES = "300";
+    };
+    # Seed-only wiring for the three search hooks (home.file above ships the
+    # scripts). The live settings.json already carries these; a fresh machine
+    # gets them from here.
+    hooks = {
+      PreToolUse = [
+        { matcher = "Read"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/read-guard.sh"; } ]; }
+        { matcher = "Bash"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/search-guard.sh"; } ]; }
+      ];
+      SessionStart = [
+        { matcher = ""; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/search-warmup.sh"; } ]; }
+      ];
     };
     permissions = claudePermissions;
     model = "opus";
@@ -590,6 +782,22 @@ in
         source = ./claude/statusline-command.sh;
         executable = true;
       };
+
+      # Code search routing (CLAUDE.md "Code search routing" section). The
+      # three hooks are wired in settings.json (seed below; live file is
+      # mutable). Evidence file is what the section cites.
+      ".claude/search-eval.md".source = ./claude/search-eval.md;
+
+      # pstack subagent (see pstackSkills). A skills tree carries no agents;
+      # Claude Code reads user agents from ~/.claude/agents by bare name.
+      ".claude/agents/poteto-agent.md".source = pstackAgentFile "poteto-agent.md";
+      ".claude/pstack-models.md".source = pstackModelsSheet;
+      ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
+      ".claude/hooks/read-guard.sh" = { source = ./claude/hooks/read-guard.sh; executable = true; };
+      ".claude/hooks/search-warmup.sh" = { source = ./claude/hooks/search-warmup.sh; executable = true; };
+      ".local/bin/tg" = { source = ./claude/bin/tg; executable = true; };
+      ".local/bin/rw" = { source = ./claude/bin/rw; executable = true; };
+      ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
     } // localSkillFiles;
 
   # Git-flow style automation was removed from the curated sources instead of
@@ -971,7 +1179,7 @@ in
         "^(review|web-browser)$";
       archify = mkSource "archify" "." null;
       better-github-skill = mkSource "better-github-skill" "." null;
-    } // mpSources // effectSources;
+    } // mpSources // effectSources // pstackSources;
 
     skills = {
       enable = enabledMattpocockSkills ++ [ "archify" "better-github-skill" ];
@@ -989,6 +1197,7 @@ in
         # mattpocock skills inherit from user PATH (git/gh/jq/bun globally).
         review = mkSkill "dotfiles-pi" "review" [ pkgs.git pkgs.gh pkgs.jq ];
         web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];
+      } // pstackExplicit // {
 
         # `grill-with-docs` and `improve-codebase-architecture` used to live
         # here so a Nix `transform` could append a Karpathy-alignment footer to

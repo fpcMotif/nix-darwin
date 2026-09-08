@@ -1,0 +1,21 @@
+#!/bin/bash
+# tg — tgrep with a per-repo index kept OUT of the repo (no untracked .tgrep/ dir).
+# Usage: tg [tgrep flags] PATTERN [PATH]   (same flags as rg: -n -w -c -l -C3 -U -t ts ...)
+# Root = git toplevel of PATH (last non-flag arg, dir or file) else of $PWD; override with TG_ROOT.
+# Freshness: repos up to TG_ALWAYS_REINDEX_FILES (default 2000) files are re-indexed on EVERY call
+# (incremental, ~100 us per file: 60 ms at 600 files, ~200 ms at 2k) so a file edited a second ago is searchable;
+# larger trees re-index when the index is older than TG_MAX_AGE_MIN (default 10) minutes.
+set -euo pipefail
+last=""; for a in "$@"; do case "$a" in -*) ;; *) last="$a";; esac; done
+if [ -n "${TG_ROOT:-}" ]; then root="$TG_ROOT"
+elif [ -n "$last" ] && [ -e "$last" ]; then d="$last"; [ -d "$d" ] || d="$(dirname "$d")"; root="$(git -C "$d" rev-parse --show-toplevel 2>/dev/null || (cd "$d" && pwd -P))"
+else root="$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"; fi
+root="$(cd "$root" && pwd -P)"
+name="$(basename "$root")-$(printf '%s' "$root" | shasum | cut -c1-8)"
+idx="${TGREP_CACHE_DIR:-$HOME/.cache/tgrep}/$name"; meta="$idx.files"
+build() { n=$(tgrep index "$root" --index-path "$idx" --exclude .tgrep 2>&1 | sed -nE 's/.*Found ([0-9]+) text files.*/\1/p' | head -1); [ -n "${n:-}" ] && printf '%s\n' "$n" > "$meta" || true; }
+small=$(cat "$meta" 2>/dev/null || echo 0)
+if [ ! -d "$idx" ]; then build
+elif [ "${small:-0}" -le "${TG_ALWAYS_REINDEX_FILES:-2000}" ]; then build
+elif [ -n "$(find "$idx" -maxdepth 0 -mmin +"${TG_MAX_AGE_MIN:-10}" 2>/dev/null)" ]; then build; fi
+exec tgrep --index-path "$idx" "$@"

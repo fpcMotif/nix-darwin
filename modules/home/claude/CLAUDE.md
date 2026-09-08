@@ -24,35 +24,39 @@ Rust CLIs replace the classic tools — use these in Bash:
 | diff viewing | `delta` |
 | ad-hoc benchmarks | `hyperfine` |
 
-## Code search routing (measured 2026-09 on this machine; evidence in ~/.claude/search-eval.md)
+## Python
 
-<repo> = the ABSOLUTE path of the git repo root you are working in (substitute it; it is not a shell variable). Never search the ~/devv umbrella itself (65k files, sibling checkouts of the same repo).
-Wrappers on PATH: `tg` = tgrep with a per-repo index kept in ~/.cache, same flags as rg (-n -w -c -l -C2 -U -t ts).
-`rw` = ripwire with node_modules excluded and XML legends stripped: `rw --verb=...` inside <repo>, or `rw <repo> --verb=...`.
+- Never bare `python`, `python3`, or `pip`: the system interpreter is 3.9. Everything runs through uv, which owns its interpreters (3.14 installed).
+- Script or one-liner: `uv run script.py` with deps declared in `# /// script` metadata; `uv run --with httpx python -c '...'`.
+- Project: `uv sync`, `uv add pkg`, `uv run pytest`. No venv activation, no pip, no requirements.txt.
+- Lint and format: `ruff check --fix . && ruff format .` (ruff is on PATH; `uvx ruff@<ver>` only when the project pins one).
+- Types: `uvx ty check`. ty is pre-1.0; if the repo already configures pyright or mypy, run that one via `uvx` instead.
 
-Procedure. Stop as soon as you can act; three lookups usually suffice.
-1. Know a symbol name -> `codedb <repo> explain SYM` (MCP: codedb_explain name=SYM project=<repo>): definition body + every call site, one call.
-   Its enclosing labels `[in for (constant)]` are wrong for loops/lambdas. Need the enclosing function or tested flags -> `rw --callers=SYM`.
-2. Know a file -> `codedb <repo> outline FILE`: every symbol with line numbers. Then read ONLY that span: Read with offset/limit, or `codedb <repo> read FILE -L A-B`.
-3. Know only words -> `rw --for="the words + any identifier you know"`: ranked signatures, r=1 is the anchor (finds constants via doc comments). Then step 2 on that file.
-4. Need EVERY mention of a text (re-exports/barrels, docs, comments, string literals, constants, counts) -> `tg -c PAT <repo>` first, then `tg -n -w PAT <repo>`.
-   One identifier per query. `-C2` context, `-U` multiline, `-c` counts lines. Inside one repo `rg -n PAT <repo>` is equivalent (both under 50 ms up to ~4k files, rg 175 ms at 19k files); tg is what stays fast at the umbrella scale, where rg takes 0.6-2 s.
-   To claim a text is ABSENT, only an exhaustive scan counts: `tg -c PAT <repo>` (text files up to 64 MiB, ignore rules applied) or `rg -uu PAT <repo>` (hidden and ignored files too). Never codedb or fff for absence. Name the tool and scope behind every "not found".
-5. Before saying done: `rw --edit-check=SYM` (callers broken by a new arity), `rw --test-gate` (exit 4 = it names tests to run and an untested radius; it does not run them, so run them), `rw --quality-delta` (exit 2 = a pre-existing symbol got materially worse; new-symbol debt is printed but never gates; a renamed symbol reads as new).
+## Code search routing
 
-Do not:
-- The shell `grep` binary, ever: slower and weaker than every other tool here (no ignore rules, no index, no symbols). Use `rg` with the same flags (but never `-r`: rg reads it as --replace), or `tg`. The built-in Grep tool is rg and is fine. A hook denies a leading `grep`; `| grep` as a pipe filter is allowed.
-- Read whole files to learn one thing; read spans (step 2). Do not re-verify with a second tool unless the first said counts_floor or `[in for (constant)]`.
-- `codedb word X` (uncapped: 27k lines for Config). `rg` from the ~/devv root (1.8 s, floods). Listing (-n) 4+ alternations with no -c/-l/-w or -g/-t narrowing (30-300 KB spills).
-- MCP fff `grep` to enumerate (hard cap 50 hits; "0 exact matches" means absent). fff is for `find_files` by fuzzy name.
-- `rw --uses=CONST` for TypeScript constants (returns 0): use `tg -w CONST <repo>`. `rw --callers` misses calls inside anonymous callbacks (test it() blocks); `tg` catches them.
-- Expect codedb to see files > 2 MiB or node_modules; tg/rg cover them (tg caps at 64 MiB). Files of 1-2 MiB have no trigram entry: `codedb search` still finds them through a 2-7 s first-time scan, `codedb word` instantly.
-- `codedb context` / MCP codedb_context without `--local` / semantic=local: the default hybrid mode sends ~3 KB of path+snippet items to a remote reranker.
-Batch independent lookups in ONE Bash call separated by `;`. A grep after a pipe (`| grep`) is a filter and is never blocked.
+Measured 2026-09 on this machine; numbers and failure modes in ~/.claude/search-eval.md. The token savings came from answer shape (a definition with its callers in one call, spans instead of whole files, counts before listings), not engine speed. Inside one repo the built-in Grep and Glob tools are fine.
 
-Structural / syntax patterns (refactors, API usage) -> ast-grep: `sg -p 'console.log($$$)' --lang ts`, `sg --rewrite 'logger.debug($$$)' -p 'console.log($$$)'`.
-A client-side limit is often mirrored by a differently named server constant joined only by a comment: after locating one, `tg -w` the identifier its comment names.
-Inside one repo the built-in Grep/Glob tools (rg underneath) are fine: 12 ms at 600 files, 175 ms at 19k. The routing above is about token shape (bodies + callers in one call); tg is for the 65k-file umbrella.
+<repo> = absolute path of the git root you work in. Never search ~/devv itself (65k files, sibling checkouts of the same repo); a hook denies rg there without a sub-path.
+
+Procedure. Stop as soon as you can act; three lookups usually suffice. Batch independent lookups in one Bash call with `;`.
+1. Symbol name known -> `codedb <repo> explain SYM`: definition body plus every call site. Its enclosing-function labels are wrong inside loops and lambdas; for the enclosing function or the flags a caller tests -> `rw --callers=SYM`.
+2. File known -> `codedb <repo> outline FILE`, then read only that span: Read with offset/limit, or `codedb <repo> read FILE -L A-B`. A hook denies a limit-less Read of a code file over 300 lines.
+3. Only words known -> `rw --for="words plus any identifier you know"`: ranked signatures, rank 1 is the anchor. Then step 2 on that file.
+4. Every mention of a text (barrels, docs, strings, comments, counts) -> `rg -c PAT <repo>` first, then `rg -n -w PAT <repo>`. One identifier per query; `-C2` for context, `-U` for multiline. Above ~20k files use `tg` (same flags, indexed) instead of rg.
+   An absence claim needs an exhaustive scan: `rg -uu -c PAT <repo>` or `tg -c PAT <repo>`. Never codedb, fff, or zg for absence. Name the tool and scope behind every "not found".
+5. Before saying done: `rw --edit-check=SYM` (callers broken by a new arity); `rw --test-gate` (exit 4 names tests to run; it does not run them, so run them); `rw --quality-delta` (exit 2 = a pre-existing symbol got materially worse).
+
+Wrappers on PATH: `tg` = tgrep with a per-repo index in ~/.cache, same flags as rg. `rw` = ripwire with node_modules excluded and legends stripped; `rw --verb=...` inside <repo>, or `rw <repo> --verb=...`.
+
+MCP or CLI. codedb, fff, and zg each run as an MCP server: same answers as the CLI, typed parameters, no shell quoting. Their schemas are deferred, so the first MCP call in a session costs one ToolSearch round trip, and codedb's server needs ~12 s after start while its CLI is instant. Rule: CLI for the first lookups and inside subagents, MCP once the session is warm. Always pass project=<repo> (codedb) or root=<repo> (zg).
+- codedb_explain for a symbol; codedb_context for a task, only with semantic=local (the default sends snippets to a remote reranker). Outline and read are CLI only.
+- fff find_files for fuzzy filenames, recent and git-dirty first. Not fff grep to enumerate: it caps at 50 hits, and "0 exact matches" means absent.
+- zg zvec_grep_search for word-only orientation on one TypeScript repo, with `fts: SYM` when you know a name. It returns vector neighbours even when nothing matched lexically, so a zg hit never proves presence.
+
+Traps: `rw --uses=CONST` returns 0 for TypeScript constants (use `rg -w`); `rw --callers` misses calls inside anonymous callbacks such as test `it()` blocks; codedb skips node_modules and files over 2 MiB, rg and tg cover them; `codedb word` is uncapped (27k lines for `Config`) and a hook denies it without a pipe to head; the shell `grep` binary as a command is denied by a hook (`| grep` as a filter is fine); never `rg -r` (it means --replace).
+
+Structural patterns (refactors, API usage) -> ast-grep: `sg -p 'console.log($$$)' --lang ts`, `sg --rewrite 'logger.debug($$$)' -p 'console.log($$$)'`.
+A client-side limit is often mirrored by a differently named server constant joined only by a comment: after locating one, `rg -w` the identifier its comment names.
 
 ## Git
 
@@ -61,10 +65,26 @@ Inside one repo the built-in Grep/Glob tools (rg underneath) are fine: 12 ms at 
 
 ## Code Quality
 
+- Simplest direct way. No abstraction, option, or indirection until a second real use demands it.
 - Comments only for what code can't say; no defensive checks
 - Match existing codebase patterns; confirm a library is installed before using it
 - Never expose secrets, keys, or tokens in code or logs
 - bun/bunx for all package management and script execution (never npm/npx)
+
+## Issues, specs, and any document a human reviews
+
+Every issue, spec, PRD, or analysis you write or update has two readers: the agent that implements it and a human who must make sense of it in two minutes. Serve the human **first in the body**, above the agent-facing spec, in an "At a glance" section:
+
+1. **Ask one clarifying question** before writing when the request leaves a real choice open (which fix, which scope, which reader). One question, then write.
+2. **TL;DR** in three sentences: what is wrong, why, what changes.
+3. **General case before this instance.** Describe the mechanism in general terms first so a reviewer can recognise the next occurrence, then the concrete case that exposed it.
+4. **Evidence with real data.** Exact log lines, row values, server timestamps to the millisecond where event order is the point. Label estimates as estimates. Put failing cases beside working ones in a comparison table across the variables that might explain it, so what does *not* correlate is visible.
+5. **More than one kind of visual.** Mermaid (renders in GitHub, Linear, most wikis) is the default for sequence, state, and flow. Pair it with at least one other form the mechanism calls for: a monospace timeline, an annotated code path, a before/after table, a can/cannot matrix. One idea per visual, with a caption.
+6. **A picture version** via `/eli5` or a published artifact when the mechanism is subtle or the reviewer is not the implementer. Link it at the foot: `[eli5 artifact: <name>](<url>)`.
+
+**Done when** a reviewer who reads only "At a glance" can state the root cause, name the fix, and say what stays unchanged.
+
+**On update**, a comment that changes the analysis (a correction, a measured number replacing an estimate, a new decision) carries its own evidence and visual, and the body is edited so it no longer contradicts the comment.
 
 ## Writing Style
 
