@@ -503,9 +503,18 @@ let
   pstackPrinciples = builtins.filter (lib.hasPrefix "principle-")
     (builtins.attrNames (builtins.readDir pstackSkillsRoot));
   pstackSkills = [
-    "poteto-mode" "how" "why" "architect" "arena" "swarm" "interrogate"
-    "figure-it-out" "unslop" "show-me-your-work"
-    "create-verification-skill" "maintain-verification-skill"
+    "poteto-mode"
+    "how"
+    "why"
+    "architect"
+    "arena"
+    "swarm"
+    "interrogate"
+    "figure-it-out"
+    "unslop"
+    "show-me-your-work"
+    "create-verification-skill"
+    "maintain-verification-skill"
   ];
 
   # Names the playbooks and references still use for skills that are not
@@ -541,7 +550,8 @@ let
   pstackTransform = id: { original, dependencies }:
     let
       body = lib.replaceStrings
-        [ "\"pstack:poteto-agent\""
+        [
+          "\"pstack:poteto-agent\""
           "Plugin agents register under the plugin namespace; the bare name `poteto-agent` errors."
           "plugin-dev:skill-development"
           "- Before commit → the **deslop** skill (`/deslop`).\n"
@@ -555,9 +565,16 @@ let
           "Cite only principles whose leaf SKILL.md you read this session."
           "Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in `~/.claude/pstack-models.md` overrides each at runtime; see `/setup-pstack`."
           "`/setup-pstack`"
-          "claude-opus-5" "claude-opus-4-8" "claude-opus-4-6"
-          "claude-fable-5" "claude-sonnet-5" "claude-sonnet-4-6" "claude-haiku-4-5" ]
-        [ "\"poteto-agent\""
+          "claude-opus-5"
+          "claude-opus-4-8"
+          "claude-opus-4-6"
+          "claude-fable-5"
+          "claude-sonnet-5"
+          "claude-sonnet-4-6"
+          "claude-haiku-4-5"
+        ]
+        [
+          "\"poteto-agent\""
           "The agent lives in `~/.claude/agents`, so the bare name resolves."
           "writing-for-agents"
           (pstackTddTrigger + "- Before commit → the **simplify** skill (`/simplify`).\n")
@@ -571,21 +588,31 @@ let
           "Cite only principles whose section you read this session."
           pstackModelsIntro
           "`~/.claude/pstack-models.md`"
-          "opus" "opus" "opus"
-          "fable" "sonnet" "sonnet" "haiku" ]
+          "opus"
+          "opus"
+          "opus"
+          "fable"
+          "sonnet"
+          "sonnet"
+          "haiku"
+        ]
         original;
-    in body + lib.optionalString (id == "poteto-mode") pstackPotetoAppendix;
+    in
+    body + lib.optionalString (id == "poteto-mode") pstackPotetoAppendix;
 
   # The 23 principle leaves as one module. Each leaf's body (frontmatter
   # dropped, sibling links turned into section anchors) becomes a section
   # headed by its upstream id, so poteto-mode's index bullets still name the
   # exact id. Built from the input at eval time, so upstream edits flow through.
-  pstackPrincipleSections = lib.concatMapStringsSep "\n" (id:
-    let
-      raw = builtins.readFile (pstackSkillsRoot + "/${id}/SKILL.md");
-      leafBody = lib.concatStringsSep "\n---\n" (lib.drop 1 (lib.splitString "\n---\n" raw));
-      linked = lib.replaceStrings [ "(../principle-" "/SKILL.md)" ] [ "(#principle-" ")" ] leafBody;
-    in "## ${id}\n${linked}") pstackPrinciples;
+  pstackPrincipleSections = lib.concatMapStringsSep "\n"
+    (id:
+      let
+        raw = builtins.readFile (pstackSkillsRoot + "/${id}/SKILL.md");
+        leafBody = lib.concatStringsSep "\n---\n" (lib.drop 1 (lib.splitString "\n---\n" raw));
+        linked = lib.replaceStrings [ "(../principle-" "/SKILL.md)" ] [ "(#principle-" ")" ] leafBody;
+      in
+      "## ${id}\n${linked}")
+    pstackPrinciples;
   pstackPrinciplesSkill = ''
     ---
     name: pstack-principles
@@ -632,9 +659,10 @@ let
     pstack = mkSource "pstack-claude" "plugins/pstack/skills"
       "^(${lib.concatStringsSep "|" pstackSkills})$";
   };
-  pstackExplicit = listToAttrs (map
-    (id: { name = id; value = mkSkill "pstack" id [ ] // { transform = pstackTransform id; }; })
-    pstackSkills) // {
+  pstackExplicit = listToAttrs
+    (map
+      (id: { name = id; value = mkSkill "pstack" id [ ] // { transform = pstackTransform id; }; })
+      pstackSkills) // {
     pstack-principles = mkSkill "pstack" "principle-laziness-protocol" [ ]
       // { transform = { original, dependencies }: pstackPrinciplesSkill; };
   };
@@ -677,11 +705,11 @@ let
     # gets them from here.
     hooks = {
       PreToolUse = [
-        { matcher = "Read"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/read-guard.sh"; } ]; }
-        { matcher = "Bash"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/search-guard.sh"; } ]; }
+        { matcher = "Read"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/read-guard.sh"; }]; }
+        { matcher = "Bash"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/search-guard.sh"; }]; }
       ];
       SessionStart = [
-        { matcher = ""; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/search-warmup.sh"; } ]; }
+        { matcher = ""; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/search-warmup.sh"; }]; }
       ];
     };
     permissions = claudePermissions;
