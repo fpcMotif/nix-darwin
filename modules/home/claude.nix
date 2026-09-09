@@ -632,9 +632,14 @@ let
     pstack-principles = mkSkill "pstack" "principle-laziness-protocol" [ ]
       // { transform = { original, dependencies }: pstackPrinciplesSkill; };
   };
+  # The agent description is a context pointer the lead reads on every turn,
+  # so it states what the agent is and when to pick it, and leaves the
+  # "read SKILL.md first" instruction to the body, which already carries it.
   pstackAgentFile = name: pkgs.writeText name (lib.replaceStrings
-    [ "Navigate to a leaf `principle-*` skill whenever you apply that principle." ]
-    [ "Read the matching section of the `pstack-principles` skill whenever you apply a principle." ]
+    [ "description: Routing target for `/poteto-mode` and any request for poteto's style. Resume an existing `poteto-agent` for the conversation rather than spawning a sibling. Reads the `poteto-mode` skill's `SKILL.md` in full before any work, including its inline Principles index. Substituting `general-purpose` skips that read and drifts."
+      "Navigate to a leaf `principle-*` skill whenever you apply that principle." ]
+    [ "description: Subagent for poteto-mode playbook steps. It reads poteto-mode's SKILL.md and principles before working, which general-purpose does not. Use as `subagent_type` for any delegate a pstack playbook spawns; resume an existing poteto-agent instead of spawning a sibling."
+      "Read the matching section of the `pstack-principles` skill whenever you apply a principle." ]
     (builtins.readFile (inputs.pstack-claude + "/plugins/pstack/agents/${name}")));
 
   # There is deliberately no `in-progress/` source any more. It existed to pull

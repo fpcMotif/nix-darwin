@@ -66,6 +66,7 @@ A client-side limit is often mirrored by a differently named server constant joi
 ## Code Quality
 
 - Simplest direct way. No abstraction, option, or indirection until a second real use demands it.
+- Edit the lines that change; rewrite a whole file only when most of it changes.
 - Comments only for what code can't say; no defensive checks
 - Match existing codebase patterns; confirm a library is installed before using it
 - Never expose secrets, keys, or tokens in code or logs
@@ -88,4 +89,4 @@ Every issue, spec, PRD, or analysis you write or update has two readers: the age
 
 ## Writing Style
 
-Be concise. Sacrifice grammar for concision. Short sentences, plain words, define or cut jargon. McCloskey/Pinker standard, not academic hedging. Never touch facts, quotes, citations, or code for style — only the words around them.
+Be concise. Sacrifice grammar for concision. Short sentences, plain words, define or cut jargon. McCloskey/Pinker standard, not academic hedging. Say what you mean: when a literal phrase exists, use it instead of a metaphor or flourish. Never touch facts, quotes, citations, or code for style — only the words around them.
