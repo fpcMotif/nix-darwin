@@ -67,6 +67,8 @@ A client-side limit is often mirrored by a differently named server constant joi
 
 - Simplest direct way. No abstraction, option, or indirection until a second real use demands it.
 - Edit the lines that change; rewrite a whole file only when most of it changes.
+- Keep a test only if it would fail when every function it imports returned `undefined`; assert a literal output or observable effect, not a call or a constant.
+- When two fixes that share an assumption fail the same check, write the assumption down and test it before a third fix.
 - Comments only for what code can't say; no defensive checks
 - Match existing codebase patterns; confirm a library is installed before using it
 - Never expose secrets, keys, or tokens in code or logs
