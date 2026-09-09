@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
 {
   home.activation.cleanupLegacyDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
@@ -35,6 +35,26 @@
     # NOTE: settings.json is intentionally NOT cleared — Claude mutates it
     # at runtime; the seed activation in claude.nix only writes if absent.
     remove_legacy_path "$HOME/.claude/CLAUDE.md"
+
+    # Agent-layer review 2026-09-09 (ADR-0015 area). The codedb-pro blockers
+    # deny every tool CLAUDE.md names and re-arm on a licence probe; they were
+    # never nix-owned. The five personal hooks after them are nix files now
+    # (modules/home/claude/hooks), so a plain copy must go before linking; a
+    # symlink there is already ours.
+    for h in block-legacy-tools block-native-tools codedb-block-legacy codedbpro-gate \
+             auto-verify-edit auto-log-error pre-compact-save post-compact-reload codedb-warmup; do
+      f="$HOME/.claude/hooks/$h.sh"
+      if [ -e "$f" ] && [ ! -L "$f" ]; then remove_legacy_path "$f"; fi
+    done
+    # codedbpro was registered only in ~/.mcp.json; nothing in the repo owns it.
+    if [ -f "$HOME/.mcp.json" ] && ${pkgs.jq}/bin/jq -e ".mcpServers.codedbpro" "$HOME/.mcp.json" >/dev/null 2>&1; then
+      tmp=$(mktemp)
+      ${pkgs.jq}/bin/jq "del(.mcpServers.codedbpro)" "$HOME/.mcp.json" > "$tmp" && mv -- "$tmp" "$HOME/.mcp.json"
+    fi
+    # aily-md is a per-project skill (Feishu aily docs); it leaves the global pickers.
+    for d in .claude/skills .agents/skills .config/crush/skills .config/opencode/skills .pi/agent/skills .codex/skills .cursor/skills .factory/skills; do
+      if [ -L "$HOME/$d/aily-md" ]; then remove_legacy_path "$HOME/$d/aily-md"; fi
+    done
     remove_legacy_path "$HOME/.claude/claude.md"
     remove_legacy_path "$HOME/.claude/statusline-command.sh"
     # Code search routing files were hand-installed on 2026-09-08 before Nix

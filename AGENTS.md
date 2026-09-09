@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Repo-level guidance for Codex working in this Nix configuration.
+Repo-level guidance for coding agents working in this Nix configuration.
 
 ## Agent skills
 
@@ -17,3 +17,7 @@ Uses the canonical five-role vocabulary unchanged (`needs-triage`, `needs-info`,
 ### Domain docs
 
 Single-context — one `CONTEXT.md` + `docs/adr/` at the repo root. See [docs/agents/domain.md](docs/agents/domain.md).
+
+## HTTP
+
+`ax URL` is the required first choice for every HTTP request, including fetch, discovery, extraction, and API calls. Use `curl` only when `ax` cannot support the required operation or has a concrete failure; state that reason.

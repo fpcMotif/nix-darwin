@@ -52,7 +52,6 @@ let
     mkcert
     jwt-cli
     step-cli
-    xh
     hyperfine
 
     neovim
@@ -105,6 +104,9 @@ let
     martin.sourcegraph-amp
     martin.droid
     martin.opencode
+    # Hunk, prebuilt release: review-first TUI diff viewer the Git section of
+    # CLAUDE.md routes human review to (nixpkgs `hunk` SIGKILLs here, see pkgs/hunk-bin.nix).
+    martin.hunk-bin
     martin.mole
     codex
     nur.repos.charmbracelet.crush

@@ -98,7 +98,8 @@ let
   # mattpocock/skills promoted buckets. `personal/` and `deprecated/` are
   # excluded per upstream CONTEXT.md. New upstream skills under any bucket
   # auto-load on the next `nix flake update mattpocock-skills`.
-  mattpocockBuckets = [ "engineering" "productivity" "misc" ];
+  # misc retired 2026-09-09: every skill it held was lean-excluded.
+  mattpocockBuckets = [ "engineering" "productivity" ];
   # Skills genuinely turned off. Kept out of every picker dir AND out of the
   # Claude Code plugin surface — since mattpocock-skills@claude-plugins-official
   # was installed, the plugin is the one route that can still reach us with an
@@ -122,12 +123,9 @@ let
   # removing it here, or surface it on demand with `/<name>` once re-enabled.
   # `caveman` and `zoom-out` used to sit here; upstream deleted both, so the
   # entries excluded nothing — unit-skill-hygiene now fails on a dead term.
-  leanExcludedMattpocockSkills = [
-    "git-guardrails-claude-code" # one-time git-hook setup, not a recurring workflow
-    "migrate-to-shoehorn" # @total-typescript/shoehorn-specific test migration
-    "scaffold-exercises" # course / exercise authoring
-    "setup-pre-commit" # Husky / lint-staged JS setup, one-off
-  ];
+  # Empty since 2026-09-09: its four entries were the whole misc bucket, which
+  # is no longer discovered. Keep the list; a future bucket may need it.
+  leanExcludedMattpocockSkills = [ ];
   # Every id we refuse to carry, for the all-targets picker sweep. None is in
   # the bundle, but the external `skills` CLI (~/.agents/.skill-lock.json)
   # re-installs some as real dirs under ~/.agents/skills — exactly the leak
@@ -471,31 +469,40 @@ let
   # `teach` out of that bucket; upstream has since promoted `teach` into
   # `productivity/`, so the old `^teach$` regex matched nothing and `teach` now
   # arrives through plain bucket auto-discovery from the same store root.
-  # Re-adding an in-progress source is a duplicate-id hazard — the bucket also
-  # ships a `review` that collides with the dotfiles-pi `review` below, and any
-  # id upstream later promotes would then be discovered twice, making
-  # discoverCatalog throw — so unit-skill-hygiene asserts it stays gone.
+  # Re-adding an in-progress source is a duplicate-id hazard — any id upstream
+  # later promotes would then be discovered twice, making discoverCatalog
+  # throw — so unit-skill-hygiene asserts it stays gone. (The bucket's own
+  # `review` no longer collides with anything: the dotfiles-pi `review` was
+  # retired for the code-review host, ADR-0015.)
+
+  # Settings env, seeded on a fresh machine and filled into the live
+  # settings.json at every switch (live values win, new keys are added).
+  claudeSeedEnv = {
+    API_TIMEOUT_MS = "3000000";
+    ENABLE_LSP_TOOL = "1";
+    CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
+    CLAUDE_CODE_NEW_INIT = "1";
+    CLAUDE_CODE_NO_FLICKER = "1";
+    CLAUDE_CODE_SIMPLE_SYSTEM_PROMPT = "1";
+    CLAUDE_CODE_FORK_SUBAGENT = "1";
+    CLAUDE_AUTO_BACKGROUND_TASKS = "1";
+    CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING = "1";
+    ENABLE_PROMPT_CACHING_1H = "1";
+    CLAUDE_CODE_MAX_OUTPUT_TOKENS = "64000";
+    # Code search routing: rg defaults for agent shells only (6 threads,
+    # 240-column cap, node_modules excluded) and the read-guard threshold.
+    # A 200-line file costs about what one denied round trip costs, so the
+    # guard only pays for itself above ~300 lines.
+    RIPGREP_CONFIG_PATH = "${homeDir}/.config/ripgrep/agent-config";
+    READ_GUARD_MAX_LINES = "300";
+    # Bash tool: 10 s default before a command is backgrounded (lookups answer
+    # in under a second); the tiers above it are in CLAUDE.md, up to the ceiling.
+    BASH_DEFAULT_TIMEOUT_MS = "10000";
+    BASH_MAX_TIMEOUT_MS = "600000";
+  };
 
   claudeSettingsSeed = pkgs.writeText "claude-settings-seed.json" (builtins.toJSON {
-    env = {
-      API_TIMEOUT_MS = "3000000";
-      ENABLE_LSP_TOOL = "1";
-      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
-      CLAUDE_CODE_NEW_INIT = "1";
-      CLAUDE_CODE_NO_FLICKER = "1";
-      CLAUDE_CODE_SIMPLE_SYSTEM_PROMPT = "1";
-      CLAUDE_CODE_FORK_SUBAGENT = "1";
-      CLAUDE_AUTO_BACKGROUND_TASKS = "1";
-      CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING = "1";
-      ENABLE_PROMPT_CACHING_1H = "1";
-      CLAUDE_CODE_MAX_OUTPUT_TOKENS = "64000";
-      # Code search routing: rg defaults for agent shells only (6 threads,
-      # 240-column cap, node_modules excluded) and the read-guard threshold.
-      # A 200-line file costs about what one denied round trip costs, so the
-      # guard only pays for itself above ~300 lines.
-      RIPGREP_CONFIG_PATH = "${homeDir}/.config/ripgrep/agent-config";
-      READ_GUARD_MAX_LINES = "300";
-    };
+    env = claudeSeedEnv;
     # Seed-only wiring for the three search hooks (home.file above ships the
     # scripts). The live settings.json already carries these; a fresh machine
     # gets them from here.
@@ -504,8 +511,19 @@ let
         { matcher = "Read"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/read-guard.sh"; } ]; }
         { matcher = "Bash"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/search-guard.sh"; } ]; }
       ];
+      PostToolUse = [
+        { matcher = "Bash"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/auto-verify-edit.sh"; } ]; }
+      ];
+      PostToolUseFailure = [
+        { matcher = "Bash"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/auto-log-error.sh"; } ]; }
+      ];
+      PreCompact = [
+        { matcher = ""; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/pre-compact-save.sh"; } ]; }
+      ];
       SessionStart = [
         { matcher = ""; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/search-warmup.sh"; } ]; }
+        { matcher = ""; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/codedb-warmup.sh"; } ]; }
+        { matcher = "compact"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/post-compact-reload.sh"; } ]; }
       ];
     };
     permissions = claudePermissions;
@@ -521,18 +539,11 @@ let
       "gopls-lsp@claude-plugins-official" = true;
       "code-simplifier@claude-plugins-official" = true;
       "code-review@claude-plugins-official" = true;
-      "ralph-loop@claude-plugins-official" = true;
       "expert-lsp@elixir-expert" = true;
       "typescript-lsp@claude-plugins-official" = true;
       "context7@claude-plugins-official" = true;
       "skill-creator@claude-plugins-official" = true;
       "claude-md-management@claude-plugins-official" = true;
-      "git@frad-dotclaude" = true;
-      "gitflow@frad-dotclaude" = true;
-      "github@frad-dotclaude" = true;
-      "superpowers@frad-dotclaude" = true;
-      "refactor@frad-dotclaude" = true;
-      "code-context@frad-dotclaude" = true;
     };
     extraKnownMarketplaces = {
       "frad-dotclaude" = {
@@ -617,6 +628,7 @@ in
       # three hooks are wired in settings.json (seed below; live file is
       # mutable). Evidence file is what the section cites.
       ".claude/search-eval.md".source = ./claude/search-eval.md;
+      ".claude/search-routing.md".source = ./claude/search-routing.md;
 
       # pstack subagent (see pstackSkills). A skills tree carries no agents;
       # Claude Code reads user agents from ~/.claude/agents by bare name.
@@ -625,6 +637,13 @@ in
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
       ".claude/hooks/read-guard.sh" = { source = ./claude/hooks/read-guard.sh; executable = true; };
       ".claude/hooks/search-warmup.sh" = { source = ./claude/hooks/search-warmup.sh; executable = true; };
+      # Personal hooks, vendored 2026-09-09 (they were plain files only the live
+      # settings knew about): zigmemo/zigdiff helpers and the codedb warm-up.
+      ".claude/hooks/auto-verify-edit.sh" = { source = ./claude/hooks/auto-verify-edit.sh; executable = true; };
+      ".claude/hooks/auto-log-error.sh" = { source = ./claude/hooks/auto-log-error.sh; executable = true; };
+      ".claude/hooks/pre-compact-save.sh" = { source = ./claude/hooks/pre-compact-save.sh; executable = true; };
+      ".claude/hooks/post-compact-reload.sh" = { source = ./claude/hooks/post-compact-reload.sh; executable = true; };
+      ".claude/hooks/codedb-warmup.sh" = { source = ./claude/hooks/codedb-warmup.sh; executable = true; };
       ".local/bin/tg" = { source = ./claude/bin/tg; executable = true; };
       ".local/bin/rw" = { source = ./claude/bin/rw; executable = true; };
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
@@ -745,9 +764,12 @@ in
       tmp=$(mktemp)
       if ${pkgs.jq}/bin/jq \
           --argjson hidden ${lib.escapeShellArg (builtins.toJSON claudeHiddenSkillIds)} \
-          --argjson denied ${lib.escapeShellArg (builtins.toJSON deniedPluginSkills)} '
-            .skillOverrides = ((.skillOverrides // {})
+          --argjson denied ${lib.escapeShellArg (builtins.toJSON deniedPluginSkills)} \
+          --argjson seedenv ${lib.escapeShellArg (builtins.toJSON claudeSeedEnv)} '
+            .env = ($seedenv + (.env // {}))
+            | .skillOverrides = ((.skillOverrides // {})
               + ($hidden | map({ key: ., value: "off" }) | from_entries))
+            | del(.skillOverrides["writing-great-skills"])
             | .permissions = (.permissions // {})
             | .permissions.deny = ((.permissions.deny // [])
               + ($denied - (.permissions.deny // [])))
@@ -1006,7 +1028,7 @@ in
 
     sources = {
       dotfiles-pi = mkSource "dotfiles" "dot_pi/agent/skills"
-        "^(review|web-browser)$";
+        "^web-browser$";
       archify = mkSource "archify" "." null;
       better-github-skill = mkSource "better-github-skill" "." null;
     } // mpSources // effectSources // pstackSources;
@@ -1023,9 +1045,10 @@ in
       # for reuse / trivial re-enable: `enableAll = builtins.attrNames effectSources;`.
       enableAll = [ ];
       explicit = {
-        # Skills that need CLI deps symlinked into the bundle dir.
-        # mattpocock skills inherit from user PATH (git/gh/jq/bun globally).
-        review = mkSkill "dotfiles-pi" "review" [ pkgs.git pkgs.gh pkgs.jq ];
+        # Skills wired one by one; the list is CLI deps symlinked into the
+        # bundle dir (none now: the dotfiles-pi `review` that carried git/gh/jq
+        # was retired for the code-review host, ADR-0015). mattpocock skills
+        # inherit from user PATH (git/gh/jq/bun globally).
         web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];
       } // pstackExplicit // {
 

@@ -30,11 +30,12 @@ if [ "$CWD" = "$UMBRELLA" ] && printf '%s' "$CMD" | grep -Eq '(^|;|&&|\|\|)[[:sp
   fi
 fi
 
-# 3. cat/bat of a large file (>300 KB): token bomb. Point at ranged reads.
-if printf '%s' "$CMD" | grep -Eq '(^|[;&|[:space:]])(cat|bat)[[:space:]]'; then
+# 3. bat (or cat) of a long file with no line range: token bomb. read-guard caps the Read tool at the same height; point at a span.
+if printf '%s' "$CMD" | grep -Eq '(^|[;&|[:space:]])(cat|bat)[[:space:]]' \
+   && ! printf '%s' "$CMD" | grep -Eq -- '--line-range|(^|[[:space:]])-r[[:space:]]'; then
   for f in $(printf '%s' "$CMD" | grep -Eo '(^|[[:space:]])(cat|bat)[[:space:]]+[^|;&]*' | sed -E 's/^[[:space:]]*(cat|bat)[[:space:]]+//' | tr ' ' '\n' | grep -v '^-'); do
     p="$f"; [ "${p#/}" = "$p" ] && p="$CWD/$f"
-    if [ -f "$p" ]; then sz=$(stat -f %z "$p" 2>/dev/null || echo 0); [ "$sz" -gt 307200 ] && deny "search-guard: $f is $((sz/1024)) KB. Read a span instead: 'codedb <repo> read $f -L A-B', 'codedb <repo> outline $f', or the Read tool with offset/limit."; fi
+    if [ -f "$p" ]; then n=$(wc -l < "$p" 2>/dev/null | tr -d " " || echo 0); [ "$n" -gt "${READ_GUARD_MAX_LINES:-300}" ] && deny "search-guard: $f has $n lines. Read a span: 'bat -pp --line-range A:B $f' after 'codedb <repo> outline $f', or the Read tool with offset/limit."; fi
   done
 fi
 

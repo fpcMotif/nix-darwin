@@ -266,11 +266,6 @@ programs.agent-skills = {
     enable = enabledMattpocockSkills;
     enableAll = [ "effect-ts" ];
     explicit = {
-      review = {
-        from = "dotfiles-pi";
-        path = "review";
-        packages = [ pkgs.git pkgs.gh pkgs.jq ];
-      };
       web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
     };
   };
