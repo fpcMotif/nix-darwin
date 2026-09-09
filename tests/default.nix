@@ -52,6 +52,7 @@ in
   '';
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
+  unit-pstack-hygiene = callTest ./unit/pstack-hygiene-test.nix { };
 
   # Tier-1 hermetic check for martin.shell.viMode + martin.shell.search:
   # assembles the zshrc in home-manager's real section order, loads it in a

@@ -60,6 +60,18 @@ The drift checks over the curation lists: Tier 1 `unit-skill-hygiene` (hermetic 
 A *discovered* skill exists in the catalog (its source is wired up) but is not placed in any picker. An *enabled* skill is additionally surfaced into the picker target dirs and is selectable. Wiring a source discovers its skills; it does not enable them.
 Rejected workflow skills should be removed from source filters instead of left discovered-but-disabled.
 
+**Transformed skill**:
+A skill sourced from a flake input whose `SKILL.md` is rewritten at build time by a Nix `transform` (pure string replacement on the pinned text) so plugin-only or foreign-runtime spellings resolve here; every other file in the skill ships verbatim. pstack is the instance (ADR-0014, `modules/home/claude/pstack.nix`); `unit-pstack-hygiene` is its tripwire. _Avoid_: fork, patch (nothing is vendored; the input stays pinned and bumps nightly).
+
+**Alias section**:
+The "Names used in the playbooks" section a transformed router skill carries so that names in files the module cannot rewrite (playbooks, references) resolve to installed skills in one place. Single source for that mapping; the trigger-line rewrites in the transform follow it.
+
+**Collapsed principles**:
+`pstack-principles`: one module built at eval time from the upstream `principle-*` leaves, one section per upstream id, so 23 catalog entries become one and the router's index bullets still name exact ids.
+
+**Role sheet**:
+`~/.claude/pstack-models.md`, Nix-owned, one line per pstack role in Agent tool aliases (`fable`, `opus`, `sonnet`, `haiku`). pstack's own override contract makes it the one place model routing changes; the skills' Models sections are upstream defaults it overrides.
+
 ### Skill-router effects
 
 **Router runtime (`RouterRuntime`)**:
