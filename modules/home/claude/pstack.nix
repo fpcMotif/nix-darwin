@@ -40,9 +40,18 @@ let
   pstackPrinciples = builtins.filter (lib.hasPrefix "principle-")
     (builtins.attrNames (builtins.readDir pstackSkillsRoot));
   pstackSkills = [
-    "poteto-mode" "how" "why" "architect" "arena" "swarm" "interrogate"
-    "figure-it-out" "unslop" "show-me-your-work"
-    "create-verification-skill" "maintain-verification-skill"
+    "poteto-mode"
+    "how"
+    "why"
+    "architect"
+    "arena"
+    "swarm"
+    "interrogate"
+    "figure-it-out"
+    "unslop"
+    "show-me-your-work"
+    "create-verification-skill"
+    "maintain-verification-skill"
   ];
 
   # Names the playbooks and references still use for skills that are not
@@ -78,7 +87,8 @@ let
   pstackTransform = id: { original, dependencies }:
     let
       body = lib.replaceStrings
-        [ "\"pstack:poteto-agent\""
+        [
+          "\"pstack:poteto-agent\""
           "Plugin agents register under the plugin namespace; the bare name `poteto-agent` errors."
           "plugin-dev:skill-development"
           "- Before commit → the **deslop** skill (`/deslop`).\n"
@@ -92,10 +102,18 @@ let
           "Cite only principles whose leaf SKILL.md you read this session."
           "Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in `~/.claude/pstack-models.md` overrides each at runtime; see `/setup-pstack`."
           "`/setup-pstack`"
-          "claude-opus-5" "claude-opus-4-8" "claude-opus-4-6"
-          "claude-fable-5" "claude-sonnet-5" "claude-sonnet-4-6" "claude-haiku-4-5"
-          " — " "—" ]
-        [ "\"poteto-agent\""
+          "claude-opus-5"
+          "claude-opus-4-8"
+          "claude-opus-4-6"
+          "claude-fable-5"
+          "claude-sonnet-5"
+          "claude-sonnet-4-6"
+          "claude-haiku-4-5"
+          " — "
+          "—"
+        ]
+        [
+          "\"poteto-agent\""
           "The agent lives in `~/.claude/agents`, so the bare name resolves."
           "writing-for-agents"
           (pstackTddTrigger + "- Before commit → the **simplify** skill (`/simplify`).\n")
@@ -109,22 +127,33 @@ let
           "Cite only principles whose section you read this session."
           pstackModelsIntro
           "`~/.claude/pstack-models.md`"
-          "opus" "opus" "opus"
-          "fable" "sonnet" "sonnet" "haiku"
-          ", " ", " ]
+          "opus"
+          "opus"
+          "opus"
+          "fable"
+          "sonnet"
+          "sonnet"
+          "haiku"
+          ", "
+          ", "
+        ]
         original;
-    in body + lib.optionalString (id == "poteto-mode") pstackPotetoAppendix;
+    in
+    body + lib.optionalString (id == "poteto-mode") pstackPotetoAppendix;
 
   # The 23 principle leaves as one module. Each leaf's body (frontmatter
   # dropped, sibling links turned into section anchors) becomes a section
   # headed by its upstream id, so poteto-mode's index bullets still name the
   # exact id. Built from the input at eval time, so upstream edits flow through.
-  pstackPrincipleSections = lib.concatMapStringsSep "\n" (id:
-    let
-      raw = builtins.readFile (pstackSkillsRoot + "/${id}/SKILL.md");
-      leafBody = lib.concatStringsSep "\n---\n" (lib.drop 1 (lib.splitString "\n---\n" raw));
-      linked = lib.replaceStrings [ "(../principle-" "/SKILL.md)" ] [ "(#principle-" ")" ] leafBody;
-    in "## ${id}\n${linked}") pstackPrinciples;
+  pstackPrincipleSections = lib.concatMapStringsSep "\n"
+    (id:
+      let
+        raw = builtins.readFile (pstackSkillsRoot + "/${id}/SKILL.md");
+        leafBody = lib.concatStringsSep "\n---\n" (lib.drop 1 (lib.splitString "\n---\n" raw));
+        linked = lib.replaceStrings [ "(../principle-" "/SKILL.md)" ] [ "(#principle-" ")" ] leafBody;
+      in
+      "## ${id}\n${linked}")
+    pstackPrinciples;
   pstackPrinciplesSkill = ''
     ---
     name: pstack-principles
@@ -172,9 +201,10 @@ let
     pstack = mkSource "pstack-claude" "plugins/pstack/skills"
       "^(${lib.concatStringsSep "|" pstackSkills})$";
   };
-  pstackExplicit = lib.listToAttrs (map
-    (id: { name = id; value = mkSkill "pstack" id [ ] // { transform = pstackTransform id; }; })
-    pstackSkills) // {
+  pstackExplicit = lib.listToAttrs
+    (map
+      (id: { name = id; value = mkSkill "pstack" id [ ] // { transform = pstackTransform id; }; })
+      pstackSkills) // {
     pstack-principles = mkSkill "pstack" "principle-laziness-protocol" [ ]
       // { transform = { original, dependencies }: pstackPrinciplesSkill; };
   };
@@ -182,13 +212,18 @@ let
   # so it states what the agent is and when to pick it, and leaves the
   # "read SKILL.md first" instruction to the body, which already carries it.
   pstackAgentText = name: lib.replaceStrings
-    [ "description: Routing target for `/poteto-mode` and any request for poteto's style. Resume an existing `poteto-agent` for the conversation rather than spawning a sibling. Reads the `poteto-mode` skill's `SKILL.md` in full before any work, including its inline Principles index. Substituting `general-purpose` skips that read and drifts."
-      "Navigate to a leaf `principle-*` skill whenever you apply that principle." ]
-    [ "description: Subagent for poteto-mode playbook steps. It reads poteto-mode's SKILL.md and principles before working, which general-purpose does not. Use as `subagent_type` for any delegate a pstack playbook spawns; resume an existing poteto-agent instead of spawning a sibling."
-      "Read the matching section of the `pstack-principles` skill whenever you apply a principle." ]
+    [
+      "description: Routing target for `/poteto-mode` and any request for poteto's style. Resume an existing `poteto-agent` for the conversation rather than spawning a sibling. Reads the `poteto-mode` skill's `SKILL.md` in full before any work, including its inline Principles index. Substituting `general-purpose` skips that read and drifts."
+      "Navigate to a leaf `principle-*` skill whenever you apply that principle."
+    ]
+    [
+      "description: Subagent for poteto-mode playbook steps. It reads poteto-mode's SKILL.md and principles before working, which general-purpose does not. Use as `subagent_type` for any delegate a pstack playbook spawns; resume an existing poteto-agent instead of spawning a sibling."
+      "Read the matching section of the `pstack-principles` skill whenever you apply a principle."
+    ]
     (builtins.readFile (inputs.pstack-claude + "/plugins/pstack/agents/${name}"));
   pstackAgentFile = name: pkgs.writeText name (pstackAgentText name);
-in {
+in
+{
   inherit pstackSkillsRoot pstackPrinciples pstackSkills pstackAliases
     pstackTransform pstackPrinciplesSkill pstackModelRoles pstackModelsSheetText
     pstackModelsSheet pstackSources pstackExplicit pstackAgentText pstackAgentFile;

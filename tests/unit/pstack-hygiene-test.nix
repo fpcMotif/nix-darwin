@@ -29,19 +29,37 @@ let
 
   # RESTATED: the ids claude.nix installs from pstack.
   installedIds = [
-    "poteto-mode" "how" "why" "architect" "arena" "swarm" "interrogate"
-    "figure-it-out" "unslop" "show-me-your-work"
-    "create-verification-skill" "maintain-verification-skill"
+    "poteto-mode"
+    "how"
+    "why"
+    "architect"
+    "arena"
+    "swarm"
+    "interrogate"
+    "figure-it-out"
+    "unslop"
+    "show-me-your-work"
+    "create-verification-skill"
+    "maintain-verification-skill"
   ];
 
   # Spellings that must never reach an installed SKILL.md. The alias section
   # poteto-mode carries names foreign spellings on purpose, as lookup keys,
   # so the scan covers the text above it.
   residue = [
-    "pstack:" "plugin-dev:" "/setup-pstack"
-    "claude-opus-5" "claude-fable-5" "claude-sonnet-5" "claude-haiku-4-5"
-    "playbooks/prototype.md" "**deslop**" "**no-comments**" "**technical-writing**"
-    "leaf SKILL.md" "—"
+    "pstack:"
+    "plugin-dev:"
+    "/setup-pstack"
+    "claude-opus-5"
+    "claude-fable-5"
+    "claude-sonnet-5"
+    "claude-haiku-4-5"
+    "playbooks/prototype.md"
+    "**deslop**"
+    "**no-comments**"
+    "**technical-writing**"
+    "leaf SKILL.md"
+    "—"
   ];
   aboveAliases = text: builtins.head (lib.splitString "## Names used in the playbooks" text);
   residueHits = lib.concatMap
