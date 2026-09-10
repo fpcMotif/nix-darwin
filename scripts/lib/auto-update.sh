@@ -134,7 +134,14 @@ au_is_glue_drv_name() {
     system-path*|system-applications*)
       return 0 ;;
     # home-manager profiles, file trees, fonts, option docs
-    home-manager-*|hm_*|options.json)
+    home-manager-*|hm_*|options.json|fonts|source|patches)
+      return 0 ;;
+    # Generated system files and activation helpers
+    npm-config-hook|hm-session-vars.sh|set-environment|ca-certificates.crt|\
+    martin-auto-switch|*-auto-switch|*.plist|*.json|*.md|*.sh|\
+    *-config|*-settings|*-keymaps|*-models|*-report|*-report.domain|\
+    link|cleanup|launchd|darwin-rebuild|darwin-option|darwin-version*|\
+    darwin-uninstaller|check-link-targets.sh)
       return 0 ;;
     # Generated LSP config files (claude-lsp.json, codex-lsp.toml, …)
     *-lsp.*)
