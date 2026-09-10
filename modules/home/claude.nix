@@ -8,6 +8,7 @@
 #
 let
   inherit (lib) optionalAttrs listToAttrs;
+  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
 
   homeDir = config.home.homeDirectory;
   mkSource = input: subdir: nameRegex: {
@@ -207,7 +208,6 @@ let
     "Bash(nix:*)"
     "Bash(nix-build:*)"
     "Bash(nix-shell:*)"
-    "Bash(darwin-rebuild:*)"
     "Bash(home-manager:*)"
     "Bash(just:*)"
     "Bash(make:*)"
@@ -237,7 +237,6 @@ let
     "Bash(gofmt:*)"
     "Bash(swift:*)"
     "Bash(swiftc:*)"
-    "Bash(xcrun:*)"
     "Bash(fd:*)"
     "Bash(eza:*)"
     "Bash(bat:*)"
@@ -287,8 +286,6 @@ let
     "Read(~/.docker/config.json)"
     "Read(~/.config/gh/**)"
     "Read(~/.claude.json)"
-    "Read(~/Library/Application Support/Claude/config.json)"
-    "Read(~/Library/**)"
     "Read(~/.claude/projects/**/*.jsonl)"
     "Read(~/.claude/sessions/**)"
     "Read(~/.claude/session-env/**)"
@@ -317,6 +314,13 @@ let
     "Read(~/.config/zed/**)"
     "Edit(~/.config/zed/**)"
     "Write(~/.config/zed/**)"
+  ] ++ lib.optionals isDarwin [
+    # macOS-only commands and home paths stay out of Linux settings and
+    # activation scripts.
+    "Bash(darwin-rebuild:*)"
+    "Bash(xcrun:*)"
+    "Read(~/Library/Application Support/Claude/config.json)"
+    "Read(~/Library/**)"
   ];
 
   # Minimal deny list, kept intentionally short to mirror the live
@@ -337,6 +341,7 @@ let
     "Read(~/.ssh/**)"
     "Read(~/.aws/**)"
     "Read(~/.gnupg/**)"
+  ] ++ lib.optionals isDarwin [
     "Read(~/Library/Keychains/**)"
     "Edit(~/Library/**)"
     "Write(~/Library/**)"
@@ -349,9 +354,6 @@ let
   # Note these mostly go quiet under defaultMode bypassPermissions, which skips
   # prompts — they are the fallback for any session started in another mode.
   claudeAskRules = [
-    "Read(~/Applications/**)"
-    "Edit(~/Applications/**)"
-    "Write(~/Applications/**)"
     "Read(~/Documents/**)"
     "Edit(~/Documents/**)"
     "Write(~/Documents/**)"
@@ -376,6 +378,10 @@ let
     "Read(~/*.*)"
     "Edit(~/*.*)"
     "Write(~/*.*)"
+  ] ++ lib.optionals isDarwin [
+    "Read(~/Applications/**)"
+    "Edit(~/Applications/**)"
+    "Write(~/Applications/**)"
   ];
 
   # The exact object merged over `.permissions` each switch. deny appends

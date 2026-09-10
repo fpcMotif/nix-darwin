@@ -27,13 +27,21 @@ fi
 
 # Update the package.json pin and regenerate the lockfile. Use npm from Nix
 # rather than the PATH shim: Bun's `npm` writes bun.lock instead of the lock
-# file Nix consumes.
-nodejs_out=$(nix eval --raw nixpkgs#nodejs_24.outPath)
-npm_cmd="$nodejs_out/bin/npm"
-if [ ! -x "$npm_cmd" ]; then
-  echo "update-sourcegraph-amp: Nix Node npm not found at $npm_cmd" >&2
-  exit 1
+# file Nix consumes. Nixpkgs splits npm from the Node runtime, so resolve both
+# outputs explicitly and keep a fallback for older channel revisions that
+# embedded the CLI under lib/node_modules.
+nodejs_out=$(nix eval --raw nixpkgs#nodejs-slim_26.outPath)
+npm_out=$(nix eval --raw nixpkgs#nodejs-slim_26.npm.outPath)
+npm_cmd=("$npm_out/bin/npm")
+if [ ! -x "${npm_cmd[0]}" ]; then
+  npm_cli="$nodejs_out/lib/node_modules/npm/bin/npm-cli.js"
+  if [ ! -x "$nodejs_out/bin/node" ] || [ ! -f "$npm_cli" ]; then
+    echo "update-sourcegraph-amp: Nix Node 26 npm output not found" >&2
+    exit 1
+  fi
+  npm_cmd=("$nodejs_out/bin/node" "$npm_cli")
 fi
+
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 jq --arg v "$latest" '.dependencies."@sourcegraph/amp" = $v' \
@@ -47,7 +55,7 @@ if [ ! -f "$ca_file" ]; then
   ca_file="$ca_out/etc/ssl/certs/ca-bundle.crt"
 fi
 (cd "$work" && NODE_EXTRA_CA_CERTS="$ca_file" \
-  "$npm_cmd" install --package-lock-only --omit=peer >/dev/null)
+  "${npm_cmd[@]}" install --package-lock-only --omit=peer >/dev/null)
 
 mv "$work/package.json" "$PKG_DIR/package.json"
 mv "$work/package-lock.json" "$PKG_DIR/package-lock.json"
