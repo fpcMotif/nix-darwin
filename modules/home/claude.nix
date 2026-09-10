@@ -514,22 +514,22 @@ let
     # gets them from here.
     hooks = {
       PreToolUse = [
-        { matcher = "Read"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/read-guard.sh"; } ]; }
-        { matcher = "Bash"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/search-guard.sh"; } ]; }
+        { matcher = "Read"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/read-guard.sh"; }]; }
+        { matcher = "Bash"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/search-guard.sh"; }]; }
       ];
       PostToolUse = [
-        { matcher = "Bash"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/auto-verify-edit.sh"; } ]; }
+        { matcher = "Bash"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/auto-verify-edit.sh"; }]; }
       ];
       PostToolUseFailure = [
-        { matcher = "Bash"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/auto-log-error.sh"; } ]; }
+        { matcher = "Bash"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/auto-log-error.sh"; }]; }
       ];
       PreCompact = [
-        { matcher = ""; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/pre-compact-save.sh"; } ]; }
+        { matcher = ""; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/pre-compact-save.sh"; }]; }
       ];
       SessionStart = [
-        { matcher = ""; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/search-warmup.sh"; } ]; }
-        { matcher = ""; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/codedb-warmup.sh"; } ]; }
-        { matcher = "compact"; hooks = [ { type = "command"; command = "$HOME/.claude/hooks/post-compact-reload.sh"; } ]; }
+        { matcher = ""; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/search-warmup.sh"; }]; }
+        { matcher = ""; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/codedb-warmup.sh"; }]; }
+        { matcher = "compact"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/post-compact-reload.sh"; }]; }
       ];
     };
     permissions = claudePermissions;
