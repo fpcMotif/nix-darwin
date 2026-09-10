@@ -152,7 +152,7 @@ au_is_glue_drv_name() {
 au_is_fixed_output_drv() {
   local drv=$1
   nix derivation show "$drv" 2>/dev/null \
-    | jq -e '.[].outputs.out.hash? != null' >/dev/null
+    | jq -e 'any(.derivations[]?.outputs[]?; .hash? != null)' >/dev/null
 }
 
 # Is <drv-name> covered by the given vendored pname list? A drv whose name
