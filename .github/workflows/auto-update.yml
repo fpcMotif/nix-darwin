@@ -135,6 +135,14 @@ jobs:
             Auto-merges on green CI. See `PANIC.md` for rollback.
           labels: auto-update
           delete-branch: true
+      - name: Wait for PR checks
+        if: steps.cpr.outputs.pull-request-number
+        env:
+          GH_TOKEN: ${{ secrets.AUTO_UPDATE_PAT }}
+        run: |
+          gh pr checks --watch --fail-fast \
+            "${{ steps.cpr.outputs.pull-request-number }}"
+
 
       - name: Enable auto-merge
         if: steps.cpr.outputs.pull-request-number
