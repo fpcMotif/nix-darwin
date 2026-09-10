@@ -71,6 +71,27 @@ diff editor (space to toggle a hunk, `c` to confirm):
 stack, then `jj show <rev>` (or `jj diff -r <rev>`) on each to review per-commit
 hunks.
 
+## Interactive review in Hunk
+
+`hunk` is the TUI the user reviews agent changes in. It detects `.jj/`, so
+`hunk diff [revset]` and `hunk show <rev>` take revsets. Steer the open window
+from this terminal with `hunk session ...`; run `hunk skill path` and load that
+skill for the full session, navigate, reload, and comment commands.
+
+| Goal | Command |
+|------|---------|
+| Open `@` for review, auto-reloading as you edit | `hunk diff --watch` |
+| Open one commit | `hunk show <rev>` |
+| Structure of the loaded review, no patch text | `hunk session review --repo . --json` |
+| The user's inline notes with file:line anchors | `hunk session comment list --repo . --json` |
+| Leave a note | `hunk session comment add --repo . --file <path> --new-line <n> --summary "..."` |
+
+Extensions install imperatively (`hunk extension install <owner/repo>`, not
+through nix): `muzomer/hunk-commit` marks hunks in the TUI and commits, squashes
+into an unpushed commit, or discards them as one jj operation (`jj undo` reverts
+it); `victor-software-house/hunk-history` browses history and reviews commit
+ranges (the 0.22 beta folds it into `hunk log`).
+
 ## Bookmarks & Git interop
 
 | Task | Command |
@@ -119,8 +140,16 @@ Common: `jj log -r 'trunk()..@'`, `jj diff -r 'description("WIP")'`.
 
 ## Agent etiquette in jj repos
 
-- Inspect with `jj status` + `jj diff` before changing anything — no `git
-  status`/`git diff` (they miss jj's working-copy commit semantics).
+- Inspect with `jj status` + `jj diff` before changing anything.
+- **Colocated contract** (`.git` beside `.jj`): git HEAD is `@-`, so read-only
+  git sees the current change (`git diff HEAD` equals `jj diff`), and tools
+  that read git (code-review, ripwire, calldiff, hunk) work as they are. Git
+  writes (`checkout`, `add`, `stash`, `commit`, `branch`) desync the two: the
+  next jj command resets the working copy onto the new HEAD and abandons the
+  old working-copy commit.
+- Git-reading tools take git refs, not revsets: the fixed point is the bookmark
+  name (`main`), and "commit first" is `jj new`, which makes the change `@-`
+  and therefore HEAD.
 - Make atomic commits by editing freely then `jj split -i` / `jj absorb`, rather
   than trying to stage hunks (there is no index).
 - Never assume a bookmark moved — advance it explicitly before `jj git push`.

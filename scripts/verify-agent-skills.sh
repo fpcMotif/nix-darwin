@@ -127,6 +127,17 @@ if [ -d "$PLUGIN_CACHE" ]; then
       bad "$id is hidden from Claude but the plugin does not declare it -- the flake pin is ahead of the plugin, so this skill is now invisible"
     fi
   done
+  # Text drift: Claude reads the plugin copy, every other agent the bundle copy.
+  # Different cadences (plugin release vs flake pin) make drift expected, so it
+  # is reported, never failed; an id present on one side only is caught above.
+  drift=0
+  for id in ${PLUGIN_PROVIDED[@]+"${PLUGIN_PROVIDED[@]}"}; do
+    [ -n "$id" ] || continue
+    bundle="$CLAUDE_SKILLS/$id/SKILL.md"
+    plugin=$(find "$PLUGIN_CACHE" -path "*/skills/*/$id/SKILL.md" -print -quit 2>/dev/null)
+    if [ -f "$bundle" ] && [ -n "$plugin" ] && ! cmp -s "$bundle" "$plugin"; then drift=$((drift + 1)); fi
+  done
+  if [ "$drift" -eq 0 ]; then ok "plugin and bundle SKILL.md identical for every hidden id"; else na "$drift hidden ids differ between plugin and bundle text (plugin release vs flake pin); Claude reads the plugin, other agents the bundle"; fi
 else
   na "plugin cache not found at $PLUGIN_CACHE"
 fi
@@ -238,7 +249,7 @@ if [ -f "$CLAUDE_MD" ]; then
   [ "$banned_found" -eq 0 ] && ok "no dead/banned tools found in $CLAUDE_MD"
 
   tools_missing=0
-  for tool in fd rg bat eza dust procs btm xh delta hyperfine fff; do
+  for tool in fd rg bat eza dust procs btm ax delta hyperfine fff; do
     if ! printf '%s\n' "$claude_md_content" | grep -q "\b$tool\b"; then
       bad "required tool '$tool' not mentioned in $CLAUDE_MD"
       tools_missing=1

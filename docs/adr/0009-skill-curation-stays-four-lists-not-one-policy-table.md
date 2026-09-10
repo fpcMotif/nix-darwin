@@ -14,6 +14,9 @@ Status: refuted (not deferred — see "What would change this decision" for the 
 >   still carries per-skill CLI-dependency lists (`review`) that a status table cannot express.
 > - The lists are now **three**, not four: `disabledMattpocockSkills`,
 >   `leanExcludedMattpocockSkills`, `removedSkillIds`.
+> - The `review` example in Q1 is gone as of 2026-09-09: the dotfiles-pi `review` was retired
+>   (ADR-0015). `skills.explicit` still carries `web-browser` and the pstack entries, so the
+>   argument rests on the mechanism (per-skill entries with a deps list), not on that skill.
 >
 > The `DRY_RUN` asymmetry Q1 identified as the one genuine win has since been fixed.
 > `tests/unit/skill-hygiene-test.nix` now enforces that no `transform` returns to a mattpocock

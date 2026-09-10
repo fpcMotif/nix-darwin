@@ -105,7 +105,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: [wsl, x230]
+        config: [x230]
     steps:
       - uses: actions/checkout@v5
 

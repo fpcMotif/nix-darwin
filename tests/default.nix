@@ -52,6 +52,7 @@ in
   '';
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
+  unit-pstack-hygiene = callTest ./unit/pstack-hygiene-test.nix { };
 
   # Tier-1 hermetic check for martin.shell.viMode + martin.shell.search:
   # assembles the zshrc in home-manager's real section order, loads it in a
@@ -96,7 +97,6 @@ in
     else
       callTest ./integration/configurations-eval-test.nix {
         evalScope = "nixos";
-        wslConfigurationInput = self.nixosConfigurations.wsl;
         x230ConfigurationInput = self.nixosConfigurations.x230;
         vmConfigurationInput = self.nixosConfigurations.vm-aarch64-utm;
       };
@@ -113,7 +113,6 @@ in
       ''
     else
       callTest ./integration/home-linux-purity-test.nix {
-        wslConfigurationInput = self.nixosConfigurations.wsl;
         x230ConfigurationInput = self.nixosConfigurations.x230;
         vmConfigurationInput = self.nixosConfigurations.vm-aarch64-utm;
       };

@@ -1,5 +1,5 @@
 {
-  description = "Martin's cross-platform Nix config: active nix-darwin Mac with Linux/WSL scaffolds";
+  description = "Martin's cross-platform Nix config: active nix-darwin Mac with Linux scaffolds";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -16,11 +16,6 @@
 
     nur = {
       url = "github:nix-community/NUR";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    nixos-wsl = {
-      url = "github:nix-community/NixOS-WSL/main";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -92,12 +87,6 @@
           system = "aarch64-darwin";
           target = "darwin";
           hostModule = ./hosts/darwin;
-        };
-
-        wsl = {
-          system = "x86_64-linux";
-          target = "nixos";
-          hostModule = ./hosts/wsl;
         };
 
         x230 = {

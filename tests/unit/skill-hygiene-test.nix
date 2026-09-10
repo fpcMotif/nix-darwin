@@ -22,16 +22,11 @@ let
       (builtins.readDir root));
 
   # The promoted buckets claude.nix discovers from.
-  upstreamIds = lib.unique (lib.concatMap bucketIds [ "engineering" "productivity" "misc" ]);
+  upstreamIds = lib.unique (lib.concatMap bucketIds [ "engineering" "productivity" ]);
 
   # RESTATED, not imported — must match modules/home/claude.nix by hand.
   disabled = [ "grill-me" ];
-  leanExcluded = [
-    "git-guardrails-claude-code"
-    "migrate-to-shoehorn"
-    "scaffold-exercises"
-    "setup-pre-commit"
-  ];
+  leanExcluded = [ ];
   vendored = [ "jj" "setup-ts-deep-modules" ];
 
   claudeNix = builtins.readFile (self + "/modules/home/claude.nix");

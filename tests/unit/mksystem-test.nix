@@ -18,13 +18,12 @@ let
   user = "martinfan";
 
   darwinConfig = self.darwinConfigurations."f".config;
-  wslConfig = self.nixosConfigurations.wsl.config;
   x230Config = self.nixosConfigurations.x230.config;
   vmConfig = self.nixosConfigurations.vm-aarch64-utm.config;
 
   homeConfig =
     if isDarwin then darwinConfig.home-manager.users.${user}
-    else wslConfig.home-manager.users.${user};
+    else x230Config.home-manager.users.${user};
 
   expectedHomeDirectory = if isDarwin then "/Users/${user}" else "/home/${user}";
 
@@ -155,14 +154,6 @@ let
   ];
 
   linuxChecks = lib.optionals (!isDarwin) [
-    (helpers.assertTest "wsl-host-name-matches-flake-attr"
-      (wslConfig.networking.hostName == "wsl")
-      "wsl networking.hostName must equal its flake attribute name (driven by mkSystem's hostname arg, not the host module)")
-
-    (helpers.assertTest "wsl-default-user"
-      (wslConfig.wsl.defaultUser == user)
-      "WSL default user should come from currentSystemUser")
-
     (helpers.assertTest "x230-host-name-matches-flake-attr"
       (x230Config.networking.hostName == "x230")
       "x230 networking.hostName must equal its flake attribute name (driven by mkSystem's hostname arg, not the host module)")
@@ -176,8 +167,7 @@ let
       "vm-aarch64-utm networking.hostName must equal its flake attribute name (driven by mkSystem's hostname arg, not the host module)")
     (helpers.assertTest "linux-host-platforms-match-host-definitions"
       (
-        wslConfig.nixpkgs.hostPlatform.system == "x86_64-linux"
-        && x230Config.nixpkgs.hostPlatform.system == "x86_64-linux"
+        x230Config.nixpkgs.hostPlatform.system == "x86_64-linux"
         && vmConfig.nixpkgs.hostPlatform.system == "aarch64-linux"
       )
       "NixOS host platforms should come from the flake host definitions")

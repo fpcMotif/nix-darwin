@@ -43,7 +43,7 @@ required_tools=(
   "dust"
   "procs"
   "btm"
-  "xh"
+  "ax"
   "delta"
   "hyperfine"
   "fff"

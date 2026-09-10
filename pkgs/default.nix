@@ -46,6 +46,7 @@ final: _prev:
     bun-canary-bin = final.callPackage ./bun-canary-bin.nix { };
     drafts-mcp-server = final.callPackage ./drafts-mcp-server.nix { };
     fff-mcp = final.callPackage ./fff-mcp.nix { };
+    hunk-bin = final.callPackage ./hunk-bin.nix { };
     nub = final.callPackage ./nub.nix { };
     oh-my-pi = final.callPackage ./oh-my-pi.nix { };
     pi-coding-agent = final.callPackage ./pi-coding-agent.nix { };
