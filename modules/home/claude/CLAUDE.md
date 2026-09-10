@@ -7,7 +7,7 @@
 
 ## Tooling defaults
 
-In Bash, these are the commands, in bypass mode too.
+In Bash, these are the commands, in bypass mode too. A hook denies `cat`, `sed`, `find`, and `perl` and names the row to use.
 
 | Job                          | Run                                             |
 | ---------------------------- | ----------------------------------------------- |
@@ -27,9 +27,14 @@ Compose them: `fd -e ts | xargs sg -p 'PATTERN' --lang ts`, `rg -l PAT | xargs b
 
 Timeouts: the default is 10 s and a lookup answers in under a second, so a lookup still running at 10 s is the wrong command; narrow it. Pass `timeout` for the slow classes: tests 120000, network calls 30000, nix builds and `just check` 600000; servers and watchers run in the background.
 
+## File changes
+
+Create a file with the Write tool. Change lines with the Edit tool: exact `old_string` to `new_string`, `replace_all` for every occurrence; it fails loudly on a missed anchor. Batch: every independent Edit of a task goes in one response, one Edit per site, the same file included; a hook flags a run of single-Edit turns. A rule across many sites or files is `sg -p PAT -r REPL --lang X DIR` (dry run), then `-U`. A hook denies the shell forms (heredoc into a file, `sed -i`, `echo >>`, inline python that writes a file); measured error rates and the trial are in modules/home/claude/shell-guard-eval.md in nix-config.
+
 ## Python
 
-- Script or one-liner: `uv run script.py` with deps declared in `# /// script` metadata; `uv run --with httpx python -c '...'`.
+- Every Python call goes through uv; a hook denies bare `python`, `python3`, and `pip`.
+- Script or one-liner: `uv run script.py` with deps declared in `# /// script` metadata; `uv run - <<'PY'` for stdin; `uv run --with httpx python -c '...'`.
 - Project: `uv sync`, `uv add pkg`, `uv run pytest`.
 - Lint and format: `ruff check --fix . && ruff format .`
 - Types: `uvx ty check`; a repo that configures pyright or mypy gets that one via `uvx`.

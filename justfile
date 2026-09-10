@@ -157,6 +157,8 @@ check:
         '.#checks.aarch64-darwin.unit-overlay' \
         '.#checks.aarch64-darwin.unit-justfile' \
         '.#checks.aarch64-darwin.unit-claude-md' \
+        '.#checks.aarch64-darwin.unit-shell-guard' \
+        '.#checks.aarch64-darwin.unit-edit-batch-nudge' \
         '.#checks.aarch64-darwin.unit-auto-update' \
         '.#checks.aarch64-darwin.unit-rolling-pins' \
         '.#checks.aarch64-darwin.unit-skill-router' \

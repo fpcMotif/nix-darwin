@@ -507,19 +507,30 @@ let
     BASH_MAX_TIMEOUT_MS = "600000";
   };
 
+  # Tool guards: seeded on a fresh machine and re-asserted into the live
+  # settings.json every switch (claudeHooksAssert), so a guard added here is
+  # live after the next switch without a hand edit.
+  claudeGuardHooks = [
+    { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/search-guard.sh"; }
+    { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/shell-guard.sh"; }
+    { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
+  ];
+  guardEntries = event:
+    map (g: { inherit (g) matcher; hooks = [{ type = "command"; inherit (g) command; }]; })
+      (builtins.filter (g: g.event == event) claudeGuardHooks);
+
   claudeSettingsSeed = pkgs.writeText "claude-settings-seed.json" (builtins.toJSON {
     env = claudeSeedEnv;
-    # Seed-only wiring for the three search hooks (home.file above ships the
-    # scripts). The live settings.json already carries these; a fresh machine
-    # gets them from here.
+    # Seed-only wiring for the read guard and the rest (home.file above ships
+    # the scripts). The live settings.json already carries these; a fresh
+    # machine gets them from here.
     hooks = {
       PreToolUse = [
         { matcher = "Read"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/read-guard.sh"; }]; }
-        { matcher = "Bash"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/search-guard.sh"; }]; }
-      ];
+      ] ++ guardEntries "PreToolUse";
       PostToolUse = [
         { matcher = "Bash"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/auto-verify-edit.sh"; }]; }
-      ];
+      ] ++ guardEntries "PostToolUse";
       PostToolUseFailure = [
         { matcher = "Bash"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/auto-log-error.sh"; }]; }
       ];
@@ -642,6 +653,8 @@ in
       ".claude/pstack-models.md".source = pstackModelsSheet;
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
       ".claude/hooks/read-guard.sh" = { source = ./claude/hooks/read-guard.sh; executable = true; };
+      ".claude/hooks/shell-guard.sh" = { source = ./claude/hooks/shell-guard.sh; executable = true; };
+      ".claude/hooks/edit-batch-nudge.sh" = { source = ./claude/hooks/edit-batch-nudge.sh; executable = true; };
       ".claude/hooks/search-warmup.sh" = { source = ./claude/hooks/search-warmup.sh; executable = true; };
       # Personal hooks, vendored 2026-09-09 (they were plain files only the live
       # settings knew about): zigmemo/zigdiff helpers and the codedb warm-up.
@@ -955,6 +968,34 @@ in
       else
         rm -f -- "$tmp"
       fi
+    fi
+  '';
+
+  # === hooks: nix-declared tool guards re-asserted every switch ===
+  # Additive by command path under the guard's event: a guard missing from the
+  # live file is appended, hand-added hooks survive, and a present guard leaves
+  # the file byte-identical.
+  home.activation.claudeHooksAssert = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
+    target="${homeDir}/.claude/settings.json"
+    if [ ! -f "$target" ]; then
+      echo "claude-hooks: missing $target, skipping" >&2
+    else
+      for spec in ${lib.escapeShellArgs (map builtins.toJSON claudeGuardHooks)}; do
+        tmp=$(mktemp)
+        if ${pkgs.jq}/bin/jq --argjson g "$spec" \
+            'if ([.hooks[$g.event][]? | .hooks[]? | .command] | index($g.command)) then . else .hooks[$g.event] += [{matcher: $g.matcher, hooks: [{type: "command", command: $g.command}]}] end' \
+            "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
+          if [ -n "''${DRY_RUN:-}" ]; then
+            echo "claude-hooks: would add $spec to $target" >&2
+            rm -f -- "$tmp"
+          else
+            mv -- "$tmp" "$target"
+            echo "claude-hooks: added $spec" >&2
+          fi
+        else
+          rm -f -- "$tmp"
+        fi
+      done
     fi
   '';
 

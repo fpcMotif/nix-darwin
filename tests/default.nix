@@ -50,6 +50,16 @@ in
       ${../modules/home/claude.nix}
     touch $out
   '';
+  unit-shell-guard = pkgs.runCommand "unit-shell-guard" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.gawk ]; } ''
+    bash ${../modules/home/claude/hooks/shell-guard-test.sh} \
+      ${../modules/home/claude/hooks/shell-guard.sh}
+    touch $out
+  '';
+  unit-edit-batch-nudge = pkgs.runCommand "unit-edit-batch-nudge" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnused pkgs.coreutils ]; } ''
+    bash ${../modules/home/claude/hooks/edit-batch-nudge-test.sh} \
+      ${../modules/home/claude/hooks/edit-batch-nudge.sh}
+    touch $out
+  '';
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
   unit-pstack-hygiene = callTest ./unit/pstack-hygiene-test.nix { };
