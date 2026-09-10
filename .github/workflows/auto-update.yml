@@ -140,9 +140,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.AUTO_UPDATE_PAT }}
         run: |
-          gh pr checks --watch --fail-fast \
-            "${{ steps.cpr.outputs.pull-request-number }}"
-
+          pr="${{ steps.cpr.outputs.pull-request-number }}"
+          for _ in {1..30}; do
+            checks=$(gh pr checks "$pr" 2>&1 || true)
+            if [[ "$checks" != *"no checks reported"* ]]; then
+              gh pr checks --watch --fail-fast "$pr"
+              exit $?
+            fi
+            sleep 10
+          done
+          echo "No checks appeared for PR #$pr after five minutes" >&2
+          exit 1
 
       - name: Enable auto-merge
         if: steps.cpr.outputs.pull-request-number
