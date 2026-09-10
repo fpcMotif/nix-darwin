@@ -146,6 +146,15 @@ au_is_glue_drv_name() {
   return 1
 }
 
+# Fixed-output derivations download a source/archive and do not compile it.
+# Fresh CI runners legitimately rebuild these when the binary cache lacks the
+# exact hash, so they must not be mistaken for source compilation.
+au_is_fixed_output_drv() {
+  local drv=$1
+  nix derivation show "$drv" 2>/dev/null \
+    | jq -e '.[].outputs.out.hash? != null' >/dev/null
+}
+
 # Is <drv-name> covered by the given vendored pname list? A drv whose name
 # starts with "<pname>-<version>" (e.g. zed-nightly-bin-wrapped-…) matches.
 au_is_vendored_drv_name() {
@@ -157,28 +166,32 @@ au_is_vendored_drv_name() {
   return 1
 }
 
-# Every package defined in this repo, as derivation-name prefixes. Derived
-# from pkgs/* pnames at call time — the exemption list validates itself
-# against reality rather than rotting into a hand-maintained fiction.
+# Packages imported from flake inputs are not represented by pkgs/*.nix.
+# Keep their derivation prefixes in the same local-build exemption.
 au_vendored_drv_names() {
   local dir=${1:-pkgs}
-  grep -hoE 'pname = "[^"]+"' "$dir"/*.nix 2>/dev/null \
-    | cut -d'"' -f2 | sort -u
+  {
+    grep -hoE 'pname = "[^"]+"' "$dir"/*.nix 2>/dev/null \
+      | cut -d'"' -f2
+    printf '%s\n' agent-skills claude-code crush oh-my-pi opencode pi
+    printf '%s\n' codex droid sourcegraph-amp zed-nightly-bin
+  } | sort -u
 }
 
-# Pure classifier: read a dry-run build plan on stdin, print the NAMES of
-# derivations that would build from source without an exemption.
-#   au_plan_offenders <vendored-pname>...   (plan text on stdin)
 au_plan_offenders() {
-  local building='' line name
+  local building='' line name drv
   while IFS= read -r line; do
     case "$line" in
       *"will be built:") building=1 ;;
       *"will be fetched"*|*"will be copied"*|*"will be substituted") building='' ;;
       */nix/store/*-*.drv)
         [ -n "$building" ] || continue
-        [[ "$line" =~ /[a-z0-9]{32}-([^[:space:]]+)\.drv ]] || continue
-        name=${BASH_REMATCH[1]}
+        [[ "$line" =~ (/nix/store/[a-z0-9]{32}-([^[:space:]]+)\.drv) ]] || continue
+        drv=${BASH_REMATCH[1]}
+        name=${BASH_REMATCH[2]}
+        if [ "${AU_SKIP_FIXED_OUTPUTS:-0}" = 1 ] && au_is_fixed_output_drv "$drv"; then
+          continue
+        fi
         au_is_glue_drv_name "$name" && continue
         au_is_vendored_drv_name "$name" "$@" && continue
         printf '%s\n' "$name"
@@ -198,7 +211,7 @@ au_guard_source_builds() {
     return 1
   fi
   # shellcheck disable=SC2046  # pnames are single words (validated by unit test)
-  offenders=$(printf '%s\n' "$log" | au_plan_offenders $(au_vendored_drv_names))
+  offenders=$(printf '%s\n' "$log" | AU_SKIP_FIXED_OUTPUTS=1 au_plan_offenders $(au_vendored_drv_names))
   if [ -n "$offenders" ]; then
     {
       echo "::error::source-build-guard: $attr would BUILD FROM SOURCE:"
