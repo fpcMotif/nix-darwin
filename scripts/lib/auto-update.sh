@@ -140,8 +140,9 @@ au_is_glue_drv_name() {
     npm-config-hook|hm-session-vars.sh|set-environment|ca-certificates.crt|\
     martin-auto-switch|*-auto-switch|*.plist|*.json|*.md|*.sh|\
     *-config|*-settings|*-keymaps|*-models|*-report|*-report.domain|\
-    link|cleanup|launchd|darwin-rebuild|darwin-option|darwin-version*|\
-    darwin-uninstaller|check-link-targets.sh)
+    *-extension-update.domain|python3-*-env|nix.conf|hm-modules-messages|\
+    activate-system-start|link|cleanup|launchd|darwin-rebuild|\
+    darwin-option|darwin-version*|darwin-uninstaller|check-link-targets.sh)
       return 0 ;;
     # Generated LSP config files (claude-lsp.json, codex-lsp.toml, …)
     *-lsp.*)
@@ -182,6 +183,7 @@ au_vendored_drv_names() {
       | cut -d'"' -f2
     printf '%s\n' agent-skills claude-code crush oh-my-pi opencode pi
     printf '%s\n' codex droid sourcegraph-amp zed-nightly-bin
+    printf '%s\n' direnv skill-router tmux
   } | sort -u
 }
 
