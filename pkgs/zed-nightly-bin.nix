@@ -32,12 +32,12 @@
 }:
 
 let
-  version = "1.21.0+nightly.3324.52b2927a1bac46be5d50ad341ac00b665e13764b";
+  version = "1.21.0+nightly.3333.dfec59fb1c8e405a27c75dae8ce914d629c54dac";
 
   sources = {
     "aarch64-darwin" = {
       url = "https://zed-nightly-host.nyc3.digitaloceanspaces.com/${version}/Zed-aarch64.dmg";
-      hash = "sha256-SPR+mwt4eWiZVFasR15yU/O59l83QCTqiYM6iG4aRoo=";
+      hash = "sha256-JnzMPhq1FHuq5VNax4Kaonq6UsxpoipZAJo2h0ygJEg=";
     };
   };
 
