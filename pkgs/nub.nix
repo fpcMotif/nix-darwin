@@ -18,11 +18,11 @@
 
 stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "nub";
-  version = "0.9.1";
+  version = "0.9.2";
 
   src = fetchurl {
     url = "https://github.com/nubjs/nub/releases/download/v${finalAttrs.version}/nub-darwin-arm64.tar.gz";
-    hash = "sha256-8+rMOVEcUA42gIYbacdHKW02xXUjiP1o4p4spbbXfHg=";
+    hash = "sha256-eDutTkpLDm+/CXoYuapfXPJm2AeoHV+7s7AbYZg0wVk=";
   };
 
   # Flat tarball (bin/nub, bin/nubx, runtime/); stay at the extraction root
