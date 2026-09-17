@@ -51,6 +51,10 @@ let
     factory = ".factory/skills";
     opencode = ".config/opencode/skills";
     pi = ".pi/agent/skills";
+    # Custom target — Antigravity CLI (`agy`). Its own `/skills` panel
+    # documents this as the "Shared" discovery path; it does not read
+    # `.agents/skills`, unlike every other target above.
+    gemini = ".gemini/skills";
   };
   # The same dirs as a quoted, absolute, space-separated shell list, for the
   # `for dir in …` loops in the activation sweeps below.
