@@ -24,11 +24,11 @@
     "archify": {
       "flake": false,
       "locked": {
-        "lastModified": 1789460866,
-        "narHash": "sha256-0GKYLvKBGJ5Skwm2vOrdAQ1x9PfMqzXpmRsT+UMRaN4=",
+        "lastModified": 1789571087,
+        "narHash": "sha256-dLMKfHz7DtJVJrIpj1iRPdKi2PFVvuBlkGU5lj4JVsA=",
         "owner": "tt-a1i",
         "repo": "archify",
-        "rev": "d673e8300df60a5c8166abe78787fdc78f6b8000",
+        "rev": "72c750bb070d95171dbb2244e5b62b1b7da69c12",
         "type": "github"
       },
       "original": {
@@ -61,11 +61,11 @@
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1789434921,
-        "narHash": "sha256-ppvKlpoPL41TrSC3UjpvrHT8zcjnokLqacHMLeq356U=",
+        "lastModified": 1789607714,
+        "narHash": "sha256-Jay2MK0zBQP5DuTR+izZBobg7m93h0tKMXOYDZYW0xA=",
         "owner": "sadjow",
         "repo": "claude-code-nix",
-        "rev": "21f45473c72a5c902fc7a6156cd0195a656a2e9e",
+        "rev": "96942598f50150e88f94bf01295aee593c440824",
         "type": "github"
       },
       "original": {
@@ -155,11 +155,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1789430117,
-        "narHash": "sha256-t+U1mijItLJ64xZOifpfQ17kpAL73nU7pDI48ScacVc=",
+        "lastModified": 1789618856,
+        "narHash": "sha256-OSqj7eOijvCZfN7owFWRxLWRhej5lZI+Kt82q3INLvc=",
         "owner": "nix-community",
         "repo": "home-manager",
-        "rev": "cda90fd8838825c689fde9d3f3b4e937937790df",
+        "rev": "afa6821c70560bb19d1a8c577bff398f7f239869",
         "type": "github"
       },
       "original": {
@@ -171,11 +171,11 @@
     "mattpocock-skills": {
       "flake": false,
       "locked": {
-        "lastModified": 1788511407,
-        "narHash": "sha256-dF5i37jHnqfcXD1IRSVzSSm/pfCYSUmOsEhhs5Zx340=",
+        "lastModified": 1789482526,
+        "narHash": "sha256-AbIlPEE0VWJq+NJpa56SDzhM8o7vXDBtlJHS5FCTElE=",
         "owner": "mattpocock",
         "repo": "skills",
-        "rev": "3cca18b368ae95cdbdebbff572ccafa662551015",
+        "rev": "959a8e9f1edc3adbe2f7e3054bb6fbefa6696260",
         "type": "github"
       },
       "original": {
@@ -225,11 +225,11 @@
     "pstack-claude": {
       "flake": false,
       "locked": {
-        "lastModified": 1789428822,
-        "narHash": "sha256-ZAyZS2ZPdo6YxI6BkfqfT/1GXlUM5fw0Ed3mx2eSWhs=",
+        "lastModified": 1789588440,
+        "narHash": "sha256-6KT+aCDYpaL++RvjwRkjogQjH+AxEDegwXRGYpeW5QI=",
         "owner": "michael-denyer",
         "repo": "pstack-claude",
-        "rev": "0986f344496c9c8468003465261711f6bb2c5ec1",
+        "rev": "006819d480209b9cfbc55e68571b0f3a8a320e44",
         "type": "github"
       },
       "original": {
