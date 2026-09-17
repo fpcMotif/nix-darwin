@@ -245,6 +245,21 @@ EOF
 # Version polling
 # ---------------------------------------------------------------------------
 
+# Authenticated GitHub API GET; prints the raw response body. Every updater
+# that talks to api.github.com must route through this (directly, or via
+# au_latest_github_release below) so the API's 60/hr unauthenticated limit
+# can't silently 403 it — each updater is "tolerated to fail", so a
+# rate-limited run would just skip the bump. GH_TOKEN/GITHUB_TOKEN are the
+# conventional names; both `gh` and CI provide one.
+#   au_github_api <url>
+au_github_api() {
+  local url=$1
+  local auth=()
+  local tok=${GITHUB_TOKEN:-${GH_TOKEN:-}}
+  [ -n "$tok" ] && auth=(-H "Authorization: Bearer ${tok}")
+  curl -fsSL ${auth[@]+"${auth[@]}"} "$url"
+}
+
 # Latest GitHub release tag. Defaults to the latest STABLE release via the
 # /releases/latest endpoint, which is GitHub's own "newest non-draft,
 # non-prerelease" query. Do NOT go back to `/releases?per_page=1 | .[0]`:
@@ -259,19 +274,12 @@ EOF
 au_latest_github_release() {
   local repo=$1 strip=${2:-^v} channel=${3:-stable}
   local v
-  # Authenticate when a token is present so the GitHub API's 60/hr unauthed
-  # limit can't silently 403 an updater (each is "tolerated to fail", so a
-  # rate-limited run would just skip the bump). GH_TOKEN/GITHUB_TOKEN are the
-  # conventional names; both `gh` and CI provide one.
-  local auth=()
-  local tok=${GITHUB_TOKEN:-${GH_TOKEN:-}}
-  [ -n "$tok" ] && auth=(-H "Authorization: Bearer ${tok}")
   if [ "$channel" = prerelease ]; then
-    v=$(curl -fsSL ${auth[@]+"${auth[@]}"} "https://api.github.com/repos/${repo}/releases?per_page=30" \
+    v=$(au_github_api "https://api.github.com/repos/${repo}/releases?per_page=30" \
           | jq -r '[.[] | select(.draft | not)] | sort_by(.published_at) | last | .tag_name // ""' \
           | sed "s|${strip}||")
   else
-    v=$(curl -fsSL ${auth[@]+"${auth[@]}"} "https://api.github.com/repos/${repo}/releases/latest" \
+    v=$(au_github_api "https://api.github.com/repos/${repo}/releases/latest" \
           | jq -r '.tag_name // ""' | sed "s|${strip}||")
   fi
   [ -n "$v" ] && [ "$v" != "null" ] || {

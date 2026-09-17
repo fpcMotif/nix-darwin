@@ -1,0 +1,552 @@
+# Machine defaults live here. Codex persists model and reasoning choices in
+# writable ~/.codex/config.toml, which has higher precedence than this layer.
+plan_mode_reasoning_effort = "xhigh"
+personality = "none"
+approvals_reviewer = "user"
+suppress_unstable_features_warning = true
+check_for_update_on_startup = false
+service_tier = "default"
+notify = ["/Users/martinfan/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+# Command allow/refuse lists live in ~/.codex/rules/default.rules (execpolicy
+# prefix_rule files — the official mechanism; config.toml has no allow/deny keys).
+# They mirror ~/.claude/settings.json permissions.allow/deny. decision="forbidden"
+# still hard-blocks under approval_policy="never"; decision="prompt" fails closed.
+# Validate: codex execpolicy check --pretty --rules ~/.codex/rules/default.rules -- <cmd>
+
+[agents]
+max_depth = 2
+# malab-disabled(incompatible with multi_agent_v2): max_threads = 6
+
+[sandbox_workspace_write]
+network_access = true
+
+# CLI profiles live in <name>.config.toml beside this file.
+
+[features]
+apps = false
+child_agents_md = true
+chronicle = true
+external_migration = true
+goals = true
+guardian_approval = true
+hooks = true
+memories = true
+multi_agent = true
+prevent_idle_sleep = true
+respect_system_proxy = true
+terminal_resize_reflow = true
+network_proxy = false
+mentions_v2 = true
+js_repl = false
+# Experimental context management (new compaction): notes + searchable
+# history instead of one summary. Plus/Pro ChatGPT sign-in only; new tasks.
+context_management.experimental_mode = true
+
+[notice]
+fast_default_opt_out = true
+hide_full_access_warning = true
+hide_rate_limit_model_nudge = true
+
+[notice.external_config_migration_prompts]
+home_last_prompted_at = 1778674342
+
+[plugins."build-macos-apps@openai-curated"]
+enabled = true
+
+[plugins."expo@openai-curated"]
+enabled = true
+
+[plugins."figma@openai-curated"]
+enabled = true
+
+[plugins."github@openai-curated"]
+enabled = true
+
+[plugins."gmail@openai-curated"]
+enabled = true
+
+[plugins."google-calendar@openai-curated"]
+enabled = true
+
+[plugins."git@frad-dotclaude"]
+enabled = true
+
+[plugins."codex-lsp-toolchain@local-lsp"]
+enabled = true
+
+[plugins."codex@openai-codex"]
+enabled = true
+
+[plugins."build-ios-apps@openai-curated"]
+enabled = true
+
+[plugins."build-web-apps@openai-curated"]
+enabled = true
+
+[plugins."codex-security@openai-curated"]
+enabled = true
+
+[plugins."temporal@openai-curated"]
+enabled = true
+
+[plugins."supabase@openai-curated"]
+enabled = true
+
+[plugins."superpowers@openai-curated"]
+enabled = true
+
+[plugins."remotion@openai-curated"]
+enabled = true
+
+[plugins."canva@openai-curated"]
+enabled = true
+
+[plugins."heygen@openai-curated"]
+enabled = true
+
+[plugins."hyperframes@openai-curated"]
+enabled = true
+
+[plugins."attio@openai-curated"]
+enabled = true
+
+[plugins."linear@openai-curated"]
+enabled = true
+
+[plugins."computer-use@openai-bundled"]
+enabled = true
+
+[plugins."visualize@openai-bundled"]
+enabled = true
+
+[plugins."chrome@openai-bundled"]
+enabled = true
+
+[plugins."browser@openai-bundled"]
+enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."pdf@openai-primary-runtime"]
+enabled = true
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = true
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = true
+
+[plugins."template-creator@openai-primary-runtime"]
+enabled = true
+
+[plugins."codex-app-tools@openai-bundled"]
+enabled = true
+
+[plugins."sites@openai-bundled"]
+enabled = true
+
+[plugins."unified-computer-use@openai-bundled"]
+enabled = true
+
+[plugins."computer-history@openai-bundled"]
+enabled = true
+
+[projects."/Users/martinfan"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-25/but-not-hcha-the-this-sumli"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-25/i-want-to-use-branchhlet-brush"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-25/i-want-to-use-branchhlet-brush-2"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-25/last-login-sat-apr-25-12"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-25/note-that-this-is-most-ieficint"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-25/reve-curen-nix-sysmte-and-dotfiles"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-27/check-the-dotfieles-and-turn-the"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-27/chekc-my-curent-nix-os-seting"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-27/explain-fuly-what-does-mena-does"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-27/fix-it-for-me-last-login"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-27/try-to-use-chatgpt-sub-in"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-04-28/pull-it-and-chekc-that-doe"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/feishu-record-addon-demo"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/gosh-my-pi"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/nix-config"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/pi"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/pi-gui"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/conductor/repos/Quickstart"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Mole"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/kwwk"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/outlook-feishu-bridge"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/PointerPilot"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/PanePilot"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/mac-capture-ocr"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/linearmouse"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/xediadownloader"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/xtimelinefilter"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/xblocker"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/notebooklm-porter"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/haskell_cat"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/stacks-project"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/gosh-my-pi"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/typescript-book"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/tab-sorter"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/uav-react"]
+trust_level = "trusted"
+
+[projects."/private/tmp/claude-501/-Users-martinfan/72a2f2eb-f8ed-45df-b3c4-f6649e3d3e50/scratchpad/probe"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/floodlight"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/yt-memory"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-08-08/wayfinder-nix-store-ip4524y0bcd2zdv336idbk29xj5wxl22-agent-skills"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/popper"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/outlook-feishu-bridge"]
+trust_level = "trusted"
+
+[projects."/private/tmp"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-09-09/create-an-image-of"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-09-09/create-an-image-of-2"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-09-09/c"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-09-09/outlook-email-plugin-outlook-email-openai"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-09-09/let-s-set-up-a-scheduled"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-09-09/let-s-set-up-a-scheduled-2"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-09-09/how-x20"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/Documents/Codex/2026-09-09/se"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/devv/feishu-chat-topic-routing"]
+trust_level = "trusted"
+
+[projects."/Users/martinfan/.config/nix-darwin"]
+trust_level = "trusted"
+
+[shell_environment_policy]
+inherit = "core"
+
+[shell_environment_policy.set]
+PI_PLAN_MODEL = "@PI_PLAN_MODEL@"
+PI_SLOW_MODEL = "@PI_SLOW_MODEL@"
+PI_SMOL_MODEL = "@PI_SMOL_MODEL@"
+API_TIMEOUT_MS = "3000000"
+CLAUDE_AUTO_BACKGROUND_TASKS = "1"
+CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = "1"
+CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING = "1"
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1"
+CLAUDE_CODE_FORK_SUBAGENT = "1"
+CLAUDE_CODE_NEW_INIT = "1"
+CLAUDE_CODE_NO_FLICKER = "1"
+CLAUDE_CODE_SIMPLE_SYSTEM_PROMPT = "1"
+ENABLE_LSP_TOOL = "1"
+CLAUDE_CODE_MAX_OUTPUT_TOKENS = "64000"
+ENABLE_PROMPT_CACHING_1H = "1"
+NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "9230e2bd8b24b7ac7a0ba6774c64bf0d78ecdabbdd91d0ed627b02a587bae2df"
+
+[tui]
+notification_condition = "always"
+notification_method = "osc9"
+notifications = true
+show_tooltips = false
+
+[hooks.state]
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:pre_tool_use:0:0"]
+trusted_hash = "sha256:6e039a8410fa79849c35ed46f8731ca1a17a933872c51c06edbf7934f4022b10"
+enabled = false
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:bf13882845da1e9fd9556a74aa68f47e5e2a85c1b9c618021a4e44dae4d1d792"
+enabled = false
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:stop:0:0"]
+trusted_hash = "sha256:68f4af5798a1144a5c97d22dd83706601dff0b32b27b3b7ed1d8dc96d8284e15"
+enabled = false
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:user_prompt_submit:0:0"]
+trusted_hash = "sha256:b8080c773f971a7a7da8605f3d11d32e921b62c13229d62f3e27a01a27cab231"
+enabled = false
+
+[hooks.state."codex@openai-codex:hooks/hooks.json:session_start:0:0"]
+trusted_hash = "sha256:e6b9df143de11443eb576c38874cf6e0c48358f948170948fdf630f1c047c098"
+enabled = false
+
+[hooks.state."codex@openai-codex:hooks/hooks.json:stop:0:0"]
+trusted_hash = "sha256:3dfaa7e4f022570b260b8a8cf4ac7585c986175256b887a4723fac4f358a482f"
+enabled = false
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:pre_tool_use:1:0"]
+trusted_hash = "sha256:072537d84d819a17ce38b2cf5a8c9da0dd7db9b7e89996bbc4c53a7ccdd52d61"
+enabled = false
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:permission_request:0:0"]
+trusted_hash = "sha256:14c3597c4dba8f1f25f531152ef485dea588e39b4981b783bb67542d2cd7997b"
+enabled = false
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:session_start:1:0"]
+trusted_hash = "sha256:9835be6ec4c8debb470d63ed4be9b4bc507408e8baef664f0a1f968b0537a5a3"
+enabled = false
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:user_prompt_submit:1:0"]
+trusted_hash = "sha256:34c79fd41b3c0b4c83dbad3bb57d3f3019b8c3bdd0b6ad79a2528b66a8caa431"
+enabled = false
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:stop:1:0"]
+trusted_hash = "sha256:4ac4113ef4f10bff51ad7d257cb7aed1133ce36a898a1925d5acbe7e24067747"
+enabled = false
+
+[hooks.state."/Users/martinfan/gosh-my-pi/.codex/hooks.json:post_tool_use:0:0"]
+trusted_hash = "sha256:7c82f58c37fb60b8b8d2bdef1a3d8b1407da919a48678ab41186f303f7d8d225"
+
+[hooks.state."/Users/martinfan/gosh-my-pi/.codex/hooks.json:stop:0:0"]
+trusted_hash = "sha256:1e8b135860802497d7d71df2351747ffd9e888b3b3d6d7f985bb63255fedee99"
+
+[mcp_servers.cua-driver]
+command = "/Users/martinfan/.local/bin/cua-driver"
+args = ["mcp"]
+startup_timeout_sec = 120
+tool_timeout_sec = 120
+
+[mcp_servers.stagehand]
+command = "/etc/profiles/per-user/martinfan/bin/bun"
+args = ["/Users/martinfan/devv/stagehand/packages/integrations/core/dist/facade/stdio-server.mjs"]
+startup_timeout_sec = 120
+tool_timeout_sec = 120
+
+[mcp_servers.stagehand.env]
+STAGEHAND_BROWSER = "local"
+
+[mcp_servers.fff]
+command = "/etc/profiles/per-user/martinfan/bin/fff-mcp"
+args = ["--no-update-check"]
+
+[mcp_servers.node_repl]
+args = []
+command = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node_repl"
+startup_timeout_sec = 120
+
+[mcp_servers.node_repl.env]
+NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
+NODE_REPL_NODE_MODULE_DIRS = "/Applications/ChatGPT.app/Contents/Resources/cua_node/lib/node_modules"
+NODE_REPL_NODE_PATH = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node"
+NODE_REPL_TRUSTED_CODE_PATHS = "/Users/martinfan/.codex:/Applications/ChatGPT.app/Contents/Resources/cua_node/lib/node_modules"
+CODEX_HOME = "/Users/martinfan/.codex"
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
+BROWSER_USE_TINYSKY_ENABLED = "1"
+NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = ""
+NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = ""
+NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE = ""
+BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
+BROWSER_USE_CODEX_APP_VERSION = "26.908.40834"
+NODE_REPL_TRUSTED_SERVICES = '{"browser":"/Users/martinfan/.codex/plugins/cache/openai-bundled/browser/26.908.40834/scripts/browser-service.mjs","sky":"@oai/sky/service"}'
+SKY_CUA_SERVICE_PATH = "/Users/martinfan/.codex/computer-use/Codex Computer Use.app"
+CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex"
+
+[mcp_servers.drafts]
+command = "/etc/profiles/per-user/martinfan/bin/drafts-mcp-server"
+
+[mcp_servers.computer-use]
+command = "./Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient"
+args = ["mcp"]
+cwd = "."
+enabled = false
+
+[apps.connector_76869538009648d5b282a4bb21c3d157.tools.github_create_pull_request]
+approval_mode = "approve"
+
+[desktop]
+ambient-suggestions-enabled = true
+preventSleepWhileRunning = true
+keepRemoteControlAwakeWhilePluggedIn = true
+conversationDetailMode = "STEPS_COMMANDS"
+default-service-tier = "priority"
+followUpQueueMode = "queue"
+dock-icon-preference = "codex-system"
+selected-avatar-id = "null-signal"
+avatar-overlay-mascot-width-px = 80
+enabled-reasoning-efforts = ["low", "medium", "high", "xhigh", "ultra", "max"]
+localeOverride = "en-US"
+show-context-window-usage = true
+
+[desktop.open-in-target-preferences]
+global = "zed"
+
+[desktop.open-in-target-preferences.perPath]
+"/Users/martinfan/nix-config" = "zed"
+
+# Skills disabled to mirror the 2026-07-15 Windows skills-budget trim.
+# Only the skills that actually exist on this Mac are listed here — most of
+# the Windows-disabled set (lark-*, cloudflare-*, omx-setup, hud, help, etc.)
+# isn't installed on this machine at all, so there was nothing to mirror for those.
+[[skills.config]]
+path = "/Users/martinfan/.agents/skills/migrate-to-shoehorn/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/martinfan/.agents/skills/qa/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/martinfan/.agents/skills/request-refactor-plan/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/martinfan/.agents/skills/review/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "/Users/martinfan/.codex/skills/review/SKILL.md"
+enabled = false
+
+[lsp.servers.vue]
+command = "vue-language-server"
+args = ["--stdio"]
+extensions = [".vue"]
+
+[lsp.servers.haskell]
+command = "haskell-language-server-wrapper"
+args = ["--lsp"]
+extensions = [".hs", ".lhs", ".cabal"]
+
+[marketplaces.openai-bundled]
+source_type = "local"
+source = "/Users/martinfan/.codex/.tmp/bundled-marketplaces/openai-bundled"
+
+[marketplaces.openai-primary-runtime]
+source_type = "local"
+source = "/Users/martinfan/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+
+[features.multi_agent_v2]
+max_concurrent_threads_per_session = 13
+
+# >>> seedmux-codex-trust >>>
+# Seedmux 生成:免 Trust 弹窗的 hook 信任记录。整块可整体摘除,别手改
+[hooks.state."/Users/martinfan/.codex/hooks.json:session_start:2:0"]
+trusted_hash = "sha256:0eae3992c70ff2183c4c8c629cbd4057dde2fce7149e69b499528f3d40f0dcc2"
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:user_prompt_submit:2:0"]
+trusted_hash = "sha256:e499bb2fae137a222e401d3d2d686f9e63d80bbcf6ee668404218bf6d1f28e62"
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:pre_tool_use:2:0"]
+trusted_hash = "sha256:400c72e8e08d7f16a15410a81397385a972f1afa81fff8b910ae913f05e4fb69"
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:post_tool_use:0:0"]
+trusted_hash = "sha256:42317b3c22287a1bf4e3d6d4347c8e6748df9a6a20d27ea97cd537678fe2d6be"
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:permission_request:1:0"]
+trusted_hash = "sha256:bb8f12bbfbf0119869597134f7948597b6ca3b51b5fbd0be5e24be3ff2636dca"
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:stop:2:0"]
+trusted_hash = "sha256:cd6e40ea027096e2647413e2361dc8d677d48984edca374fa04c6c9f7e1cec59"
+
+[hooks.state."/Users/martinfan/.codex/hooks.json:session_end:0:0"]
+trusted_hash = "sha256:2792a4d02c6a00ce8cb81c83be2236d4ac9c780874c5b8e5c885deecd546fcea"
+# <<< seedmux-codex-trust <<<
+
+[mcp_servers.codedbpro]
+command = "/Users/martinfan/bin/codedb-pro"
+args = ["--mcp"]
+# Dormant until CodeDB Pro activation is configured; the codedb server stays active.
+enabled = false
+
+[mcp_servers.codedb]
+command = "/Users/martinfan/bin/codedb"
+args = ["mcp"]
+startup_timeout_sec = 30
+
+[mcp_servers.deepwiki]
+url = "https://mcp.deepwiki.com/mcp"

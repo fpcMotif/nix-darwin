@@ -35,6 +35,15 @@
 # preferences UI continues to work — flip a flag to false to make Nix the
 # single source of truth for that file.
 
+let
+  routing = import ../shared/agent-model-routing.nix { inherit lib; };
+  openAiFavorite = job: {
+    provider = "openai-subscribed";
+    model = routing.modelId job;
+    enable_thinking = true;
+    effort = routing.effort job;
+  };
+in
 {
   xdg.configFile = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
     "zed/settings.json".force = true;
@@ -115,10 +124,7 @@
 
       agent_servers = {
         pi-acp = {
-          favorite_models = [
-            "openai-codex/gpt-5.5"
-            "openai-codex/gpt-5.3-codex-spark"
-          ];
+          favorite_models = map routing.bareSelector routing.adapters.zedFavorites;
           type = "registry";
         };
         opencode.type = "registry";
@@ -126,6 +132,7 @@
         claude-acp.type = "registry";
         amp-acp.type = "registry";
         factory-droid.type = "registry";
+        antigravity-acp.type = "registry";
       };
 
       project_panel.dock = "right";
@@ -139,19 +146,7 @@
         thinking_display = "preview";
         default_profile = "write";
 
-        favorite_models = [
-          {
-            provider = "openai-subscribed";
-            model = "gpt-5.3-codex";
-            enable_thinking = true;
-            effort = "xhigh";
-          }
-          {
-            provider = "openai-subscribed";
-            model = "gpt-5.5";
-            enable_thinking = true;
-            effort = "xhigh";
-          }
+        favorite_models = map openAiFavorite routing.adapters.zedFavorites ++ [
           {
             provider = "zed.dev";
             model = "claude-fable-5";
@@ -193,6 +188,7 @@
 
         profiles = {
           write = {
+            name = "Write";
             enable_all_context_servers = true;
             context_servers = { };
             tools = {
@@ -219,6 +215,7 @@
             };
           };
           ask = {
+            name = "Ask";
             enable_all_context_servers = false;
             context_servers = { };
             tools = {
@@ -346,10 +343,6 @@
         };
       };
 
-      assistant = {
-        version = "2";
-        enabled = true;
-      };
 
       git = {
         inline_blame = {

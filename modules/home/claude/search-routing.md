@@ -1,6 +1,6 @@
 # Code search routing: examples, wrappers, traps
 
-Reference behind the "Code search routing" section of CLAUDE.md. The section carries the six routing steps; this file carries what only some branches need. Numbers and failure modes measured 2026-09: `~/.claude/search-eval.md`.
+Reference behind the Search section of `~/.claude/CLAUDE.md`. That section names the tool per branch; this file carries what only some branches need. Numbers and failure modes measured 2026-09: `~/.claude/search-eval.md`.
 
 ## Worked examples (nix-config, 2026-09-09)
 
@@ -61,12 +61,11 @@ Recent and git-dirty files rank first. Keep queries to one or two terms; each ex
 
 ## Wrappers on PATH
 
-- `tg`: tgrep with a per-repo index in `~/.cache`, same flags as rg. Use above ~20k files.
 - `rw`: ripwire with node_modules excluded and legends stripped. `rw --verb=...` inside `<repo>`, `rw <repo> --verb=...` elsewhere.
 
 ## MCP or CLI
 
-codedb, fff, and zg each run as an MCP server: same answers as the CLI, typed parameters, no shell quoting. Schemas are deferred, so the first MCP call in a session costs one ToolSearch round trip. codedb's server needs ~12 s after session start; its CLI is instant. Always pass `project=<repo>` (codedb) or `root=<repo>` (zg).
+codedb, fff, and zg each run as an MCP server: same answers as the CLI, typed parameters, no shell quoting. fff and codedb register with `alwaysLoad`, so their schemas load on turn one; zg stays deferred behind one ToolSearch round trip. codedb's server needs ~12 s after session start; its CLI is instant. Always pass `project=<repo>` (codedb) or `root=<repo>` (zg).
 
 - codedb: `codedb_explain` for a symbol; `codedb_context` for a task, only with `semantic=local` (the default sends snippets to a remote reranker). Outline and read are CLI only.
 - fff: `find_files` (fuzzy file names, frecency), `grep` (one bare identifier, plain text, no regex), `multi_grep` (OR over literal patterns). Hard cap 50 hits, so counts and exhaustive listings stay with `rg -c`. fff honours `.ignore`. fff has no CLI on this machine: inside a subagent, load its MCP schema with ToolSearch or use rg.
@@ -81,7 +80,7 @@ One identifier per query. `-C2` for context, `-U` for multiline, `-uu` for an ex
 - codedb's enclosing-function labels are wrong inside loops and lambdas; for the enclosing function or the flags a caller tests, `rw --callers=SYM`.
 - `rw --uses=CONST` returns 0 for TypeScript constants; use `rg -w`.
 - `rw --callers` misses calls inside anonymous callbacks such as test `it()` blocks.
-- codedb skips node_modules and files over 2 MiB; rg and tg cover them.
+- codedb skips node_modules and files over 2 MiB; rg covers them.
 - `codedb word` is uncapped (27k lines for `Config`); a hook denies it without a pipe to head.
 - The shell `grep` binary as a command is denied by a hook; `| grep` as a filter is fine.
 - `rg -r` means `--replace`; never pass it.

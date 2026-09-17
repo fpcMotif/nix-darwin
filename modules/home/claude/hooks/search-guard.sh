@@ -15,7 +15,7 @@ deny() { printf '%s\n' "$1" >&2; exit 2; }
 # 1. `codedb word X` with no cap: uncapped inverted-index dump (27k lines for `Config`).
 if printf '%s' "$CMD" | grep -Eq '(^|[;&|[:space:]])codedb([[:space:]]+[^[:space:]]+)?[[:space:]]+word[[:space:]]' \
    && ! printf '%s' "$CMD" | grep -Eq '\|[[:space:]]*(head|wc|tail|sort|uniq|awk|sed|rg|grep|cut)'; then
-  deny "search-guard: 'codedb word' has no result cap (1.7 MB for a common identifier). Use 'codedb <repo> explain SYM' (def + callers), 'codedb <repo> search --max-results 30 TEXT', or 'tg -c PAT' for counts; or pipe word to '| head -40'."
+  deny "search-guard: 'codedb word' has no result cap (1.7 MB for a common identifier). Use 'codedb <repo> explain SYM' (def + callers), 'codedb <repo> search --max-results 30 TEXT', or 'rg -c PAT <repo>' for counts; or pipe word to '| head -40'."
 fi
 
 # 2. rg/grep launched from the umbrella root (~/devv) with no narrower path: 65k files, 1.8 s, node_modules noise.
@@ -26,7 +26,7 @@ if [ "$CWD" = "$UMBRELLA" ] && printf '%s' "$CMD" | grep -Eq '(^|;|&&|\|\|)[[:sp
   rest="$CMD"; [ -n "$cdto" ] && rest=$(printf '%s' "$CMD" | sed -E 's/^[[:space:]]*cd[[:space:]]+[^[:space:];&|]+//')
   case "$cdto" in ""|.|"$UMBRELLA"|"~/devv"|"$HOME/devv") cdto="";; esac
   if [ -z "$cdto" ] && ! printf '%s' "$rest" | grep -Eq '(^|[[:space:]])[^-[:space:]][^[:space:]]*/' ; then
-    deny "search-guard: rg/grep at the ~/devv umbrella root scans 65k files (19k in node_modules) in ~1.8 s and floods context. Scope to a repo dir (rg PAT <repo>/), or use the index: 'tg -c PAT <repo>' then 'tg -n PAT <repo>'."
+    deny "search-guard: rg/grep at the ~/devv umbrella root scans 65k files (19k in node_modules) in ~1.8 s and floods context. Scope to a repo dir: 'rg -c PAT <repo>/' then 'rg -n PAT <repo>/'."
   fi
 fi
 
@@ -39,16 +39,16 @@ if printf '%s' "$CMD" | grep -Eq '(^|[;&|[:space:]])(cat|bat)[[:space:]]' \
   done
 fi
 
-# 4. rg/grep/tg listing (-n) over 4+ alternations with no narrowing (-c/-l/-w/-m, -g/-t, or a single file) spilled 30-300 KB in trials.
-if printf '%s' "$CMD" | grep -Eq '(^|;|&&|\|\|)[[:space:]]*(rg|grep|tgrep|tg)[[:space:]]' \
+# 4. rg/grep listing (-n) over 4+ alternations with no narrowing (-c/-l/-w/-m, -g/-t, or a single file) spilled 30-300 KB in trials.
+if printf '%s' "$CMD" | grep -Eq '(^|;|&&|\|\|)[[:space:]]*(rg|grep)[[:space:]]' \
    && printf '%s' "$CMD" | grep -Eq "['\"][^'\"]*\|[^'\"]*\|[^'\"]*\|[^'\"]*['\"]" \
    && ! printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])(-c|-l|-w|-m|-g|-t|--count|--files-with-matches|--max-count|--glob|--type|--iglob)([[:space:]=]|$)' \
    && ! printf '%s' "$CMD" | grep -Eq '[[:space:]][^[:space:]]+\.[A-Za-z0-9]{1,6}([[:space:]]|$)'; then
   deny "search-guard: 4+ alternatives with no narrowing (-c/-l/-w, -g/-t, or one file) spilled 30-300 KB in trials. Count first (-c), list files (-l), or search one identifier with -w; then read spans."
 fi
-# 5. The shell grep/egrep/fgrep binary as a LEADING command (a file scan). rg has the same flags and respects ignores; tg is indexed.
+# 5. The shell grep/egrep/fgrep binary as a LEADING command (a file scan). rg has the same flags and respects ignores.
 #    `| grep` as a pipe filter is untouched (handled by the leading-command anchor).
 if printf '%s' "$CMD" | grep -Eq '(^|;|&&|\|\|)[[:space:]]*(grep|egrep|fgrep)[[:space:]]'; then
-  deny "search-guard: plain grep is slower and weaker than every other tool here. Same flags with rg: 'rg -n PAT <repo>' (or 'rg -w', '-C2', '-l', '-c'); exhaustive/indexed: 'tg -n PAT <repo>'; symbols: 'codedb <repo> explain SYM'."
+  deny "search-guard: plain grep is slower and weaker than every other tool here. One identifier: mcp__fff__grep. Symbol: mcp__codedb__codedb_explain project=<repo>. Exhaustive: 'rg -n PAT <repo>' (or 'rg -w', '-C2', '-l', '-c')."
 fi
 exit 0

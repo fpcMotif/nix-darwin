@@ -9,6 +9,7 @@
     ./baseline-activation.nix
     ./background-services.nix
     ./brew-variants.nix
+    ./codex.nix
     ./default-apps.nix
     ./defaults.nix
     ./fonts.nix

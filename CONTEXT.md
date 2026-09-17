@@ -96,6 +96,12 @@ _Avoid_: conflating `intentRunner`/`runnerCmd` (what to exec) with `run`/`Comman
 
 ### AI tooling surfaces
 
+**Semantic job-routing policy**:
+The Nix module that maps `search`, `check`, `general`, `plan`, and `economy` work to model families and effort.
+Runtime adapters translate those jobs into OMP roles, Pi frontmatter, Codex profiles, Crush slots, and Zed favorites.
+Claude pstack keeps its native-alias role sheet under ADR-0014.
+_Avoid_: copying model ids into adapters or treating a model picker as a routing policy.
+
 **Vendored agent CLI**:
 An AI coding-agent binary packaged under `pkgs/` and installed via `home.packages` (codex, droid, opencode, amp, pi, oh-my-pi). It lives on the `darwin-rebuild` build path, so its upstream pinning is a maintenance surface for the whole system rebuild — a stale source hash wedges the rebuild, not just that one tool.
 _Avoid_: conflating it with a model used only over its API, or with a GUI app launched from the hotkey plane.

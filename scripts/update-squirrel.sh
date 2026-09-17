@@ -10,7 +10,7 @@ cd "$(au_repo_root)"
 FILE="pkgs/squirrel.nix"
 
 latest=$(
-  curl -fsSL "https://api.github.com/repos/rime/squirrel/releases/latest" \
+  au_github_api "https://api.github.com/repos/rime/squirrel/releases/latest" \
     | jq -r '.assets[].name' \
     | grep -oE 'Squirrel-[0-9.]+\.pkg' \
     | head -1 \

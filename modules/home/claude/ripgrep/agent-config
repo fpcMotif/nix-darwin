@@ -6,5 +6,4 @@
 --max-columns-preview
 # The umbrella dir is not a git repo, so node_modules is not ignored there (19k files).
 --glob=!node_modules
---glob=!.tgrep
 --glob=!*.snapshot

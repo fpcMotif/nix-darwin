@@ -67,6 +67,9 @@
     remove_legacy_path "$HOME/.local/bin/tg"
     remove_legacy_path "$HOME/.local/bin/rw"
     remove_legacy_path "$HOME/.config/ripgrep/agent-config"
+    # tgrep was retired 2026-09-14: a hand-installed binary plus a 43 GB index cache.
+    remove_legacy_path "$HOME/.local/bin/tgrep"
+    remove_legacy_path "$HOME/.cache/tgrep"
 
     remove_legacy_path "$HOME/.local/bin/opencode"
     remove_legacy_path "$HOME/.local/bin/opencode-electron"

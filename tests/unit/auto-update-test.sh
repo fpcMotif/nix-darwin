@@ -37,6 +37,38 @@ case "$colored" in
 esac
 
 # ---------------------------------------------------------------------------
+# au_github_api: every GitHub API caller must authenticate when a token is
+# present, so the 60/hr unauthenticated limit can't silently 403 a caller
+# (reproduced 2026-09-15: update-squirrel.sh 403s under load because it
+# bypassed this and curled api.github.com directly).
+# ---------------------------------------------------------------------------
+
+curl_argv_capture=$(mktemp)
+curl() { printf '%s\n' "$*" > "$curl_argv_capture"; }
+
+unset GITHUB_TOKEN GH_TOKEN 2>/dev/null || true
+au_github_api "https://api.github.com/repos/x/y/releases/latest" >/dev/null
+captured=$(cat "$curl_argv_capture")
+case "$captured" in
+  *Authorization*) fail "au_github_api sent an auth header with no token present: $captured" ;;
+esac
+
+captured=$(GITHUB_TOKEN=tok123 au_github_api "https://api.github.com/repos/x/y/releases/latest" >/dev/null; cat "$curl_argv_capture")
+case "$captured" in
+  *"Authorization: Bearer tok123"*) ;;
+  *) fail "au_github_api did not send GITHUB_TOKEN as a Bearer header: $captured" ;;
+esac
+
+captured=$(GH_TOKEN=tok456 au_github_api "https://api.github.com/repos/x/y/releases/latest" >/dev/null; cat "$curl_argv_capture")
+case "$captured" in
+  *"Authorization: Bearer tok456"*) ;;
+  *) fail "au_github_api did not fall back to GH_TOKEN: $captured" ;;
+esac
+
+rm -f "$curl_argv_capture"
+unset -f curl
+
+# ---------------------------------------------------------------------------
 # Cadence policy (issue #336): heavy inputs move only on the cadence day.
 # ---------------------------------------------------------------------------
 
@@ -185,6 +217,14 @@ if [ -n "$scripts_dir" ]; then
   # The crush updater cannot quietly bypass the heavy classification.
   grep -qF 'au_inputs_to_bump' "$scripts_dir/update-crush.sh" \
     || fail "update-crush.sh must adopt the cadence gate for nur"
+  # Squirrel resolves its version from an asset name, not a tag, so it can't
+  # use au_latest_github_release -- but it must still authenticate via
+  # au_github_api rather than curling api.github.com unauthenticated.
+  grep -qF 'au_github_api' "$scripts_dir/update-squirrel.sh" \
+    || fail "update-squirrel.sh must poll the GitHub API via au_github_api (misses token auth)"
+  if grep -qE 'curl[^|;]*api\.github\.com' "$scripts_dir/update-squirrel.sh"; then
+    fail "update-squirrel.sh must not curl api.github.com directly, bypassing au_github_api auth"
+  fi
 fi
 
 if [ -n "$github_dir" ]; then

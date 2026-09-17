@@ -8,10 +8,12 @@
     ./ai-cli.nix
     ./pi.nix
     ./ai-model-routing.nix
+    ./agent-instructions.nix
     ./obsidian.nix
     ./tmux.nix
     ./git.nix
     ./jujutsu.nix
+    ./worktrunk.nix
     ./ghostty.nix
     ./kitty.nix
     ./yazi.nix

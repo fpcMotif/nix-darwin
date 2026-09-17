@@ -20,8 +20,41 @@ BODY=$(printf '%s\n' "$CMD" | awk '
   { print }')
 
 # A command position: line start, or after ; && || | ( $( `, with wrappers and VAR=x prefixes stripped.
+# Separators count only outside quotes, so `rg "ls|find"` stays one segment; $( and ` still open a
+# command inside double quotes. Newlines inside quotes become spaces; a # comment runs to end of line.
 segments() {
-  printf '%s\n' "$BODY" | awk '{ gsub(/&&|\|\||\||;|\$\(|`|\(/, "\n"); print }' \
+  printf '%s\n' "$BODY" | awk -v q="'" '
+    { s = s $0 "\n" }
+    END {
+      n = length(s); d = 0; st[0] = "N"; prev = "\n"
+      for (i = 1; i <= n; i++) {
+        c = substr(s, i, 1); c2 = substr(s, i, 2)
+        if (st[d] == "D") {
+          if (c == "\\") { printf "%s", c2; i++ }
+          else if (c == "\"") { d--; printf "%s", c }
+          else if (c2 == "$(") { st[++d] = "P"; printf "\n"; i++ }
+          else if (c == "`") { st[++d] = "B"; printf "\n" }
+          else printf "%s", (c == "\n" ? " " : c)
+          continue
+        }
+        if (c == "\\") { printf "%s", c2; i++ }
+        else if (c == q || c2 == "$" q) {
+          j = i + (c == q ? 1 : 2)
+          while (j <= n && substr(s, j, 1) != q) j += (c != q && substr(s, j, 1) == "\\") ? 2 : 1
+          t = substr(s, i, j - i + 1); gsub(/\n/, " ", t); printf "%s", t; i = j
+        }
+        else if (c == "\"") { st[++d] = "D"; printf "%s", c }
+        else if (c == "#" && prev ~ /[[:space:];&|(`]/) { while (i < n && substr(s, i + 1, 1) != "\n") i++ }
+        else if (c2 == "&&" || c2 == "||" || c2 == "$(") { if (c2 == "$(") st[++d] = "P"; printf "\n"; i++ }
+        else if (c == "|" || c == ";") printf "\n"
+        else if (c == "(") { st[++d] = "P"; printf "\n" }
+        else if (c == ")" && st[d] == "P") { d--; printf "%s", c }
+        else if (c == "`" && st[d] == "B") { d--; printf "%s", c }
+        else if (c == "`") { st[++d] = "B"; printf "\n" }
+        else printf "%s", c
+        prev = c
+      }
+    }' \
     | sed -E 's/^[[:space:]]+//; s/^((sudo|time|nohup|exec|command|env|xargs)[[:space:]]+|[A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*//'
 }
 

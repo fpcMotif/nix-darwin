@@ -19,6 +19,17 @@ let
 
   mkSkill = from: path: packages: { inherit from path packages; };
 
+  renderAgentGuide = import ./agent-instructions/render-agent-guide.nix { inherit lib; };
+  claudeGuide = pkgs.writeText "claude-global-guide.md" (renderAgentGuide [
+    ./claude/CLAUDE.md
+    ./agent-instructions/shared/working-contract.md
+    ./agent-instructions/shared/quality-and-style.md
+  ]);
+  claudeDevelopmentGuide = pkgs.writeText "claude-development-guide.md" (renderAgentGuide [
+    ./claude/development.md
+    ./agent-instructions/shared/development.md
+  ]);
+
   # `link` makes every target a tree of `home.file` symlinks pointing at
   # the same /nix/store/...-agent-skills-bundle/<skill>/SKILL.md. Pi's
   # loader de-duplicates discovered skills by realpath, so identical
@@ -351,8 +362,11 @@ let
   # Written by Claude Code itself when a directory-access prompt is answered
   # (hence the Read/Edit/Write triple per dir); pinned here so a fresh machine
   # inherits the same boundary instead of re-learning it one prompt at a time.
-  # Note these mostly go quiet under defaultMode bypassPermissions, which skips
-  # prompts — they are the fallback for any session started in another mode.
+  # Ask rules still prompt under defaultMode bypassPermissions, and a PreToolUse
+  # hook's "allow" does not override them (checked headless on 2.1.267,
+  # 2026-09-14). So no home-wide catch-all lives here: Read/Edit/Write(~/.*) and
+  # (~/*.*) also matched ~/.claude and shadowed every dotfile allow above, and
+  # rule globs have no exception syntax. Credential dirs stay in claudeDenyRules.
   claudeAskRules = [
     "Read(~/Documents/**)"
     "Edit(~/Documents/**)"
@@ -372,12 +386,6 @@ let
     "Read(~/Public/**)"
     "Edit(~/Public/**)"
     "Write(~/Public/**)"
-    "Read(~/.*)"
-    "Edit(~/.*)"
-    "Write(~/.*)"
-    "Read(~/*.*)"
-    "Edit(~/*.*)"
-    "Write(~/*.*)"
   ] ++ lib.optionals isDarwin [
     "Read(~/Applications/**)"
     "Edit(~/Applications/**)"
@@ -469,7 +477,7 @@ let
 
   # pstack: see modules/home/claude/pstack.nix (shared with its hygiene test).
   pstack = import ./claude/pstack.nix { inherit lib pkgs inputs mkSource mkSkill; };
-  inherit (pstack) pstackSources pstackExplicit pstackAgentFile pstackModelsSheet;
+  inherit (pstack) pstackSources pstackExplicit pstackAgentFile pstackModelsSheet pstackDrvs;
 
   # There is deliberately no `in-progress/` source any more. It existed to pull
   # `teach` out of that bucket; upstream has since promoted `teach` into
@@ -495,6 +503,10 @@ let
     CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING = "1";
     ENABLE_PROMPT_CACHING_1H = "1";
     CLAUDE_CODE_MAX_OUTPUT_TOKENS = "64000";
+    # Default model for subagents that don't set their own `model:`
+    # frontmatter (Task-spawned agents). The main session model above stays
+    # opus/fable; most subagents don't need that reasoning tier.
+    CLAUDE_CODE_SUBAGENT_MODEL = "sonnet";
     # Code search routing: rg defaults for agent shells only (6 threads,
     # 240-column cap, node_modules excluded) and the read-guard threshold.
     # A 200-line file costs about what one denied round trip costs, so the
@@ -514,7 +526,41 @@ let
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/search-guard.sh"; }
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/shell-guard.sh"; }
     { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
-  ];
+  ] ++ lib.optionals config.programs.worktrunk.enable worktrunkMarkerHooks;
+
+  # Worktrunk activity markers, shown per branch in `wt list`: 🤖 while Claude
+  # works, 💬 while it waits, cleared at session end. Same events as upstream's
+  # plugin (worktrunk.dev/claude-code/#activity-tracking). The hook path is
+  # stable so a wt bump never strands a store path in the additive assert.
+  # Claude's own worktree creation stays native on purpose: a WorktreeCreate
+  # hook would drop symlinkDirectories, .worktreeinclude, and the stale sweep.
+  worktrunkMarker = pkgs.writeShellApplication {
+    name = "worktrunk-marker";
+    runtimeInputs = [ config.programs.worktrunk.package ];
+    # UserPromptSubmit feeds plain stdout into Claude's context, so all output
+    # is dropped. Outside a git branch wt fails, and the marker is skipped.
+    text = ''
+      case "''${1:-}" in
+        working) args=(set 🤖) ;;
+        waiting) args=(set 💬) ;;
+        clear) args=(clear) ;;
+        *) exit 0 ;;
+      esac
+      wt config state marker "''${args[@]}" </dev/null >/dev/null 2>&1 || true
+    '';
+  };
+  worktrunkMarkerHooks =
+    let
+      marker = state: "$HOME/.claude/hooks/worktrunk-marker.sh ${state}";
+    in
+    [
+      { event = "UserPromptSubmit"; matcher = ""; command = marker "working"; }
+      { event = "Notification"; matcher = ""; command = marker "waiting"; }
+      { event = "PreToolUse"; matcher = "AskUserQuestion"; command = marker "waiting"; }
+      { event = "PermissionRequest"; matcher = ""; command = marker "waiting"; }
+      { event = "Stop"; matcher = ""; command = marker "waiting"; }
+      { event = "SessionEnd"; matcher = ""; command = marker "clear"; }
+    ];
   guardEntries = event:
     map (g: { inherit (g) matcher; hooks = [{ type = "command"; inherit (g) command; }]; })
       (builtins.filter (g: g.event == event) claudeGuardHooks);
@@ -616,6 +662,11 @@ in
           (skill: { name = "${dir}/${skill}"; value = { source = ./skills + "/${skill}"; }; })
           localSkillIds)
         (lib.attrValues skillLinkDirs));
+      pstackSkillFiles = listToAttrs (lib.concatMap
+        (dir: lib.mapAttrsToList
+          (skill: drv: { name = "${dir}/${skill}"; value = { source = drv; }; })
+          pstackDrvs)
+        (lib.attrValues skillLinkDirs));
     in
     {
       # Contract between this module and scripts/verify-agent-skills.sh (Tier 2),
@@ -635,15 +686,17 @@ in
         });
 
       ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
-      ".claude/CLAUDE.md".source = ./claude/CLAUDE.md;
+      ".claude/CLAUDE.md".source = claudeGuide;
+      ".claude/guidance/development.md".source = claudeDevelopmentGuide;
+      ".claude/guidance/human-documents.md".source = ./claude/human-documents.md;
       ".claude/statusline-command.sh" = {
         source = ./claude/statusline-command.sh;
         executable = true;
       };
 
-      # Code search routing (CLAUDE.md "Code search routing" section). The
+      # Code search routing (routes in guidance/development.md). The
       # three hooks are wired in settings.json (seed below; live file is
-      # mutable). Evidence file is what the section cites.
+      # mutable). Evidence file is what the routes cite.
       ".claude/search-eval.md".source = ./claude/search-eval.md;
       ".claude/search-routing.md".source = ./claude/search-routing.md;
 
@@ -663,10 +716,12 @@ in
       ".claude/hooks/pre-compact-save.sh" = { source = ./claude/hooks/pre-compact-save.sh; executable = true; };
       ".claude/hooks/post-compact-reload.sh" = { source = ./claude/hooks/post-compact-reload.sh; executable = true; };
       ".claude/hooks/codedb-warmup.sh" = { source = ./claude/hooks/codedb-warmup.sh; executable = true; };
-      ".local/bin/tg" = { source = ./claude/bin/tg; executable = true; };
       ".local/bin/rw" = { source = ./claude/bin/rw; executable = true; };
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
-    } // localSkillFiles;
+    } // localSkillFiles // pstackSkillFiles
+    // lib.optionalAttrs config.programs.worktrunk.enable {
+      ".claude/hooks/worktrunk-marker.sh".source = lib.getExe worktrunkMarker;
+    };
 
   # Git-flow style automation was removed from the curated sources instead of
   # parked. Delete any stale mirrors or cached session copies left by earlier
@@ -680,44 +735,8 @@ in
     fi
   '';
 
-  # Surge ships its agent skill inside the app bundle, so it is never copied
-  # into the Nix store — Surge updates have to refresh it in place.
-  # Surge.app is a macOS bundle; Linux hosts must not reference /Applications.
-  #
-  # The bundled frontmatter declares `name: Surge`. Claude Code tolerates that,
-  # Pi does not: it rejects any id outside [a-z0-9-] ("name contains invalid
-  # characters") and drops the skill entirely. So the bundle is restaged into
-  # ONE normalized copy that every picker dir then symlinks, rather than nine
-  # copies — Pi's skill loader de-duplicates by realpath alone
-  # (`if (realPathSet.has(realPath)) continue;`, checked before the name-collision
-  # branch), so nine copies would report as an eight-way collision while nine
-  # symlinks to one path collapse silently. Restaged on every activation, which
-  # is what keeps it tracking Surge upgrades; only the frontmatter `name:` line
-  # is rewritten, and the substitution is idempotent if upstream ever lowercases it.
-  #
-  # Anchored on linkGeneration: "agent-skills" names an activation node that
-  # only exists when some target uses `structure = "symlink-tree"`. Every target
-  # here is `link`, so that node is never created and hm's topoSort silently
-  # drops the edge, leaving this block unordered against the linking it depends on.
-  home.activation.surgeAgentSkillSymlinks = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-    source="/Applications/Surge.app/Contents/Resources/Skills/surge"
-    staged="${homeDir}/.cache/agent-skills/surge"
-    if [ -d "$source" ] && [ -f "$source/SKILL.md" ]; then
-      ${pkgs.coreutils}/bin/mkdir -p "${homeDir}/.cache/agent-skills"
-      ${pkgs.coreutils}/bin/rm -rf -- "$staged"
-      ${pkgs.coreutils}/bin/cp -R -- "$source" "$staged"
-      ${pkgs.coreutils}/bin/chmod -R u+w -- "$staged"
-      ${pkgs.gnused}/bin/sed -i '1,/^---$/s/^name:[[:space:]].*/name: surge/' "$staged/SKILL.md"
-      for dir in ${skillTargetDirsSh}; do
-        ${pkgs.coreutils}/bin/mkdir -p "$dir"
-        target="$dir/surge"
-        ${pkgs.coreutils}/bin/rm -rf -- "$target"
-        ${pkgs.coreutils}/bin/ln -s -- "$staged" "$target"
-      done
-    else
-      echo "surge-agent-skill: missing $source, skipping" >&2
-    fi
-  '');
+  # Surge now shares the pinned personal skill source in agent-instructions.nix.
+  # Restaging the app bundle here would replace its Home Manager symlinks.
 
   # Claude can cache Anthropic-provided skills outside the Nix-managed skill
   # targets, and the external `skills` CLI (~/.agents/.skill-lock.json) writes
@@ -999,48 +1018,64 @@ in
     fi
   '';
 
-  # === MCP: register fff (frecency-ranked, git-aware file search) ===
-  # `claude mcp add -s user` is the only supported way to write
+  # === MCP: register fff and codedb with alwaysLoad ===
+  # `claude mcp add-json -s user` is the only supported way to write
   # ~/.claude.json's mcpServers — that file carries other CLI-managed state
   # (auth, project registry) we don't want to hand-roll with jq the way
   # claudeDesktopMcpScaffold does for claude_desktop_config.json in
   # lsp.nix (that file's shape is simple enough to own; this one isn't).
   #
-  # Idempotency compares the *registered command path* to the current
-  # ${pkgs.martin.fff-mcp} store path rather than just "does fff exist" —
-  # every fff-mcp version bump gets a new store path, and a stale
-  # registration would silently break the moment `nix-collect-garbage`
-  # reaps the old one. Re-registering on every switch keeps it pinned to
-  # a path this generation actually holds a GC root on.
-  home.activation.claudeMcpFff = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  # alwaysLoad exempts a server from tool-search deferral. A deferred server
+  # shows the model tool names only, so Claude reached for Bash ls/rg rather
+  # than pay a ToolSearch round trip; Codex loads MCP schemas eagerly and
+  # never had the gap. Checked on 2.1.267 (2026-09-14): fff with alwaysLoad
+  # arrived with full schemas, codedb without it stayed deferred.
+  #
+  # Idempotency compares command, args, and alwaysLoad with the wanted spec.
+  # fff's command is a store path, so every fff-mcp bump re-registers and the
+  # entry never points at a path `nix-collect-garbage` has reaped.
+  home.activation.claudeMcpAlwaysLoaded = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     claudeBin="${pkgs.claude-code}/bin/claude"
-    fffBin="${pkgs.martin.fff-mcp}/bin/fff-mcp"
+    jqBin="${pkgs.jq}/bin/jq"
     target="${homeDir}/.claude.json"
 
-    currentCmd=""
-    if [ -f "$target" ]; then
-      currentCmd=$(${pkgs.jq}/bin/jq -r '.mcpServers.fff.command // empty' "$target" 2>/dev/null || true)
-    fi
+    registerAlwaysLoaded() {
+      name="$1"
+      spec="$2"
+      current=""
+      if [ -f "$target" ]; then
+        current=$("$jqBin" -c --arg n "$name" '.mcpServers[$n] // {} | {command, args, alwaysLoad}' "$target" 2>/dev/null || true)
+      fi
+      wanted=$(printf '%s' "$spec" | "$jqBin" -c '{command, args, alwaysLoad}')
+
+      if [ "$current" = "$wanted" ]; then
+        :
+      elif [ -n "''${DRY_RUN:-}" ]; then
+        echo "claude-mcp: would (re)register $name -> $wanted (was: ''${current:-none})" >&2
+      else
+        "$claudeBin" mcp remove -s user "$name" >/dev/null 2>&1 || true
+        if "$claudeBin" mcp add-json -s user "$name" "$spec" >&2; then
+          echo "claude-mcp: registered $name with alwaysLoad" >&2
+        else
+          echo "claude-mcp: failed to register $name (see above)" >&2
+        fi
+      fi
+    }
 
     if [ ! -x "$claudeBin" ]; then
-      echo "claude-mcp-fff: claude CLI not found, skipping" >&2
-    elif [ "$currentCmd" = "$fffBin" ]; then
-      :
-    elif [ -n "''${DRY_RUN:-}" ]; then
-      echo "claude-mcp-fff: would (re)register fff -> $fffBin (was: ''${currentCmd:-none})" >&2
+      echo "claude-mcp: claude CLI not found, skipping" >&2
     else
-      "$claudeBin" mcp remove -s user fff >/dev/null 2>&1 || true
-      if "$claudeBin" mcp add -s user fff -- "$fffBin" >&2; then
-        echo "claude-mcp-fff: registered fff -> $fffBin" >&2
-      else
-        echo "claude-mcp-fff: failed to register fff (see above)" >&2
+      registerAlwaysLoaded fff '{"type":"stdio","command":"${pkgs.martin.fff-mcp}/bin/fff-mcp","args":[],"alwaysLoad":true}'
+      # codedb is a hand-installed binary outside Nix; register it only when present.
+      if [ -x "${homeDir}/bin/codedb" ]; then
+        registerAlwaysLoaded codedb '{"type":"stdio","command":"${homeDir}/bin/codedb","args":["mcp"],"alwaysLoad":true}'
       fi
     fi
   '';
 
   # === MCP: register drafts (Drafts.app AppleScript bridge) ===
   # Same mechanism and same store-path idempotency reasoning as
-  # claudeMcpFff above. The patched defaults (bulk tools gated behind
+  # claudeMcpAlwaysLoaded above. The patched defaults (bulk tools gated behind
   # DRAFTS_MCP_ALLOW_BULK=1, 20s osascript watchdog, 200-result cap) are
   # baked into pkgs/drafts-mcp-server.nix, so no env is passed here.
   home.activation.claudeMcpDrafts = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -1078,7 +1113,7 @@ in
         "^web-browser$";
       archify = mkSource "archify" "." null;
       better-github-skill = mkSource "better-github-skill" "." null;
-    } // mpSources // effectSources // pstackSources;
+    } // mpSources // effectSources;
 
     skills = {
       enable = enabledMattpocockSkills ++ [ "archify" "better-github-skill" ];
@@ -1097,16 +1132,6 @@ in
         # was retired for the code-review host, ADR-0015). mattpocock skills
         # inherit from user PATH (git/gh/jq/bun globally).
         web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];
-      } // pstackExplicit // {
-
-        # `grill-with-docs` and `improve-codebase-architecture` used to live
-        # here so a Nix `transform` could append a Karpathy-alignment footer to
-        # each. Both forks are retired: the plugin now supplies both ids, and a
-        # local fork would shadow the plugin copy and re-create the very
-        # duplicate this module removes (the fork of
-        # improve-codebase-architecture had also drifted onto a stale upstream
-        # body). They are back on plain bucket auto-discovery, so every non-
-        # Claude picker dir gets the untransformed upstream copy.
       };
     };
 

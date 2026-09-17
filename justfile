@@ -157,6 +157,7 @@ check:
         '.#checks.aarch64-darwin.unit-overlay' \
         '.#checks.aarch64-darwin.unit-justfile' \
         '.#checks.aarch64-darwin.unit-claude-md' \
+        '.#checks.aarch64-darwin.unit-agent-guides' \
         '.#checks.aarch64-darwin.unit-shell-guard' \
         '.#checks.aarch64-darwin.unit-edit-batch-nudge' \
         '.#checks.aarch64-darwin.unit-auto-update' \
@@ -164,6 +165,7 @@ check:
         '.#checks.aarch64-darwin.unit-skill-router' \
         '.#checks.aarch64-darwin.unit-skill-hygiene' \
         '.#checks.aarch64-darwin.unit-pstack-hygiene' \
+        '.#checks.aarch64-darwin.unit-ai-model-routing' \
         '.#checks.aarch64-darwin.integration-configurations-eval'
 
 # Run the skill-router bun suite (spawn-seam gate) offline via the Nix sandbox.

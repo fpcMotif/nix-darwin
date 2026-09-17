@@ -84,5 +84,19 @@ check allow "jq '.a' in.json > out.json"
 check allow "git diff > /tmp/x.diff"
 check allow "bat -pp --line-range 1:30 hooks/shell-guard.sh"
 
+# Separators inside quotes do not start a command; $( inside double quotes does.
+check allow "rg -n \"ls|find|fff\" x"
+check allow "rg -n 'a|sed' x"
+check allow "rg -n \$'a|find' x"
+check allow "git commit -m \"fix; find . works\""
+check allow $'rg -n "a\nfind b" x'
+check allow $'ls # don\'t run find here'
+check allow "ls | grep foo"
+check deny  "echo x | sed s/a/b/"
+check deny  "find . -name x"
+check deny  "rg -n 'a|b' x; find . -name y"
+check deny  "echo \"v=\$(cat VERSION)\""
+check deny  $'ls # don\'t\nfind .'
+
 printf '%s/%s rows passed\n' "$((n - fail))" "$n"
 [ "$fail" -eq 0 ]

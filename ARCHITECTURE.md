@@ -112,6 +112,15 @@ Three layers, one writer per concern:
 
 Home Manager now owns the selected shell, prompt, terminal, and git config text in Nix, including generated files like `~/.zshrc`, `~/.config/starship.toml`, `~/.config/tmux/tmux.conf`, `~/.config/ghostty/config`, and `~/.config/git/config`. Legacy Stow/Homebrew dotfiles are inventory only; they are not an active writer for migrated concerns.
 
+`modules/shared/agent-model-routing.nix` owns the semantic job-routing policy.
+OMP, Pi, Codex, Crush, and Zed adapters render from that interface.
+`modules/home/ai-model-routing.nix` applies only the mutable Pi adapter.
+Claude pstack retains its native-alias role sheet under ADR-0014.
+`modules/darwin/codex.nix` owns machine-wide Codex defaults in
+`/etc/codex/config.toml`. Codex owns writable user overrides in
+`~/.codex/config.toml`. Home Manager links Codex profiles and personal agent
+instructions. OMP model settings remain native in `~/.omp/agent/config.yml`.
+
 ### Migrating a config file into Nix ownership
 
 Do this one file at a time:
@@ -207,13 +216,15 @@ modules/home/
 ├── kitty.nix            # Kitty terminal config
 ├── git.nix              # Git behavior without copied identity/signing keys
 ├── jujutsu.nix          # jj VCS config + local jj skill
+├── worktrunk.nix        # wt worktree manager: config.toml + build-time zsh wrapper
 ├── ssh.nix              # SSH client config (settings, not deprecated matchBlocks)
 ├── yazi.nix             # Yazi file manager
 ├── obsidian.nix         # Obsidian vault wiring
-├── lsp.nix              # single source of truth for language servers (Claude/Codex/Neovim)
+├── lsp.nix              # language-server packages and Claude/Neovim configuration
 ├── claude.nix           # Claude Code config + the agent-skills bundle
 ├── ai-cli.nix           # claude/cc/codex/amp shell wrappers (ultracode defaults)
-├── ai-model-routing.nix # two-tier AI model routing
+├── agent-instructions.nix # Codex profiles and personal harness instructions
+├── ai-model-routing.nix # mutable Pi adapter for the shared routing policy
 ├── opencode.nix         # opencode CLI config
 ├── crush.nix            # crush CLI config
 ├── amp.nix              # Sourcegraph Amp settings
@@ -232,6 +243,11 @@ This section is the largest because the moving parts (sources, targets, discover
 ### Mechanism
 
 `modules/home/claude.nix` imports `inputs.agent-skills.homeManagerModules.default` and uses the upstream `programs.agent-skills` DSL — no custom activation scripts. The module owns one declarative bundle of selected `SKILL.md` directories and links that bundle into each enabled target.
+
+Personal skill sources live in `modules/home/skills/personal/`. Their manifest preserves existing harness discovery paths.
+`agent-instructions.nix` links matching copies to one source and archives previous files before Home Manager links them.
+OMP-specific skills retain their native scope. Codex system skills and native Codex/Claude plugin caches remain installer-owned exceptions.
+Durable Codex defaults belong in Nix. Personal model, reasoning, trust, plugin, and UI choices remain writable overrides.
 
 ### Enabled targets
 

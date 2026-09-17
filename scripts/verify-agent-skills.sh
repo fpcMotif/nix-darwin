@@ -237,8 +237,9 @@ ok "dangling-symlink sweep completed"
 # ---------------------------------------------------------------------------
 section "9. Global CLAUDE.md hygiene (real tools only, dead tools removed)"
 CLAUDE_MD="${HOME}/.claude/CLAUDE.md"
+CLAUDE_DEV="${HOME}/.claude/guidance/development.md"
 if [ -f "$CLAUDE_MD" ]; then
-  claude_md_content=$(cat "$CLAUDE_MD")
+  claude_md_content=$(cat "$CLAUDE_MD" "$CLAUDE_DEV" 2>/dev/null || cat "$CLAUDE_MD")
   banned_found=0
   for term in gemini deepwiki mgrep lazygit deep-research chezmoi; do
     if printf '%s\n' "$claude_md_content" | grep -qi "$term"; then
