@@ -33,6 +33,9 @@
 # macOS metadata.
 .DS_Store
 
+# Python bytecode from `uv run` of the eval scripts under modules/home/claude/evals/.
+__pycache__/
+
 # Rime user state and rebuildable artifacts. The reusable schemas can live
 # under MyRime-main/, but per-user runtime state stays out of git.
 /MyRime-main/build/

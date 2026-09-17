@@ -1,0 +1,44 @@
+{
+  "$comment": "The Threads pointer-events:none Quick Grab bug (x-media-downloader #92). Run: bun scripts/cdp-annotate.mjs examples/threads-cloaked-img.json --out /tmp/shots. Needs the xmd debug Chrome (ext id below) on :9222. On the FIXED build the ring may already read '4 started' in the first frame; the before-banner quotes the pre-fix trace.",
+  "url": "https://www.threads.com/@uiuxandrii/post/DcVelsgCBu2",
+  "viewport": { "width": 1440, "height": 840, "scale": 2 },
+  "traces": [
+    {
+      "name": "sw",
+      "type": "service_worker",
+      "match": "ejbfndjdeemmhccclagchbdbkinepoof",
+      "filter": "[XMD] quickgrab",
+      "evaluate": "(() => { if (!self.__stub) { self.__stub = []; let n = 900000; chrome.downloads.download = (o) => { self.__stub.push(o.url); return Promise.resolve(++n) } } return 'downloads stubbed' })()"
+    }
+  ],
+  "steps": [
+    { "waitFor": "js:[...document.querySelectorAll('img')].some(i => /cdninstagram\\.com\\/v\\/t51/.test(i.src) && i.naturalWidth > 150)" },
+    { "scrollTo": "js:[...document.querySelectorAll('img')].find(i => /cdninstagram\\.com\\/v\\/t51/.test(i.src) && i.naturalWidth > 150 && !/t51\\.2885-19/.test(i.src))", "settle": 1800 },
+    { "hover": "js:[...document.querySelectorAll('img')].find(i => /cdninstagram\\.com\\/v\\/t51/.test(i.src) && i.naturalWidth > 150 && !/t51\\.2885-19/.test(i.src) && i.getBoundingClientRect().top > 60)" },
+    { "wait": 100 },
+    { "keyDown": ["Alt", "Meta"] },
+    { "nudge": [1, 1], "every": 40 },
+    { "wait": 200 },
+    {
+      "annotate": [
+        { "box": "@hover", "color": "red" },
+        { "label": ["① the hovered <img>", "   computed style: pointer-events: none · position: absolute", "   → the mouse can see it but can never \"touch\" it"], "at": "@hover", "anchor": "above", "dx": -6, "color": "red" },
+        { "arrow": { "from": { "target": "@cursor", "offset": [-70, 70] }, "to": "@cursor" }, "color": "orange" },
+        { "label": "② cursor (lastX, lastY)", "at": "@cursor", "anchor": "at", "dx": -200, "dy": 74, "color": "orange" },
+        { "label": ["③ document.elementsFromPoint(cursor) =", "   div › div › div › div › div", "   → NO <img> in it: a pointer-events:none element", "     is never hit-tested", "   → old check: stack.includes(img) === false", "     ⇒ \"grab-target-stale\""], "at": "@hover", "anchor": "right", "gap": 24, "dy": 8, "color": "ink" },
+        { "label": ["④ ring is CHARGING (\"Grab all\"):", "   the ARM step found the <img> by looking inside", "   its wrapper (nonInteractiveMediaAt) —", "   the FIRE step then refused the same <img>"], "at": "@hover", "anchor": "right", "gap": 24, "dy": 176, "color": "blue" },
+        { "banner": ["⑤ BEFORE FIX — +500 ms later (service-worker trace, pre-fix build):", "   quickgrab armed → quickgrab grab-target-stale   ← ring vanishes, nothing downloads", "   cause: holdsKey → mediaStillUnderPointer → stack.includes(img) === false"], "color": "red" }
+      ],
+      "capture": "threads-cloaked-img-before.png"
+    },
+    { "wait": 2200 },
+    {
+      "annotate": [
+        { "box": "@hover", "color": "red" },
+        { "banner": ["⑤ AFTER FIX — same gesture, same post:", "   quickgrab armed → queued → start-ack      ring: \"4 queued\" → \"4 started\""], "color": "green" }
+      ],
+      "capture": "threads-cloaked-img-after.png"
+    },
+    { "keyUp": ["Meta", "Alt"] }
+  ]
+}

@@ -208,6 +208,29 @@ let
     pstack-principles = mkSkill "pstack" "principle-laziness-protocol" [ ]
       // { transform = { original, dependencies }: pstackPrinciplesSkill; };
   };
+  pstackSkillDrv = id: pkgs.runCommand "pstack-skill-${id}" { preferLocalBuild = true; } ''
+    mkdir -p "$out"
+    shopt -s nullglob
+    for f in ${pstackSkillsRoot}/${id}/*; do
+      fname="$(basename "$f")"
+      if [ "$fname" != "SKILL.md" ]; then
+        ln -s "$f" "$out/$fname"
+      fi
+    done
+    cp ${pkgs.writeText "SKILL.md" (pstackTransform id { original = builtins.readFile (pstackSkillsRoot + "/${id}/SKILL.md"); dependencies = ""; })} "$out/SKILL.md"
+    chmod 0444 "$out/SKILL.md"
+  '';
+
+  pstackPrinciplesDrv = pkgs.runCommand "pstack-skill-pstack-principles" { preferLocalBuild = true; } ''
+    mkdir -p "$out"
+    cp ${pkgs.writeText "SKILL.md" pstackPrinciplesSkill} "$out/SKILL.md"
+    chmod 0444 "$out/SKILL.md"
+  '';
+
+  pstackDrvs = lib.listToAttrs (map (id: { name = id; value = pstackSkillDrv id; }) pstackSkills) // {
+    pstack-principles = pstackPrinciplesDrv;
+  };
+
   # The agent description is a context pointer the lead reads on every turn,
   # so it states what the agent is and when to pick it, and leaves the
   # "read SKILL.md first" instruction to the body, which already carries it.
@@ -226,5 +249,5 @@ in
 {
   inherit pstackSkillsRoot pstackPrinciples pstackSkills pstackAliases
     pstackTransform pstackPrinciplesSkill pstackModelRoles pstackModelsSheetText
-    pstackModelsSheet pstackSources pstackExplicit pstackAgentText pstackAgentFile;
+    pstackModelsSheet pstackSources pstackExplicit pstackDrvs pstackAgentText pstackAgentFile;
 }

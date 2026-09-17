@@ -1,0 +1,26 @@
+{
+  "$comment": "Copy to parity.config.json. Paths join the --serve/--url base (web) or resolve inside chrome-extension://<id>/ (extension). Keys: schemes, darkMode, resetScript, readyScript, settledSelectors, quietMs, stateTargets, ignoreAttributes, ignoreCustomProperties, viewport, deviceScaleFactor, scenarios[{ name, path, viewport?, schemes?, steps?, tabContext? (extension only) }].",
+  "viewport": { "width": 1280, "height": 900 },
+  "schemes": ["light", "dark"],
+  "darkMode": { "mode": "media" },
+  "resetScript": "localStorage.clear(); sessionStorage.clear()",
+  "readyScript": "document.fonts.ready",
+  "settledSelectors": ["[data-loading]", "[aria-busy=\"true\"]"],
+  "quietMs": 300,
+  "stateTargets": "button, a[href], input, select, textarea, [role=\"switch\"], [role=\"checkbox\"], [role=\"option\"], [role=\"menuitem\"], [role=\"tab\"], [tabindex]",
+  "ignoreAttributes": [],
+  "scenarios": [
+    { "name": "home", "path": "/" },
+    { "name": "home_narrow", "path": "/", "viewport": { "width": 560, "height": 900 } },
+    {
+      "name": "settings_menu_open",
+      "path": "/settings",
+      "steps": ["await __parity.click('button', 'Menu')", "await __parity.sleep(400)", "__parity.blur()"]
+    },
+    {
+      "name": "delete_armed",
+      "path": "/settings",
+      "steps": ["await __parity.click('button', 'Delete')", "await __parity.sleep(500)", "__parity.freezeClock()", "__parity.blur()"]
+    }
+  ]
+}

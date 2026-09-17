@@ -1,0 +1,912 @@
+{
+  "agent-browser-cdp-a11y": [
+    ".agents/skills/agent-browser-cdp-a11y",
+    ".omp/agent/managed-skills/agent-browser-cdp-a11y"
+  ],
+  "aily-batch-autoresearch-workflow": [
+    ".agents/skills/aily-batch-autoresearch-workflow",
+    ".omp/agent/managed-skills/aily-batch-autoresearch-workflow"
+  ],
+  "aily-figure-anchoring": [
+    ".agents/skills/aily-figure-anchoring",
+    ".omp/agent/managed-skills/aily-figure-anchoring"
+  ],
+  "aily-runon-splitting": [
+    ".agents/skills/aily-runon-splitting",
+    ".omp/agent/managed-skills/aily-runon-splitting"
+  ],
+  "animation-vocabulary": [
+    ".agents/skills/animation-vocabulary",
+    ".claude/skills/animation-vocabulary",
+    ".codex/skills/animation-vocabulary",
+    ".skillshub/animation-vocabulary"
+  ],
+  "annotated-screenshot": [
+    ".agents/skills/annotated-screenshot",
+    ".claude/skills/annotated-screenshot",
+    ".codex/skills/annotated-screenshot",
+    ".skillshub/annotated-screenshot"
+  ],
+  "antithesis-agent-browser": [
+    ".agents/skills/antithesis-agent-browser",
+    ".codex/skills/antithesis-agent-browser"
+  ],
+  "antithesis-debug": [
+    ".agents/skills/antithesis-debug",
+    ".codex/skills/antithesis-debug"
+  ],
+  "antithesis-documentation": [
+    ".agents/skills/antithesis-documentation",
+    ".codex/skills/antithesis-documentation"
+  ],
+  "antithesis-launch": [
+    ".agents/skills/antithesis-launch",
+    ".codex/skills/antithesis-launch"
+  ],
+  "antithesis-query-logs": [
+    ".agents/skills/antithesis-query-logs",
+    ".codex/skills/antithesis-query-logs"
+  ],
+  "antithesis-research": [
+    ".agents/skills/antithesis-research",
+    ".codex/skills/antithesis-research"
+  ],
+  "antithesis-setup": [
+    ".agents/skills/antithesis-setup",
+    ".codex/skills/antithesis-setup"
+  ],
+  "antithesis-setup-k8s": [
+    ".agents/skills/antithesis-setup-k8s",
+    ".codex/skills/antithesis-setup-k8s"
+  ],
+  "antithesis-skills-feedback": [
+    ".agents/skills/antithesis-skills-feedback",
+    ".codex/skills/antithesis-skills-feedback"
+  ],
+  "antithesis-triage": [
+    ".agents/skills/antithesis-triage",
+    ".codex/skills/antithesis-triage"
+  ],
+  "antithesis-workload": [
+    ".agents/skills/antithesis-workload",
+    ".codex/skills/antithesis-workload"
+  ],
+  "apple-design": [
+    ".agents/skills/apple-design",
+    ".claude/skills/apple-design",
+    ".codex/skills/apple-design",
+    ".skillshub/apple-design"
+  ],
+  "archify-workflow-recipes": [
+    ".agents/skills/archify-workflow-recipes",
+    ".omp/agent/managed-skills/archify-workflow-recipes"
+  ],
+  "ast-grep-boundary-checker": [
+    ".agents/skills/ast-grep-boundary-checker",
+    ".omp/agent/managed-skills/ast-grep-boundary-checker"
+  ],
+  "autoresearch": [
+    ".agents/skills/autoresearch",
+    ".claude/skills/autoresearch",
+    ".codex/skills/autoresearch",
+    ".skillshub/autoresearch"
+  ],
+  "axe-core-cdp-audit": [
+    ".agents/skills/axe-core-cdp-audit",
+    ".omp/agent/managed-skills/axe-core-cdp-audit"
+  ],
+  "better-accessibility": [
+    ".agents/skills/better-accessibility",
+    ".claude/skills/better-accessibility",
+    ".codex/skills/better-accessibility",
+    ".skillshub/better-accessibility"
+  ],
+  "better-colors": [
+    ".agents/skills/better-colors",
+    ".claude/skills/better-colors",
+    ".codex/skills/better-colors",
+    ".skillshub/better-colors"
+  ],
+  "better-interface": [
+    ".agents/skills/better-interface",
+    ".claude/skills/better-interface",
+    ".codex/skills/better-interface",
+    ".skillshub/better-interface"
+  ],
+  "better-layout": [
+    ".agents/skills/better-layout",
+    ".claude/skills/better-layout",
+    ".codex/skills/better-layout",
+    ".skillshub/better-layout"
+  ],
+  "better-typography": [
+    ".agents/skills/better-typography",
+    ".claude/skills/better-typography",
+    ".codex/skills/better-typography",
+    ".skillshub/better-typography"
+  ],
+  "better-ui": [
+    ".agents/skills/better-ui",
+    ".claude/skills/better-ui",
+    ".codex/skills/better-ui",
+    ".skillshub/better-ui"
+  ],
+  "better-writing": [
+    ".agents/skills/better-writing",
+    ".claude/skills/better-writing",
+    ".codex/skills/better-writing",
+    ".skillshub/better-writing"
+  ],
+  "browser-frame-parity-clone": [
+    ".agents/skills/browser-frame-parity-clone",
+    ".omp/agent/managed-skills/browser-frame-parity-clone"
+  ],
+  "bun-native-boundary-checker": [
+    ".agents/skills/bun-native-boundary-checker",
+    ".omp/agent/managed-skills/bun-native-boundary-checker"
+  ],
+  "carbone-studio-template-audit": [
+    ".agents/skills/carbone-studio-template-audit",
+    ".omp/agent/managed-skills/carbone-studio-template-audit"
+  ],
+  "cdp-hover-extraction": [
+    ".agents/skills/cdp-hover-extraction",
+    ".omp/agent/managed-skills/cdp-hover-extraction"
+  ],
+  "cdp-pixel-fidelity-harness": [
+    ".agents/skills/cdp-pixel-fidelity-harness",
+    ".omp/agent/managed-skills/cdp-pixel-fidelity-harness"
+  ],
+  "cdp-scroll-animation-testing": [
+    ".agents/skills/cdp-scroll-animation-testing",
+    ".omp/agent/managed-skills/cdp-scroll-animation-testing"
+  ],
+  "cdp-site-extraction": [
+    ".agents/skills/cdp-site-extraction",
+    ".omp/agent/managed-skills/cdp-site-extraction"
+  ],
+  "cdp-style-extraction-cloning": [
+    ".agents/skills/cdp-style-extraction-cloning",
+    ".omp/agent/managed-skills/cdp-style-extraction-cloning"
+  ],
+  "cdp-tanstack-web-clone": [
+    ".agents/skills/cdp-tanstack-web-clone",
+    ".omp/agent/managed-skills/cdp-tanstack-web-clone"
+  ],
+  "cdp-virtual-time-motion-capture": [
+    ".agents/skills/cdp-virtual-time-motion-capture",
+    ".omp/agent/managed-skills/cdp-virtual-time-motion-capture"
+  ],
+  "cdp-web-clone-verification": [
+    ".agents/skills/cdp-web-clone-verification",
+    ".omp/agent/managed-skills/cdp-web-clone-verification"
+  ],
+  "cdp-web-cloning": [
+    ".agents/skills/cdp-web-cloning",
+    ".omp/agent/managed-skills/cdp-web-cloning"
+  ],
+  "chrome-beta-background-cdp": [
+    ".agents/skills/chrome-beta-background-cdp",
+    ".omp/agent/managed-skills/chrome-beta-background-cdp"
+  ],
+  "chrome-cdp-ipv6-proxy": [
+    ".agents/skills/chrome-cdp-ipv6-proxy",
+    ".omp/agent/managed-skills/chrome-cdp-ipv6-proxy"
+  ],
+  "chrome-extension-a11y-audit": [
+    ".agents/skills/chrome-extension-a11y-audit",
+    ".omp/agent/managed-skills/chrome-extension-a11y-audit"
+  ],
+  "chrome-extension-frameshift-visual-diff": [
+    ".agents/skills/chrome-extension-frameshift-visual-diff",
+    ".omp/agent/managed-skills/chrome-extension-frameshift-visual-diff"
+  ],
+  "chrome-extension-remote-cdp": [
+    ".agents/skills/chrome-extension-remote-cdp",
+    ".omp/agent/managed-skills/chrome-extension-remote-cdp"
+  ],
+  "chronicle": [
+    ".agents/skills/chronicle",
+    ".claude/skills/chronicle",
+    ".skillshub/chronicle"
+  ],
+  "clashmi-to-surge-profile": [
+    ".agents/skills/clashmi-to-surge-profile",
+    ".omp/agent/managed-skills/clashmi-to-surge-profile"
+  ],
+  "claude-handoff": [
+    ".agents/skills/claude-handoff",
+    ".claude/skills/claude-handoff",
+    ".codex/skills/claude-handoff",
+    ".skillshub/claude-handoff"
+  ],
+  "claude-md-improver": [
+    ".agents/skills/claude-md-improver",
+    ".claude/skills/claude-md-improver",
+    ".codex/skills/claude-md-improver",
+    ".skillshub/claude-md-improver"
+  ],
+  "clean": [
+    ".agents/skills/clean",
+    ".claude/skills/clean",
+    ".codex/skills/clean"
+  ],
+  "codewiki-clone-cdp-workflow": [
+    ".agents/skills/codewiki-clone-cdp-workflow",
+    ".omp/agent/managed-skills/codewiki-clone-cdp-workflow"
+  ],
+  "compiled-regex-flags-gotcha": [
+    ".agents/skills/compiled-regex-flags-gotcha",
+    ".omp/agent/managed-skills/compiled-regex-flags-gotcha"
+  ],
+  "design": [
+    ".agents/skills/design",
+    ".claude/skills/design",
+    ".codex/skills/design",
+    ".skillshub/design"
+  ],
+  "design-an-interface": [
+    ".agents/skills/design-an-interface",
+    ".claude/skills/design-an-interface",
+    ".codex/skills/design-an-interface",
+    ".skillshub/design-an-interface"
+  ],
+  "deterministic-motion-screenshot-bench": [
+    ".agents/skills/deterministic-motion-screenshot-bench",
+    ".omp/agent/managed-skills/deterministic-motion-screenshot-bench"
+  ],
+  "drafts-automation-golden-rule": [
+    ".agents/skills/drafts-automation-golden-rule",
+    ".omp/agent/managed-skills/drafts-automation-golden-rule"
+  ],
+  "drafts-batch-classification-and-tagging": [
+    ".agents/skills/drafts-batch-classification-and-tagging",
+    ".omp/agent/managed-skills/drafts-batch-classification-and-tagging"
+  ],
+  "drafts-cloudkit-sync-diagnosis": [
+    ".agents/skills/drafts-cloudkit-sync-diagnosis",
+    ".omp/agent/managed-skills/drafts-cloudkit-sync-diagnosis"
+  ],
+  "drafts-jxa-batch-ops": [
+    ".agents/skills/drafts-jxa-batch-ops",
+    ".omp/agent/managed-skills/drafts-jxa-batch-ops"
+  ],
+  "drafts-ledger": [
+    ".agents/skills/drafts-ledger",
+    ".claude/skills/drafts-ledger",
+    ".codex/skills/drafts-ledger",
+    ".omp/agent/skills/drafts-ledger",
+    ".skillshub/drafts-ledger"
+  ],
+  "drafts-ledger-audit-pipeline": [
+    ".agents/skills/drafts-ledger-audit-pipeline",
+    ".omp/agent/managed-skills/drafts-ledger-audit-pipeline"
+  ],
+  "drafts-youtube-key-abstracts": [
+    ".agents/skills/drafts-youtube-key-abstracts",
+    ".omp/agent/managed-skills/drafts-youtube-key-abstracts"
+  ],
+  "edit-article": [
+    ".agents/skills/edit-article",
+    ".claude/skills/edit-article",
+    ".codex/skills/edit-article",
+    ".skillshub/edit-article"
+  ],
+  "eli5": [
+    ".agents/skills/eli5",
+    ".claude/skills/eli5",
+    ".codex/skills/eli5",
+    ".skillshub/eli5"
+  ],
+  "emil-design-eng": [
+    ".agents/skills/emil-design-eng",
+    ".claude/skills/emil-design-eng",
+    ".codex/skills/emil-design-eng",
+    ".skillshub/emil-design-eng"
+  ],
+  "feishu-aily-batch-conversion": [
+    ".agents/skills/feishu-aily-batch-conversion",
+    ".omp/agent/managed-skills/feishu-aily-batch-conversion"
+  ],
+  "feishu-docx-markdown-importer": [
+    ".agents/skills/feishu-docx-markdown-importer",
+    ".omp/agent/managed-skills/feishu-docx-markdown-importer"
+  ],
+  "feishu-sop-mermaid-table-extraction": [
+    ".agents/skills/feishu-sop-mermaid-table-extraction",
+    ".omp/agent/managed-skills/feishu-sop-mermaid-table-extraction"
+  ],
+  "feishudoc-aily-revision-audit": [
+    ".agents/skills/feishudoc-aily-revision-audit",
+    ".omp/agent/managed-skills/feishudoc-aily-revision-audit"
+  ],
+  "feishudoc-aily-sop-revision-audit": [
+    ".agents/skills/feishudoc-aily-sop-revision-audit",
+    ".omp/agent/managed-skills/feishudoc-aily-sop-revision-audit"
+  ],
+  "feishudoc-batch-aily-conversion": [
+    ".agents/skills/feishudoc-batch-aily-conversion",
+    ".omp/agent/managed-skills/feishudoc-batch-aily-conversion"
+  ],
+  "feishudoc-batch-aily-pipeline": [
+    ".agents/skills/feishudoc-batch-aily-pipeline",
+    ".omp/agent/managed-skills/feishudoc-batch-aily-pipeline"
+  ],
+  "feishudoc-fig-placement-repair": [
+    ".agents/skills/feishudoc-fig-placement-repair",
+    ".omp/agent/managed-skills/feishudoc-fig-placement-repair"
+  ],
+  "feishudoc-figure-semantics-describer": [
+    ".agents/skills/feishudoc-figure-semantics-describer",
+    ".omp/agent/managed-skills/feishudoc-figure-semantics-describer"
+  ],
+  "feishudoc-gemini-autore-standardizer": [
+    ".agents/skills/feishudoc-gemini-autore-standardizer",
+    ".omp/agent/managed-skills/feishudoc-gemini-autore-standardizer"
+  ],
+  "feishudoc-sop-clean-standardization": [
+    ".agents/skills/feishudoc-sop-clean-standardization",
+    ".omp/agent/managed-skills/feishudoc-sop-clean-standardization"
+  ],
+  "feishudoc-sop-revision-audit": [
+    ".agents/skills/feishudoc-sop-revision-audit",
+    ".omp/agent/managed-skills/feishudoc-sop-revision-audit"
+  ],
+  "find-animation-opportunities": [
+    ".agents/skills/find-animation-opportunities",
+    ".claude/skills/find-animation-opportunities",
+    ".codex/skills/find-animation-opportunities",
+    ".skillshub/find-animation-opportunities"
+  ],
+  "find-skills": [
+    ".agents/skills/find-skills",
+    ".claude/skills/find-skills",
+    ".codex/skills/find-skills",
+    ".skillshub/find-skills"
+  ],
+  "floodlight-ci-diagnosis": [
+    ".agents/skills/floodlight-ci-diagnosis",
+    ".omp/agent/managed-skills/floodlight-ci-diagnosis"
+  ],
+  "frameshift-visual-diff-workflow": [
+    ".agents/skills/frameshift-visual-diff-workflow",
+    ".omp/agent/managed-skills/frameshift-visual-diff-workflow"
+  ],
+  "gemini-vision-fidelity-reviewer": [
+    ".agents/skills/gemini-vision-fidelity-reviewer",
+    ".omp/agent/managed-skills/gemini-vision-fidelity-reviewer"
+  ],
+  "ground-truth-audit": [
+    ".agents/skills/ground-truth-audit",
+    ".claude/skills/ground-truth-audit",
+    ".codex/skills/ground-truth-audit",
+    ".skillshub/ground-truth-audit"
+  ],
+  "improve-animations": [
+    ".agents/skills/improve-animations",
+    ".claude/skills/improve-animations",
+    ".codex/skills/improve-animations",
+    ".skillshub/improve-animations"
+  ],
+  "interface-review": [
+    ".agents/skills/interface-review",
+    ".claude/skills/interface-review",
+    ".codex/skills/interface-review",
+    ".skillshub/interface-review"
+  ],
+  "jj-colocated-git-workflow": [
+    ".agents/skills/jj-colocated-git-workflow",
+    ".omp/agent/managed-skills/jj-colocated-git-workflow"
+  ],
+  "labs-google-clone-ground-truth": [
+    ".agents/skills/labs-google-clone-ground-truth",
+    ".omp/agent/managed-skills/labs-google-clone-ground-truth"
+  ],
+  "labs-google-live-parity": [
+    ".agents/skills/labs-google-live-parity",
+    ".omp/agent/managed-skills/labs-google-live-parity"
+  ],
+  "labs-hero-carousel-anatomy": [
+    ".agents/skills/labs-hero-carousel-anatomy",
+    ".omp/agent/managed-skills/labs-hero-carousel-anatomy"
+  ],
+  "labsgoogle-measured-slides": [
+    ".agents/skills/labsgoogle-measured-slides",
+    ".omp/agent/managed-skills/labsgoogle-measured-slides"
+  ],
+  "land-autoresearch-work-to-main": [
+    ".agents/skills/land-autoresearch-work-to-main",
+    ".omp/agent/managed-skills/land-autoresearch-work-to-main"
+  ],
+  "lark-cli-setup": [
+    ".agents/skills/lark-cli-setup",
+    ".omp/agent/managed-skills/lark-cli-setup"
+  ],
+  "lasso-convex-sync-cdp-diagnosis": [
+    ".agents/skills/lasso-convex-sync-cdp-diagnosis",
+    ".omp/agent/managed-skills/lasso-convex-sync-cdp-diagnosis"
+  ],
+  "lasso-remote-cdp-folder-verification": [
+    ".agents/skills/lasso-remote-cdp-folder-verification",
+    ".omp/agent/managed-skills/lasso-remote-cdp-folder-verification"
+  ],
+  "loop-me": [
+    ".agents/skills/loop-me",
+    ".claude/skills/loop-me",
+    ".codex/skills/loop-me",
+    ".skillshub/loop-me"
+  ],
+  "macos-app-bundle-size-optimization": [
+    ".agents/skills/macos-app-bundle-size-optimization",
+    ".omp/agent/managed-skills/macos-app-bundle-size-optimization"
+  ],
+  "macos-app-visual-qa": [
+    ".agents/skills/macos-app-visual-qa",
+    ".omp/agent/managed-skills/macos-app-visual-qa"
+  ],
+  "macos-appkit-liquid-glass-qa": [
+    ".agents/skills/macos-appkit-liquid-glass-qa",
+    ".omp/agent/managed-skills/macos-appkit-liquid-glass-qa"
+  ],
+  "macos-drafts-query-and-sync": [
+    ".agents/skills/macos-drafts-query-and-sync",
+    ".omp/agent/managed-skills/macos-drafts-query-and-sync"
+  ],
+  "macos-drag-drop-permission-onboarding": [
+    ".agents/skills/macos-drag-drop-permission-onboarding",
+    ".omp/agent/managed-skills/macos-drag-drop-permission-onboarding"
+  ],
+  "macos-liquid-glass-appkit": [
+    ".agents/skills/macos-liquid-glass-appkit",
+    ".omp/agent/managed-skills/macos-liquid-glass-appkit"
+  ],
+  "macos-liquid-glass-ui-polish": [
+    ".agents/skills/macos-liquid-glass-ui-polish",
+    ".omp/agent/managed-skills/macos-liquid-glass-ui-polish"
+  ],
+  "macos-rust-dyld-linkedit-fix": [
+    ".agents/skills/macos-rust-dyld-linkedit-fix",
+    ".omp/agent/managed-skills/macos-rust-dyld-linkedit-fix"
+  ],
+  "macos-swift-xcode-build": [
+    ".agents/skills/macos-swift-xcode-build",
+    ".omp/agent/managed-skills/macos-swift-xcode-build"
+  ],
+  "make-interfaces-feel-better": [
+    ".agents/skills/make-interfaces-feel-better",
+    ".claude/skills/make-interfaces-feel-better",
+    ".codex/skills/make-interfaces-feel-better",
+    ".skillshub/make-interfaces-feel-better"
+  ],
+  "manage-taskboard": [
+    ".agents/skills/manage-taskboard"
+  ],
+  "measure-live-carousel": [
+    ".agents/skills/measure-live-carousel",
+    ".omp/agent/managed-skills/measure-live-carousel"
+  ],
+  "meridian-authenticated-dev": [
+    ".agents/skills/meridian-authenticated-dev",
+    ".omp/agent/managed-skills/meridian-authenticated-dev"
+  ],
+  "meridian-demo-visual-verify": [
+    ".agents/skills/meridian-demo-visual-verify",
+    ".omp/agent/managed-skills/meridian-demo-visual-verify"
+  ],
+  "meridian-dev-auth-modes": [
+    ".agents/skills/meridian-dev-auth-modes",
+    ".omp/agent/managed-skills/meridian-dev-auth-modes"
+  ],
+  "meridian-dev-mode-cdp": [
+    ".agents/skills/meridian-dev-mode-cdp",
+    ".omp/agent/managed-skills/meridian-dev-mode-cdp"
+  ],
+  "meridian-dev-run-verify": [
+    ".agents/skills/meridian-dev-run-verify",
+    ".omp/agent/managed-skills/meridian-dev-run-verify"
+  ],
+  "nix-agent-skills": [
+    ".agents/skills/nix-agent-skills",
+    ".omp/agent/managed-skills/nix-agent-skills"
+  ],
+  "nix-config-land-autoupdate-main": [
+    ".agents/skills/nix-config-land-autoupdate-main",
+    ".omp/agent/managed-skills/nix-config-land-autoupdate-main"
+  ],
+  "nix-config-zsh-key-plane": [
+    ".agents/skills/nix-config-zsh-key-plane",
+    ".omp/agent/managed-skills/nix-config-zsh-key-plane"
+  ],
+  "notebooklm": [
+    ".agents/skills/notebooklm",
+    ".claude/skills/notebooklm",
+    ".codex/skills/notebooklm",
+    ".skillshub/notebooklm"
+  ],
+  "nuclear-cqr": [
+    ".agents/skills/nuclear-cqr",
+    ".claude/skills/nuclear-cqr",
+    ".codex/skills/nuclear-cqr",
+    ".skillshub/nuclear-cqr"
+  ],
+  "obsidian-vault": [
+    ".agents/skills/obsidian-vault",
+    ".claude/skills/obsidian-vault",
+    ".codex/skills/obsidian-vault",
+    ".skillshub/obsidian-vault"
+  ],
+  "oklch-color-conversion": [
+    ".agents/skills/oklch-color-conversion",
+    ".omp/agent/managed-skills/oklch-color-conversion"
+  ],
+  "oklch-typeaware-cdp-cloning": [
+    ".agents/skills/oklch-typeaware-cdp-cloning",
+    ".omp/agent/managed-skills/oklch-typeaware-cdp-cloning"
+  ],
+  "omp-completion-and-advisor": [
+    ".agents/skills/omp-completion-and-advisor",
+    ".omp/agent/managed-skills/omp-completion-and-advisor"
+  ],
+  "oxlint-typeaware-setup": [
+    ".agents/skills/oxlint-typeaware-setup",
+    ".omp/agent/managed-skills/oxlint-typeaware-setup"
+  ],
+  "pdf-grounded-figure-placement": [
+    ".agents/skills/pdf-grounded-figure-placement",
+    ".omp/agent/managed-skills/pdf-grounded-figure-placement"
+  ],
+  "pdf-grounded-figure-placement-repair": [
+    ".agents/skills/pdf-grounded-figure-placement-repair",
+    ".omp/agent/managed-skills/pdf-grounded-figure-placement-repair"
+  ],
+  "pdf-grounded-figure-relocation": [
+    ".agents/skills/pdf-grounded-figure-relocation",
+    ".omp/agent/managed-skills/pdf-grounded-figure-relocation"
+  ],
+  "pi-keybinding-conflict-resolution": [
+    ".agents/skills/pi-keybinding-conflict-resolution",
+    ".omp/agent/managed-skills/pi-keybinding-conflict-resolution"
+  ],
+  "pick-ui-library": [
+    ".agents/skills/pick-ui-library",
+    ".claude/skills/pick-ui-library",
+    ".codex/skills/pick-ui-library",
+    ".skillshub/pick-ui-library"
+  ],
+  "pixel-clone-landing-page": [
+    ".agents/skills/pixel-clone-landing-page",
+    ".claude/skills/pixel-clone-landing-page",
+    ".codex/skills/pixel-clone-landing-page",
+    ".skillshub/pixel-clone-landing-page"
+  ],
+  "plasmo-mermaid-bundling": [
+    ".agents/skills/plasmo-mermaid-bundling",
+    ".omp/agent/managed-skills/plasmo-mermaid-bundling"
+  ],
+  "portless-dev-server": [
+    ".agents/skills/portless-dev-server",
+    ".omp/agent/managed-skills/portless-dev-server"
+  ],
+  "prime-agent-rlm": [
+    ".agents/skills/prime-agent-rlm",
+    ".omp/agent/managed-skills/prime-agent-rlm"
+  ],
+  "procedural-ascii-canvas-shaders": [
+    ".agents/skills/procedural-ascii-canvas-shaders",
+    ".omp/agent/managed-skills/procedural-ascii-canvas-shaders"
+  ],
+  "qa": [
+    ".agents/skills/qa",
+    ".claude/skills/qa",
+    ".codex/skills/qa",
+    ".skillshub/qa"
+  ],
+  "qmd": [
+    ".agents/skills/qmd",
+    ".claude/skills/qmd",
+    ".omp/agent/skills/qmd"
+  ],
+  "qmd-nix-darwin-setup": [
+    ".agents/skills/qmd-nix-darwin-setup",
+    ".omp/agent/managed-skills/qmd-nix-darwin-setup"
+  ],
+  "react-vite-singlefile-html": [
+    ".agents/skills/react-vite-singlefile-html",
+    ".omp/agent/managed-skills/react-vite-singlefile-html"
+  ],
+  "remctl-macos-reminders": [
+    ".agents/skills/remctl-macos-reminders",
+    ".omp/agent/managed-skills/remctl-macos-reminders"
+  ],
+  "request-refactor-plan": [
+    ".agents/skills/request-refactor-plan",
+    ".claude/skills/request-refactor-plan",
+    ".codex/skills/request-refactor-plan",
+    ".skillshub/request-refactor-plan"
+  ],
+  "review-animations": [
+    ".agents/skills/review-animations",
+    ".claude/skills/review-animations",
+    ".codex/skills/review-animations",
+    ".skillshub/review-animations"
+  ],
+  "ripwire-before-you-build": [
+    ".agents/skills/ripwire-before-you-build",
+    ".claude/skills/ripwire-before-you-build",
+    ".local/share/ripwire/skills/ripwire-before-you-build"
+  ],
+  "ripwire-change-check": [
+    ".agents/skills/ripwire-change-check",
+    ".claude/skills/ripwire-change-check",
+    ".local/share/ripwire/skills/ripwire-change-check"
+  ],
+  "ripwire-find-bug": [
+    ".agents/skills/ripwire-find-bug",
+    ".claude/skills/ripwire-find-bug",
+    ".local/share/ripwire/skills/ripwire-find-bug"
+  ],
+  "ripwire-fresh-eyes": [
+    ".agents/skills/ripwire-fresh-eyes",
+    ".claude/skills/ripwire-fresh-eyes",
+    ".local/share/ripwire/skills/ripwire-fresh-eyes"
+  ],
+  "ripwire-graph-query": [
+    ".agents/skills/ripwire-graph-query",
+    ".claude/skills/ripwire-graph-query",
+    ".local/share/ripwire/skills/ripwire-graph-query"
+  ],
+  "ripwire-handoff": [
+    ".agents/skills/ripwire-handoff",
+    ".claude/skills/ripwire-handoff",
+    ".local/share/ripwire/skills/ripwire-handoff"
+  ],
+  "ripwire-install": [
+    ".agents/skills/ripwire-install",
+    ".omp/agent/managed-skills/ripwire-install"
+  ],
+  "ripwire-layers": [
+    ".agents/skills/ripwire-layers",
+    ".claude/skills/ripwire-layers",
+    ".local/share/ripwire/skills/ripwire-layers"
+  ],
+  "ripwire-mcp": [
+    ".agents/skills/ripwire-mcp",
+    ".claude/skills/ripwire-mcp",
+    ".local/share/ripwire/skills/ripwire-mcp"
+  ],
+  "ripwire-navigate": [
+    ".agents/skills/ripwire-navigate",
+    ".claude/skills/ripwire-navigate",
+    ".local/share/ripwire/skills/ripwire-navigate"
+  ],
+  "ripwire-orient": [
+    ".agents/skills/ripwire-orient",
+    ".claude/skills/ripwire-orient",
+    ".local/share/ripwire/skills/ripwire-orient"
+  ],
+  "ripwire-perf-target": [
+    ".agents/skills/ripwire-perf-target",
+    ".claude/skills/ripwire-perf-target",
+    ".local/share/ripwire/skills/ripwire-perf-target"
+  ],
+  "ripwire-quality-bar": [
+    ".agents/skills/ripwire-quality-bar",
+    ".claude/skills/ripwire-quality-bar",
+    ".local/share/ripwire/skills/ripwire-quality-bar"
+  ],
+  "ripwire-reuse-first": [
+    ".agents/skills/ripwire-reuse-first",
+    ".claude/skills/ripwire-reuse-first",
+    ".local/share/ripwire/skills/ripwire-reuse-first"
+  ],
+  "ripwire-router": [
+    ".agents/skills/ripwire-router",
+    ".claude/skills/ripwire-router",
+    ".local/share/ripwire/skills/ripwire-router"
+  ],
+  "ripwire-security-scan": [
+    ".agents/skills/ripwire-security-scan",
+    ".claude/skills/ripwire-security-scan",
+    ".local/share/ripwire/skills/ripwire-security-scan"
+  ],
+  "ripwire-write-tests": [
+    ".agents/skills/ripwire-write-tests",
+    ".claude/skills/ripwire-write-tests",
+    ".local/share/ripwire/skills/ripwire-write-tests"
+  ],
+  "seeded-landing-direction": [
+    ".agents/skills/seeded-landing-direction",
+    ".codex/skills/seeded-landing-direction",
+    ".skillshub/seeded-landing-direction"
+  ],
+  "seedmux-team": [
+    ".agents/skills/seedmux-team",
+    ".claude/skills/seedmux-team"
+  ],
+  "shadcn-cn-migration": [
+    ".agents/skills/shadcn-cn-migration",
+    ".omp/agent/managed-skills/shadcn-cn-migration"
+  ],
+  "show-me": [
+    ".agents/skills/show-me",
+    ".claude/skills/show-me",
+    ".codex/skills/show-me",
+    ".skillshub/show-me"
+  ],
+  "simplify": [
+    ".agents/skills/simplify",
+    ".codex/skills/simplify",
+    ".omp/agent/skills/simplify"
+  ],
+  "skill-creator": [
+    ".agents/skills/skill-creator",
+    ".claude/skills/skill-creator",
+    ".codex/skills/skill-creator",
+    ".skillshub/skill-creator"
+  ],
+  "spec-gap-analysis": [
+    ".agents/skills/spec-gap-analysis",
+    ".omp/agent/managed-skills/spec-gap-analysis"
+  ],
+  "specfit-pdf-extractor": [
+    ".agents/skills/specfit-pdf-extractor",
+    ".omp/agent/managed-skills/specfit-pdf-extractor"
+  ],
+  "study-first-site-parity": [
+    ".agents/skills/study-first-site-parity",
+    ".omp/agent/managed-skills/study-first-site-parity"
+  ],
+  "stylex-tanstack-start-vite-recipes": [
+    ".agents/skills/stylex-tanstack-start-vite-recipes",
+    ".omp/agent/managed-skills/stylex-tanstack-start-vite-recipes"
+  ],
+  "stylex-wxt-vite-integration": [
+    ".agents/skills/stylex-wxt-vite-integration",
+    ".omp/agent/managed-skills/stylex-wxt-vite-integration"
+  ],
+  "surge": [
+    ".agents/skills/surge",
+    ".cache/agent-skills/surge",
+    ".claude/skills/surge",
+    ".codex/skills/surge"
+  ],
+  "surge-proxy-benchmark": [
+    ".agents/skills/surge-proxy-benchmark",
+    ".omp/agent/managed-skills/surge-proxy-benchmark"
+  ],
+  "t3chat-pixel-cloning": [
+    ".agents/skills/t3chat-pixel-cloning",
+    ".omp/agent/managed-skills/t3chat-pixel-cloning"
+  ],
+  "tailwind-to-stylex": [
+    ".agents/skills/tailwind-to-stylex",
+    ".claude/skills/tailwind-to-stylex",
+    ".omp/agent/skills/tailwind-to-stylex"
+  ],
+  "tanstack-start-cdp-3d-clone": [
+    ".agents/skills/tanstack-start-cdp-3d-clone",
+    ".omp/agent/managed-skills/tanstack-start-cdp-3d-clone"
+  ],
+  "tanstack-start-cdp-clone-procedure": [
+    ".agents/skills/tanstack-start-cdp-clone-procedure",
+    ".omp/agent/managed-skills/tanstack-start-cdp-clone-procedure"
+  ],
+  "tanstack-start-cdp-clone-verify": [
+    ".agents/skills/tanstack-start-cdp-clone-verify",
+    ".omp/agent/managed-skills/tanstack-start-cdp-clone-verify"
+  ],
+  "tanstack-start-cdp-iframe-clone": [
+    ".agents/skills/tanstack-start-cdp-iframe-clone",
+    ".omp/agent/managed-skills/tanstack-start-cdp-iframe-clone"
+  ],
+  "tanstack-start-cdp-verification": [
+    ".agents/skills/tanstack-start-cdp-verification",
+    ".omp/agent/managed-skills/tanstack-start-cdp-verification"
+  ],
+  "tanstack-start-codewiki-clone": [
+    ".agents/skills/tanstack-start-codewiki-clone",
+    ".omp/agent/managed-skills/tanstack-start-codewiki-clone"
+  ],
+  "tanstack-start-labs-clone": [
+    ".agents/skills/tanstack-start-labs-clone",
+    ".omp/agent/managed-skills/tanstack-start-labs-clone"
+  ],
+  "tanstack-start-landing-clone": [
+    ".agents/skills/tanstack-start-landing-clone",
+    ".omp/agent/managed-skills/tanstack-start-landing-clone"
+  ],
+  "tanstack-start-matterjs-clone": [
+    ".agents/skills/tanstack-start-matterjs-clone",
+    ".omp/agent/managed-skills/tanstack-start-matterjs-clone"
+  ],
+  "tanstack-start-matterjs-physics-clone": [
+    ".agents/skills/tanstack-start-matterjs-physics-clone",
+    ".omp/agent/managed-skills/tanstack-start-matterjs-physics-clone"
+  ],
+  "tanstack-start-matterjs-web-clone": [
+    ".agents/skills/tanstack-start-matterjs-web-clone",
+    ".omp/agent/managed-skills/tanstack-start-matterjs-web-clone"
+  ],
+  "tanstack-start-stylex-oklch": [
+    ".agents/skills/tanstack-start-stylex-oklch",
+    ".omp/agent/managed-skills/tanstack-start-stylex-oklch"
+  ],
+  "tanstack-start-stylex-vite-setup": [
+    ".agents/skills/tanstack-start-stylex-vite-setup",
+    ".omp/agent/managed-skills/tanstack-start-stylex-vite-setup"
+  ],
+  "term-radar": [
+    ".agents/skills/term-radar",
+    ".claude/skills/term-radar",
+    ".codex/skills/term-radar",
+    ".skillshub/term-radar"
+  ],
+  "ubiquitous-language": [
+    ".agents/skills/ubiquitous-language",
+    ".claude/skills/ubiquitous-language",
+    ".codex/skills/ubiquitous-language",
+    ".skillshub/ubiquitous-language"
+  ],
+  "unicorn-studio-scene-cloning": [
+    ".agents/skills/unicorn-studio-scene-cloning",
+    ".omp/agent/managed-skills/unicorn-studio-scene-cloning"
+  ],
+  "varlock-setup": [
+    ".agents/skills/varlock-setup",
+    ".omp/agent/managed-skills/varlock-setup"
+  ],
+  "web-app-cdp-clone-verify": [
+    ".agents/skills/web-app-cdp-clone-verify",
+    ".omp/agent/managed-skills/web-app-cdp-clone-verify"
+  ],
+  "webgl-particle-cursor-cloning": [
+    ".agents/skills/webgl-particle-cursor-cloning",
+    ".omp/agent/managed-skills/webgl-particle-cursor-cloning"
+  ],
+  "wecom-sheet-applescript-audit": [
+    ".agents/skills/wecom-sheet-applescript-audit",
+    ".omp/agent/managed-skills/wecom-sheet-applescript-audit"
+  ],
+  "wecom-sheet-jxa-audit": [
+    ".agents/skills/wecom-sheet-jxa-audit",
+    ".omp/agent/managed-skills/wecom-sheet-jxa-audit"
+  ],
+  "writing-beats": [
+    ".agents/skills/writing-beats",
+    ".claude/skills/writing-beats",
+    ".codex/skills/writing-beats",
+    ".skillshub/writing-beats"
+  ],
+  "writing-fragments": [
+    ".agents/skills/writing-fragments",
+    ".claude/skills/writing-fragments",
+    ".codex/skills/writing-fragments",
+    ".skillshub/writing-fragments"
+  ],
+  "writing-shape": [
+    ".agents/skills/writing-shape",
+    ".claude/skills/writing-shape",
+    ".codex/skills/writing-shape",
+    ".skillshub/writing-shape"
+  ],
+  "xmd-release-bench-harness": [
+    ".agents/skills/xmd-release-bench-harness",
+    ".omp/agent/managed-skills/xmd-release-bench-harness"
+  ],
+  "xmd-release-cdp-diagnosis": [
+    ".agents/skills/xmd-release-cdp-diagnosis",
+    ".omp/agent/managed-skills/xmd-release-cdp-diagnosis"
+  ],
+  "xmd-release-diagnosis-and-bench": [
+    ".agents/skills/xmd-release-diagnosis-and-bench",
+    ".omp/agent/managed-skills/xmd-release-diagnosis-and-bench"
+  ],
+  "yt-takeout-pipeline": [
+    ".agents/skills/yt-takeout-pipeline",
+    ".omp/agent/managed-skills/yt-takeout-pipeline"
+  ],
+  "zvec-grep-guide": [
+    ".agents/skills/zvec-grep-guide",
+    ".omp/agent/managed-skills/zvec-grep-guide"
+  ]
+}

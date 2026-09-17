@@ -5,10 +5,10 @@
 #
 #   - Claude Code CLI    → reads ~/.claude/lsp.json + enabled plugins
 #                          from claude-plugins-official
-#   - Codex CLI          → reads ~/.codex/config.toml `[lsp]` block
+#   - Codex CLI          → reads /etc/codex/config.toml `[lsp]` defaults
 #   - Claude Desktop     → reads claude_desktop_config.json `mcpServers`
 #                          (LSP wrapped via mcp-language-server)
-#   - Codex App          → reads ~/.codex/config.toml `[mcp_servers]`
+#   - Codex App          → reads layered Codex `[mcp_servers]` configuration
 #                          (same MCP bridge as Claude Desktop)
 #   - Neovim             → built-in lsp client picks binaries from $PATH
 #
@@ -41,6 +41,8 @@ let
   inherit (lib) hm;
 
   homeDir = config.home.homeDirectory;
+  codexLsp = import ../shared/codex-lsp.nix { inherit lib; };
+  inherit (codexLsp) jsExtensions oxlintExtraExtensions tailwindExtensions;
 
   lspServers = with pkgs; [
     # === TypeScript / JavaScript — modern Rust/Go stack ===
@@ -82,38 +84,6 @@ let
     # === MCP bridge for desktop apps ===
     mcp-language-server # wraps any LSP as an MCP server
   ];
-
-  # Common JS/TS extension → language-id map used by tsgo, oxlint, and
-  # vtsls. Kept as a Nix attrset so all servers share one definition.
-  jsExtensions = {
-    ".ts" = "typescript";
-    ".tsx" = "typescriptreact";
-    ".mts" = "typescript";
-    ".cts" = "typescript";
-    ".js" = "javascript";
-    ".jsx" = "javascriptreact";
-    ".mjs" = "javascript";
-    ".cjs" = "javascript";
-  };
-
-  # Extra extensions oxlint handles natively that tsgo does not.
-  oxlintExtraExtensions = {
-    ".vue" = "vue";
-    ".astro" = "astro";
-    ".svelte" = "svelte";
-  };
-
-  # Render an attrset's keys as a TOML string array. Lets the Codex
-  # config below stay in sync with the Nix-side extension maps without
-  # hand-listing extensions twice.
-  tomlExts = attrs: lib.concatMapStringsSep ", " (e: ''"${e}"'') (builtins.attrNames attrs);
-
-  jsExtsToml = tomlExts jsExtensions;
-  jsAndVueExtsToml = tomlExts (jsExtensions // oxlintExtraExtensions);
-  tailwindExtsToml = tomlExts (jsExtensions // oxlintExtraExtensions // {
-    ".html" = "html";
-    ".css" = "css";
-  });
 
   # ~/.claude/lsp.json — user-global LSP config for Claude Code's
   # built-in LSP tool. Project-root `.lsp.json` overrides this.
@@ -168,10 +138,7 @@ let
       tailwindcss = {
         command = "tailwindcss-language-server";
         args = [ "--stdio" ];
-        extensionToLanguage = jsExtensions // oxlintExtraExtensions // {
-          ".html" = "html";
-          ".css" = "css";
-        };
+        extensionToLanguage = tailwindExtensions;
       };
 
       # Swift / iOS projects. Xcode remains the SDK owner; sourcekit-lsp is
@@ -204,74 +171,6 @@ let
     };
   });
 
-  # Codex CLI ~/.codex/config.toml [lsp] block — same server set.
-  # Activation merges idempotently — re-appends only if our managed
-  # marker is missing.
-  codexLspToml = pkgs.writeText "codex-lsp.toml" ''
-
-    # --- managed by ~/nix-config/modules/home/lsp.nix (do not hand-edit) ---
-    [lsp]
-    enabled = true
-    diagnosticsOnWrite = true
-    diagnosticsOnEdit = false
-    formatOnWrite = false
-
-    # TS 7 / tsgo native LSP — 10-30x faster than tsserver.
-    [lsp.servers.tsgo]
-    command = "tsgo"
-    args = ["--lsp", "--stdio"]
-    extensions = [${jsExtsToml}]
-
-    # oxc-based linter (Vite ecosystem).
-    [lsp.servers.oxlint]
-    command = "oxlint"
-    args = ["--lsp"]
-    extensions = [${jsAndVueExtsToml}]
-    is_linter = true
-
-    [lsp.servers.astro]
-    command = "astro-language-server"
-    args = ["--stdio"]
-    extensions = [".astro"]
-
-    [lsp.servers.svelte]
-    command = "svelteserver"
-    args = ["--stdio"]
-    extensions = [".svelte"]
-
-    [lsp.servers.tailwindcss]
-    command = "tailwindcss-language-server"
-    args = ["--stdio"]
-    extensions = [${tailwindExtsToml}]
-
-    [lsp.servers.gopls]
-    command = "gopls"
-    extensions = [".go"]
-
-    [lsp.servers.rust]
-    command = "rust-analyzer"
-    extensions = [".rs"]
-
-    [lsp.servers.sourcekit]
-    command = "sourcekit-lsp"
-    extensions = [".swift"]
-
-    [lsp.servers.pyright]
-    command = "basedpyright-langserver"
-    args = ["--stdio"]
-    extensions = [".py", ".pyi"]
-
-    [lsp.servers.ruff]
-    command = "ruff"
-    args = ["server"]
-    extensions = [".py", ".pyi"]
-    is_linter = true
-
-    [lsp.servers.lua]
-    command = "lua-language-server"
-    extensions = [".lua"]
-    # --- end managed block ---
-  '';
 in
 {
   home.packages = lspServers;
@@ -280,27 +179,6 @@ in
   # Read-only Nix-managed file. Project-level `.lsp.json` at any repo
   # root still wins per Claude Code's config cascade.
   home.file.".claude/lsp.json".source = claudeLspJson;
-
-  # === Codex CLI: idempotent [lsp] merge ===
-  # Codex config.toml is fully user-managed (auth tokens, profiles,
-  # marketplaces). We append our LSP block only if our managed marker
-  # is absent — that way a user-authored `[lsp]` section coexists with
-  # ours on next switch if they ever delete our block. Re-runs every
-  # darwin-rebuild switch.
-  home.activation.codexLspConfig = hm.dag.entryAfter [ "writeBoundary" ] ''
-    target="${homeDir}/.codex/config.toml"
-
-    if [ ! -f "$target" ]; then
-      echo "codex-lsp: $target missing, skipping" >&2
-    elif ${pkgs.gnugrep}/bin/grep -qF 'managed by ~/nix-config/modules/home/lsp.nix' "$target"; then
-      :
-    elif [ -n "''${DRY_RUN:-}" ]; then
-      echo "codex-lsp: would append managed [lsp] block to $target" >&2
-    else
-      ${pkgs.coreutils}/bin/cat ${codexLspToml} >> "$target"
-      echo "codex-lsp: appended managed [lsp] block to $target" >&2
-    fi
-  '';
 
   # === Claude Desktop / Codex App: ensure mcpServers key exists ===
   # We don't pre-bake per-workspace LSP→MCP bridges — that's per-project

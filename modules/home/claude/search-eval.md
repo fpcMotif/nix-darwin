@@ -1,6 +1,6 @@
 # Code search tier evaluation (2026-09-08, M4 Pro, ~/devv)
 
-Evidence behind the "Code search routing" block in CLAUDE.md. Tools: codedb 0.2.5854, fff-mcp 0.10.0 (not 0.10.5), tgrep 1.0.4, ripwire 0.5.0, ripgrep 15.2.0. Tree: 65,163 files rg walks (18,924 in node_modules; ~/devv is not a git repo), 59,527 text files tgrep indexes, 16,375 files codedb indexes (skips node_modules and files > 2 MiB).
+Evidence behind the Search section of `~/.claude/CLAUDE.md`. tgrep and its `tg` wrapper were removed on 2026-09-14; their rows below are historical measurements, and `rg` is the exhaustive route. Tools: codedb 0.2.5854, fff-mcp 0.10.0 (not 0.10.5), tgrep 1.0.4, ripwire 0.5.0, ripgrep 15.2.0. Tree: 65,163 files rg walks (18,924 in node_modules; ~/devv is not a git repo), 59,527 text files tgrep indexes, 16,375 files codedb indexes (skips node_modules and files > 2 MiB).
 
 ## Latency (hyperfine mean, warm cache, whole ~/devv)
 

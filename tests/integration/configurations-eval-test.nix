@@ -186,6 +186,19 @@ let
         (homePrograms.jujutsu.enable == true)
         "${prefix} Home Manager should own jj config")
 
+      (helpers.assertTest "${prefix}-home-worktrunk-config"
+        (homePrograms.worktrunk.enable == true
+          && homeXdg.configFile ? "worktrunk/config.toml"
+          && homePrograms.worktrunk.settings.skip-shell-integration-prompt == true)
+        "${prefix} Home Manager should own worktrunk config.toml and pre-answer the prompt that writes it")
+
+      (helpers.assertTest "${prefix}-claude-worktrunk-marker-hooks"
+        (homeData.file ? ".claude/hooks/worktrunk-marker.sh"
+          && lib.hasInfix "worktrunk-marker.sh working" homeActivation.claudeHooksAssert.data
+          && lib.hasInfix "worktrunk-marker.sh clear" homeActivation.claudeHooksAssert.data
+          && !(lib.hasInfix "WorktreeCreate" homeActivation.claudeHooksAssert.data))
+        "${prefix} Claude hooks should set worktrunk activity markers but leave worktree creation native")
+
       (helpers.assertTest "${prefix}-home-tmux-enabled"
         (homePrograms.tmux.enable == true)
         "${prefix} Home Manager should own tmux config")
@@ -372,10 +385,9 @@ let
         (!(homeData.file ? ".config/skill-router/config.json"))
         "${prefix} should leave skill-router config.json user-owned; the CLI bundles its default config")
 
-      (helpers.assertTest "${prefix}-lsp-activation-dry-run-safe"
+      (helpers.assertTest "${prefix}-lsp-declarative-codex-and-safe-desktop"
         (
           let
-            codex = homeActivation.codexLspConfig.data;
             desktopOk =
               if prefix == "darwin" then
                 let desktop = homeActivation.claudeDesktopMcpScaffold.data;
@@ -385,11 +397,58 @@ let
               else
                 !(homeActivation ? claudeDesktopMcpScaffold);
           in
-          lib.hasInfix "DRY_RUN" codex
-          && !(lib.hasInfix "exit 0" codex)
+          !(homeActivation ? codexLspConfig)
           && desktopOk
         )
-        "${prefix} LSP activation scripts should respect Home Manager dry runs without exiting activation")
+        "${prefix} Codex LSP must have no activation writer; desktop scaffolding must respect dry runs")
+
+      (helpers.assertTest "${prefix}-codex-declarative-files"
+        (prefix != "darwin" || lib.all
+          (path: builtins.hasAttr path homeData.file && !homeData.file.${path}.force)
+          [
+            ".codex/fast.config.toml"
+            ".codex/fast-low.config.toml"
+            ".codex/plan.config.toml"
+            ".codex/deep.config.toml"
+            ".codex/AGENTS.md"
+            ".codex/guidance/development.md"
+            ".codex/guidance/setup.md"
+            ".config/agent-guidance/development.md"
+            ".config/agent-routing/omp.yml"
+            ".config/agent-routing/omp-economy.yml"
+            ".config/agent-routing/README.md"
+            ".omp/agent/AGENTS.md"
+            ".omp/agent/guidance/development.md"
+            ".omp/agent/guidance/human-documents.md"
+            ".claude/CLAUDE.md"
+            ".claude/guidance/development.md"
+            ".claude/guidance/human-documents.md"
+          ])
+        "${prefix} immutable agent guidance and profiles must use Home Manager files without forced overwrite")
+
+      (helpers.assertTest "${prefix}-codex-user-config-writable"
+        (prefix != "darwin" ||
+          (!(builtins.hasAttr ".codex/config.toml" homeData.file)
+            && homeActivation ? ensureWritableCodexConfig
+            && lib.hasInfix "replace_store_link" homeActivation.ensureWritableCodexConfig.data
+            && lib.hasInfix "migrate legacy full config" homeActivation.ensureWritableCodexConfig.data
+            && lib.hasInfix "DRY_RUN" homeActivation.ensureWritableCodexConfig.data))
+        "${prefix} Codex user config must remain writable and migrate old Nix-store links safely")
+
+      (helpers.assertTest "${prefix}-agent-runtime-state-unmanaged"
+        (lib.all (path: !(builtins.hasAttr path homeData.file))
+          [
+            ".codex/auth.json"
+            ".codex/plugins"
+            ".claude/plugins"
+            ".omp/agent/config.yml"
+            ".omp/agent/auth.json"
+          ])
+        "${prefix} credentials, native plugin caches, and OMP runtime model state must remain outside the Nix store")
+
+      (helpers.assertTest "${prefix}-surge-skill-single-writer"
+        (!(homeActivation ? surgeAgentSkillSymlinks))
+        "${prefix} Surge skill activation must not replace the declarative personal skill symlinks")
 
       (helpers.assertTest "${prefix}-home-zsh-search-baseline"
         (homeConfig.martin.shell.search.enable == true
@@ -436,6 +495,39 @@ let
     (helpers.assertTest "darwin-primary-user"
       (darwinConfig.system.primaryUser == user)
       "Darwin primary user should match ${user}")
+
+    (helpers.assertTest "darwin-codex-layered-config"
+      (
+        let
+          codexDefaults = darwinConfig.environment.etc."codex/config.toml".text;
+        in
+        builtins.hasAttr "codex/config.toml" darwinConfig.environment.etc
+          && lib.hasInfix "[lsp.servers.tsgo]" codexDefaults
+          && lib.hasInfix "[mcp_servers.fff]" codexDefaults
+          && lib.hasInfix ''PI_PLAN_MODEL = "openai-codex/gpt-5.6-terra:xhigh"'' codexDefaults
+          && !(lib.hasInfix "@PI_" codexDefaults)
+          && !(lib.hasInfix "gpt-5.5" codexDefaults)
+          && !(lib.hasInfix "gpt-5.6-sol" codexDefaults)
+          && !(lib.hasInfix ''
+          model = "''
+          codexDefaults)
+          && !(lib.hasInfix "model_reasoning_effort =" codexDefaults)
+      )
+      "Darwin should keep Codex machine defaults in /etc without locking the user model choice")
+
+    (helpers.assertTest "darwin-agent-routing-no-retired-models"
+      (
+        let
+          crush = darwinHome.xdg.configFile."crush/crush.json".text;
+          zed = builtins.toJSON darwinHome.programs.zed-editor.userSettings;
+          rendered = crush + zed;
+        in
+        lib.hasInfix "gpt-5.6-terra" rendered
+          && lib.hasInfix "gpt-5.3-codex-spark" rendered
+          && !(lib.hasInfix "gpt-5.5" rendered)
+          && !(lib.hasInfix "gpt-5.6-sol" rendered)
+      )
+      "Darwin Crush and Zed adapters should render only current semantic routes")
 
     # BetterMouse left Nix on 2026-08-17 and BetterDisplay on 2026-08-19, for
     # the same reason: both ship Sparkle, which self-updated the writable

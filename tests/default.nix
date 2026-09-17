@@ -44,15 +44,145 @@ in
     bash ${./unit/rolling-pins-test.sh} ${../pkgs} ${../scripts}
     touch $out
   '';
-  unit-claude-md = pkgs.runCommand "unit-claude-md" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
-    bash ${./unit/claude-md-test.sh} \
-      ${../modules/home/claude/CLAUDE.md} \
-      ${../modules/home/claude.nix}
+  unit-claude-md =
+    let
+      renderAgentGuide = import ../modules/home/agent-instructions/render-agent-guide.nix { inherit lib; };
+      renderedClaudeGuide = pkgs.writeText "rendered-claude-guide.md" (renderAgentGuide [
+        ../modules/home/claude/CLAUDE.md
+        ../modules/home/agent-instructions/shared/working-contract.md
+        ../modules/home/agent-instructions/shared/quality-and-style.md
+      ]);
+      renderedClaudeDevelopment = pkgs.writeText "rendered-claude-development.md" (renderAgentGuide [
+        ../modules/home/claude/development.md
+        ../modules/home/agent-instructions/shared/development.md
+      ]);
+    in
+    pkgs.runCommand "unit-claude-md" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
+      bash ${./unit/claude-md-test.sh} \
+        ${renderedClaudeGuide} \
+        ${../modules/home/claude.nix} \
+        ${../modules/home/claude/human-documents.md} \
+        ${renderedClaudeDevelopment}
+      touch $out
+    '';
+  unit-agent-guides =
+    let
+      renderAgentGuide = import ../modules/home/agent-instructions/render-agent-guide.nix { inherit lib; };
+      sharedContract = ../modules/home/agent-instructions/shared/working-contract.md;
+      sharedDevelopment = ../modules/home/agent-instructions/shared/development.md;
+      sharedQuality = ../modules/home/agent-instructions/shared/quality-and-style.md;
+      guides = {
+        general = renderAgentGuide [
+          ../modules/home/agent-instructions/AGENTS.md
+          sharedContract
+          sharedQuality
+        ];
+        codex = renderAgentGuide [
+          ../modules/home/agent-instructions/codex/AGENTS.md
+          sharedContract
+          sharedQuality
+        ];
+        codexDevelopment = renderAgentGuide [
+          ../modules/home/agent-instructions/codex/guidance/development.md
+          sharedDevelopment
+        ];
+        omp = renderAgentGuide [
+          ../modules/home/agent-instructions/omp/agent/AGENTS.md
+          sharedContract
+          sharedQuality
+        ];
+        ompDevelopment = renderAgentGuide [
+          ../modules/home/agent-instructions/omp/agent/guidance/development.md
+          sharedDevelopment
+        ];
+        claude = renderAgentGuide [
+          ../modules/home/claude/CLAUDE.md
+          sharedContract
+          sharedQuality
+        ];
+        claudeDevelopment = renderAgentGuide [
+          ../modules/home/claude/development.md
+          sharedDevelopment
+        ];
+      };
+      count = marker: text: builtins.length (lib.splitString marker text) - 1;
+      once = marker: text: count marker text == 1;
+      commonGuides = with guides; [ general codex omp claude ];
+      developmentGuides = with guides; [
+        (builtins.readFile sharedDevelopment)
+        codexDevelopment
+        ompDevelopment
+        claudeDevelopment
+      ];
+      noModelCache = text: lib.all (term: !(lib.hasInfix term text)) [
+        "gpt-"
+        "Gemini"
+        "Astra"
+        "Sol"
+        "Terra"
+        "Luna"
+      ];
+    in
+    assert lib.all (once "## Working contract") commonGuides;
+    assert lib.all (once "## Code quality") commonGuides;
+    assert lib.all (once "## Command routing") developmentGuides;
+    assert lib.all noModelCache commonGuides;
+    pkgs.runCommand "unit-agent-guides" { } ''
+      touch $out
+    '';
+  unit-shell-guard = pkgs.runCommand "unit-shell-guard" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.gawk ]; } ''
+    bash ${../modules/home/claude/hooks/shell-guard-test.sh} \
+      ${../modules/home/claude/hooks/shell-guard.sh}
+    touch $out
+  '';
+  unit-edit-batch-nudge = pkgs.runCommand "unit-edit-batch-nudge" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnused pkgs.coreutils ]; } ''
+    bash ${../modules/home/claude/hooks/edit-batch-nudge-test.sh} \
+      ${../modules/home/claude/hooks/edit-batch-nudge.sh}
     touch $out
   '';
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
   unit-pstack-hygiene = callTest ./unit/pstack-hygiene-test.nix { };
+  unit-ai-model-routing =
+    let
+      routing = import ../modules/shared/agent-model-routing.nix { inherit lib; };
+      policy = pkgs.writeText "agent-model-routing-test.json" (builtins.toJSON routing.policy);
+      omp = routing.adapters.omp;
+      roleModel = role: omp.normal.modelRoles.${role};
+      agentModel = agent:
+        let role = lib.removePrefix "@" omp.normal.task.agentModelOverrides.${agent};
+        in roleModel role;
+      fallbackChains = omp.normal.retry.fallbackChains;
+      economy = omp.economy;
+      serializedAdapters = builtins.toJSON routing.adapters;
+      routingPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
+    in
+    assert agentModel "scout" == routing.selector "search";
+    assert agentModel "explore" == routing.selector "search";
+    assert agentModel "librarian" == routing.selector "search";
+    assert agentModel "reviewer" == routing.selector "check";
+    assert agentModel "security-reviewer" == routing.selector "check";
+    assert agentModel "task" == routing.selector "general";
+    assert agentModel "plan" == routing.selector "plan";
+    assert fallbackChains.${routing.bareSelector "general"} == [ (routing.bareSelector "economy") ];
+    assert fallbackChains.${routing.bareSelector "search"} == [ ];
+    assert fallbackChains.${routing.bareSelector "economy"} == [ ];
+    assert lib.all (lib.hasPrefix "openai-codex/") (lib.attrValues omp.normal.modelRoles);
+    assert lib.all (lib.hasPrefix "openai-codex/") (lib.filter (m: !(lib.hasSuffix "/*" m)) omp.normal.enabledModels);
+    assert lib.elem "google-antigravity/*" omp.normal.enabledModels;
+    assert economy.modelRoles.default == routing.selector "economy";
+    assert economy.modelRoles.reviewer == routing.selector "check";
+    assert economy.modelRoles.plan == routing.selector "plan";
+    assert economy.task.agentModelOverrides == omp.normal.task.agentModelOverrides;
+    assert economy.retry == omp.normal.retry;
+    assert routing.adapters.codex.profiles.fast.model == routing.modelId "search";
+    assert routing.adapters.codex.profiles.plan.model == routing.modelId "plan";
+    assert lib.all (term: !(lib.hasInfix term serializedAdapters)) [ "gpt-5.5" "gpt-5.6-sol" ];
+    pkgs.runCommand "unit-ai-model-routing" { } ''
+      ${routingPython}/bin/python3 ${./unit/ai-model-routing-test.py} \
+        ${../modules/home/ai-model-routing.py} ${policy}
+      touch $out
+    '';
 
   # Tier-1 hermetic check for martin.shell.viMode + martin.shell.search:
   # assembles the zshrc in home-manager's real section order, loads it in a

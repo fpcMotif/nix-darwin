@@ -1,6 +1,7 @@
-{ ... }:
+{ lib, ... }:
 
 let
+  routing = import ../shared/agent-model-routing.nix { inherit lib; };
   reasoningModel = id: name: {
     inherit id name;
     cost_per_1m_in = 0;
@@ -21,6 +22,8 @@ let
     reasoning_effort = effort;
     max_tokens = 32000;
   };
+  routeDefaults = job:
+    modelDefaults "chatgpt-sub" (routing.modelId job) (routing.effort job);
 
   config = {
     "$schema" = "https://charm.land/crush.json";
@@ -32,18 +35,13 @@ let
       base_url = "http://127.0.0.1:10531/v1";
       api_key = "not-required";
       models = [
-        (reasoningModel "gpt-5.5" "GPT-5.5 (ChatGPT subscription)")
-        (reasoningModel "gpt-5.3-codex-spark" "GPT-5.3 Codex Spark (ChatGPT subscription)")
+        (reasoningModel (routing.modelId "general") "GPT-5.6 Terra (ChatGPT subscription)")
+        (reasoningModel (routing.modelId "economy") "GPT-5.6 Luna (ChatGPT subscription)")
+        (reasoningModel (routing.modelId "search") "GPT-5.3 Codex Spark (ChatGPT subscription)")
       ];
     };
 
-
-    models = {
-      large = modelDefaults "chatgpt-sub" "gpt-5.5" "medium";
-      small = modelDefaults "chatgpt-sub" "gpt-5.3-codex-spark" "low";
-      execute = modelDefaults "chatgpt-sub" "gpt-5.5" "medium";
-      commit = modelDefaults "chatgpt-sub" "gpt-5.3-codex-spark" "low";
-    };
+    models = lib.mapAttrs (_: job: routeDefaults job) routing.adapters.crush;
 
     options = {
       disable_default_providers = true;

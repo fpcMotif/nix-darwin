@@ -116,7 +116,7 @@ let
     # Drafts.app MCP server with local watchdog/lock/bulk-gate patches baked
     # in (replaces the bun global install those patches kept dying in).
     # Registered with Claude Code via claudeMcpDrafts in claude.nix; Codex
-    # points at the stable /etc/profiles/per-user path in ~/.codex/config.toml.
+    # points at the stable /etc/profiles/per-user path in Codex configuration.
     martin.drafts-mcp-server
     # zed-editor itself is installed by programs.zed-editor.enable in zed.nix.
   ];

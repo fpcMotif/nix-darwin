@@ -51,6 +51,12 @@ let
     (builtins.readDir (self + "/modules/home/skills")));
 
   sorted = lib.sort (a: b: a < b);
+  personalRoot = self + "/modules/home/skills/personal";
+  personalManifest = builtins.fromJSON (builtins.readFile (personalRoot + "/manifest.json"));
+  personalIds = builtins.attrNames personalManifest;
+  personalTargets = lib.concatLists (builtins.attrValues personalManifest);
+  personalDirs = builtins.attrNames (lib.filterAttrs (_: type: type == "directory")
+    (builtins.readDir personalRoot));
 in
 helpers.testSuite "skill-hygiene" (
   # 1. Every exclusion term must still name a live upstream skill. A term that
@@ -72,6 +78,27 @@ helpers.testSuite "skill-hygiene" (
     vendored)
 
   ++ [
+    (helpers.assertTest "skill-hygiene-personal-source-complete"
+      (personalIds != [ ] && sorted personalDirs == sorted personalIds
+      && lib.all
+        (id:
+          builtins.pathExists (personalRoot + "/${id}/SKILL.md")
+          && builtins.readFile (personalRoot + "/${id}/SKILL.md") != ""
+          && personalManifest.${id} != [ ])
+        personalIds)
+      "every personal skill must have a nonempty source and at least one declared target")
+
+    (helpers.assertTest "skill-hygiene-personal-target-ownership"
+      (builtins.length personalTargets == builtins.length (lib.unique personalTargets)
+      && lib.all
+        (target:
+          !(lib.hasPrefix "/" target)
+          && !(builtins.elem ".." (lib.splitString "/" target))
+          && !(lib.hasInfix "/plugins/" target)
+          && !(lib.hasInfix "/.system" target))
+        personalTargets)
+      "personal skill targets must be unique home-relative paths outside native plugin and system-skill directories")
+
     # 3. Vendored dirs on disk == the ids this test knows about. claude.nix now
     #    derives localSkillIds from readDir, so this is the tripwire that a new
     #    modules/home/skills/<id> got added without a decision.
