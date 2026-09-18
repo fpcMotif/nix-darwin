@@ -4,7 +4,7 @@ Reference behind the Search section of `~/.claude/CLAUDE.md`. That section names
 
 ## Worked examples (nix-config, 2026-09-09)
 
-### A symbol: codedb_explain before any file
+### A symbol: codedb_explain for structural context
 
 `codedb_explain name=resolveContext project=/Users/martinfan/nix-config`, one call:
 
@@ -37,7 +37,7 @@ tools/skill-router/src/cli.ts
  65: const ctx = await resolveContext();
 ```
 
-Definition marked `[def]`, usages in code and docs, 12 lines. Read the header: `N/M matches`; `0 exact matches` means absent.
+Definition marked `[def]`, usages in code and docs, 12 lines. Read the header: `N/M matches`; `0 exact matches` means none in that indexed search scope, not absence from the whole checkout.
 
 ### Two or three spellings at once: fff multi_grep
 
@@ -65,15 +65,19 @@ Recent and git-dirty files rank first. Keep queries to one or two terms; each ex
 
 ## MCP or CLI
 
-codedb, fff, and zg each run as an MCP server: same answers as the CLI, typed parameters, no shell quoting. fff and codedb register with `alwaysLoad`, so their schemas load on turn one; zg stays deferred behind one ToolSearch round trip. codedb's server needs ~12 s after session start; its CLI is instant. Always pass `project=<repo>` (codedb) or `root=<repo>` (zg).
+In the recorded September 2026 setup, codedb, fff, and zg run as MCP servers with typed parameters and no shell quoting. fff and codedb register with `alwaysLoad`; zg stays deferred behind ToolSearch. The recorded codedb startup was ~12 s, while its CLI was instant. Pass `project=<repo>` (codedb) or `root=<repo>` (zg).
+
+Loaded schemas do not guarantee a ready server or current index. Use scoped `rg`, `fd`, or Read when MCP is unavailable, warming up, or stale; do not wait or retry solely to enforce routing. Read known paths directly. Read more only when returned context is insufficient or freshness is uncertain.
 
 - codedb: `codedb_explain` for a symbol; `codedb_context` for a task, only with `semantic=local` (the default sends snippets to a remote reranker). Outline and read are CLI only.
-- fff: `find_files` (fuzzy file names, frecency), `grep` (one bare identifier, plain text, no regex), `multi_grep` (OR over literal patterns). Hard cap 50 hits, so counts and exhaustive listings stay with `rg -c`. fff honours `.ignore`. fff has no CLI on this machine: inside a subagent, load its MCP schema with ToolSearch or use rg.
+- fff: `find_files` (fuzzy file names, frecency), `grep` (one bare identifier, plain text, no regex), `multi_grep` (OR over literal patterns). The recorded setup caps replies at 50 hits; check the installed schema and result header rather than assuming this limit is universal. Use `rg -c` for matching-line counts, `rg -l` for matching-file lists, or untruncated `rg -n` for matching lines. fff honours `.ignore`. fff has no CLI on this machine: inside a subagent, load its MCP schema with ToolSearch or use rg.
 - zg: `zvec_grep_search` for word-only orientation on one TypeScript repo, `fts: SYM` when you know a name. It returns vector neighbours even when nothing matched lexically, so a zg hit never proves presence; confirm with rg.
 
 ## rg flags
 
-One identifier per query. `-C2` for context, `-U` for multiline, `-uu` for an exhaustive scan (ignored and hidden files included).
+Scope paths and globs explicitly. Use `-F` for literals, `-e` for related patterns, `-C2` for context, and `-U` for multiline. `-c` counts matching lines, not individual occurrences.
+
+For completeness checks, account for ignore rules, configuration, result limits, and read errors. `-uu` includes hidden and ignored files but does not guarantee coverage of binary files or symlink targets. Use `--no-config` only when a config-free audit is intended. Do not pipe completeness checks through `head`, suppress errors, or treat an execution error as no matches. State what was actually searched.
 
 ## Traps
 

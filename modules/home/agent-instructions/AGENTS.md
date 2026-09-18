@@ -6,12 +6,16 @@ User: f.
 
 ## Search
 
-The first move of every search is FFF or CodeDB. Each answers in one ranked, bounded call. `rg`, `fd`, and `ls` return raw lines that cost extra reads.
+FFF is the default discovery tool. CodeDB is the default structural tool. `rg` is the verification tool. Read known paths directly; prefer one bounded call over chains of searches.
 
-- **File name**: FFF `find_files` with one or two terms; without the FFF server, `codedb <repo> file NAME`.
-- **Symbol**: A definition or its callers go to CodeDB `codedb_explain` with `project=<repo>`; without the server, `codedb <repo> explain SYM`.
-- **Identifier**: Where a name or string appears goes to FFF `grep`; `multi_grep` takes its spellings.
-- **Task**: CodeDB `codedb_context` with `semantic=local`; without the server, `codedb <repo> context --local TASK`.
-- **Folder**: `eza -la DIR` or `eza --tree -L 2 DIR`.
-- **Jump**: `z NAME && COMMAND` runs a command in a frecent directory found by name.
-- **Exhaustive**: `rg` proves every mention, count, or absence. FFF caps at 50 hits; CodeDB skips node_modules and files over 2 MiB.
+- **Known path**: Read the needed span directly.
+- **File name**: FFF `find_files` with one or two terms; without the server, `codedb <repo> file NAME`.
+- **Identifier**: FFF `grep`; batch related spellings with `multi_grep`.
+- **Symbol**: CodeDB `codedb_explain` with `project=<repo>` for definition and indexed callers; without the server, `codedb <repo> explain SYM`.
+- **Task**: For an unfamiliar task spanning modules, CodeDB `codedb_context` with `semantic=local`; without the server, `codedb <repo> context --local TASK`.
+- **Folder**: CodeDB `codedb_list_dir` or `eza --tree -L 2 DIR`.
+- **Coverage**: Use scoped `rg` for text listings, counts, or absence checks. State scope and exclusions; do not truncate completeness checks.
+- **Other repository**: Use its explicit `project` in CodeDB, or scoped `rg`. Confirm the checkout/worktree before editing.
+- **Fallback**: When MCP is unavailable, warming up, or stale, use CLI `codedb`, scoped `rg`, `fd`, or direct reads. Do not retry merely to obey routing.
+
+Ranked or indexed results do not guarantee every caller or repo-wide absence. Read additional source only when needed context is missing or freshness is uncertain.

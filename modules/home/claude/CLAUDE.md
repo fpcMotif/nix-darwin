@@ -7,15 +7,17 @@
 
 ## Search
 
-The first move of every search is fff or codedb. Both load on turn one and answer in one ranked, bounded call. `rg`, `fd`, and `ls` return raw lines that cost extra reads.
+fff is the default discovery tool. codedb is the default structural tool. `rg` is the verification tool. Read known paths directly; prefer one bounded call over chains of searches.
 
-- **File name**: `mcp__fff__find_files` with one or two terms. Recent and git-dirty files rank first.
-- **Symbol**: A definition or its callers go to `mcp__codedb__codedb_explain` with `name` and `project=<repo>`. One call returns the body and every call site, so no follow-up reads.
-- **Identifier**: Where a name or string appears goes to `mcp__fff__grep`; `mcp__fff__multi_grep` takes its spellings.
-- **Task**: `mcp__codedb__codedb_context` with `semantic=local` and `project=<repo>` orients a task in one bundle.
-- **Folder**: `mcp__codedb__codedb_list_dir`, or `eza -la DIR` and `eza --tree -L 2 DIR`.
-- **Jump**: `z NAME && COMMAND` runs a command in a frecent directory found by name.
-- **Known path**: Read the span with offset and limit.
-- **Exhaustive**: `rg` proves every mention, count, or absence. fff caps at 50 hits; codedb skips node_modules and files over 2 MiB.
-- **Other repository**: fff searches the session root only. Pass that repository's `project` to codedb, or scope `rg` to it.
-- **Detail**: Read `~/.claude/search-routing.md` for worked examples, traps, and measured evidence.
+- **Known path**: Read the needed span with offset and limit.
+- **File name**: `mcp__fff__find_files` with one or two terms.
+- **Identifier**: `mcp__fff__grep`; batch related spellings with `mcp__fff__multi_grep`.
+- **Symbol**: `mcp__codedb__codedb_explain` with `name` and `project=<repo>` for a definition and indexed callers.
+- **Task**: For an unfamiliar task spanning modules, `mcp__codedb__codedb_context` with `semantic=local` and `project=<repo>`.
+- **Folder**: `mcp__codedb__codedb_list_dir` or `eza --tree -L 2 DIR`.
+- **Coverage**: Use scoped `rg` for text listings, counts, or absence checks. State scope and exclusions; do not truncate completeness checks.
+- **Other repository**: Use its explicit `project` in codedb, or scoped `rg`. Confirm the checkout/worktree before editing.
+- **Fallback**: When MCP is unavailable, warming up, or stale, use scoped `rg`, `fd`, or Read. Do not retry merely to obey routing.
+- **Detail**: Read `~/.claude/search-routing.md` only for unclear routing, tool limits, or examples.
+
+Ranked or indexed results do not guarantee every caller or repo-wide absence. Read additional source only when needed context is missing or freshness is uncertain.
