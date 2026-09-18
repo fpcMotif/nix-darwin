@@ -22,11 +22,14 @@ FILE="pkgs/zed-nightly-bin.nix"
 
 resolve_final_url() {
   # `nightly/latest/<asset>` goes through two hops (zed.dev → cloud.zed.dev →
-  # nyc3.digitaloceanspaces.com). `curl -sLI` only emits the first Location
-  # header on some HEAD chains, so use a tiny ranged GET to force redirect
-  # following and print the effective URL.
-  curl -sL "https://cloud.zed.dev/releases/nightly/latest/download?asset=zed&os=macos&arch=$1" \
-       -o /dev/null -w "%{url_effective}\n" --range 0-0
+  # nyc3.digitaloceanspaces.com). `ax` follows redirects and reports the final
+  # destination in its JSON `.url` field. Fall back to curl when ax is absent.
+  local target="https://cloud.zed.dev/releases/nightly/latest/download?asset=zed&os=macos&arch=$1"
+  if command -v ax >/dev/null 2>&1; then
+    ax "$target" --max-bytes 1 | jq -r .url
+  else
+    curl -sL "$target" -o /dev/null -w "%{url_effective}\n" --range 0-0
+  fi
 }
 
 final_aarch64=$(resolve_final_url aarch64)

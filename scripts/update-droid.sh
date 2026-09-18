@@ -12,7 +12,7 @@ cd "$(au_repo_root)"
 
 FILE="pkgs/droid.nix"
 
-latest=$(curl -fsSL "https://registry.npmjs.org/@factory%2fcli-darwin-arm64" \
+latest=$(au_http_get "https://registry.npmjs.org/@factory%2fcli-darwin-arm64" \
            | jq -r '."dist-tags".latest // ""')
 [ -n "$latest" ] && [ "$latest" != null ] || {
   echo "update-droid: empty latest dist-tag" >&2; exit 1

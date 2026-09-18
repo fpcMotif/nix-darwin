@@ -744,6 +744,10 @@ let
       (hasPackage "oh-my-pi" darwinHome.home.packages)
       "Darwin Home Manager packages should include oh-my-pi")
 
+
+    (helpers.assertTest "darwin-has-uv"
+      (hasPackage "uv" darwinHome.home.packages)
+      "Darwin Home Manager packages should include uv for Python package management")
     (helpers.assertTest "darwin-registers-drafts-mcp"
       (darwinHome.home.activation ? claudeMcpDrafts)
       "Darwin Home Manager should register the Drafts MCP server")

@@ -77,6 +77,9 @@ let
     gofumpt
     golangci-lint
 
+    # Python.
+    uv
+
     # All language servers live in ./lsp.nix — including typescript-go
     # (it's both compiler and `tsgo --lsp` server), oxlint, vtsls,
     # vue/astro/svelte/tailwind/emmet servers, gopls, rust-analyzer,

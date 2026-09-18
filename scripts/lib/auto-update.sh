@@ -245,6 +245,19 @@ EOF
 # Version polling
 # ---------------------------------------------------------------------------
 
+# HTTP GET using `ax --body` when available (AGENTS.md contract), with
+# `curl -fsSL` fallback for environments without ax.
+#   au_http_get <url> [headers/options...]
+au_http_get() {
+  local url=$1
+  shift
+  if command -v ax >/dev/null 2>&1; then
+    ax "$url" --body "$@"
+  else
+    curl -fsSL "$@" "$url"
+  fi
+}
+
 # Authenticated GitHub API GET; prints the raw response body. Every updater
 # that talks to api.github.com must route through this (directly, or via
 # au_latest_github_release below) so the API's 60/hr unauthenticated limit
@@ -256,8 +269,11 @@ au_github_api() {
   local url=$1
   local auth=()
   local tok=${GITHUB_TOKEN:-${GH_TOKEN:-}}
+  if [ -z "$tok" ] && command -v gh >/dev/null 2>&1; then
+    tok=$(gh auth token 2>/dev/null || true)
+  fi
   [ -n "$tok" ] && auth=(-H "Authorization: Bearer ${tok}")
-  curl -fsSL ${auth[@]+"${auth[@]}"} "$url"
+  au_http_get "$url" ${auth[@]+"${auth[@]}"}
 }
 
 # Latest GitHub release tag. Defaults to the latest STABLE release via the
@@ -299,7 +315,7 @@ au_latest_npm() {
     # Bleeding-edge priority: pick the first available tag. A single jq query
     # filters the priority list natively instead of spawning jq once per tag.
     local meta
-    meta=$(curl -fsSL "https://registry.npmjs.org/${encoded}")
+    meta=$(au_http_get "https://registry.npmjs.org/${encoded}")
     v=$(printf '%s\n' "$meta" | jq -r '
       .["dist-tags"] |
       [ .canary, .dev, .next, .preview, .beta, .alpha, .rc, .latest ] |
@@ -307,7 +323,7 @@ au_latest_npm() {
       .[0] // ""
     ')
   else
-    v=$(curl -fsSL "https://registry.npmjs.org/${encoded}" \
+    v=$(au_http_get "https://registry.npmjs.org/${encoded}" \
           | jq -r --arg t "$tag" '."dist-tags"[$t] // ""')
   fi
   [ -n "$v" ] && [ "$v" != "null" ] || {

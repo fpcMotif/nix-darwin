@@ -44,8 +44,8 @@ esac
 # ---------------------------------------------------------------------------
 
 curl_argv_capture=$(mktemp)
+ax() { printf '%s\n' "$*" > "$curl_argv_capture"; }
 curl() { printf '%s\n' "$*" > "$curl_argv_capture"; }
-
 unset GITHUB_TOKEN GH_TOKEN 2>/dev/null || true
 au_github_api "https://api.github.com/repos/x/y/releases/latest" >/dev/null
 captured=$(cat "$curl_argv_capture")
@@ -66,8 +66,7 @@ case "$captured" in
 esac
 
 rm -f "$curl_argv_capture"
-unset -f curl
-
+unset -f ax curl
 # ---------------------------------------------------------------------------
 # Cadence policy (issue #336): heavy inputs move only on the cadence day.
 # ---------------------------------------------------------------------------

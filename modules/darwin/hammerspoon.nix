@@ -2,6 +2,9 @@
 
 let
   cfg = config.martin.hammerspoon;
+  appName = "Hammerspoon.app";
+  hsPkg = pkgs.martin.hammerspoon;
+  lsregister = "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister";
 
   defaultInit = ''
     -- Hammerspoon is reserved for rich macOS automation.
@@ -62,7 +65,46 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    environment.systemPackages = [ pkgs.martin.hammerspoon ];
+    # Expose the `hs` CLI wrapper in system packages while keeping
+    # /Applications out of this derivation. If a package in environment.systemPackages
+    # outputs /Applications, nix-darwin's applications.nix rsyncs it into
+    # /Applications/Nix Apps with `--chmod=-w`, which triggers nix-darwin's
+    # `ensureAppManagement` check and fatally wedges the unattended nightly
+    # auto-switch daemon (`error: permission denied when trying to update apps over SSH`).
+    # Instead, we copy Hammerspoon.app into /Applications directly in postActivation,
+    # identical to how Zed Nightly and Squirrel are deployed.
+    environment.systemPackages = [
+      (pkgs.runCommand "hammerspoon" {
+        inherit (hsPkg) meta;
+        passthru.app = hsPkg;
+      } ''
+        mkdir -p $out/bin
+        cat << 'EOF' > $out/bin/hs
+        #!/bin/sh
+        exec /Applications/Hammerspoon.app/Contents/Frameworks/hs/hs "$@"
+        EOF
+        chmod +x $out/bin/hs
+      '')
+    ];
+
+    system.activationScripts.postActivation.text = lib.mkAfter ''
+      hs_src="${hsPkg}/Applications/${appName}"
+      hs_dst="/Applications/${appName}"
+      hs_marker="/Applications/.hammerspoon.src"
+
+      if [ ! -d "$hs_src" ]; then
+        echo "[hammerspoon] WARNING: $hs_src not found; skipping /Applications install" >&2
+      elif [ "$(readlink "$hs_marker" 2>/dev/null)" != "${hsPkg}" ]; then
+        echo "[hammerspoon] installing $hs_src into /Applications"
+        if [ -e "$hs_dst" ]; then chmod -R u+w "$hs_dst" 2>/dev/null || true; fi
+        rm -rf "$hs_dst"
+        cp -R "$hs_src" "$hs_dst"
+        chmod -R u+w "$hs_dst"
+        ln -sfn "${hsPkg}" "$hs_marker"
+        echo "[hammerspoon] registering $hs_dst with LaunchServices"
+        ${lsregister} -f "$hs_dst" || true
+      fi
+    '';
 
     home-manager.users.${currentSystemUser} = {
       home.file.".hammerspoon/init.lua".text = defaultInit + cfg.extraInit;

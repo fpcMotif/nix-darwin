@@ -15,7 +15,7 @@ PKG_DIR="pkgs/sourcegraph-amp"
 # timestamp currently trails `latest`, so the priority list would pin us to an
 # OLDER build and revert manual bumps on the next nightly run. `latest` is
 # amp's stable release channel and matches what `amp` self-updates to.
-latest=$(curl -fsSL "https://registry.npmjs.org/@sourcegraph%2famp" \
+latest=$(au_http_get "https://registry.npmjs.org/@sourcegraph%2famp" \
            | jq -r '."dist-tags".latest // ""')
 [ -n "$latest" ] && [ "$latest" != null ] || {
   echo "update-sourcegraph-amp: empty latest dist-tag" >&2; exit 1
