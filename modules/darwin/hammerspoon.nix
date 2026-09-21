@@ -74,10 +74,11 @@ in
     # Instead, we copy Hammerspoon.app into /Applications directly in postActivation,
     # identical to how Zed Nightly and Squirrel are deployed.
     environment.systemPackages = [
-      (pkgs.runCommand "hammerspoon" {
-        inherit (hsPkg) meta;
-        passthru.app = hsPkg;
-      } ''
+      (pkgs.runCommand "hammerspoon"
+        {
+          inherit (hsPkg) meta;
+          passthru.app = hsPkg;
+        } ''
         mkdir -p $out/bin
         cat << 'EOF' > $out/bin/hs
         #!/bin/sh

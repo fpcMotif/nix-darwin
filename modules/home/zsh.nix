@@ -460,6 +460,7 @@ in
       '';
 
       envExtra = lib.optionalString isDarwin ''
+        export PATH="$HOME/Library/Application Support/mbx/bin:$PATH"
         export SHELL="/bin/zsh"
       '' + ''
         export BAT_THEME="Catppuccin Macchiato"

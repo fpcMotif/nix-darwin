@@ -184,8 +184,24 @@
         default = self.templates.dev-shell;
       };
 
-      formatter = lib.genAttrs supportedSystems
-        (s: nixpkgs.legacyPackages.${s}.nixpkgs-fmt);
+      formatter = lib.genAttrs supportedSystems (s:
+        let
+          pkgs = nixpkgs.legacyPackages.${s};
+        in
+        pkgs.writeShellScriptBin "nixpkgs-fmt" ''
+          has_file=0
+          for arg in "$@"; do
+            if [[ "$arg" != -* ]]; then
+              has_file=1
+              break
+            fi
+          done
+          if [ "$has_file" -eq 0 ]; then
+            exec ${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt "$@" .
+          else
+            exec ${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt "$@"
+          fi
+        '');
 
       checks = lib.genAttrs checkSystems (s:
         import ./tests {
