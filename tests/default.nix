@@ -125,6 +125,7 @@ in
     in
     assert lib.all (once "## Working contract") commonGuides;
     assert lib.all (once "## Code quality") commonGuides;
+    assert lib.all (once "## Testing") commonGuides;
     assert lib.all (once "## Command routing") developmentGuides;
     assert lib.all noModelCache commonGuides;
     pkgs.runCommand "unit-agent-guides" { } ''

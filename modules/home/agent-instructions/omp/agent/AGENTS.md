@@ -10,7 +10,8 @@
 - **Escalate**: Move a task to a stronger configured role when its current model cannot complete it.
 - **Complete**: For bulk work or blocking advisor notes, load `/Users/martinfan/.omp/agent/managed-skills/omp-completion-and-advisor/SKILL.md`.
 - **Develop**: Before choosing a shell command, running Python, or using version control, read `~/.omp/agent/guidance/development.md`.
-- **Documents**: Before writing an issue, specification, PRD, or analysis, read `~/.omp/agent/guidance/human-documents.md`.
+- **Documents**: Before writing an issue, specification, PRD, analysis, or final review, read `~/.omp/agent/guidance/human-documents.md`.
+- **Test**: Before writing a test, choosing a technique beyond E2E, or recording a test artifact, read `~/.omp/agent/guidance/testing.md`.
 
 ## Search
 

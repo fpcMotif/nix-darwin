@@ -3,6 +3,7 @@
 User: f.
 
 - **Develop**: Before choosing a shell command, running Python, or using version control, read `~/.config/agent-guidance/development.md`.
+- **Test**: Before writing a test, choosing a technique beyond E2E, or recording a test artifact, read `~/.config/agent-guidance/testing.md`.
 
 ## Search
 

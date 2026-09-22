@@ -3,7 +3,8 @@
 ## Claude
 
 - **Develop**: Before choosing a shell command, running Python, or using version control, read `~/.claude/guidance/development.md`.
-- **Documents**: Before writing an issue, specification, PRD, or analysis, read `~/.claude/guidance/human-documents.md`.
+- **Documents**: Before writing an issue, specification, PRD, analysis, or final review, read `~/.claude/guidance/human-documents.md`.
+- **Test**: Before writing a test, choosing a technique beyond E2E, or recording a test artifact, read `~/.claude/guidance/testing.md`.
 
 ## Search
 
