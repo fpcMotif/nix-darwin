@@ -46,19 +46,10 @@ let
 
   lspServers = with pkgs; [
     # === TypeScript / JavaScript — modern Rust/Go stack ===
-    typescript-go # `tsgo --lsp` — TS 7 native LSP
+    typescript # `tsgo --lsp` — TS 7 native LSP + tsserver for vtsls/tsls
+               # (formerly typescript-go; nixpkgs merged both into `typescript`)
     oxlint # `oxlint --lsp` — oxc lint LSP
     vtsls # tsserver wrapper, opt-in fallback
-    # Compat: `typescript-lsp@claude-plugins-official` plugin still
-    # spawns `typescript-language-server`, and vtsls reads tsserver
-    # from a `typescript` package. Keeping both here is cheap and
-    # avoids breakage when a project pins to the legacy tsserver.
-    # lowPrio: both this package and typescript-go ship bin/tsc
-    # (typescript-go's is a symlink to its native TS7 tsgo binary).
-    # lowPrio lets buildEnv resolve the collision by dropping this
-    # package's tsc in favor of typescript-go's, while still keeping
-    # tsserver (and everything else here) for vtsls/tsls consumers.
-    (lib.lowPrio typescript)
     typescript-language-server
     astro-language-server # Astro components (Vite-based)
     svelte-language-server # Svelte (Vite-based)

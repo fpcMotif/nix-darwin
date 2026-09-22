@@ -281,7 +281,7 @@ in
       ${lib.getExe pkgs.oxlint} --version
       ${lib.getExe pkgs.oxfmt} --version
       ${lib.getExe pkgs.tsgolint} --help >/dev/null
-      ${lib.getExe pkgs.typescript-go} --version
+      ${lib.getExe pkgs.typescript} --version
       ${lib.getExe pkgs.uv} --version
       ${lib.getExe pkgs.ruff} --version
     ''
