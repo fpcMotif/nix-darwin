@@ -53,7 +53,7 @@ for section in "${required_sections[@]}"; do
   fi
 done
 
-for marker in "## Working contract" "## Command routing" "## Code quality" "## Testing"; do
+for marker in "## Working contract" "## Command routing" "## Code quality" "## Testing" "## Waiting and background work"; do
   count=$(printf '%s\n' "$all_content" | grep -cF "$marker")
   if [ "$count" -ne 1 ]; then
     echo "claude-md-test: '$marker' must appear once, found $count" >&2
