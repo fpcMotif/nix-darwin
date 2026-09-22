@@ -56,17 +56,16 @@ let
     ".config/agent-routing/omp-economy.yml" = yaml.generate "omp-economy.yml"
       modelRouting.adapters.omp.economy;
     ".config/agent-routing/README.md" = ../../config/omp/README.md;
+    # OMP auto-loads only `@path` imports, never a "read FILE" pointer, so
+    # its one guide inlines every guidance file the other adapters point to.
     ".omp/agent/AGENTS.md" = mkGuide "omp-agents.md" [
       ./agent-instructions/omp/agent/AGENTS.md
       sharedContract
       sharedQuality
-    ];
-    ".omp/agent/guidance/development.md" = mkGuide "omp-development.md" [
-      ./agent-instructions/omp/agent/guidance/development.md
       sharedDevelopment
+      sharedTesting
+      sharedHumanDocuments
     ];
-    ".omp/agent/guidance/human-documents.md" = sharedHumanDocuments;
-    ".omp/agent/guidance/testing.md" = sharedTesting;
     ".omp/agent/agents/codex-plan-deployer.md" = ./agent-instructions/omp/agent/agents/codex-plan-deployer.md;
     ".omp/agent/agents/codex-spark-worker.md" = ./agent-instructions/omp/agent/agents/codex-spark-worker.md;
     ".omp/agent/agents/designer.md" = ./agent-instructions/omp/agent/agents/designer.md;

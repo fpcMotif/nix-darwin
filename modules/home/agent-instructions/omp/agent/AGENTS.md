@@ -9,9 +9,19 @@
 - **Diagnose**: Use `oracle` for ambiguous architecture, uncertain diagnosis, or two failed fixes.
 - **Escalate**: Move a task to a stronger configured role when its current model cannot complete it.
 - **Complete**: For bulk work or blocking advisor notes, load `/Users/martinfan/.omp/agent/managed-skills/omp-completion-and-advisor/SKILL.md`.
-- **Develop**: Before choosing a shell command, running Python, or using version control, read `~/.omp/agent/guidance/development.md`.
-- **Documents**: Before writing an issue, specification, PRD, analysis, or final review, read `~/.omp/agent/guidance/human-documents.md`.
-- **Test**: Before writing a test, choosing a technique beyond E2E, or recording a test artifact, read `~/.omp/agent/guidance/testing.md`.
+
+Everything else this guide needs is below: search, working contract, code quality and testing, development routing, the testing guide, and human-reviewed documents.
+
+## OMP tools
+
+- **Read**: Use native `read` for text, spans, URLs, and image questions.
+- **Shell**: Use the Command routing table below when native tools cannot answer the task.
+- **Spawn**: Use `task` only for independent work smaller than the current task.
+- **Background**: A bash call past the auto-background threshold (60 s by default) keeps running, and its result arrives as a follow-up turn. Do other work, or end the reply and be woken.
+- **Services**: Start services, watchers, debuggers, and REPLs with `hub` `op:"start"`; read them with `op:"logs"` and end them with `op:"stop"`.
+- **Condition**: Wait for readiness with `hub` `op:"wait"`, a `name`, `for: "ready"`, and a `pattern`, bounded by `timeout`. Job results deliver themselves; a bare `op:"wait"` is only for when nothing else remains.
+- **Timeout**: `timeout` bounds the whole call without lengthening the foreground wait. `timeout: 0` removes the deadline; reserve it for jobs that must run unbounded.
+- **Lifetime**: `omp -p` cancels unfinished jobs about three seconds after the final answer, and a `task` worker's jobs end when the worker is parked. Finish required jobs before either point.
 
 ## Search
 
