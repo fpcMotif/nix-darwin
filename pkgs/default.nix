@@ -4,6 +4,24 @@ final: _prev:
   direnv = _prev.direnv.overrideAttrs (_old: {
     doCheck = false;
   });
+  # nixpkgs' Node 26 test suite currently fails in the Linux Nix sandbox on
+  # test-fs-cp-async-file-modes. Keep the rest of the suite enabled; remove
+  # this workaround when nixpkgs carries the fix.
+  nodejs-slim_26 =
+    if final.stdenv.hostPlatform.isLinux then
+      _prev.nodejs-slim_26.overrideAttrs
+        (old: {
+          checkFlags = map
+            (flag:
+              if final.lib.hasPrefix "CI_SKIP_TESTS=" flag then
+                "${flag},test-fs-cp-async-file-modes"
+              else
+                flag
+            )
+            (old.checkFlags or [ ]);
+        })
+    else
+      _prev.nodejs-slim_26;
 
   # tmux 3.7 added a configure check that REFUSES to build on darwin unless
   # jemalloc is explicitly opted in or out:
