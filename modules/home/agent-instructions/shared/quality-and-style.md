@@ -9,13 +9,28 @@
 
 ## Testing
 
-- **No tautological tests**: Assert required observable behavior. Do not copy implementation logic into expectations or merely assert a mock's configured return value. Derive expectations from requirements or an independent oracle. Each test must detect a named behavioral failure.
-- **E2E first**: Highly prefer end-to-end tests as the sole testing mechanism. Verify complex features through real user, API, or CLI entry points and check resulting state. Do not add redundant unit suites.
-- **Tests before code**: NEVER write unit tests after implementing the code under test.
-- **Isolation exception**: Explain the risk E2E cannot verify adequately. FIRST list all identified failure modes and required outcomes. THEN write failing tests. Only then implement the isolated system.
-- **Verifiable artifacts**: Every E2E run must leave inspectable evidence, including successful runs. For UI changes, record a video of the exercised flow and retain assertion results. For backend changes, provide a rerunnable script with definitive observed output and asserted outcomes. Exit nonzero on mismatches; retain failure evidence.
-- **Repeatable artifacts**: Record the exact command, tested revision, prerequisites, fixture inputs, and setup/reset steps. Another person must be able to reproduce the scenario and inspect actual outcomes. A bare PASS/FAIL file is insufficient. The semantic result must repeat; video bytes, timestamps, and generated IDs need not.
-- **Meaningful comparison**: Compare actual behavior with explicit assertions or a reviewed expected baseline, not merely the previous run. Normalize irrelevant volatile fields only. Never regenerate baselines solely to make a failing test pass.
+- **No tautological tests**: Derive expected behavior from requirements or an independent reference, never copied implementation logic. Do not merely assert a mock's configured return value. Each test must detect a named behavioral failure.
+- **E2E first**: Highly prefer end-to-end tests as the sole testing layer when they cover the risks. Exercise real user, API, or CLI entry points and verify resulting state. Fuzzing and property-based checks can exercise those same boundaries; they do not require separate unit suites.
+- **Failure modes first**: Before implementation, list identified failure modes and required outcomes. Explain any risk that needs isolation rather than E2E. Do not claim the list is exhaustive.
+- **Tests before behavior**: NEVER implement new behavior first and retrofit its unit tests afterward. Work in small red-green-refactor cycles: one failing test, minimal implementation, then cleanup with tests passing. Verify the failure concerns the intended behavior. For existing bugs, write a reproducing regression test before the fix. This does not forbid independent tests exposing gaps found by mutation testing.
+- **Choose by risk**: Use the techniques below where they address a named risk. Reuse existing tools and set a bounded run budget. Do not mandate every technique, add redundant suites, or build a testing platform for a small change.
+
+| Technique | Use and required evidence |
+| --- | --- |
+| Fuzzing | Generate varied, malformed, boundary, or adversarial inputs where input robustness matters. Check meaningful failures, not only crashes. Retain failing inputs and minimize them when supported. |
+| Property-based testing | Define requirements that hold across generated inputs or action sequences, such as idempotence or valid state transitions. Check meaningful scenarios were reached; skipped cases or never-triggered conditions are not evidence. Retain the counterexample and replay details. |
+| Antithesis-style simulation | For races, retries, and partial failures, vary event order, delays, duplicate delivery, and relevant faults. Check safety and progress under stated recovery assumptions and bounds. Record the schedule/fault trace or platform replay reference. A random seed alone does not make live external services deterministic. Name simulated boundaries; keep real-provider checks. Do not require Antithesis itself. |
+| Mutation testing | After the suite passes, deliberately alter selected changed or critical logic and check that tests detect it. Review surviving mutants for missing assertions or equivalent behavior; do not chase a blanket score. Retain mutations, outcomes, and survivor decisions. Keep compile errors, timeouts, and infrastructure failures distinct from assertion failures. Never ship deliberate mutations. |
+
+### Test evidence
+
+- **Verifiable**: Every E2E run must leave inspectable evidence, including successful runs. UI changes need a flow video plus assertion results. Backend changes need a rerunnable script plus observed, checked output. Fail the command on mismatches and retain failure evidence. A video alone or bare PASS/FAIL file is insufficient.
+- **Repeatable**: Record command, revision, tool versions, prerequisites, fixture inputs, and setup/reset steps. For generated tests, save the seed, replay/shrink path when applicable, failing input or action sequence, and run budget. For simulation, include schedule/fault replay details. Promote confirmed failures into fixed regression cases before fixing production code. Semantic results must repeat; video bytes, timestamps, and generated IDs need not.
+- **Honest**: Compare against explicit requirements or a reviewed baseline, not merely the previous run. Normalize only irrelevant volatile fields. Never regenerate expectations solely to pass. Distinguish passed, failed, blocked, and not-run checks. Report sampled runs and untested boundaries; passing tests are not proof of correctness. Use synthetic fixtures and redact secrets and personal data from artifacts.
+
+## Human final review
+
+For substantial changes, provide one compact Markdown review: behavior and non-goals, the smallest useful diagram, requirement-to-evidence links, and remaining risks. Prefer Mermaid. Use PlantUML only when UML detail improves the review. Do not maintain the same diagram in both formats. Diagrams explain intended structure; executed tests establish observed behavior. Neither replaces human judgment.
 
 ## Writing
 
