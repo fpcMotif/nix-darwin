@@ -28,9 +28,18 @@
 - **Repeatable**: Record command, revision, tool versions, prerequisites, fixture inputs, and setup/reset steps. For generated tests, save the seed, replay/shrink path when applicable, failing input or action sequence, and run budget. For simulation, include schedule/fault replay details. Promote confirmed failures into fixed regression cases before fixing production code. Semantic results must repeat; video bytes, timestamps, and generated IDs need not.
 - **Honest**: Compare against explicit requirements or a reviewed baseline, not merely the previous run. Normalize only irrelevant volatile fields. Never regenerate expectations solely to pass. Distinguish passed, failed, blocked, and not-run checks. Report sampled runs and untested boundaries; passing tests are not proof of correctness. Use synthetic fixtures and redact secrets and personal data from artifacts.
 
+## Fallow — TypeScript/JavaScript only
+
+- **Scope**: Use Fallow for substantial TypeScript/JavaScript code or dependency changes, including related framework and style files. In mixed-language repositories, select the JS/TS project or workspace root and record scope. Do not use Fallow to analyze Rust, Python, Go, Nix, or other non-JS/TS code. Rust-native describes its implementation, not its target languages. Skip it for unrelated or documentation-only changes.
+- **Purpose**: Use the free static layer for unused code, circular imports, duplication, complexity, configured architecture boundaries, and styling drift. It supplements tests, type checks, and lint; it does not prove runtime correctness.
+- **Run**: Reuse the pinned binary or project script and existing configuration. Check the installed version's help or `fallow schema` before unfamiliar flags. Set `BASE` to the resolved PR comparison commit; run `fallow audit --base "$BASE" --format json`. Prefer new-only attribution unless repository policy requires stricter gating. If unavailable, report not run; do not silently install tooling.
+- **Evidence**: Save JSON, stderr, exit status, command, version, revision, resolved base, configuration, and analyzed scope. For `audit`, exit 0 can mean pass or warn; 1 means policy failure; 2 means execution error. Read `verdict` and new-versus-inherited attribution, not just total issue counts. Never hide errors with `|| true` or discard diagnostics.
+- **Act narrowly**: Inspect findings and verify framework entry points, generated code, dynamic consumers, and public APIs before removal. Preview fixes, review the diff, and rerun affected checks. Separate introduced findings from inherited debt. Do not delete code, suppress findings, or invent abstractions merely to improve a score.
+- **Opt-in boundaries**: Default to static analysis. Hooks, MCP installation, guide-rewriting installers, Fallow Runtime, and code/coverage uploads require a separate request. Paid runtime monitoring is not a review prerequisite. No observed production hits does not prove code is safe to delete.
+
 ## Human final review
 
-For substantial changes, provide one compact Markdown review: behavior and non-goals, the smallest useful diagram, requirement-to-evidence links, and remaining risks. Prefer Mermaid. Use PlantUML only when UML detail improves the review. Do not maintain the same diagram in both formats. Diagrams explain intended structure; executed tests establish observed behavior. Neither replaces human judgment.
+For substantial changes, provide one compact Markdown review: behavior and non-goals, the smallest useful diagram, requirement-to-evidence links, and remaining risks. For JS/TS changes, include scoped Fallow findings as static evidence when run. Prefer Mermaid. Use PlantUML only when UML detail improves the review. Do not maintain the same diagram in both formats. Diagrams explain intended structure; executed tests establish observed behavior. Neither replaces human judgment.
 
 ## Writing
 
