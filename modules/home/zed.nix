@@ -20,7 +20,7 @@
 # package (e.g. `pkgs.zed-editor` from nixpkgs) if a Linux Zed becomes useful.
 #
 # Toolchain choices:
-#   TypeScript / JS  — tsgo (typescript-go, the Go rewrite from the TS team)
+#   TypeScript / JS  — TS 7 `tsc --lsp` (nixpkgs `typescript`, the Go rewrite)
 #                      as the type-checker; oxlint (oxc family) for linting;
 #                      oxfmt (oxc family) for formatting.
 #                      vtsls is kept on PATH as a fallback for projects that
@@ -58,7 +58,7 @@ in
       nixd
 
       # TypeScript / JavaScript
-      typescript-go # provides `tsgo` binary
+      typescript # TS 7 `tsc`, which serves LSP via `--lsp` (formerly typescript-go)
       vtsls # fallback TS LSP for projects tsgo can't handle yet
       oxlint # fast linter (oxc)
       oxfmt # fast formatter (oxc)
@@ -257,8 +257,8 @@ in
         # standard tsserver protocol and Zed's built-in TypeScript adapter
         # routes to whatever binary is on PATH or pinned here.
         typescript-language-server.binary = {
-          path = "${pkgs.typescript-go}/bin/tsgo";
-          arguments = [ "lsp" "--stdio" ];
+          path = "${pkgs.typescript}/bin/tsc";
+          arguments = [ "--lsp" "--stdio" ];
         };
         # Keep vtsls available as an explicit fallback profile for projects
         # that opt out of tsgo via .zed/settings.json.
