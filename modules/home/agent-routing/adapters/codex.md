@@ -1,0 +1,1 @@
+- **Posting**: `~/.codex/rules/default.rules` prompts on `gh pr comment` and `gh pr review` and fails closed under `approval_policy = "never"`. This is a tested prefix guard on those two commands, not a boundary on every GitHub write: `gh api` writes stay unguarded.
