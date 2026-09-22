@@ -53,7 +53,7 @@ for section in "${required_sections[@]}"; do
   fi
 done
 
-for marker in "## Working contract" "## Command routing" "## Code quality"; do
+for marker in "## Working contract" "## Command routing" "## Code quality" "## Testing"; do
   count=$(printf '%s\n' "$all_content" | grep -cF "$marker")
   if [ "$count" -ne 1 ]; then
     echo "claude-md-test: '$marker' must appear once, found $count" >&2
@@ -69,6 +69,10 @@ if ! printf '%s\n' "$content" | grep -qF '~/.claude/guidance/development.md'; th
   echo "claude-md-test: development context pointer missing" >&2
   exit 1
 fi
+if ! printf '%s\n' "$content" | grep -qF '~/.claude/guidance/testing.md'; then
+  echo "claude-md-test: testing context pointer missing" >&2
+  exit 1
+fi
 if ! printf '%s\n' "$documents_content" | grep -qF 'The document is done when'; then
   echo "claude-md-test: human-document completion criterion missing" >&2
   exit 1
@@ -82,7 +86,8 @@ for binding in \
   'renderAgentGuide = import ./agent-instructions/render-agent-guide.nix' \
   '".claude/CLAUDE.md".source = claudeGuide;' \
   '".claude/guidance/development.md".source = claudeDevelopmentGuide;' \
-  '".claude/guidance/human-documents.md".source = ./claude/human-documents.md;'
+  '".claude/guidance/human-documents.md".source = ./claude/human-documents.md;' \
+  '".claude/guidance/testing.md".source = ./agent-instructions/shared/testing.md;'
 do
   if ! printf '%s\n' "$nix_content" | grep -qF "$binding"; then
     echo "claude-md-test: missing Nix binding '$binding'" >&2

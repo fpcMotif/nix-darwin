@@ -693,6 +693,7 @@ in
       ".claude/CLAUDE.md".source = claudeGuide;
       ".claude/guidance/development.md".source = claudeDevelopmentGuide;
       ".claude/guidance/human-documents.md".source = ./claude/human-documents.md;
+      ".claude/guidance/testing.md".source = ./agent-instructions/shared/testing.md;
       ".claude/statusline-command.sh" = {
         source = ./claude/statusline-command.sh;
         executable = true;

@@ -8,6 +8,7 @@ let
   sharedContract = ./agent-instructions/shared/working-contract.md;
   sharedDevelopment = ./agent-instructions/shared/development.md;
   sharedQuality = ./agent-instructions/shared/quality-and-style.md;
+  sharedTesting = ./agent-instructions/shared/testing.md;
   # Reuses Claude's copy rather than forking a second one — same guidance,
   # one source of truth. claude.nix wires the Claude-side target.
   sharedHumanDocuments = ./claude/human-documents.md;
@@ -22,7 +23,7 @@ let
       targets)
     personalSkills));
   # Host adapters stay small. Shared wording is rendered into every guide from
-  # the three files above, so one edit changes every agent surface.
+  # the shared files above, so one edit changes every agent surface.
   files = {
     "AGENTS.md" = mkGuide "shared-agents.md" [
       ./agent-instructions/AGENTS.md
@@ -30,6 +31,7 @@ let
       sharedQuality
     ];
     ".config/agent-guidance/development.md" = sharedDevelopment;
+    ".config/agent-guidance/testing.md" = sharedTesting;
     ".codex/AGENTS.md" = mkGuide "codex-agents.md" [
       ./agent-instructions/codex/AGENTS.md
       sharedContract
@@ -39,6 +41,7 @@ let
       ./agent-instructions/codex/guidance/development.md
       sharedDevelopment
     ];
+    ".codex/guidance/testing.md" = sharedTesting;
     ".codex/guidance/setup.md" = ./agent-instructions/codex/guidance/setup.md;
     ".codex/fast.config.toml" = toml.generate "codex-fast.config.toml"
       modelRouting.adapters.codex.profiles.fast;
@@ -63,6 +66,7 @@ let
       sharedDevelopment
     ];
     ".omp/agent/guidance/human-documents.md" = sharedHumanDocuments;
+    ".omp/agent/guidance/testing.md" = sharedTesting;
     ".omp/agent/agents/codex-plan-deployer.md" = ./agent-instructions/omp/agent/agents/codex-plan-deployer.md;
     ".omp/agent/agents/codex-spark-worker.md" = ./agent-instructions/omp/agent/agents/codex-spark-worker.md;
     ".omp/agent/agents/designer.md" = ./agent-instructions/omp/agent/agents/designer.md;
