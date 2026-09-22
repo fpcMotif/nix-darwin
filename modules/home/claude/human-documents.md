@@ -14,41 +14,20 @@ When later evidence changes the analysis, update the body and attach that eviden
 
 ## Final implementation review
 
-Keep one compact Markdown review in the PR or existing design document. Do not create a parallel reporting system.
+Write one compact review in the PR or the existing design document; it is the only report.
 
-1. **Decision**: State changed behavior, unchanged behavior, and the decision the human must make.
-2. **Model**: Show the smallest diagram that resolves a real review question. Prefer Mermaid for the overview. Add PlantUML detail only when useful; do not redraw the same information twice.
-3. **Evidence**: Use a small table: requirement or failure mode | check/scenario | observed result | artifact and rerun command. Distinguish executed test evidence from static-analysis reports; neither is just a PASS count. Show the tested revision and label blocked or unrun checks.
-4. **Risk**: State remaining gaps, simulated/external boundaries, and relevant rollout or rollback concerns. For mutation checks, explain important survivors. For generated tests, link minimized failures and replay details. Stop at readiness for review; never imply human approval or merge without authorization.
-
-### Static evidence for TypeScript/JavaScript
-
-When Fallow runs, link its saved JSON report in the same evidence table, labeled static analysis.
-Record command, version/configuration, scope, base/revision, verdict, and exit status.
-Summarize introduced findings, inherited debt, and decisions: fix, justified exception, or deferred risk.
-Keep static findings separate from executed tests and optional production coverage.
-For Rust, Python, Go, Nix, or other non-JS/TS code, omit Fallow and follow that project's tooling.
-
-Use significant import-cycle or boundary findings to check Mermaid/PlantUML models against actual dependencies.
-A declared boundary without a matching enabled check is not verified by Fallow.
-Link optional `fallow viz` HTML only when a code map answers a question the compact diagram cannot.
-Do not require both views or dump the whole dependency graph into UML.
-Neither a map nor a health score establishes correct behavior or safe deletion.
+1. **Decision**: State the changed behavior, the unchanged behavior, and the decision the reviewer must make. Completion: a reviewer can name all three from this section alone.
+2. **Model**: Draw the smallest diagram that answers a real review question, chosen from the table below. Completion: each diagram answers one question and is drawn once.
+3. **Evidence**: One row per requirement or failure mode: requirement | check | observed result | artifact and rerun command. Label static-analysis rows, and label blocked or not-run checks. Completion: the tested revision is stated and every row links an artifact.
+4. **Risk**: State remaining gaps, simulated or external boundaries, mutation survivors, and rollout or rollback concerns. Completion: the review stops at ready-for-review; approval and merge stay with the human.
 
 ### Choose the diagram by the question
 
 | Review question | Default view |
 | --- | --- |
 | What happens, and where can it fail? | Mermaid flowchart. |
-| Who calls whom, in which order? Where can retries or races occur? | Mermaid sequence diagram, including the relevant failure branch. |
-| Which states and transitions are allowed or forbidden? | Mermaid state diagram. |
-| Who owns data, contracts, or deployment boundaries? | Mermaid overview; PlantUML component, class, or deployment detail when UML notation materially clarifies it. |
+| Who calls whom, in which order, and where can retries or races occur? | Mermaid sequence diagram with the failure branch. |
+| Which states and transitions are allowed? | Mermaid state diagram. |
+| Who owns data, contracts, or deployment boundaries? | Mermaid overview; PlantUML component, class, or deployment detail when UML notation answers a different question. |
 
-UML is the modeling notation, not an additional test suite. Mermaid and PlantUML are alternative rendering tools.
-Combine a Mermaid overview with a linked PlantUML detail only when they answer different questions.
-Keep diagram source beside the document. For PlantUML, attach a rendered SVG or PNG from that source.
-Render and inspect every changed diagram; do not submit source alone as visual review evidence.
-Use local or approved rendering for private architecture; do not send it to public diagram services.
-Trace important diagram transitions or contracts to evidence-table rows; diagrams alone do not establish correctness.
-Review contracts, ownership, failure paths, and unnecessary coupling—not whether every class has a box.
-Skip diagrams and empty template sections for trivial changes that need no visual explanation.
+Keep diagram source beside the document; for PlantUML, attach the rendered SVG or PNG. Render and inspect every changed diagram before submitting it. Render private architecture locally. Trivial changes skip the diagram and the empty sections.
