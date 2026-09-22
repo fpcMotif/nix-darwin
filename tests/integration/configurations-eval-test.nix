@@ -418,13 +418,27 @@ let
             ".config/agent-routing/omp-economy.yml"
             ".config/agent-routing/README.md"
             ".omp/agent/AGENTS.md"
-            ".omp/agent/guidance/development.md"
-            ".omp/agent/guidance/human-documents.md"
             ".claude/CLAUDE.md"
             ".claude/guidance/development.md"
             ".claude/guidance/human-documents.md"
           ])
         "${prefix} immutable agent guidance and profiles must use Home Manager files without forced overwrite")
+
+      (helpers.assertTest "${prefix}-omp-guide-self-contained"
+        (prefix != "darwin" || (
+          let guide = homeData.file.".omp/agent/AGENTS.md".source.text; in
+          !(lib.hasInfix "/.omp/agent/guidance/" guide)
+            && lib.all (heading: lib.hasInfix heading guide) [
+            "## Working contract"
+            "## Testing"
+            "## Command routing"
+            "## Waiting and background work"
+            "## Repeatable artifact"
+            "## Final implementation review"
+          ]
+            && lib.hasInfix "op:\"start\"" guide
+        ))
+        "${prefix} OMP auto-loads only @path imports, so its one guide must inline every guidance section")
 
       (helpers.assertTest "${prefix}-codex-user-config-writable"
         (prefix != "darwin" ||

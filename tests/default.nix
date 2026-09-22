@@ -90,10 +90,9 @@ in
           ../modules/home/agent-instructions/omp/agent/AGENTS.md
           sharedContract
           sharedQuality
-        ];
-        ompDevelopment = renderAgentGuide [
-          ../modules/home/agent-instructions/omp/agent/guidance/development.md
           sharedDevelopment
+          ../modules/home/agent-instructions/shared/testing.md
+          ../modules/home/claude/human-documents.md
         ];
         claude = renderAgentGuide [
           ../modules/home/claude/CLAUDE.md
@@ -111,7 +110,7 @@ in
       developmentGuides = with guides; [
         (builtins.readFile sharedDevelopment)
         codexDevelopment
-        ompDevelopment
+        omp
         claudeDevelopment
       ];
       noModelCache = text: lib.all (term: !(lib.hasInfix term text)) [
