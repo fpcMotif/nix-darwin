@@ -18,8 +18,22 @@ Keep one compact Markdown review in the PR or existing design document. Do not c
 
 1. **Decision**: State changed behavior, unchanged behavior, and the decision the human must make.
 2. **Model**: Show the smallest diagram that resolves a real review question. Prefer Mermaid for the overview. Add PlantUML detail only when useful; do not redraw the same information twice.
-3. **Evidence**: Use a small table: requirement or failure mode | test/scenario | observed result | artifact and rerun command. Link executable evidence, not just a PASS count. Show the tested revision and label blocked or unrun checks.
+3. **Evidence**: Use a small table: requirement or failure mode | check/scenario | observed result | artifact and rerun command. Distinguish executed test evidence from static-analysis reports; neither is just a PASS count. Show the tested revision and label blocked or unrun checks.
 4. **Risk**: State remaining gaps, simulated/external boundaries, and relevant rollout or rollback concerns. For mutation checks, explain important survivors. For generated tests, link minimized failures and replay details. Stop at readiness for review; never imply human approval or merge without authorization.
+
+### Static evidence for TypeScript/JavaScript
+
+When Fallow runs, link its saved JSON report in the same evidence table, labeled static analysis.
+Record command, version/configuration, scope, base/revision, verdict, and exit status.
+Summarize introduced findings, inherited debt, and decisions: fix, justified exception, or deferred risk.
+Keep static findings separate from executed tests and optional production coverage.
+For Rust, Python, Go, Nix, or other non-JS/TS code, omit Fallow and follow that project's tooling.
+
+Use significant import-cycle or boundary findings to check Mermaid/PlantUML models against actual dependencies.
+A declared boundary without a matching enabled check is not verified by Fallow.
+Link optional `fallow viz` HTML only when a code map answers a question the compact diagram cannot.
+Do not require both views or dump the whole dependency graph into UML.
+Neither a map nor a health score establishes correct behavior or safe deletion.
 
 ### Choose the diagram by the question
 
