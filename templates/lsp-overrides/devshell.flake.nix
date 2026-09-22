@@ -22,7 +22,7 @@
           # === TypeScript / Vite stack ===
           nodejs_22
           bun # primary package manager
-          typescript-go # `tsgo --lsp` for TS 7 LSP
+          typescript # `tsgo --lsp` for TS 7 LSP (formerly typescript-go)
           oxlint # `oxlint --lsp` for lint
           vtsls # tsserver wrapper, plugin-capable
           vue-language-server # Vite + Vue
@@ -51,7 +51,7 @@
         shellHook = ''
           echo "devShell: pinned LSP servers loaded for $(pwd)" >&2
           # tsgo version sanity check
-          ${pkgs.typescript-go}/bin/tsgo --version 2>/dev/null || true
+          ${pkgs.typescript}/bin/tsc --version 2>/dev/null || true
         '';
       };
     });
