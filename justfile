@@ -94,9 +94,7 @@ fix-daemon: _no-sudo _daemon
 # fails the *whole* system build, not just that package.
 # tests/unit/rolling-pins-test.sh keeps this set honest.
 refresh-rolling: _no-sudo _daemon
-    @for s in update-bun-canary update-sf-mono; do \
-        echo "=== $s ==="; bash "scripts/$s.sh" || true; \
-    done
+    @bash scripts/lib/auto-update.sh run-updaters scripts/update-bun-canary.sh scripts/update-sf-mono.sh
 
 # Shared failure hint. A fixed-output hash mismatch is almost always a rolling
 # pin drifting rather than anything wrong with the working tree, and the raw
@@ -138,9 +136,10 @@ update-and-switch: _no-sudo _daemon
 # Run every scripts/update-*.sh updater, then activate. This is what the
 # nightly auto-update GitHub workflow does, but on-demand. Forces the full
 # bump: an explicit human invocation wants fresh nixpkgs too (issue #336).
+# The variable sits on the runner's line: just runs each recipe line in its
+# own shell, so a separate `export` line would never reach the updaters.
 bump-and-switch: _no-sudo _daemon
-    export AU_FORCE_FULL_BUMP=1
-    for s in scripts/update-*.sh; do echo "=== $s ==="; bash "$s" || true; done
+    AU_FORCE_FULL_BUMP=1 bash scripts/lib/auto-update.sh run-updaters
     sudo darwin-rebuild switch --flake .
 
 # Show drift between binaries currently on PATH and the versions pinned

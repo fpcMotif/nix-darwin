@@ -3,19 +3,8 @@
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
-FILE="pkgs/oh-my-pi.nix"
-
 latest=$(au_latest_github_release can1357/oh-my-pi)
-current=$(au_current_version "$FILE")
-if [ "$current" = "$latest" ]; then
-  echo "oh-my-pi already at $latest"; exit 0
-fi
 
-url="https://github.com/can1357/oh-my-pi/releases/download/v${latest}/omp-darwin-arm64"
-sri=$(au_prefetch_sri "$url")
-
-au_set_version "$FILE" "$latest"
-au_inplace_sed "$FILE" -e "s|hash = \"sha256-[^\"]*\"|hash = \"${sri}\"|"
-
-au_build_darwin .#martin.oh-my-pi
-au_report_change oh-my-pi "$current" "$latest"
+au_bump_release --name oh-my-pi --file pkgs/oh-my-pi.nix --version "$latest" \
+  --attr .#martin.oh-my-pi \
+  --asset "https://github.com/can1357/oh-my-pi/releases/download/v${latest}/omp-darwin-arm64" '/omp-darwin-arm64"'

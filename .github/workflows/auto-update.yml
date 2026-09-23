@@ -71,18 +71,9 @@ jobs:
         # silently skip a bump.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          shopt -s nullglob
-          fail_count=0
-          for s in scripts/update-*.sh; do
-            echo "::group::$s"
-            if ! bash "$s"; then
-              fail_count=$((fail_count + 1))
-              echo "::warning::$s failed; continuing"
-            fi
-            echo "::endgroup::"
-          done
-          echo "::notice::$fail_count updater(s) failed (tolerated)"
+        # au_run_updaters restores pkgs/ and flake.lock after a failed updater,
+        # so a half-finished bump never lands in the combined PR.
+        run: bash scripts/lib/auto-update.sh run-updaters
 
       - name: Clean stray sed/sed-bak artifacts (defence-in-depth)
         run: |

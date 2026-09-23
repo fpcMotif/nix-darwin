@@ -4,27 +4,15 @@
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
-FILE="pkgs/mole.nix"
-
 latest=$(au_latest_github_release tw93/Mole '^V')
-current=$(au_current_version "$FILE")
-if [ "$current" = "$latest" ]; then
-  echo "mole already at $latest"; exit 0
-fi
-
-au_set_version "$FILE" "$latest"
-
-src_url="https://github.com/tw93/Mole/archive/refs/tags/V${latest}.tar.gz"
-analyze_url="https://github.com/tw93/Mole/releases/download/V${latest}/analyze-darwin-arm64"
-status_url="https://github.com/tw93/Mole/releases/download/V${latest}/status-darwin-arm64"
+base="https://github.com/tw93/Mole"
 
 # src uses fetchzip → unpacked hash. Anchor on `archive/refs/tags` (unique to
 # the source URL): the literal `${version}` in the URL must NOT appear in the
 # anchor, because au_set_block_hash feeds it through Perl's \Q…\E, which first
 # interpolates `$version` (empty) and so would never match.
-au_set_block_hash "$FILE" "archive/refs/tags" "$(au_prefetch_unpacked_sri "$src_url")"
-au_set_block_hash "$FILE" "/analyze-darwin-arm64"   "$(au_prefetch_sri        "$analyze_url")"
-au_set_block_hash "$FILE" "/status-darwin-arm64"    "$(au_prefetch_sri        "$status_url")"
-
-au_build_darwin .#martin.mole
-au_report_change mole "$current" "$latest"
+au_bump_release --name mole --file pkgs/mole.nix --version "$latest" \
+  --attr .#martin.mole \
+  --unpacked-asset "${base}/archive/refs/tags/V${latest}.tar.gz" 'archive/refs/tags' \
+  --asset "${base}/releases/download/V${latest}/analyze-darwin-arm64" '/analyze-darwin-arm64' \
+  --asset "${base}/releases/download/V${latest}/status-darwin-arm64" '/status-darwin-arm64'
