@@ -32,6 +32,10 @@ fi
 # embedded the CLI under lib/node_modules.
 nodejs_out=$(nix eval --raw nixpkgs#nodejs-slim_26.outPath)
 npm_out=$(nix eval --raw nixpkgs#nodejs-slim_26.npm.outPath)
+# `nix eval` only yields the store paths. Realise npm before testing its
+# executable so a fresh machine does not falsely fall through to the legacy
+# embedded-CLI probe.
+nix build --no-link 'nixpkgs#nodejs-slim_26^npm' >/dev/null
 npm_cmd=("$npm_out/bin/npm")
 if [ ! -x "${npm_cmd[0]}" ]; then
   npm_cli="$nodejs_out/lib/node_modules/npm/bin/npm-cli.js"
