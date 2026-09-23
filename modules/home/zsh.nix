@@ -29,18 +29,8 @@ let
       "/usr/local/bin"
       "$HOME/bin"
       "$HOME/.bun/bin"
-      "$HOME/.elixir-install/installs/otp/27.3.4/bin"
-      "$HOME/.elixir-install/installs/elixir/1.18.4-otp-27/bin"
       "$HOME/.cargo/bin"
       "$HOME/go/bin"
-      "$HOME/.opencode/bin"
-      "$HOME/.codeium/windsurf/bin"
-      "$HOME/.antigravity/antigravity/bin"
-      "$HOME/.amp/bin"
-      "$HOME/.fabro/bin"
-    ];
-    apps = lib.optionals isDarwin [
-      "/Applications/Obsidian.app/Contents/MacOS"
     ];
   };
 
@@ -259,7 +249,7 @@ in
     # hm-session-vars.sh prepends this list in login shells after ~/.zshenv,
     # so PATH order is set here; an envExtra prepend would lose.
     home.sessionPath = pathTiers.shims ++ pathTiers.nixProfiles
-      ++ pathTiers.userInstallers ++ pathTiers.apps;
+      ++ pathTiers.userInstallers;
 
     programs.fzf = {
       enable = true;
