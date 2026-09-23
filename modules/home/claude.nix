@@ -19,16 +19,7 @@ let
 
   mkSkill = from: path: packages: { inherit from path packages; };
 
-  renderAgentGuide = import ./agent-instructions/render-agent-guide.nix { inherit lib; };
-  claudeGuide = pkgs.writeText "claude-global-guide.md" (renderAgentGuide [
-    ./claude/CLAUDE.md
-    ./agent-instructions/shared/working-contract.md
-    ./agent-instructions/shared/quality-and-style.md
-  ]);
-  claudeDevelopmentGuide = pkgs.writeText "claude-development-guide.md" (renderAgentGuide [
-    ./claude/development.md
-    ./agent-instructions/shared/development.md
-  ]);
+  guideCatalog = import ./agent-instructions/guides.nix { inherit lib pkgs; };
 
   # `link` makes every target a tree of `home.file` symlinks pointing at
   # the same /nix/store/...-agent-skills-bundle/<skill>/SKILL.md. Pi's
@@ -690,9 +681,12 @@ in
         });
 
       ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
-      ".claude/CLAUDE.md".source = claudeGuide;
-      ".claude/guidance/development.md".source = claudeDevelopmentGuide;
-      ".claude/guidance/human-documents.md".source = ./claude/human-documents.md;
+      "${guideCatalog.hosts.claude.startup.target}".source =
+        guideCatalog.hosts.claude.startup.source;
+      "${guideCatalog.hosts.claude.development.target}".source =
+        guideCatalog.hosts.claude.development.source;
+      "${guideCatalog.hosts.claude.humanDocuments.target}".source =
+        guideCatalog.hosts.claude.humanDocuments.source;
       ".claude/statusline-command.sh" = {
         source = ./claude/statusline-command.sh;
         executable = true;

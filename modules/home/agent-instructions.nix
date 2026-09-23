@@ -1,17 +1,10 @@
 { config, lib, pkgs, ... }:
 
 let
-  renderAgentGuide = import ./agent-instructions/render-agent-guide.nix { inherit lib; };
+  guideCatalog = import ./agent-instructions/guides.nix { inherit lib pkgs; };
   modelRouting = import ../shared/agent-model-routing.nix { inherit lib; };
   toml = pkgs.formats.toml { };
   yaml = pkgs.formats.yaml { };
-  sharedContract = ./agent-instructions/shared/working-contract.md;
-  sharedDevelopment = ./agent-instructions/shared/development.md;
-  sharedQuality = ./agent-instructions/shared/quality-and-style.md;
-  # Reuses Claude's copy rather than forking a second one — same guidance,
-  # one source of truth. claude.nix wires the Claude-side target.
-  sharedHumanDocuments = ./claude/human-documents.md;
-  mkGuide = name: parts: pkgs.writeText name (renderAgentGuide parts);
   personalSkills = builtins.fromJSON (builtins.readFile ./skills/personal/manifest.json);
   personalFiles = builtins.listToAttrs (lib.concatLists (lib.mapAttrsToList
     (name: targets: map
@@ -21,24 +14,11 @@ let
       })
       targets)
     personalSkills));
-  # Host adapters stay small. Shared wording is rendered into every guide from
-  # the three files above, so one edit changes every agent surface.
   files = {
-    "AGENTS.md" = mkGuide "shared-agents.md" [
-      ./agent-instructions/AGENTS.md
-      sharedContract
-      sharedQuality
-    ];
-    ".config/agent-guidance/development.md" = sharedDevelopment;
-    ".codex/AGENTS.md" = mkGuide "codex-agents.md" [
-      ./agent-instructions/codex/AGENTS.md
-      sharedContract
-      sharedQuality
-    ];
-    ".codex/guidance/development.md" = mkGuide "codex-development.md" [
-      ./agent-instructions/codex/guidance/development.md
-      sharedDevelopment
-    ];
+    "${guideCatalog.hosts.general.startup.target}" = guideCatalog.hosts.general.startup.source;
+    "${guideCatalog.hosts.general.development.target}" = guideCatalog.hosts.general.development.source;
+    "${guideCatalog.hosts.codex.startup.target}" = guideCatalog.hosts.codex.startup.source;
+    "${guideCatalog.hosts.codex.development.target}" = guideCatalog.hosts.codex.development.source;
     ".codex/guidance/setup.md" = ./agent-instructions/codex/guidance/setup.md;
     ".codex/fast.config.toml" = toml.generate "codex-fast.config.toml"
       modelRouting.adapters.codex.profiles.fast;
@@ -53,16 +33,9 @@ let
     ".config/agent-routing/omp-economy.yml" = yaml.generate "omp-economy.yml"
       modelRouting.adapters.omp.economy;
     ".config/agent-routing/README.md" = ../../config/omp/README.md;
-    ".omp/agent/AGENTS.md" = mkGuide "omp-agents.md" [
-      ./agent-instructions/omp/agent/AGENTS.md
-      sharedContract
-      sharedQuality
-    ];
-    ".omp/agent/guidance/development.md" = mkGuide "omp-development.md" [
-      ./agent-instructions/omp/agent/guidance/development.md
-      sharedDevelopment
-    ];
-    ".omp/agent/guidance/human-documents.md" = sharedHumanDocuments;
+    "${guideCatalog.hosts.omp.startup.target}" = guideCatalog.hosts.omp.startup.source;
+    "${guideCatalog.hosts.omp.development.target}" = guideCatalog.hosts.omp.development.source;
+    "${guideCatalog.hosts.omp.humanDocuments.target}" = guideCatalog.hosts.omp.humanDocuments.source;
     ".omp/agent/agents/codex-plan-deployer.md" = ./agent-instructions/omp/agent/agents/codex-plan-deployer.md;
     ".omp/agent/agents/codex-spark-worker.md" = ./agent-instructions/omp/agent/agents/codex-spark-worker.md;
     ".omp/agent/agents/designer.md" = ./agent-instructions/omp/agent/agents/designer.md;

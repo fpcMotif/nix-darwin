@@ -44,76 +44,38 @@ in
     bash ${./unit/rolling-pins-test.sh} ${../pkgs} ${../scripts}
     touch $out
   '';
-  unit-claude-md =
-    let
-      renderAgentGuide = import ../modules/home/agent-instructions/render-agent-guide.nix { inherit lib; };
-      renderedClaudeGuide = pkgs.writeText "rendered-claude-guide.md" (renderAgentGuide [
-        ../modules/home/claude/CLAUDE.md
-        ../modules/home/agent-instructions/shared/working-contract.md
-        ../modules/home/agent-instructions/shared/quality-and-style.md
-      ]);
-      renderedClaudeDevelopment = pkgs.writeText "rendered-claude-development.md" (renderAgentGuide [
-        ../modules/home/claude/development.md
-        ../modules/home/agent-instructions/shared/development.md
-      ]);
-    in
-    pkgs.runCommand "unit-claude-md" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
-      bash ${./unit/claude-md-test.sh} \
-        ${renderedClaudeGuide} \
-        ${../modules/home/claude.nix} \
-        ${../modules/home/claude/human-documents.md} \
-        ${renderedClaudeDevelopment}
-      touch $out
-    '';
   unit-agent-guides =
     let
-      renderAgentGuide = import ../modules/home/agent-instructions/render-agent-guide.nix { inherit lib; };
-      sharedContract = ../modules/home/agent-instructions/shared/working-contract.md;
-      sharedDevelopment = ../modules/home/agent-instructions/shared/development.md;
-      sharedQuality = ../modules/home/agent-instructions/shared/quality-and-style.md;
-      guides = {
-        general = renderAgentGuide [
-          ../modules/home/agent-instructions/AGENTS.md
-          sharedContract
-          sharedQuality
-        ];
-        codex = renderAgentGuide [
-          ../modules/home/agent-instructions/codex/AGENTS.md
-          sharedContract
-          sharedQuality
-        ];
-        codexDevelopment = renderAgentGuide [
-          ../modules/home/agent-instructions/codex/guidance/development.md
-          sharedDevelopment
-        ];
-        omp = renderAgentGuide [
-          ../modules/home/agent-instructions/omp/agent/AGENTS.md
-          sharedContract
-          sharedQuality
-        ];
-        ompDevelopment = renderAgentGuide [
-          ../modules/home/agent-instructions/omp/agent/guidance/development.md
-          sharedDevelopment
-        ];
-        claude = renderAgentGuide [
-          ../modules/home/claude/CLAUDE.md
-          sharedContract
-          sharedQuality
-        ];
-        claudeDevelopment = renderAgentGuide [
-          ../modules/home/claude/development.md
-          sharedDevelopment
-        ];
-      };
+      guideCatalog = import ../modules/home/agent-instructions/guides.nix { inherit lib pkgs; };
+      hosts = guideCatalog.hosts;
+      hasWord = word: text:
+        lib.any
+          (line:
+            builtins.match ".*(^|[^A-Za-z0-9_])${word}($|[^A-Za-z0-9_]).*" line != null)
+          (lib.splitString "\n" text);
+      contentForHost = host:
+        lib.concatStringsSep "\n" (map (guide: guide.content) [
+          host.startup
+          host.development
+        ]);
       count = marker: text: builtins.length (lib.splitString marker text) - 1;
-      once = marker: text: count marker text == 1;
-      commonGuides = with guides; [ general codex omp claude ];
-      developmentGuides = with guides; [
-        (builtins.readFile sharedDevelopment)
-        codexDevelopment
-        ompDevelopment
-        claudeDevelopment
+      requiredSections = [
+        "## Working contract"
+        "## Completion"
+        "## Command routing"
+        "## Code search"
+        "## Python"
+        "## Version control"
+        "## Code quality"
+        "## Writing"
       ];
+      onceSections = [
+        "## Working contract"
+        "## Code quality"
+        "## Command routing"
+      ];
+      bannedTerms = [ "gemini" "deepwiki" "mgrep" "lazygit" "deep-research" "chezmoi" ];
+      requiredTools = [ "fd" "rg" "bat" "eza" "dust" "procs" "btm" "ax" "delta" "hyperfine" ];
       noModelCache = text: lib.all (term: !(lib.hasInfix term text)) [
         "gpt-"
         "Gemini"
@@ -122,11 +84,30 @@ in
         "Terra"
         "Luna"
       ];
+      checkHost = name: host:
+        let
+          content = contentForHost host;
+          links = builtins.filter
+            (guide: guide.target != host.startup.target)
+            host.guides;
+          tools = requiredTools ++ lib.optional (name == "claude") "fff";
+        in
+        assert lib.all (section: lib.hasInfix section content) requiredSections;
+        assert lib.all (section: count section content == 1) onceSections;
+        assert lib.all
+          (term: !(lib.hasInfix (lib.toLower term) (lib.toLower content)))
+          bannedTerms;
+        assert noModelCache content;
+        assert lib.all (tool: hasWord tool content) tools;
+        assert lib.all
+          (guide: lib.hasInfix "~/${guide.target}" host.startup.content)
+          links;
+        true;
+      hostChecks = lib.mapAttrsToList checkHost hosts;
     in
-    assert lib.all (once "## Working contract") commonGuides;
-    assert lib.all (once "## Code quality") commonGuides;
-    assert lib.all (once "## Command routing") developmentGuides;
-    assert lib.all noModelCache commonGuides;
+    assert !(hasWord "bat" "batch");
+    assert lib.all (passed: passed) hostChecks;
+    assert lib.hasInfix "The document is done when" hosts.claude.humanDocuments.content;
     pkgs.runCommand "unit-agent-guides" { } ''
       touch $out
     '';
@@ -168,10 +149,12 @@ in
     assert fallbackChains.${routing.bareSelector "search"} == [ ];
     assert fallbackChains.${routing.bareSelector "economy"} == [ ];
     assert lib.all (lib.hasPrefix "openai-codex/") (lib.attrValues omp.normal.modelRoles);
-    assert lib.all (model:
-      lib.hasPrefix "openai-codex/gpt-6-" model
-      || model == "google-antigravity/*"
-    ) omp.normal.enabledModels;
+    assert lib.all
+      (model:
+        lib.hasPrefix "openai-codex/gpt-6-" model
+        || model == "google-antigravity/*"
+      )
+      omp.normal.enabledModels;
     assert lib.elem "google-antigravity/*" omp.normal.enabledModels;
     assert lib.all (model: lib.hasInfix model serializedAdapters) [
       "gpt-6-astra"

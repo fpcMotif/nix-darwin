@@ -25,6 +25,8 @@
 
 let
   helpers = import ../lib/assertions.nix { inherit pkgs lib; };
+  guideCatalog = import ../../modules/home/agent-instructions/guides.nix { inherit lib pkgs; };
+  guideTargets = guideCatalog.targets;
 
   user = "martinfan";
   selectedScope =
@@ -402,29 +404,20 @@ let
         )
         "${prefix} Codex LSP must have no activation writer; desktop scaffolding must respect dry runs")
 
-      (helpers.assertTest "${prefix}-codex-declarative-files"
+      (helpers.assertTest "${prefix}-agent-guide-files"
         (prefix != "darwin" || lib.all
           (path: builtins.hasAttr path homeData.file && !homeData.file.${path}.force)
-          [
+          ([
             ".codex/fast.config.toml"
             ".codex/fast-low.config.toml"
             ".codex/plan.config.toml"
             ".codex/deep.config.toml"
-            ".codex/AGENTS.md"
-            ".codex/guidance/development.md"
             ".codex/guidance/setup.md"
-            ".config/agent-guidance/development.md"
             ".config/agent-routing/omp.yml"
             ".config/agent-routing/omp-economy.yml"
             ".config/agent-routing/README.md"
-            ".omp/agent/AGENTS.md"
-            ".omp/agent/guidance/development.md"
-            ".omp/agent/guidance/human-documents.md"
-            ".claude/CLAUDE.md"
-            ".claude/guidance/development.md"
-            ".claude/guidance/human-documents.md"
-          ])
-        "${prefix} immutable agent guidance and profiles must use Home Manager files without forced overwrite")
+          ] ++ guideTargets))
+        "${prefix} catalog guides and agent profiles must use non-forced Home Manager files")
 
       (helpers.assertTest "${prefix}-codex-user-config-writable"
         (prefix != "darwin" ||
@@ -526,7 +519,7 @@ let
           "gpt-6-sol"
           "gpt-6-luna"
         ]
-          && !(lib.hasInfix "gpt-5." rendered)
+        && !(lib.hasInfix "gpt-5." rendered)
       )
       "Darwin Crush and Zed adapters should render only GPT-6 semantic routes")
 
