@@ -18,6 +18,6 @@ fff is the default discovery tool. codedb is the default structural tool. `rg` i
 - **Coverage**: Use scoped `rg` for text listings, counts, or absence checks. State scope and exclusions; do not truncate completeness checks.
 - **Other repository**: Use its explicit `project` in codedb, or scoped `rg`. Confirm the checkout/worktree before editing.
 - **Fallback**: When MCP is unavailable, warming up, or stale, use scoped `rg`, `fd`, or Read. Do not retry merely to obey routing.
-- **Detail**: Read `~/.claude/search-routing.md` only for unclear routing, tool limits, or examples.
+- **Detail**: Read `~/.claude/search-routing.md` only for unclear routing or tool limits.
 
 Ranked or indexed results do not guarantee every caller or repo-wide absence. Read additional source only when needed context is missing or freshness is uncertain.

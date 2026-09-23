@@ -7,7 +7,7 @@
 - **Choose**: Resolve routine choices from context. Ask when missing information materially changes scope, authorization, or the result.
 - **Proceed**: Existing authorization covers necessary preparation, implementation, and verification. Continue through failures caused by the requested change.
 - **Prepare**: When approval is still needed, finish reversible preparation so the user can review the exact action.
-- **Parallelize**: Give independent subagents bounded tasks, separate edit ownership, acceptance criteria, and required checks.
+- **Subagents**: When delegating, give each agent one bounded task, separate edit ownership, acceptance criteria, and required checks.
 - **Authority**: User instructions override skills. If a skill blocks work, quote its rule and explain the effect.
 - **Preserve**: Read targets before overwriting, deleting, or pushing. Keep unrelated user changes intact.
 - **Recover**: Treat a denied command as blocked. Report it instead of routing around it.

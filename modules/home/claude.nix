@@ -703,6 +703,7 @@ in
       # mutable). Evidence file is what the routes cite.
       ".claude/search-eval.md".source = ./claude/search-eval.md;
       ".claude/search-routing.md".source = ./claude/search-routing.md;
+      ".claude/references/search-routing-examples.md".source = ./claude/references/search-routing-examples.md;
 
       # pstack subagent (see pstackSkills). A skills tree carries no agents;
       # Claude Code reads user agents from ~/.claude/agents by bare name.
