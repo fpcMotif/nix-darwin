@@ -168,8 +168,12 @@ in
     assert fallbackChains.${routing.bareSelector "search"} == [ ];
     assert fallbackChains.${routing.bareSelector "economy"} == [ ];
     assert lib.all (lib.hasPrefix "openai-codex/") (lib.attrValues omp.normal.modelRoles);
-    assert lib.all (lib.hasPrefix "openai-codex/") (lib.filter (m: !(lib.hasSuffix "/*" m)) omp.normal.enabledModels);
-    assert lib.elem "google-antigravity/*" omp.normal.enabledModels;
+    assert lib.all (lib.hasPrefix "openai-codex/gpt-6-") omp.normal.enabledModels;
+    assert lib.all (model: lib.hasInfix model serializedAdapters) [
+      "gpt-6-astra"
+      "gpt-6-sol"
+      "gpt-6-luna"
+    ];
     assert economy.modelRoles.default == routing.selector "economy";
     assert economy.modelRoles.reviewer == routing.selector "check";
     assert economy.modelRoles.plan == routing.selector "plan";
@@ -177,7 +181,7 @@ in
     assert economy.retry == omp.normal.retry;
     assert routing.adapters.codex.profiles.fast.model == routing.modelId "search";
     assert routing.adapters.codex.profiles.plan.model == routing.modelId "plan";
-    assert lib.all (term: !(lib.hasInfix term serializedAdapters)) [ "gpt-5.5" "gpt-5.6-sol" ];
+    assert !(lib.hasInfix "gpt-5." serializedAdapters);
     pkgs.runCommand "unit-ai-model-routing" { } ''
       ${routingPython}/bin/python3 ${./unit/ai-model-routing-test.py} \
         ${../modules/home/ai-model-routing.py} ${policy}

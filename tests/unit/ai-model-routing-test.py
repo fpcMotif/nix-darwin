@@ -49,18 +49,21 @@ def main() -> None:
     routing = load_routing_module(Path(sys.argv[1]))
     policy = routing.load_policy(Path(sys.argv[2]))
     serialized = json.dumps(policy)
-    assert "gpt-5.5" not in serialized
-    assert "gpt-5.6-sol" not in serialized
+    assert "gpt-5." not in serialized
+    assert all(
+        model in serialized
+        for model in ("gpt-6-astra", "gpt-6-sol", "gpt-6-luna")
+    )
     assert routing.resolve(policy, "search") == (
-        "openai-codex/gpt-5.3-codex-spark",
+        "openai-codex/gpt-6-sol",
         "medium",
     )
     assert routing.resolve(policy, "check") == (
-        "openai-codex/gpt-5.3-codex-spark",
+        "openai-codex/gpt-6-sol",
         "high",
     )
     assert routing.resolve(policy, "general") == (
-        "openai-codex/gpt-5.6-terra",
+        "openai-codex/gpt-6-astra",
         "high",
     )
 
@@ -83,12 +86,12 @@ def main() -> None:
         agents_dir = home / ".pi/agent/agents"
         agents_dir.mkdir(parents=True)
         expected_agents = {
-            "planner.md": ("gpt-5.6-terra", "xhigh"),
-            "builder.md": ("gpt-5.6-terra", "high"),
-            "reviewer.md": ("gpt-5.3-codex-spark", "high"),
-            "researcher.md": ("gpt-5.3-codex-spark", "medium"),
-            "context-builder.md": ("gpt-5.3-codex-spark", "medium"),
-            "scout.md": ("gpt-5.3-codex-spark", "medium"),
+            "planner.md": ("gpt-6-astra", "xhigh"),
+            "builder.md": ("gpt-6-astra", "high"),
+            "reviewer.md": ("gpt-6-sol", "high"),
+            "researcher.md": ("gpt-6-sol", "medium"),
+            "context-builder.md": ("gpt-6-sol", "medium"),
+            "scout.md": ("gpt-6-sol", "medium"),
         }
         for filename in expected_agents:
             (agents_dir / filename).write_text(agent_fixture(filename))
@@ -111,13 +114,13 @@ def main() -> None:
 
         settings = json.loads(settings_path.read_text())
         assert settings["defaultProvider"] == "openai-codex"
-        assert settings["defaultModel"] == "gpt-5.6-terra"
+        assert settings["defaultModel"] == "gpt-6-astra"
         assert settings["defaultThinkingLevel"] == "high"
         assert settings["userSetting"] == "keep-me"
         assert {profile["model"] for profile in settings["modelProfiles"]} == {
-            "openai-codex/gpt-5.3-codex-spark",
-            "openai-codex/gpt-5.6-terra",
-            "openai-codex/gpt-5.6-luna",
+            "openai-codex/gpt-6-astra",
+            "openai-codex/gpt-6-sol",
+            "openai-codex/gpt-6-luna",
         }
 
         for filename, (model, effort) in expected_agents.items():

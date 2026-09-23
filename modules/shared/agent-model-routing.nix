@@ -2,38 +2,38 @@
 
 let
   models = {
-    spark = {
+    astra = {
       provider = "openai-codex";
-      id = "gpt-5.3-codex-spark";
+      id = "gpt-6-astra";
     };
-    terra = {
+    sol = {
       provider = "openai-codex";
-      id = "gpt-5.6-terra";
+      id = "gpt-6-sol";
     };
     luna = {
       provider = "openai-codex";
-      id = "gpt-5.6-luna";
+      id = "gpt-6-luna";
     };
   };
 
   jobs = {
     search = {
-      model = "spark";
+      model = "sol";
       effort = "medium";
       fallback = [ ];
     };
     check = {
-      model = "spark";
+      model = "sol";
       effort = "high";
       fallback = [ ];
     };
     general = {
-      model = "terra";
+      model = "astra";
       effort = "high";
       fallback = [ "economy" ];
     };
     plan = {
-      model = "terra";
+      model = "astra";
       effort = "xhigh";
       fallback = [ "economy" ];
     };
@@ -103,9 +103,9 @@ let
     plan = "plan";
   };
   # Selectable by hand in omp's /model picker and --model; no role or fallback
-  # routes to them. enabledModels is an allowlist that accepts globs, and
-  # activation rewrites it, so a provider missing here is invisible in omp.
-  ompManualModels = [ "google-antigravity/*" ];
+  # routes to them. Keep this empty so the picker exposes only the GPT-6
+  # semantic routes rendered below.
+  ompManualModels = [ ];
   ompModelRoles = lib.mapAttrs (_: job: selector job) ompRoleJobs;
   ompAgentOverrides = lib.mapAttrs (_: role: "@${role}") ompAgentRoles;
   ompNormal = {
@@ -200,11 +200,11 @@ let
     inherit models jobs adapters;
   };
 in
-assert routes.search.id == "gpt-5.3-codex-spark";
-assert routes.check.id == "gpt-5.3-codex-spark";
-assert routes.general.id == "gpt-5.6-terra";
-assert routes.economy.id == "gpt-5.6-luna";
-assert lib.all (banned: !(lib.hasInfix banned serialized)) [ "gpt-5.5" "gpt-5.6-sol" ];
+assert routes.search.id == "gpt-6-sol";
+assert routes.check.id == "gpt-6-sol";
+assert routes.general.id == "gpt-6-astra";
+assert routes.economy.id == "gpt-6-luna";
+assert lib.all (model: lib.hasPrefix "gpt-6-" model.id) (lib.attrValues models);
 {
   inherit models jobs routes resolve selector bareSelector modelId effort adapters policy;
 }

@@ -504,10 +504,9 @@ let
         builtins.hasAttr "codex/config.toml" darwinConfig.environment.etc
           && lib.hasInfix "[lsp.servers.tsgo]" codexDefaults
           && lib.hasInfix "[mcp_servers.fff]" codexDefaults
-          && lib.hasInfix ''PI_PLAN_MODEL = "openai-codex/gpt-5.6-terra:xhigh"'' codexDefaults
+          && lib.hasInfix ''PI_PLAN_MODEL = "openai-codex/gpt-6-astra:xhigh"'' codexDefaults
           && !(lib.hasInfix "@PI_" codexDefaults)
-          && !(lib.hasInfix "gpt-5.5" codexDefaults)
-          && !(lib.hasInfix "gpt-5.6-sol" codexDefaults)
+          && !(lib.hasInfix "gpt-5." codexDefaults)
           && !(lib.hasInfix ''
           model = "''
           codexDefaults)
@@ -515,19 +514,21 @@ let
       )
       "Darwin should keep Codex machine defaults in /etc without locking the user model choice")
 
-    (helpers.assertTest "darwin-agent-routing-no-retired-models"
+    (helpers.assertTest "darwin-agent-routing-gpt-6-only"
       (
         let
           crush = darwinHome.xdg.configFile."crush/crush.json".text;
           zed = builtins.toJSON darwinHome.programs.zed-editor.userSettings;
           rendered = crush + zed;
         in
-        lib.hasInfix "gpt-5.6-terra" rendered
-          && lib.hasInfix "gpt-5.3-codex-spark" rendered
-          && !(lib.hasInfix "gpt-5.5" rendered)
-          && !(lib.hasInfix "gpt-5.6-sol" rendered)
+        lib.all (model: lib.hasInfix model rendered) [
+          "gpt-6-astra"
+          "gpt-6-sol"
+          "gpt-6-luna"
+        ]
+          && !(lib.hasInfix "gpt-5." rendered)
       )
-      "Darwin Crush and Zed adapters should render only current semantic routes")
+      "Darwin Crush and Zed adapters should render only GPT-6 semantic routes")
 
     # BetterMouse left Nix on 2026-08-17 and BetterDisplay on 2026-08-19, for
     # the same reason: both ship Sparkle, which self-updated the writable
