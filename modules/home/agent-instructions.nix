@@ -14,11 +14,7 @@ let
       })
       targets)
     personalSkills));
-  files = {
-    "${guideCatalog.hosts.general.startup.target}" = guideCatalog.hosts.general.startup.source;
-    "${guideCatalog.hosts.general.development.target}" = guideCatalog.hosts.general.development.source;
-    "${guideCatalog.hosts.codex.startup.target}" = guideCatalog.hosts.codex.startup.source;
-    "${guideCatalog.hosts.codex.development.target}" = guideCatalog.hosts.codex.development.source;
+  files = guideCatalog.filesFor [ "general" "codex" "omp" ] // {
     ".codex/guidance/setup.md" = ./agent-instructions/codex/guidance/setup.md;
     ".codex/fast.config.toml" = toml.generate "codex-fast.config.toml"
       modelRouting.adapters.codex.profiles.fast;
@@ -33,9 +29,6 @@ let
     ".config/agent-routing/omp-economy.yml" = yaml.generate "omp-economy.yml"
       modelRouting.adapters.omp.economy;
     ".config/agent-routing/README.md" = ../../config/omp/README.md;
-    "${guideCatalog.hosts.omp.startup.target}" = guideCatalog.hosts.omp.startup.source;
-    "${guideCatalog.hosts.omp.development.target}" = guideCatalog.hosts.omp.development.source;
-    "${guideCatalog.hosts.omp.humanDocuments.target}" = guideCatalog.hosts.omp.humanDocuments.source;
     ".omp/agent/agents/codex-plan-deployer.md" = ./agent-instructions/omp/agent/agents/codex-plan-deployer.md;
     ".omp/agent/agents/codex-spark-worker.md" = ./agent-instructions/omp/agent/agents/codex-spark-worker.md;
     ".omp/agent/agents/designer.md" = ./agent-instructions/omp/agent/agents/designer.md;

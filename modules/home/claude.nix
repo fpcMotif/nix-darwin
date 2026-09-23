@@ -680,6 +680,7 @@ in
           pstackDrvs)
         (lib.attrValues skillLinkDirs));
     in
+    lib.mapAttrs (_: source: { inherit source; }) (guideCatalog.filesFor [ "claude" ]) //
     {
       # Contract between this module and scripts/verify-agent-skills.sh (Tier 2),
       # so that script never restates the curation lists and can never drift
@@ -698,12 +699,6 @@ in
         });
 
       ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
-      "${guideCatalog.hosts.claude.startup.target}".source =
-        guideCatalog.hosts.claude.startup.source;
-      "${guideCatalog.hosts.claude.development.target}".source =
-        guideCatalog.hosts.claude.development.source;
-      "${guideCatalog.hosts.claude.humanDocuments.target}".source =
-        guideCatalog.hosts.claude.humanDocuments.source;
       ".claude/statusline-command.sh" = {
         source = ./claude/statusline-command.sh;
         executable = true;

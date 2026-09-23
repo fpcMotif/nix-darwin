@@ -304,34 +304,6 @@ au_latest_github_release() {
   printf '%s\n' "$v"
 }
 
-# Latest npm version, prioritizing bleeding-edge tags (canary, dev, next, etc.)
-# when 'latest' is requested.
-#   au_latest_npm <pkg> [dist-tag]
-au_latest_npm() {
-  local pkg=$1 tag=${2:-latest}
-  local encoded="${pkg//\//%2f}"
-  local v
-  if [ "$tag" = latest ]; then
-    # Bleeding-edge priority: pick the first available tag. A single jq query
-    # filters the priority list natively instead of spawning jq once per tag.
-    local meta
-    meta=$(au_http_get "https://registry.npmjs.org/${encoded}")
-    v=$(printf '%s\n' "$meta" | jq -r '
-      .["dist-tags"] |
-      [ .canary, .dev, .next, .preview, .beta, .alpha, .rc, .latest ] |
-      map(select(. != null and . != "")) |
-      .[0] // ""
-    ')
-  else
-    v=$(au_http_get "https://registry.npmjs.org/${encoded}" \
-          | jq -r --arg t "$tag" '."dist-tags"[$t] // ""')
-  fi
-  [ -n "$v" ] && [ "$v" != "null" ] || {
-    echo "au_latest_npm: empty version for ${pkg}@${tag}" >&2; return 1
-  }
-  printf '%s\n' "$v"
-}
-
 # Read the first `version = "..."` literal in a file. Pass an awk address
 # range (`/start/,/end/`) to scope to a nested block.
 #   au_current_version <file> [awk-range]
@@ -377,41 +349,6 @@ au_prefetch_sri_path() {
   printf '%s\n%s\n' \
     "$(nix hash convert --to sri --hash-algo sha256 "$nar")" \
     "$path"
-}
-
-# Compute npmDepsHash directly from a package-lock.json — no fake-hash dance.
-#   au_prefetch_npm_deps <dir-containing-package-lock.json>
-au_prefetch_npm_deps() {
-  local lockdir=$1
-  [ -f "$lockdir/package-lock.json" ] || {
-    echo "au_prefetch_npm_deps: $lockdir/package-lock.json not found" >&2
-    return 1
-  }
-  nix run --quiet nixpkgs#prefetch-npm-deps -- "$lockdir/package-lock.json"
-}
-
-# Last-resort fake-hash dance: stub the chosen attr with a placeholder, run
-# the build, and parse the resulting `got: sha256-…` from the failure log.
-# Use only for cargoDeps / vendorHash / npmDepsHash where no direct prefetch
-# exists.
-#
-#   au_extract_got_hash <flake-attr>
-AU_FAKE_HASH='sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
-au_extract_got_hash() {
-  local attr=$1
-  local log
-  set +e
-  log=$(nix build "$attr" --no-link 2>&1)
-  set -e
-  local got
-  got=$(printf '%s\n' "$log" | grep -oE 'got:[[:space:]]+sha256-[A-Za-z0-9+/=]+' \
-          | head -1 | sed -E 's/got:[[:space:]]+//')
-  [ -n "$got" ] || {
-    echo "au_extract_got_hash: no 'got: sha256-…' line in build output" >&2
-    printf '%s\n' "$log" | tail -20 >&2
-    return 1
-  }
-  printf '%s\n' "$got"
 }
 
 # ---------------------------------------------------------------------------

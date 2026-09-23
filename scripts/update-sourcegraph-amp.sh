@@ -10,11 +10,8 @@ cd "$(au_repo_root)"
 FILE="pkgs/sourcegraph-amp.nix"
 PKG_DIR="pkgs/sourcegraph-amp"
 
-# Track amp's stable `latest` dist-tag, NOT au_latest_npm's bleeding-edge
-# priority list. Amp's `next` tag is a `-singleexe` side-channel whose build
-# timestamp currently trails `latest`, so the priority list would pin us to an
-# OLDER build and revert manual bumps on the next nightly run. `latest` is
-# amp's stable release channel and matches what `amp` self-updates to.
+# Track the stable `latest` channel used by Amp's self-updater.
+# Its `next` tag is a separate `-singleexe` channel that can trail `latest`.
 latest=$(au_http_get "https://registry.npmjs.org/@sourcegraph%2famp" \
            | jq -r '."dist-tags".latest // ""')
 [ -n "$latest" ] && [ "$latest" != null ] || {

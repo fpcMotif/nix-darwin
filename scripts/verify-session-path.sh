@@ -126,12 +126,6 @@ for _pe in "${(s/:/)PATH}"; do
   print -r -- "PATHENTRY"$'\t'"${_pe}"
 done
 
-# Nesting ${(u)array} directly inside ${#...} silently breaks in zsh -- must
-# assign the deduped copy to a second array first.
-typeset -a _p; _p=("${(s/:/)PATH}")
-typeset -a _u; _u=("${(u)_p[@]}")
-print -r -- "DEDUP"$'\t'"total=${#_p}"$'\t'"unique=${#_u}"
-
 # Record which names are executable in NIX and OTHER dirs. The glob's "-"
 # follows symlinks: every Nix-profile binary is a link into /nix/store, and
 # without it each Nix dir enumerates as empty.
@@ -178,7 +172,7 @@ ZSH_PROBE
 # Keep only tagged probe records, minus any trailing CR.
 clean_probe_output() {
   awk '
-    BEGIN { n = split("GUARD PATHENTRY DEDUP REQCOUNT OVERLAP_COUNT OVERLAPNAME WHENCE", tags, " ") }
+    BEGIN { n = split("GUARD PATHENTRY REQCOUNT OVERLAP_COUNT OVERLAPNAME WHENCE", tags, " ") }
     {
       line = $0
       sub(/\r$/, "", line)
@@ -241,7 +235,7 @@ process_shell_output() {
 
   local -a repeats=()
   local -A path_seen=()
-  local dedup_total="" dedup_unique=""
+  local path_count=0
   local -A whence_p=() whence_w=()
   local -a overlap_names=()
   local overlap_count="0" req_count=""
@@ -256,14 +250,11 @@ process_shell_output() {
         esac
         ;;
       PATHENTRY)
+        path_count=$((path_count + 1))
         if [ -n "${path_seen[$a]+x}" ]; then
           repeats+=("$a")
         fi
         path_seen[$a]=1
-        ;;
-      DEDUP)
-        dedup_total="${a#total=}"
-        dedup_unique="${b#unique=}"
         ;;
       REQCOUNT) req_count="$a" ;;
       OVERLAP_COUNT) overlap_count="$a" ;;
@@ -288,10 +279,10 @@ process_shell_output() {
   fi
 
   # 1. No PATH entry appears twice.
-  if [ "${#repeats[@]}" -eq 0 ] && [ -n "$dedup_total" ] && [ "$dedup_total" = "$dedup_unique" ]; then
-    ok "PATH: ${dedup_total} entries, no duplicates"
+  if [ "$path_count" -gt 0 ] && [ "${#repeats[@]}" -eq 0 ]; then
+    ok "PATH: ${path_count} entries, no duplicates"
   else
-    bad "PATH: ${dedup_total:-?} entries, ${dedup_unique:-?} unique -- repeated: ${repeats[*]+"${repeats[*]}"}"
+    bad "PATH: ${path_count} entries, ${#path_seen[@]} unique -- repeated: ${repeats[*]+"${repeats[*]}"}"
     had_fail=1
   fi
 
@@ -302,11 +293,9 @@ process_shell_output() {
     had_fail=1
   fi
 
-  # 2. Required names resolve on PATH. A function or alias shadowing one is a
-  # WARN, not a failure: the opencode and droid wrappers are intentional.
+  # 2. Required names resolve on PATH.
   for name in "${REQUIRED_NAMES[@]}"; do
     p="${whence_p[$name]:-<not-found>}"
-    w="${whence_w[$name]:-<not-found>}"
     if [ "$name" = cargo ]; then
       if [ "$p" = "$MBX_SHIM" ]; then
         ok "required: cargo -> mbx shim ($p)"
@@ -320,33 +309,21 @@ process_shell_output() {
       bad "required: $name -> '$p', expected a Nix-owned directory"
       had_fail=1
     fi
-    case "$w" in
-      *": command") ;;
-      "<not-found>"|*": none") ;;
-      *) warn "required: $name resolves via whence -p to '$p', but the bare command is shadowed by ${w#*: } -- typing '$name' does NOT run that binary" ;;
-    esac
   done
 
   # 3. Every name found in both a Nix-owned and another dir resolves to the
-  # Nix copy (cargo: the mbx shim). Shadowing is a WARN, as in (2).
+  # Nix copy (cargo: the mbx shim).
   if [ "$overlap_count" -eq 0 ]; then
     na "overlap: no overlaps tested"
   else
     local -a violations=()
-    local -a shadowed_overlaps=()
     for name in ${overlap_names[@]+"${overlap_names[@]}"}; do
       p="${whence_p[$name]:-<not-found>}"
-      w="${whence_w[$name]:-<not-found>}"
       if [ "$name" = cargo ]; then
         [ "$p" = "$MBX_SHIM" ] || violations+=("$name -> $p")
       elif [ "$p" = "<not-found>" ] || ! is_nix_owned_dir "$(dirname -- "$p")"; then
         violations+=("$name -> $p")
       fi
-      case "$w" in
-        *": command") ;;
-        "<not-found>"|*": none") ;;
-        *) shadowed_overlaps+=("$name (${w#*: })") ;;
-      esac
     done
     if [ "${#violations[@]}" -eq 0 ]; then
       ok "overlap: ${overlap_count} name(s) tested, all resolve into a Nix-owned dir (or the mbx shim for cargo)"
@@ -354,27 +331,18 @@ process_shell_output() {
       bad "overlap: ${overlap_count} name(s) tested, ${#violations[@]} violation(s): ${violations[*]}"
       had_fail=1
     fi
-    if [ "${#shadowed_overlaps[@]}" -gt 0 ]; then
-      warn "overlap: ${#shadowed_overlaps[@]} name(s) resolve correctly via whence -p but are shadowed at the bare command: ${shadowed_overlaps[*]}"
-    fi
   fi
 
-  # 4. Every shadowed name, informational.
-  local -a overrides=()
+  # 4. Warn once per shadowed name. Intentional wrappers do not fail the run.
   if [ "${#whence_w[@]}" -gt 0 ]; then
     for name in "${!whence_w[@]}"; do
       w="${whence_w[$name]}"
       case "$w" in
         *": command") ;;
         "<not-found>"|*": none") ;;
-        *) overrides+=("$name (${w#*: })") ;;
+        *) warn "$name resolves via whence -p to '${whence_p[$name]:-<not-found>}', but the bare command is shadowed by ${w#*: }" ;;
       esac
     done
-  fi
-  if [ "${#overrides[@]}" -eq 0 ]; then
-    info "overrides: none"
-  else
-    info "overrides (alias/function/builtin, informational): ${overrides[*]}"
   fi
 
   [ "$had_fail" -eq 1 ] && BASE_FAIL=1

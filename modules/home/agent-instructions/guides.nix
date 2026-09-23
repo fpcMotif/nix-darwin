@@ -84,4 +84,7 @@ let
 in
 {
   inherit hosts targets;
+  filesFor = names: builtins.listToAttrs (lib.concatMap
+    (name: map (guide: lib.nameValuePair guide.target guide.source) hosts.${name}.guides)
+    names);
 }

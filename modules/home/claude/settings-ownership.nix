@@ -18,45 +18,20 @@ let
     def set_owned($path; $value):
       if ($path | length) == 0 then
         $value
-      elif ($path | length) == 1 then
-        if type == "object" then
-          .[$path[0]] = $value
-        else
-          { ($path[0]): $value }
-        end
       else
-        . as $root
-        | $path[0] as $key
-        | if ($root | type) != "object" then
-            { ($key): ({} | set_owned($path[1:]; $value)) }
-          elif ($root[$key] | type) == "object" then
-            .[$key] |= set_owned($path[1:]; $value)
-          else
-            .[$key] = ({} | set_owned($path[1:]; $value))
-          end
+        (if type == "object" then . else {} end)
+        | .[$path[0]] |= set_owned($path[1:]; $value)
       end;
 
     def set_default($path; $value):
-      if ($path | length) == 0 then
+      if ($path | length) == 0 or type != "object" then
         .
       elif ($path | length) == 1 then
-        if type == "object" then .[$path[0]] = $value else . end
+        .[$path[0]] = $value
+      elif .[$path[0]] == null then
+        .[$path[0]] = ({} | set_default($path[1:]; $value))
       else
-        . as $root
-        | $path[0] as $key
-        | if ($root | type) != "object" then
-            $root
-          elif ($root | has($key)) then
-            if ($root[$key] | type) == "object" then
-              .[$key] |= set_default($path[1:]; $value)
-            elif ($root[$key] | type) == "null" then
-              .[$key] = ({} | set_default($path[1:]; $value))
-            else
-              .
-            end
-          else
-            .[$key] = ({} | set_default($path[1:]; $value))
-          end
+        .[$path[0]] |= set_default($path[1:]; $value)
       end;
 
     def event_groups($settings; $event):

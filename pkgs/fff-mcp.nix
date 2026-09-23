@@ -8,7 +8,8 @@
 # zed-nightly-bin.nix already solve by fetching the maintainer's own
 # release asset instead.
 #
-# Registered with Claude Code via the `claudeMcpAlwaysLoaded` activation script in
+# Registered with Claude Code via the
+# `claudeMcpAlwaysLoaded` activation script in
 # modules/home/claude.nix (shells out to `claude mcp add` — the only way to
 # write ~/.claude.json's mcpServers without risking its CLI-managed schema,
 # same reasoning as claudeDesktopMcpScaffold in lsp.nix).

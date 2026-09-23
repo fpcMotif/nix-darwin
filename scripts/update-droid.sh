@@ -2,8 +2,7 @@
 # Bump the Factory Droid CLI in pkgs/droid.nix.
 #
 # Factory publishes per-platform binary-only npm packages (@factory/cli-*).
-# They share one version and only a stable `latest` dist-tag, so query it
-# directly rather than via au_latest_npm's bleeding-edge priority list.
+# They share one version and a stable `latest` dist-tag.
 # pkgs/droid.nix re-signs the binary ad-hoc at build time (Factory's
 # linker-signed sig is invalid from the read-only Nix store), so a plain
 # version+hash bump is all that's needed here.
