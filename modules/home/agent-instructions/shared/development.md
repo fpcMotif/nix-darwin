@@ -54,6 +54,11 @@ Ranked results alone cannot prove absence.
 - Plain `cargo` also runs through mbx in zsh, whose PATH puts mbx's cargo shim first. `mbx COMMAND` works in any shell.
 - For a slow build or a cache miss, run `mbx explain`. Check the setup with `mbx doctor`. Run `mbx gc --dry-run` before `mbx gc`.
 
+## Project environments
+
+- Agent shells never run direnv's prompt hook. In a project with `.envrc`, run commands through `direnv exec . COMMAND`.
+- If direnv reports the `.envrc` is blocked, ask the user. `direnv allow` runs the file's code.
+
 ## mise
 
 - mise is not activated in agent shells. In a project with `mise.toml`, run its tools with `mise exec -- COMMAND` and its tasks with `mise run TASK`.
