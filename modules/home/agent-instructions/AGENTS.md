@@ -2,7 +2,7 @@
 
 User: f.
 
-- **Develop**: Before choosing a shell command, running Python, or using version control, read `~/.config/agent-guidance/development.md`.
+- **Develop**: Before choosing a shell command, running Python or Rust, adding an environment variable, or using version control, read `~/.config/agent-guidance/development.md`.
 
 ## Search
 

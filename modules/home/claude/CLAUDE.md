@@ -2,7 +2,7 @@
 
 ## Claude
 
-- **Develop**: Before choosing a shell command, running Python, or using version control, read `~/.claude/guidance/development.md`.
+- **Develop**: Before choosing a shell command, running Python or Rust, adding an environment variable, or using version control, read `~/.claude/guidance/development.md`.
 - **Documents**: Before writing an issue, specification, PRD, or analysis, read `~/.claude/guidance/human-documents.md`.
 
 ## Search
