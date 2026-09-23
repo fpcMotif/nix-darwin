@@ -133,6 +133,12 @@ def main() -> None:
         normal = policy["adapters"]["omp"]["normal"]
         assert omp["modelRoles"] == normal["modelRoles"]
         assert omp["enabledModels"] == normal["enabledModels"]
+        assert "google-antigravity/*" in omp["enabledModels"]
+        assert all(
+            model == "google-antigravity/*"
+            or model.startswith("openai-codex/gpt-6-")
+            for model in omp["enabledModels"]
+        )
         assert omp["retry"] == normal["retry"]
         assert (
             omp["task"]["agentModelOverrides"] == normal["task"]["agentModelOverrides"]

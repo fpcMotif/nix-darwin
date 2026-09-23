@@ -53,8 +53,9 @@ Sol has no model fallback: exhausted Sol allowance must stop or wait for reset.
 Retries are bounded; sessions do not sleep until a distant quota reset.
 
 Every role and fallback chain uses the subscription-backed `openai-codex` provider.
-The `/model` picker and `--model` expose only the GPT-6 routes: Astra, Sol, and Luna.
-`enabledModels` is an allowlist rewritten on every activation.
+The `/model` picker and `--model` expose GPT-6 Astra, Sol, and Luna, plus the
+current Google Antigravity catalog—including Gemini Flash, Claude Opus, and Claude Sonnet.
+No other provider is enabled.
 
 GPT-6 models share allowance. Switching models can conserve usage but cannot create another allowance.
 Check `omp usage --redact` and `omp models openai-codex` after login and when availability changes.

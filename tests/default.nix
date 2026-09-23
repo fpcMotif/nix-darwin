@@ -168,7 +168,11 @@ in
     assert fallbackChains.${routing.bareSelector "search"} == [ ];
     assert fallbackChains.${routing.bareSelector "economy"} == [ ];
     assert lib.all (lib.hasPrefix "openai-codex/") (lib.attrValues omp.normal.modelRoles);
-    assert lib.all (lib.hasPrefix "openai-codex/gpt-6-") omp.normal.enabledModels;
+    assert lib.all (model:
+      lib.hasPrefix "openai-codex/gpt-6-" model
+      || model == "google-antigravity/*"
+    ) omp.normal.enabledModels;
+    assert lib.elem "google-antigravity/*" omp.normal.enabledModels;
     assert lib.all (model: lib.hasInfix model serializedAdapters) [
       "gpt-6-astra"
       "gpt-6-sol"

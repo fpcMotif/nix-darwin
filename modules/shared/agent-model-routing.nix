@@ -102,10 +102,10 @@ let
     librarian = "smol";
     plan = "plan";
   };
-  # Selectable by hand in omp's /model picker and --model; no role or fallback
-  # routes to them. Keep this empty so the picker exposes only the GPT-6
-  # semantic routes rendered below.
-  ompManualModels = [ ];
+  # GPT-6 routes are selectable by hand in omp's /model picker and --model.
+  # Keep the Antigravity provider available for its current Flash, Opus, and
+  # Sonnet offerings without routing agents or fallbacks to it.
+  ompManualModels = [ "google-antigravity/*" ];
   ompModelRoles = lib.mapAttrs (_: job: selector job) ompRoleJobs;
   ompAgentOverrides = lib.mapAttrs (_: role: "@${role}") ompAgentRoles;
   ompNormal = {
