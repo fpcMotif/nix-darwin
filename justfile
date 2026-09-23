@@ -198,6 +198,14 @@ verify-macos: _no-sudo
 verify-skills: _no-sudo
     bash scripts/verify-agent-skills.sh
 
+# Tier 2: spawn real zsh processes (all four modes, clean and forked) and
+# confirm PATH is duplicate-free and the mbx cargo shim / Nix tools win over
+# their user-dir duplicates. Pass a built home-files dir to test it before
+# `just switch`; with none, tests the LIVE dotfiles. Non-hermetic, so it is
+# NOT part of `nix flake check`.
+verify-path home_files="": _no-sudo
+    bash scripts/verify-session-path.sh {{ home_files }}
+
 # Garbage-collect old generations older than 30 days.
 gc:
     sudo nix-collect-garbage --delete-older-than 30d
