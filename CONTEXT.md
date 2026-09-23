@@ -45,6 +45,12 @@ _Avoid_: disabled app, uninstalled app.
 A local diagnostic snapshot for the Mac's own maintenance loop, not telemetry and not a remote monitoring system. It exists to make drift, storage pressure, crashes, backups, and Nix garbage-collection state inspectable.
 _Avoid_: monitoring, analytics, metrics pipeline.
 
+### Shell sessions
+
+**PATH tier**:
+An ordered group of directories in the base session PATH: shims, Nix profiles, then user installers. For an external command, the first executable match wins. Project environments may put their own tools first.
+_Avoid_: PATH priority, PATH layer.
+
 ### Writable app files
 
 **Seeded file**:
