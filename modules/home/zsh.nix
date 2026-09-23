@@ -218,7 +218,12 @@ in
       OBSIDIAN_VAULT = "$HOME/Documents/obsidian";
     };
 
-    home.sessionPath = [
+    # mbx's cargo shim leads, so plain `cargo` runs through mbx's shared build
+    # cache ahead of the Nix cargo. hm-session-vars.sh prepends this list in
+    # login shells after ~/.zshenv, so an envExtra prepend would lose here.
+    home.sessionPath = lib.optionals isDarwin [
+      "$HOME/Library/Application Support/mbx/bin"
+    ] ++ [
       "/etc/profiles/per-user/$USER/bin"
       "/run/current-system/sw/bin"
       "/nix/var/nix/profiles/default/bin"
@@ -460,7 +465,6 @@ in
       '';
 
       envExtra = lib.optionalString isDarwin ''
-        export PATH="$HOME/Library/Application Support/mbx/bin:$PATH"
         export SHELL="/bin/zsh"
       '' + ''
         export BAT_THEME="Catppuccin Macchiato"
