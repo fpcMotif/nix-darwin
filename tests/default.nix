@@ -121,6 +121,7 @@ in
       ${../modules/home/claude/hooks/edit-batch-nudge.sh}
     touch $out
   '';
+  unit-claude-settings-ownership = callTest ./unit/claude-settings-ownership-test.nix { };
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
   unit-pstack-hygiene = callTest ./unit/pstack-hygiene-test.nix { };

@@ -54,7 +54,7 @@ _Avoid_: PATH priority, PATH layer.
 ### Writable app files
 
 **Seeded file**:
-A writable app file that Nix creates once if it is missing. After that, the app owns the file, except for its owned keys.
+A writable app file Nix creates when missing. Nix reconciles declared values and additions each switch; the app owns other data.
 _Avoid_: managed file, symlinked config (a seeded file is a real file, not a link into the Nix store).
 
 **Owned key**:

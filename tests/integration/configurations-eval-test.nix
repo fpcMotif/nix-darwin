@@ -194,12 +194,22 @@ let
           && homePrograms.worktrunk.settings.skip-shell-integration-prompt == true)
         "${prefix} Home Manager should own worktrunk config.toml and pre-answer the prompt that writes it")
 
-      (helpers.assertTest "${prefix}-claude-worktrunk-marker-hooks"
+      (helpers.assertTest "${prefix}-claude-settings-ownership-activation"
         (homeData.file ? ".claude/hooks/worktrunk-marker.sh"
-          && lib.hasInfix "worktrunk-marker.sh working" homeActivation.claudeHooksAssert.data
-          && lib.hasInfix "worktrunk-marker.sh clear" homeActivation.claudeHooksAssert.data
-          && !(lib.hasInfix "WorktreeCreate" homeActivation.claudeHooksAssert.data))
-        "${prefix} Claude hooks should set worktrunk activity markers but leave worktree creation native")
+          && homeActivation ? "claudeSettingsOwnership"
+          && builtins.elem "writeBoundary" homeActivation.claudeSettingsOwnership.after
+          && builtins.all
+          (name: !(builtins.hasAttr name homeActivation))
+          [
+            "claudeSkillSurfaceDedup"
+            "claudeSettingsSeed"
+            "claudePermissionsAssert"
+            "claudeDisableGlobalMcpPlugins"
+            "claudeMemorySettingsAssert"
+            "claudeWorktreeSettingsAssert"
+            "claudeHooksAssert"
+          ])
+        "${prefix} should use one post-writeBoundary Claude settings reconciliation activation")
 
       (helpers.assertTest "${prefix}-home-tmux-enabled"
         (homePrograms.tmux.enable == true)
@@ -276,54 +286,6 @@ let
         )
         "${prefix} should prune removed skills without mutating during Home Manager dry runs")
 
-      (helpers.assertTest "${prefix}-claude-global-mcp-plugin-disable-lever-wired"
-        (
-          let activation = homeActivation.claudeDisableGlobalMcpPlugins.data;
-          in
-          lib.hasInfix "enabledPlugins" activation
-          && lib.hasInfix "reduce $ids[]" activation
-        )
-        "${prefix} should keep the reproducible global-plugin-disable lever wired, even with no ids currently parked")
-
-      # Permissions are nix-owned and AUTHORITATIVE: the live settings.json had
-      # drifted to 68/47/45 rules against a 13/0/0 seed, so a fresh host got no
-      # ~/.ssh deny at all. Pin the three properties that make it reproducible.
-      (helpers.assertTest "${prefix}-claude-permissions-asserted"
-        (
-          let activation = homeActivation.claudePermissionsAssert.data;
-          in
-          # The security boundary that still bites under bypassPermissions.
-          lib.hasInfix ''Read(~/.ssh/**)'' activation
-          && lib.hasInfix ''"defaultMode":"bypassPermissions"'' activation
-          # `+` not `=`: overwrite the declared keys, keep sibling keys Claude
-          # Code may add later (additionalDirectories, …).
-          && lib.hasInfix "((.permissions // {}) + $perms)" activation
-          && lib.hasInfix "DRY_RUN" activation
-        )
-        "${prefix} should re-assert the nix-owned permission rules on every switch, not just seed them once")
-
-      # The deny key has exactly one writer in steady state. If the dedup block
-      # stopped running after the assert block, the two would disagree about
-      # grill-me and rewrite settings.json on every single switch, forever.
-      (helpers.assertTest "${prefix}-claude-permissions-single-deny-writer"
-        (homeActivation.claudeSkillSurfaceDedup.data or null != null
-          && builtins.elem "claudePermissionsAssert" homeActivation.claudeSkillSurfaceDedup.after)
-        "${prefix} should order the skill-dedup deny append after the authoritative permissions assert")
-
-      # The three assertions below pin the Claude-only de-duplication contract:
-      # hide the bundle copy from Claude (and ONLY Claude), un-list the refused
-      # plugin skills, and never let either lever reach the shared bundle that
-      # Codex/Droid/OpenCode/Crush read.
-      (helpers.assertTest "${prefix}-agent-skills-claude-dedup-wired"
-        (
-          let activation = homeActivation.claudeSkillSurfaceDedup.data;
-          in
-          lib.hasInfix "skillOverrides" activation
-          && lib.hasInfix ''"off"'' activation
-          && lib.hasInfix "permissions" activation
-          && lib.hasInfix "DRY_RUN" activation
-        )
-        "${prefix} should hide plugin-duplicated skills from Claude Code only, via settings.json skillOverrides")
 
       (helpers.assertTest "${prefix}-claude-plugin-skill-prune-wired"
         (

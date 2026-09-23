@@ -93,7 +93,7 @@ Each turn in a chain is one round trip, about 2k tokens of context at the calibr
 
 - `~/.claude/hooks/shell-guard.sh` PreToolUse(Bash). Groups and switches: `UV_GUARD_OFF=1` (bare python/pip/venv to uv), `EDIT_GUARD_OFF=1` (inline python file writes, `sed -i`/`perl -i`, heredoc into a file, `echo`/`printf` into a file, to Edit/Write), `TOOL_GUARD_OFF=1` (`cat`, `sed`, `find`, `perl`, `awk -i` to `bat -pp --line-range`, `rg -r`, `fd`, `jq`, `sg`). Heredoc bodies are stripped before matching, so text inside a document never reads as a command. Works on BSD and GNU userlands (table test runs under `PATH=/usr/bin:/bin` and in the nix sandbox).
 - `hooks/shell-guard-test.sh`: 84-row allow/deny table; `just check` runs it as `unit-shell-guard`.
-- `claude.nix`: `claudeBashGuards` lists the Bash guards; the seed and the `claudeHooksAssert` activation add a missing guard to the live settings.json on every switch, additively by command path.
+- `claude.nix`: `claudeGuardHooks` lists tool guards; the seed and `claudeSettingsOwnership` add a missing guard to live settings by command path.
 - CLAUDE.md: "File changes" section and the uv line in "Python" carry the positive form; the hook carries the enforcement.
 
 Rerun: `uv run modules/home/claude/evals/shell-guard-trial.py --steer-bash --runs 2 --model sonnet --out /tmp/trial.json` (about 4 minutes, 12 runs, ~1 USD on sonnet). Census: `uv run modules/home/claude/evals/edit-tool-census.py ~/.claude/projects/<encoded-cwd>/*.jsonl` on one workspace at a time.
