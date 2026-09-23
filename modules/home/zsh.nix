@@ -6,6 +6,44 @@ let
   viMode = config.martin.shell.viMode;
   search = config.martin.shell.search;
 
+  # PATH tiers (CONTEXT.md), in order: an earlier tier wins every command name
+  # it shares with a later one. The Nix-profile entries repeat nix-darwin's
+  # base PATH on purpose: their earlier position keeps the Nix copies of
+  # cargo, rustc, bun, and others ahead of user-installed ones. Check with
+  # `just verify-path`.
+  pathTiers = {
+    # mbx's cargo shim, so plain `cargo` runs through mbx's build cache
+    # (docs/adr/0016).
+    shims = lib.optionals isDarwin [
+      "$HOME/Library/Application Support/mbx/bin"
+    ];
+    # Same order as nix-darwin's base PATH (set-environment).
+    nixProfiles = [
+      "$HOME/.nix-profile/bin"
+      "/etc/profiles/per-user/$USER/bin"
+      "/run/current-system/sw/bin"
+      "/nix/var/nix/profiles/default/bin"
+    ];
+    userInstallers = [
+      "$HOME/.local/bin"
+      "/usr/local/bin"
+      "$HOME/bin"
+      "$HOME/.bun/bin"
+      "$HOME/.elixir-install/installs/otp/27.3.4/bin"
+      "$HOME/.elixir-install/installs/elixir/1.18.4-otp-27/bin"
+      "$HOME/.cargo/bin"
+      "$HOME/go/bin"
+      "$HOME/.opencode/bin"
+      "$HOME/.codeium/windsurf/bin"
+      "$HOME/.antigravity/antigravity/bin"
+      "$HOME/.amp/bin"
+      "$HOME/.fabro/bin"
+    ];
+    apps = lib.optionals isDarwin [
+      "/Applications/Obsidian.app/Contents/MacOS"
+    ];
+  };
+
   # The upstream fzf-git.sh half of the plane: sourced, re-registered after
   # zsh-vi-mode's keymap reset, and packaged. Everything it gates shares one
   # reason, so the predicate is spelled once.
@@ -218,33 +256,10 @@ in
       OBSIDIAN_VAULT = "$HOME/Documents/obsidian";
     };
 
-    # mbx's cargo shim leads, so plain `cargo` runs through mbx's shared build
-    # cache ahead of the Nix cargo. hm-session-vars.sh prepends this list in
-    # login shells after ~/.zshenv, so an envExtra prepend would lose here.
-    home.sessionPath = lib.optionals isDarwin [
-      "$HOME/Library/Application Support/mbx/bin"
-    ] ++ [
-      "/etc/profiles/per-user/$USER/bin"
-      "/run/current-system/sw/bin"
-      "/nix/var/nix/profiles/default/bin"
-      "$HOME/.local/bin"
-      "/usr/local/bin"
-      "$HOME/bin"
-      "$HOME/.bun/bin"
-      "$HOME/.elixir-install/installs/otp/27.3.4/bin"
-      "$HOME/.elixir-install/installs/elixir/1.18.4-otp-27/bin"
-      "$HOME/.cargo/bin"
-      "$HOME/go/bin"
-      "$HOME/.opencode/bin"
-      "$HOME/.codeium/windsurf/bin"
-      "$HOME/.antigravity/antigravity/bin"
-      "$HOME/.amp/bin"
-      "$HOME/.fabro/bin"
-    ] ++ lib.optionals isDarwin [
-      "/Applications/Obsidian.app/Contents/MacOS"
-    ] ++ [
-      "$HOME/.nix-profile/bin"
-    ];
+    # hm-session-vars.sh prepends this list in login shells after ~/.zshenv,
+    # so PATH order is set here; an envExtra prepend would lose.
+    home.sessionPath = pathTiers.shims ++ pathTiers.nixProfiles
+      ++ pathTiers.userInstallers ++ pathTiers.apps;
 
     programs.fzf = {
       enable = true;
@@ -464,7 +479,13 @@ in
         source ~/.orbstack/shell/init.zsh 2>/dev/null || :
       '';
 
-      envExtra = lib.optionalString isDarwin ''
+      # Every zsh reads .zshenv, but only interactive ones reach Home Manager's
+      # `typeset -U path` in .zshrc. PATH and path share one value, and -U
+      # applies to whichever name an assignment uses, so both get it. First
+      # occurrence wins, so tier order holds.
+      envExtra = ''
+        typeset -U PATH path
+      '' + lib.optionalString isDarwin ''
         export SHELL="/bin/zsh"
       '' + ''
         export BAT_THEME="Catppuccin Macchiato"
