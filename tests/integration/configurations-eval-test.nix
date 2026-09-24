@@ -87,20 +87,16 @@ let
       (!(lib.hasInfix "ZVM_INIT_MODE" zshViOff.programs.zsh.initContent))
       "Disabling martin.shell.viMode must leave no ZVM_* wiring behind")
 
-    (helpers.assertTest "home-zsh-vi-mode-on-plugin-single-and-keymap"
+    (helpers.assertTest "home-zsh-vi-mode-on-native-keymap"
       (zshViOn.programs.zsh.defaultKeymap == "viins"
-        && builtins.length zshViOn.programs.zsh.plugins == 1)
-      "Default-evaluated module must land in viins with exactly the zsh-vi-mode plugin (runtime wiring is the unit seam's job)")
+        && zshViOn.programs.zsh.plugins == [ ])
+      "Default-evaluated module must land in viins with zero plugins (native Zsh vi mode)")
   ];
 
   # Same seam, second plane: martin.shell.search. Proves the toggle drops
   # every trace of the search machinery and that per-key nulls remove only
   # their own chord.
   searchToggleChecks = [
-    (helpers.assertTest "home-zsh-search-off-no-stty"
-      (!(lib.hasInfix "stty -ixon" zshSearchOff.programs.zsh.initContent))
-      "Disabling martin.shell.search must drop the stty -ixon preamble")
-
     (helpers.assertTest "home-zsh-search-off-no-widgets"
       (!(lib.hasInfix "martin-content-search" zshSearchOff.programs.zsh.initContent))
       "Disabling martin.shell.search must leave no content-search widgets behind")
@@ -109,16 +105,63 @@ let
       (!(lib.any (p: p.name == "fzf-git-sh") zshSearchOff.programs.zsh.plugins)
         && !(hasPackage "fzf-git-sh" (zshSearchOff.home.packages or [ ])))
       "Disabling martin.shell.search must drop fzf-git-sh from both plugins and home.packages")
+
     (helpers.assertTest "home-zsh-search-null-dirjump-chord-gone"
       (!(lib.hasInfix "'^Gd'" zshDirJumpNull.programs.zsh.initContent)
         && lib.hasInfix "'^Gf'" zshDirJumpNull.programs.zsh.initContent)
       "Setting martin.shell.search.keys.dirJump to null must remove only the ^Gd chord")
 
-    (helpers.assertTest "home-zsh-search-default-stty-present"
-      (lib.hasInfix "stty -ixon" zshViOn.programs.zsh.initContent)
-      "The default evaluation must keep the search-plane stty -ixon preamble")
+    (helpers.assertTest "home-zsh-search-default-widgets-present"
+      (lib.hasInfix "martin-content-search" zshViOn.programs.zsh.initContent)
+      "The default evaluation must include the search-plane widgets")
   ];
 
+  # Modular shell evaluation: proves each optional module is independently removable
+  # and that session/PATH remains invariant (issue #381 requirement).
+  evalModularShell = mods: (import ../lib/zsh-module-eval.nix { inherit pkgs lib; })
+    ({ includeSession = true; } // mods);
+
+  shellAll = evalModularShell { includeDirenv = true; includeFzf = true; includeZoxide = true; includePrompt = true; };
+  shellMinimal = evalModularShell { };
+  shellNoPrompt = evalModularShell { includeDirenv = true; includeFzf = true; includeZoxide = true; };
+  shellNoFzf = evalModularShell { includeDirenv = true; includeZoxide = true; includePrompt = true; };
+  shellNoZoxide = evalModularShell { includeDirenv = true; includeFzf = true; includePrompt = true; };
+  shellNoDirenv = evalModularShell { includeFzf = true; includeZoxide = true; includePrompt = true; };
+
+  modularShellChecks = [
+    (helpers.assertTest "modular-shell-minimal-zsh-works"
+      (shellMinimal.programs.zsh.enable == true
+        && lib.hasInfix "PROMPT='%F{cyan}%1~%f %# '" shellMinimal.programs.zsh.initContent)
+      "Minimal shell without optional modules must enable zsh and have native fallback prompt")
+
+    (helpers.assertTest "modular-shell-path-invariant-across-modules"
+      (shellAll.home.sessionPath == shellMinimal.home.sessionPath
+        && shellAll.home.sessionPath == shellNoPrompt.home.sessionPath
+        && shellAll.home.sessionPath == shellNoFzf.home.sessionPath
+        && shellAll.home.sessionPath == shellNoZoxide.home.sessionPath
+        && shellAll.home.sessionPath == shellNoDirenv.home.sessionPath)
+      "home.sessionPath must remain completely invariant whether optional modules are present or removed")
+
+    (helpers.assertTest "modular-shell-delete-prompt-safe"
+      (shellNoPrompt.programs.zsh.enable == true
+        && (!(shellNoPrompt.programs ? starship) || shellNoPrompt.programs.starship.enable == false))
+      "Removing prompt.nix leaves zsh working and disables starship")
+
+    (helpers.assertTest "modular-shell-delete-fzf-safe"
+      (shellNoFzf.programs.zsh.enable == true
+        && (!(shellNoFzf.programs ? fzf) || shellNoFzf.programs.fzf.enable == false))
+      "Removing fzf.nix leaves zsh working and disables fzf")
+
+    (helpers.assertTest "modular-shell-delete-zoxide-safe"
+      (shellNoZoxide.programs.zsh.enable == true
+        && (!(shellNoZoxide.programs ? zoxide) || shellNoZoxide.programs.zoxide.enable == false))
+      "Removing zoxide.nix leaves zsh working and disables zoxide")
+
+    (helpers.assertTest "modular-shell-delete-direnv-safe"
+      (shellNoDirenv.programs.zsh.enable == true
+        && (!(shellNoDirenv.programs ? direnv) || shellNoDirenv.programs.direnv.enable == false))
+      "Removing direnv.nix leaves zsh working and disables direnv")
+  ];
   homeChecks = prefix: homeConfig: expectedHomeDirectory:
     let
       homeData = homeConfig.home;
@@ -170,11 +213,63 @@ let
         (homePrograms.zsh.defaultKeymap == "viins")
         "${prefix} Home Manager should land zsh in viins when vi mode is enabled")
 
-      (helpers.assertTest "${prefix}-home-zsh-vi-mode-plugin-wired"
-        (lib.any
-          (p: p.name == "zsh-vi-mode" && p.file == "share/zsh-vi-mode/zsh-vi-mode.plugin.zsh")
-          homePrograms.zsh.plugins)
-        "${prefix} Home Manager should source zsh-vi-mode via programs.zsh.plugins")
+      (helpers.assertTest "${prefix}-home-zsh-vi-mode-native-zero-plugins"
+        (homePrograms.zsh.plugins == [ ])
+        "${prefix} Home Manager should use native Zsh vi mode with zero third-party plugins")
+
+      (helpers.assertTest "${prefix}-home-session-path-no-duplicates"
+        (builtins.length (lib.unique homeData.sessionPath) == builtins.length homeData.sessionPath)
+        "${prefix} home.sessionPath must contain no duplicate entries")
+
+      (helpers.assertTest "${prefix}-home-session-path-tiers-order"
+        (
+          let
+            p = homeData.sessionPath;
+            userInstallersStart = lib.elemAt p (if prefix == "darwin" then 5 else 4);
+          in
+          (prefix == "darwin" -> (lib.head p == "$HOME/Library/Application Support/mbx/bin"))
+          && (lib.elem "$HOME/.nix-profile/bin" p)
+          && (userInstallersStart == "$HOME/.local/bin")
+        )
+        "${prefix} home.sessionPath must respect tier ordering: shims -> nixProfiles -> userInstallers")
+
+      (helpers.assertTest "${prefix}-home-session-variables-editor"
+        (homeData.sessionVariables.EDITOR == "nvim" && homeData.sessionVariables.VISUAL == "nvim")
+        "${prefix} home.sessionVariables must set EDITOR and VISUAL to nvim")
+
+      (helpers.assertTest "${prefix}-home-session-variables-pnpm-platform"
+        (if prefix == "darwin" then
+          homeData.sessionVariables.PNPM_HOME == "$HOME/Library/pnpm"
+        else
+          homeData.sessionVariables.PNPM_HOME == "$HOME/.local/share/pnpm")
+        "${prefix} home.sessionVariables must set platform-correct PNPM_HOME")
+      (helpers.assertTest "${prefix}-ghostty-opens-intended-shell"
+        (homePrograms.zsh.enable == true
+          && (prefix == "darwin" -> homeData.sessionVariables.SHELL == "/bin/zsh"))
+        "${prefix} Ghostty opens intended login shell (zsh enabled, SHELL=/bin/zsh on Darwin)")
+
+      (helpers.assertTest "${prefix}-tmux-opens-intended-shell"
+        (
+          let
+            zshBin = builtins.unsafeDiscardStringContext "${pkgs.zsh}/bin/zsh";
+            tmuxCfg = builtins.unsafeDiscardStringContext homePrograms.tmux.extraConfig;
+          in
+          homePrograms.tmux.shell == "${pkgs.zsh}/bin/zsh"
+          && lib.hasInfix "default-command \"${zshBin} -l\"" tmuxCfg
+        )
+        "${prefix} tmux must explicitly configure zsh as default shell and login default-command")
+      (helpers.assertTest "${prefix}-direnv-activates-projects"
+        (homePrograms.direnv.enable == true
+          && homePrograms.direnv.nix-direnv.enable == true
+          && homePrograms.direnv.enableZshIntegration == true)
+        "${prefix} direnv and nix-direnv with zsh integration must be enabled")
+
+      (helpers.assertTest "${prefix}-agent-noninteractive-receives-environment"
+        (homeData.sessionVariables ? EDITOR
+          && homeData.sessionVariables ? BUN_INSTALL
+          && homeData.sessionVariables ? CLAUDE_CODE_EFFORT_LEVEL
+          && homeData.sessionVariables ? CDPATH)
+        "${prefix} non-interactive and agent shells receive session environment variables")
 
       (helpers.assertTest "${prefix}-home-zoxide-enabled"
         (homePrograms.zoxide.enable == true)
@@ -718,7 +813,7 @@ let
     (helpers.assertTest "darwin-zed-settings-force-managed"
       (darwinHome.xdg.configFile."zed/settings.json".force == true)
       "Darwin Home Manager should force-manage Zed settings so an equivalent regular file cannot block activation")
-  ] ++ viModeToggleChecks ++ searchToggleChecks ++ (homeChecks "darwin" darwinHome "/Users/${user}");
+  ] ++ viModeToggleChecks ++ searchToggleChecks ++ modularShellChecks ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
   nixosChecks = [
     (toplevelEvaluatesOnNative "x230" "x86_64-linux" x230Config)

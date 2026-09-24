@@ -47,7 +47,7 @@ let
   lspServers = with pkgs; [
     # === TypeScript / JavaScript — modern Rust/Go stack ===
     typescript # `tsgo --lsp` — TS 7 native LSP + tsserver for vtsls/tsls
-               # (formerly typescript-go; nixpkgs merged both into `typescript`)
+    # (formerly typescript-go; nixpkgs merged both into `typescript`)
     oxlint # `oxlint --lsp` — oxc lint LSP
     vtsls # tsserver wrapper, opt-in fallback
     typescript-language-server

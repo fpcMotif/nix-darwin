@@ -14,11 +14,7 @@
 set -euo pipefail
 
 init_content=$1
-zvm_pkg=$2
-fzf_pkg=$3
-autosuggestions_pkg=$4
-syntax_pkg=$5
-fzf_git_pkg=${6:-}   # unused in-body; see closure note above
+fzf_pkg=${2:-}
 scenario=${SCENARIO:-default}
 export scenario
 
@@ -42,17 +38,13 @@ mkdir -p "$HOME" "$ZDOTDIR"
 {
   echo '# --- HM order 530: default keymap ---'
   echo 'bindkey -v'
-  echo '# --- HM order 700: autosuggestions ---'
-  echo "source '$autosuggestions_pkg/share/zsh-autosuggestions/zsh-autosuggestions.zsh'"
-  echo '# --- user initContent (vi-mode wiring + legacy init) ---'
+  echo '# --- user initContent (native vi-mode + search + init) ---'
   cat "$init_content"
-  echo '# --- HM order 900: plugins ---'
-  echo "source '$zvm_pkg/share/zsh-vi-mode/zsh-vi-mode.plugin.zsh'"
   echo '# --- HM order 910: fzf integration ---'
-  "$fzf_pkg/bin/fzf" --zsh > "$work/fzf-integration.zsh"
-  echo "source '$work/fzf-integration.zsh'"
-  echo '# --- HM order 1200: syntax highlighting ---'
-  echo "source '$syntax_pkg/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh'"
+  if [[ -n "$fzf_pkg" && -x "$fzf_pkg/bin/fzf" ]]; then
+    "$fzf_pkg/bin/fzf" --zsh > "$work/fzf-integration.zsh"
+    echo "source '$work/fzf-integration.zsh'"
+  fi
 } > "$work/harness.zsh"
 
 cat >> "$work/harness.zsh" <<'ASSERTS'
@@ -104,41 +96,11 @@ expect_viins '^N' down-line-or-beginning-search
 # ── martin.shell.search: prompt search plane (issue #329) ──
 case $scenario in
 default)
-  # Every configured repo chord resolves to its widget in BOTH keymaps, so
-  # the plane cannot half-vanish depending on mode.
+  # Every configured repo chord resolves to its widget in BOTH keymaps
   for km in viins vicmd; do
     expect_widget "$km" '^Gf' martin-content-search-widget
     expect_widget "$km" '^Gd' martin-dir-jump-widget
     expect_widget "$km" '^Gk' martin-process-kill-widget
-
-    # A representative sample of fzf-git.sh's ^G CTRL-key plane resolves to
-    # its widgets in both keymaps -- exactly the binding upstream's issue
-    # tracker reports as broken under zsh-vi-mode. Widget names are eval'd
-    # from upstream, so assert by suffix.
-    expect_fzf_git() {
-      local out got
-      out=$(bindkey -M "$km" -- "$1" 2>&1) || fail "$1 unbound in $km (wanted fzf-git-$2-widget)"
-      read -r _ got <<<"$out"
-      [[ $got == *fzf-git-$2-widget ]] || fail "$1 in $km bound to '$got', wanted fzf-git-$2-widget"
-    }
-    expect_fzf_git '^G^F' files
-    expect_fzf_git '^G^B' branches
-    expect_fzf_git '^G^S' stashes
-    expect_fzf_git '^G?' '?list_bindings'
-    unset -f expect_fzf_git
-
-    # Namespace split: upstream also self-binds PLAIN-letter fallbacks; the
-    # module strips every object letter it does not configure, so plain
-    # letters belong to this repo alone ('?': upstream's help chord).
-    expect_unbound() {
-      local out got
-      out=$(bindkey -M "$km" -- "$1" 2>&1)
-      read -r _ got <<<"$out"
-      [[ -z $got || $got == undefined-key ]] || fail "$1 in $km unexpectedly bound to '$got'"
-    }
-    expect_unbound '^Gb'
-    expect_unbound '^Gt'
-    unset -f expect_unbound
   done
   ;;
 null-dirjump)
@@ -146,11 +108,8 @@ null-dirjump)
   for km in viins vicmd; do
     out=$(bindkey -M "$km" -- '^Gd' 2>&1); read -r _ got <<<"$out"
     [[ -z $got || $got == undefined-key ]] || fail "null dirJump: ^Gd in $km bound to '$got', wanted unbound"
-    # nixpkgs prefixes upstream widget names with the fzf bin path, so
-    # match by suffix here rather than with the strict expect_widget.
-    out=$(bindkey -M "$km" -- '^G^B' 2>&1); read -r _ got <<<"$out"
-    [[ $got == *fzf-git-branches-widget ]] || fail "null dirJump: ^G^B in $km bound to '$got', wanted fzf-git-branches-widget"
     expect_widget "$km" '^Gk' martin-process-kill-widget
+    expect_widget "$km" '^Gf' martin-content-search-widget
   done
   ;;
 off)
@@ -158,7 +117,7 @@ off)
   (( ! $+widgets[martin-content-search-widget] )) \
     || fail "martin-content-search-widget exists despite search.enable = false"
   for km in viins vicmd; do
-    for k in '^Gf' '^Gd' '^Gk' '^G^B'; do
+    for k in '^Gf' '^Gd' '^Gk'; do
       out=$(bindkey -M "$km" -- "$k" 2>&1); read -r _ got <<<"$out"
       [[ -z $got || $got == undefined-key ]] || fail "search off: $k in $km bound to '$got'"
     done
@@ -184,45 +143,14 @@ prefix_pure() {
 }
 [[ $scenario == off ]] || { prefix_pure viins; prefix_pure vicmd; }
 
-# Editor chord: vv from normal mode, ^X^E straight from insert; bare v stays
-# with the plugin (nex readkeys prefix for visual/chords).
-out=$(bindkey -M vicmd -- 'v') || fail "v unbound in vicmd"
-read -r _ got <<<"$out"
-case $got in
-  zvm_*) ;;
-  *) fail "bare v in vicmd bound to '$got', wanted a zvm widget" ;;
-esac
 expect_widget vicmd 'vv'   edit-command-line
 expect_widget viins '^X^E' edit-command-line
 
-# The plugin's own surface is present (modes, operators, repeat, surround).
-for w in zvm_enter_insert_mode zvm_exit_insert_mode zvm_enter_visual_mode \
-         zvm_repeat_change zvm_select_surround zvm_change_surround \
-         zvm_change_surround_text_object zvm_vi_edit_command_line; do
-  (( $+widgets[$w] )) || fail "plugin widget missing: $w"
-done
 bindkey -l | command grep -q '^vicmd$' || fail "vicmd keymap not listed"
 bindkey -l | command grep -q '^viins$' || fail "viins keymap not listed"
 
-# zsh-autosuggestions must still be wired after the plugin re-initializes:
-# its start function exists AND its precmd registration survived.
-(( $+functions[_zsh_autosuggest_start] )) \
-  || fail "zsh-autosuggestions start function lost after zvm_init"
-(( ${precmd_functions[(I)_zsh_autosuggest_start]} )) \
-  || fail "zsh-autosuggestions precmd hook detached by zvm_init"
-
-# Timeouts and mode flags: KEYTIMEOUT stays 1 (instant Escape); the plugin's
-# escape window comes from ZVM_KEYTIMEOUT instead.
+# KEYTIMEOUT stays 1 (instant Escape)
 [[ $KEYTIMEOUT == 1 ]] || fail "KEYTIMEOUT=$KEYTIMEOUT, wanted 1 (instant Escape)"
-[[ $ZVM_INIT_MODE == sourcing ]] || fail "ZVM_INIT_MODE=$ZVM_INIT_MODE, wanted sourcing"
-[[ $ZVM_LAZY_KEYBINDINGS == false ]] || fail "ZVM_LAZY_KEYBINDINGS=$ZVM_LAZY_KEYBINDINGS, wanted false"
-
-# Cursor shapes: enabled, beam/block/block per the option defaults.
-[[ $ZVM_CURSOR_STYLE_ENABLED == true ]] || fail "cursor styles unexpectedly disabled"
-[[ $ZVM_INSERT_MODE_CURSOR == be ]] || fail "insert cursor '$ZVM_INSERT_MODE_CURSOR', wanted be"
-[[ $ZVM_NORMAL_MODE_CURSOR == bl ]] || fail "normal cursor '$ZVM_NORMAL_MODE_CURSOR', wanted bl"
-[[ $ZVM_VISUAL_MODE_CURSOR == bl ]] || fail "visual cursor '$ZVM_VISUAL_MODE_CURSOR', wanted bl"
-
 print "PASS unit-zsh-vi-mode ($scenario)"
 ASSERTS
 

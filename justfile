@@ -206,6 +206,11 @@ verify-skills: _no-sudo
 verify-path home_files="": _no-sudo
     bash scripts/verify-session-path.sh {{ home_files }}
 
+
+# Benchmark shell startup times (all modes) using hyperfine. Pass a built home-files
+# dir to test a new configuration before `just switch`; with none, tests live dotfiles.
+benchmark-startup home_files="": _no-sudo
+    bash scripts/benchmark-shell-startup.sh {{ home_files }}
 # Garbage-collect old generations older than 30 days.
 gc:
     sudo nix-collect-garbage --delete-older-than 30d

@@ -190,11 +190,8 @@ in
       mkInit = name: overrides:
         pkgs.writeText "unit-zsh-vi-mode-initContent-${name}"
           (zshEval overrides).programs.zsh.initContent;
-      run = scenario: initFile: fzfGitArg: ''
-        SCENARIO=${scenario} bash ${./unit/zsh-vi-mode-test.sh} ${initFile} \
-          ${pkgs.zsh-vi-mode} ${pkgs.fzf} \
-          ${pkgs.zsh-autosuggestions} ${pkgs.zsh-syntax-highlighting} \
-          ${fzfGitArg}
+      run = scenario: initFile: ''
+        SCENARIO=${scenario} bash ${./unit/zsh-vi-mode-test.sh} ${initFile} ${pkgs.fzf}
       '';
     in
     pkgs.runCommand "unit-zsh-vi-mode"
@@ -202,9 +199,9 @@ in
         nativeBuildInputs = [ pkgs.bash pkgs.zsh pkgs.gnugrep ];
       }
       ''
-        ${run "default" (mkInit "default" { }) "${pkgs.fzf-git-sh}"}
-        ${run "null-dirjump" (mkInit "null-dirjump" { dirJumpNull = true; }) "${pkgs.fzf-git-sh}"}
-        ${run "off" (mkInit "off" { searchEnable = false; }) ""}
+        ${run "default" (mkInit "default" { })}
+        ${run "null-dirjump" (mkInit "null-dirjump" { dirJumpNull = true; })}
+        ${run "off" (mkInit "off" { searchEnable = false; })}
         touch $out
       '';
 
