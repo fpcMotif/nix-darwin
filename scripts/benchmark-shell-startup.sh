@@ -40,7 +40,7 @@ echo "================================================================="
 echo "Shell Startup Benchmark (${LABEL})"
 echo "================================================================="
 
-hyperfine --warmup 10 \
+hyperfine --warmup 20 \
   --export-markdown "${TMPDIR:-/tmp}/shell-benchmark.md" \
   '/bin/zsh -f -i -c exit' \
   '/bin/zsh -c exit' \

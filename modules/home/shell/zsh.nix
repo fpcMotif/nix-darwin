@@ -71,7 +71,11 @@ in
 
     programs.zsh = {
       enable = true;
-      enableCompletion = false; # eager compinit scanning deferred to preserve instant startup
+      enableCompletion = true;
+      completionInit = ''
+        fpath=($HOME/.zsh/completions $fpath)
+        autoload -Uz compinit && compinit -C
+      '';
       autosuggestion.enable = false;
       syntaxHighlighting.enable = false;
       historySubstringSearch.enable = false;
@@ -255,6 +259,17 @@ in
           bindkey -M viins '^W' backward-kill-word
         ''}
 
+        ${lib.optionalString gitPlaneOn ''
+          if [[ -r "${pkgs.fzf-git-sh}/share/fzf-git-sh/fzf-git.sh" ]]; then
+            source "${pkgs.fzf-git-sh}/share/fzf-git-sh/fzf-git.sh"
+            for km in viins vicmd emacs; do
+              for k in b t r h s l e w; do
+                bindkey -rM "$km" "${search.prefix}$k" 2>/dev/null || :
+              done
+            done
+          fi
+        ''}
+
         ${lib.optionalString search.enable ''
           martin-content-search-widget() {
             local query sel
@@ -300,17 +315,6 @@ in
             bindkey -rM "$km" '${search.prefix}' 2>/dev/null || :
           done
         ''}
-        # Lazy completion on first tab
-        _lazy_compinit() {
-          autoload -Uz compinit
-          if [[ -n "$HOME/.zcompdump"(#qN.m+1) ]]; then
-            compinit
-          else
-            compinit -C
-          fi
-          zle expand-or-complete
-        }
-        zle -N expand-or-complete _lazy_compinit
 
         # Helper functions
         cd() {
