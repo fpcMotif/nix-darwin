@@ -421,12 +421,6 @@ in
           agent-browser "$@"
         }
 
-        try() {
-          if [[ -f "$HOME/.local/try.rb" ]]; then
-            eval "$(ruby ~/.local/try.rb "$@")"
-          fi
-        }
-
         [[ -f "$HOME/.config/zsh/.secret" ]] && source "$HOME/.config/zsh/.secret"
         [[ -r $HOME/.zshrc.local ]] && source $HOME/.zshrc.local
       '';
