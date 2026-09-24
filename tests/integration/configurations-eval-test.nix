@@ -121,12 +121,12 @@ let
   evalModularShell = mods: (import ../lib/zsh-module-eval.nix { inherit pkgs lib; })
     ({ includeSession = true; } // mods);
 
-  shellAll = evalModularShell { includeDirenv = true; includeFzf = true; includeZoxide = true; includePrompt = true; };
-  shellMinimal = evalModularShell { };
-  shellNoPrompt = evalModularShell { includeDirenv = true; includeFzf = true; includeZoxide = true; };
-  shellNoFzf = evalModularShell { includeDirenv = true; includeZoxide = true; includePrompt = true; };
-  shellNoZoxide = evalModularShell { includeDirenv = true; includeFzf = true; includePrompt = true; };
-  shellNoDirenv = evalModularShell { includeFzf = true; includeZoxide = true; includePrompt = true; };
+  shellAll = evalModularShell { includePrompt = true; };
+  shellMinimal = evalModularShell { includeDirenv = false; includeFzf = false; includeZoxide = false; includePrompt = false; };
+  shellNoPrompt = evalModularShell { includePrompt = false; };
+  shellNoFzf = evalModularShell { includeFzf = false; };
+  shellNoZoxide = evalModularShell { includeZoxide = false; };
+  shellNoDirenv = evalModularShell { includeDirenv = false; };
 
   modularShellChecks = [
     (helpers.assertTest "modular-shell-minimal-zsh-works"
@@ -149,14 +149,15 @@ let
 
     (helpers.assertTest "modular-shell-delete-fzf-safe"
       (shellNoFzf.programs.zsh.enable == true
-        && (!(shellNoFzf.programs ? fzf) || shellNoFzf.programs.fzf.enable == false))
-      "Removing fzf.nix leaves zsh working and disables fzf")
+        && (!(shellNoFzf.programs ? fzf) || shellNoFzf.programs.fzf.enable == false)
+        && (!(lib.hasInfix "martin-content-search-widget" shellNoFzf.programs.zsh.initContent)))
+      "Removing fzf.nix leaves zsh working, disables fzf, and omits fzf search widgets")
 
     (helpers.assertTest "modular-shell-delete-zoxide-safe"
       (shellNoZoxide.programs.zsh.enable == true
-        && (!(shellNoZoxide.programs ? zoxide) || shellNoZoxide.programs.zoxide.enable == false))
-      "Removing zoxide.nix leaves zsh working and disables zoxide")
-
+        && (!(shellNoZoxide.programs ? zoxide) || shellNoZoxide.programs.zoxide.enable == false)
+        && (!(lib.hasInfix "martin-dir-jump-widget" shellNoZoxide.programs.zsh.initContent)))
+      "Removing zoxide.nix leaves zsh working, disables zoxide, and omits zoxide search widget")
     (helpers.assertTest "modular-shell-delete-direnv-safe"
       (shellNoDirenv.programs.zsh.enable == true
         && (!(shellNoDirenv.programs ? direnv) || shellNoDirenv.programs.direnv.enable == false))

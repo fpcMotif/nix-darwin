@@ -34,16 +34,6 @@ let
   # pnpm's platform-native global dir: ~/Library on macOS, XDG data on Linux.
   pnpmHome = if isDarwin then "$HOME/Library/pnpm" else "$HOME/.local/share/pnpm";
 
-  # Terminal terminfo lookup chain. The /Applications entries are macOS app
-  # bundles and must not leak into Linux environments.
-  terminfoDirs = [
-    "$HOME/.terminfo"
-  ] ++ lib.optionals isDarwin [
-    "/Applications/Ghostty.app/Contents/Resources/terminfo"
-    "/Applications/kitty.app/Contents/Resources/kitty/terminfo"
-  ] ++ [
-    "/usr/share/terminfo"
-  ];
 in
 {
   home.sessionPath = pathTiers.shims ++ pathTiers.nixProfiles ++ pathTiers.userInstallers;
@@ -80,7 +70,6 @@ in
 
     OBSIDIAN_VAULT = "$HOME/Documents/obsidian";
     TERMINFO = "$HOME/.terminfo";
-    TERMINFO_DIRS = lib.concatStringsSep ":" terminfoDirs;
   } // lib.optionalAttrs isDarwin {
     SHELL = "/bin/zsh";
   };

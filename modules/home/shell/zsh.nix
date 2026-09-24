@@ -7,6 +7,15 @@ let
   search = config.martin.shell.search;
 
   gitPlaneOn = search.enable && search.gitObjects.enable;
+
+  terminfoDirs = [
+    "$HOME/.terminfo"
+  ] ++ lib.optionals isDarwin [
+    "/Applications/Ghostty.app/Contents/Resources/terminfo"
+    "/Applications/kitty.app/Contents/Resources/kitty/terminfo"
+  ] ++ [
+    "/usr/share/terminfo"
+  ];
 in
 {
   options.martin.shell.viMode = {
@@ -198,8 +207,16 @@ in
 
       envExtra = ''
         typeset -U PATH path
-      '' + lib.optionalString isDarwin ''
-        export SHELL="/bin/zsh"
+
+        export TERMINFO="$HOME/.terminfo"
+        typeset -aU _terminfo_dirs
+        _terminfo_dirs=(
+          ${lib.concatStringsSep "\n          " terminfoDirs}
+          ''${(s/:/)TERMINFO_DIRS}
+        )
+        _terminfo_dirs=(''${_terminfo_dirs:#})
+        (( ''${#_terminfo_dirs[@]} > 0 )) && export TERMINFO_DIRS="''${(j/:/)_terminfo_dirs}"
+        unset _terminfo_dirs
       '';
 
       initContent = ''
@@ -270,7 +287,7 @@ in
           fi
         ''}
 
-        ${lib.optionalString search.enable ''
+        ${lib.optionalString (search.enable && (config.programs.fzf.enable or false)) ''
           martin-content-search-widget() {
             local query sel
             query="''${LBUFFER##*[[:space:]]}"
@@ -284,6 +301,27 @@ in
             zle reset-prompt
           }
 
+          martin-process-kill-widget() {
+            fkill
+            zle -I
+            zle reset-prompt
+          }
+
+          zle -N martin-content-search-widget
+          zle -N martin-process-kill-widget
+
+          for km in viins vicmd emacs; do
+            ${lib.optionalString (search.keys.contentSearch != null) ''
+              bindkey -M "$km" '${search.prefix}${search.keys.contentSearch}' martin-content-search-widget 2>/dev/null || :
+            ''}
+            ${lib.optionalString (search.keys.processKill != null) ''
+              bindkey -M "$km" '${search.prefix}${search.keys.processKill}' martin-process-kill-widget 2>/dev/null || :
+            ''}
+            bindkey -rM "$km" '${search.prefix}' 2>/dev/null || :
+          done
+        ''}
+
+        ${lib.optionalString (search.enable && (config.programs.zoxide.enable or false)) ''
           martin-dir-jump-widget() {
             local dir
             dir=$(command zoxide query -i)
@@ -292,25 +330,11 @@ in
             zle reset-prompt
           }
 
-          martin-process-kill-widget() {
-            fkill
-            zle -I
-            zle reset-prompt
-          }
-
-          zle -N martin-content-search-widget
           zle -N martin-dir-jump-widget
-          zle -N martin-process-kill-widget
 
           for km in viins vicmd emacs; do
-            ${lib.optionalString (search.keys.contentSearch != null) ''
-              bindkey -M "$km" '${search.prefix}${search.keys.contentSearch}' martin-content-search-widget 2>/dev/null || :
-            ''}
             ${lib.optionalString (search.keys.dirJump != null) ''
               bindkey -M "$km" '${search.prefix}${search.keys.dirJump}' martin-dir-jump-widget 2>/dev/null || :
-            ''}
-            ${lib.optionalString (search.keys.processKill != null) ''
-              bindkey -M "$km" '${search.prefix}${search.keys.processKill}' martin-process-kill-widget 2>/dev/null || :
             ''}
             bindkey -rM "$km" '${search.prefix}' 2>/dev/null || :
           done

@@ -14,7 +14,7 @@
 # platform, unlike full-host evaluations (see the agent-skills IFD caveat in
 # tests/integration/configurations-eval-test.nix).
 { pkgs, lib }:
-{ viMode ? null, searchEnable ? null, dirJumpNull ? false, includeSession ? false, includeDirenv ? false, includeFzf ? false, includeZoxide ? false, includePrompt ? false }:
+{ viMode ? null, searchEnable ? null, dirJumpNull ? false, includeSession ? false, includeDirenv ? true, includeFzf ? true, includeZoxide ? true, includePrompt ? false }:
 
 (lib.evalModules {
   modules =

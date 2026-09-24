@@ -17,7 +17,6 @@ if ! command -v hyperfine >/dev/null 2>&1; then
 fi
 
 HOME_FILES_DIR="${1:-}"
-ZDOTDIR_ARG=""
 LABEL="live environment"
 
 if [ -n "$HOME_FILES_DIR" ]; then
