@@ -62,8 +62,8 @@ in
       workspaceGuideFits = backendHosts: required: forbidden:
         lib.all
           (host:
-            lib.all (text: lib.hasInfix text host.development.content) required
-            && lib.all (text: !(lib.hasInfix text host.development.content)) forbidden)
+            lib.all (text: lib.hasInfix text (contentForHost host)) required
+            && lib.all (text: !(lib.hasInfix text (contentForHost host))) forbidden)
           (lib.attrValues backendHosts);
       hasWord = word: text:
         lib.any
@@ -71,10 +71,8 @@ in
             builtins.match ".*(^|[^A-Za-z0-9_])${word}($|[^A-Za-z0-9_]).*" line != null)
           (lib.splitString "\n" text);
       contentForHost = host:
-        lib.concatStringsSep "\n" (map (guide: guide.content) [
-          host.startup
-          host.development
-        ]);
+        lib.concatStringsSep "\n" (map (guide: guide.content)
+          ([ host.startup ] ++ lib.optional (host ? development) host.development));
       count = marker: text: builtins.length (lib.splitString marker text) - 1;
       requiredSections = [
         "## Working contract"
@@ -90,7 +88,9 @@ in
       onceSections = [
         "## Working contract"
         "## Code quality"
+        "## Testing"
         "## Command routing"
+        "## Waiting and background work"
         "## Parallel checkouts"
       ];
       bannedTerms = [ "gemini" "deepwiki" "mgrep" "lazygit" "deep-research" "chezmoi" ];
