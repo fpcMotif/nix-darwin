@@ -164,6 +164,8 @@ check:
         '.#checks.aarch64-darwin.unit-skill-hygiene' \
         '.#checks.aarch64-darwin.unit-pstack-hygiene' \
         '.#checks.aarch64-darwin.unit-ai-model-routing' \
+        '.#checks.aarch64-darwin.unit-zsh-vi-mode' \
+        '.#checks.aarch64-darwin.unit-zim-completion' \
         '.#checks.aarch64-darwin.integration-configurations-eval'
 
 # Run the skill-router bun suite (spawn-seam gate) offline via the Nix sandbox.
