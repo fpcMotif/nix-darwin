@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   flake-check:
-    name: nix flake check (x86_64-linux)
+    name: checks (x86_64-linux)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -30,19 +30,14 @@ jobs:
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run nix flake check
+      # The check names come from the flake, so a check added to
+      # tests/default.nix runs here with no edit to this file.
+      - name: Build every checks.x86_64-linux
         run: |
+          checks=$(nix eval --raw '.#checks.x86_64-linux' --apply 'cs: toString (builtins.attrNames cs)')
+          echo "checks: $checks"
           nix build --no-link --show-trace --print-build-logs \
-            '.#checks.x86_64-linux.smoke' \
-            '.#checks.x86_64-linux.unit-mksystem' \
-            '.#checks.x86_64-linux.unit-auto-update' \
-            '.#checks.x86_64-linux.unit-overlay' \
-            '.#checks.x86_64-linux.unit-format' \
-            '.#checks.x86_64-linux.integration-configurations-eval' \
-            '.#checks.x86_64-linux.integration-home-linux-purity' \
-            '.#checks.x86_64-linux.integration-darwin-settings' \
-            '.#checks.x86_64-linux.smoke-build-oh-my-pi' \
-            '.#checks.x86_64-linux.smoke-build-toolchain'
+            $(printf '.#checks.x86_64-linux.%s ' $checks)
 
       - name: Build dev shell and dev container (x86_64-linux)
         run: |
@@ -63,18 +58,12 @@ jobs:
             experimental-features = nix-command flakes
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run nix flake check (aarch64-darwin)
+      - name: Build every checks.aarch64-darwin
         run: |
+          checks=$(nix eval --raw '.#checks.aarch64-darwin' --apply 'cs: toString (builtins.attrNames cs)')
+          echo "checks: $checks"
           nix build --no-link --show-trace --print-build-logs \
-            '.#checks.aarch64-darwin.smoke' \
-            '.#checks.aarch64-darwin.unit-mksystem' \
-            '.#checks.aarch64-darwin.unit-overlay' \
-            '.#checks.aarch64-darwin.unit-format' \
-            '.#checks.aarch64-darwin.integration-configurations-eval' \
-            '.#checks.aarch64-darwin.integration-home-linux-purity' \
-            '.#checks.aarch64-darwin.integration-darwin-settings' \
-            '.#checks.aarch64-darwin.smoke-build-oh-my-pi' \
-            '.#checks.aarch64-darwin.smoke-build-toolchain'
+            $(printf '.#checks.aarch64-darwin.%s ' $checks)
 
       - name: Build dev shell (aarch64-darwin)
         run: |

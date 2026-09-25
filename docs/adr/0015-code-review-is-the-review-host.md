@@ -4,7 +4,7 @@ Status: accepted (2026-09-09)
 
 ## Context
 
-An architecture pass over the git, GitHub, jj, and review skills (2026-09-09) found four proactive claimants for "review this" and PR URLs: the dotfiles-pi `review` (git-only, reimplementing `gh` without better-github-skill's gotchas), mattpocock `code-review`, the `/code-review` plugin command (posts `gh pr comment`), and ripwire-change-check. None named another, CLAUDE.md's "review before commit" routed to none, and every one hardcoded git while the jj skill forbade all git, so nothing composed in a colocated repo. The candidate fix was a vendored local `review` router (the jj precedent, ADR-0008).
+An architecture pass over the git, GitHub, jj, and review skills (2026-09-09) found four proactive claimants for "review this" and PR URLs: the dotfiles-pi `review` (git-only, reimplementing `gh` without better-github-skill's gotchas), mattpocock `code-review`, the `/code-review` plugin command (posts `gh pr comment`), and ripwire-change-check. None named another, CLAUDE.md's "review before commit" routed to none, and every one hardcoded git while the jj skill forbade all git, so nothing composed in a colocated repo. The candidate fix was a vendored local `review` router (the jj precedent, ADR-0017).
 
 ## Decision
 
@@ -18,7 +18,7 @@ An architecture pass over the git, GitHub, jj, and review skills (2026-09-09) fo
 
 - One proactive review skill; the hygiene lists do not change (no new vendored id).
 - CLAUDE.md pays one line per branch; the hunk and jj command duplicates leave it.
-- ADR-0009's remaining example of a per-skill CLI-deps list (`review`) is gone; `skills.explicit` keeps `web-browser` and the pstack entries.
+- `skills.explicit` keeps only `web-browser`, and no entry carries a CLI-deps list.
 - Known gap left in the host: its description promises work-in-progress review while its diff excludes the working tree (verified 2026-09-09 on this repo; upstream mattpocock/skills #511 and #958 track it). The commit-first rule covers it here.
 - The `frad-dotclaude` marketplace registration stays; it now enables nothing.
 

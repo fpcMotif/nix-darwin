@@ -8,11 +8,11 @@
   },
   "scripts": {
     "start": "bun src/cli.ts",
-    "check": "tsgo --noEmit",
+    "check": "tsc --noEmit",
     "test": "bun test"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@typescript/native-preview": "latest"
+    "typescript": "latest"
   }
 }

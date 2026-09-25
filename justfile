@@ -149,22 +149,15 @@ drift:
         printf '%-10s %s\n' "$b" "$(readlink -f ~/.nix-profile/bin/$b 2>/dev/null | sed -E 's|.*-([0-9][^/]*)/bin.*|\1|')"; \
     done
 
-# Run the full check suite (unit + integration + system eval).
+# The check names come from the flake, so a check added to tests/default.nix
+# runs here with no edit to this recipe.
+# Run the full check suite: every checks.aarch64-darwin plus the darwin system.
 check:
-    nix build --no-link \
-        '.#darwinConfigurations.f.system' \
-        '.#checks.aarch64-darwin.unit-overlay' \
-        '.#checks.aarch64-darwin.unit-justfile' \
-        '.#checks.aarch64-darwin.unit-agent-guides' \
-        '.#checks.aarch64-darwin.unit-shell-guard' \
-        '.#checks.aarch64-darwin.unit-edit-batch-nudge' \
-        '.#checks.aarch64-darwin.unit-auto-update' \
-        '.#checks.aarch64-darwin.unit-rolling-pins' \
-        '.#checks.aarch64-darwin.unit-skill-router' \
-        '.#checks.aarch64-darwin.unit-skill-hygiene' \
-        '.#checks.aarch64-darwin.unit-pstack-hygiene' \
-        '.#checks.aarch64-darwin.unit-ai-model-routing' \
-        '.#checks.aarch64-darwin.integration-configurations-eval'
+    #!/usr/bin/env bash
+    set -euo pipefail
+    checks=$(nix eval --raw '.#checks.aarch64-darwin' --apply 'cs: toString (builtins.attrNames cs)')
+    echo "check: darwinConfigurations.f.system $checks"
+    nix build --no-link '.#darwinConfigurations.f.system' $(printf '.#checks.aarch64-darwin.%s ' $checks)
 
 # Run the skill-router bun suite (spawn-seam gate) offline via the Nix sandbox.
 test-router:

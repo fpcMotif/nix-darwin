@@ -54,7 +54,3 @@ Any one of these is disqualifying; there are four.
 - `/Applications/Nix Apps/BetterMouse.app` disappears once the package leaves the closure. It carries `com.apple.macl`, so if a GC or activation ever fails to remove it, clear the xattr first: `sudo xattr -rc "/Applications/Nix Apps/BetterMouse.app"`.
 - Sparkle is deliberately left **enabled**. Updating BetterMouse is now the app's own job, from its GUI.
 - `darwin-settings-no-bettermouse-agent` and `darwin-bettermouse-not-nix-managed` guard the decision. Re-adding a Nix BetterMouse scaffold is a deliberate new decision, not a gap to fill — treat its reappearance as a regression.
-
-## Unrelated finding, fixed alongside
-
-`com.apple.mouse.doubleClickThreshold` was found at `0.15` — the fast extreme of the System Settings slider, against a macOS default of `0.5`. At that value a double-click must complete within 150 ms or the OS delivers two separate single clicks, which is what prompted the original "clicks don't feel right" investigation. It was not owned by any module. It is now pinned to `0.5` in `modules/darwin/defaults.nix` under `CustomUserPreferences.NSGlobalDomain`, with a matching entry in the settings spec table.

@@ -55,6 +55,23 @@ for job in nix-gc nix-optimise nix-auto-switch; do
   }
 done
 
+# `check` builds every checks.<system> attribute the flake exposes. A hand-kept
+# list drifted: unit-claude-settings-ownership and unit-zsh-vi-mode ran only
+# under a bare `nix flake check`, which nothing in the repo invokes.
+check_recipe=$(awk '/^check:/ { body = 1; next } body && /^[^ \t]/ { exit } body' "$justfile")
+printf '%s\n' "$check_recipe" | grep -qF 'builtins.attrNames' || {
+  echo "justfile: check must enumerate checks.<system> with builtins.attrNames" >&2
+  exit 1
+}
+if printf '%s\n' "$check_recipe" | grep -nE 'checks\.[a-z0-9_]+-(darwin|linux)\.[A-Za-z]'; then
+  echo "justfile: check must not name individual checks; new ones would go unrun" >&2
+  exit 1
+fi
+printf '%s\n' "$check_recipe" | grep -qF '.#darwinConfigurations.f.system' || {
+  echo "justfile: check must still build the full darwin system" >&2
+  exit 1
+}
+
 # Recipes that shell out to nix must not be reachable without the preflight.
 for recipe in build switch update-and-switch bump-and-switch; do
   grep -qE "^${recipe}:.*\b_daemon\b" "$justfile" || {

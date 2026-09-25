@@ -351,9 +351,9 @@ case "$out" in *"1 updater(s) failed (tolerated)"*) ;; *) fail "runner miscounte
 rm -rf "$ru"
 
 if [ -n "$github_dir" ]; then
-  # The updater-library unit check actually runs in CI.
-  grep -qF 'unit-auto-update' "$github_dir/workflows/build.yml" \
-    || fail "build.yml does not run the unit-auto-update check"
+  # The updater-library unit check actually runs in CI. build.yml builds every
+  # check by name enumeration (tests/unit/build-workflow-test.sh), so only the
+  # nightly workflow names it.
   grep -qF 'unit-auto-update' "$github_dir/workflows/auto-update.yml" \
     || fail "auto-update.yml does not run the unit-auto-update check"
   # Source-build guard: hard step in the Darwin job, ahead of the system build.

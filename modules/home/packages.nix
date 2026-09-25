@@ -81,7 +81,7 @@ let
     uv
 
     # All language servers live in ./lsp.nix — including typescript
-    # (it's both compiler and `tsgo --lsp` server), oxlint, vtsls,
+    # (it's both compiler and `tsc --lsp` server), oxlint,
     # vue/astro/svelte/tailwind/emmet servers, gopls, rust-analyzer,
     # sourcekit-lsp, basedpyright, ruff,
     # lua-language-server, mcp-language-server.

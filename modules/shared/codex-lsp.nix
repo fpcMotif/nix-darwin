@@ -36,8 +36,8 @@ in
     diagnosticsOnEdit = false
     formatOnWrite = false
 
-    [lsp.servers.tsgo]
-    command = "tsgo"
+    [lsp.servers.tsc]
+    command = "tsc"
     args = ["--lsp", "--stdio"]
     extensions = [${tomlExts jsExtensions}]
 

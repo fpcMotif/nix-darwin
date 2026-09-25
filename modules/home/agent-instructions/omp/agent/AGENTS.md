@@ -10,21 +10,20 @@
 - **Escalate**: Move a task to a stronger configured role when its current model cannot complete it.
 - **Complete**: For bulk work or blocking advisor notes, load `/Users/martinfan/.omp/agent/managed-skills/omp-completion-and-advisor/SKILL.md`.
 - **Develop**: Before choosing a shell command, running Python or Rust, adding an environment variable, or using version control, read `~/.omp/agent/guidance/development.md`.
-- **Documents**: Before writing an issue, specification, PRD, or analysis, read `~/.omp/agent/guidance/human-documents.md`.
+- **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or CONTEXT.md, read `~/.omp/agent/guidance/human-documents.md`.
 
 ## Search
 
-CodeDB is the default structural tool. Native search is the discovery tool. `rg` is the verification tool. Read known paths directly; prefer one bounded call over chains of searches.
+Search with the `codedb` CLI first: one call returns a ranked, bounded answer.
 
 - **Known path**: Read the needed span directly.
-- **File name**: `codedb <repo> file NAME` ranks fuzzy file-name matches.
-- **Symbol**: `codedb <repo> explain SYM` for a definition and indexed call sites.
-- **Call chain**: `codedb <repo> callpath FROM TO` gives the shortest resolved chain.
-- **Task**: `codedb <repo> context --local TASK` orients a task in one bundle.
-- **Identifier**: Native `grep` for one bare name; `lsp` for references in a language CodeDB misses.
-- **Words**: `rw --for="TERMS"` when no file, identifier, or symbol name is known yet.
-- **Folder**: `eza --tree -L 2 DIR` or `eza -la DIR`.
-- **Coverage**: Use scoped `rg` for text listings, counts, or absence checks. CodeDB skips node_modules and files over 2 MiB.
-- **Fallback**: When CodeDB is unavailable or stale, use scoped `rg`, `glob`, or direct reads. Do not retry merely to obey routing.
-
-Ranked or indexed results do not guarantee every caller or repo-wide absence. Read additional source only when needed context is missing or freshness is uncertain.
+- **File name**: `codedb <repo> file NAME`.
+- **Symbol**: `codedb <repo> explain SYM`.
+- **Call chain**: `codedb <repo> callpath FROM TO`.
+- **Task**: `codedb <repo> context --local TASK`.
+- **Identifier**: Native `grep` for one bare name; `lsp` for references CodeDB misses.
+- **Words**: `rw --for="TERMS"` when no name is known yet.
+- **Folder**: `eza --tree -L 2 DIR`.
+- **Trust**: Act on a result that answers the question.
+- **Coverage**: Scoped `rg` confirms a full listing, count, or absence. CodeDB skips node_modules and files over 2 MiB.
+- **Fallback**: After a `codedb` call fails, use scoped `rg`, `glob`, or direct reads, and name the failure.

@@ -547,6 +547,3 @@ enabled = false
 command = "/Users/martinfan/bin/codedb"
 args = ["mcp"]
 startup_timeout_sec = 30
-
-[mcp_servers.deepwiki]
-url = "https://mcp.deepwiki.com/mcp"

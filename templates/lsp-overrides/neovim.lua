@@ -3,7 +3,7 @@
 -- Drop this in ~/.config/nvim/lua/plugins/lsp.lua (lazy.nvim) or merge
 -- into your existing nvim-lspconfig setup.
 --
--- Stack: TS 7 / tsgo --lsp + oxlint --lsp + Vite framework servers.
+-- Stack: TS 7 / tsc --lsp + oxlint --lsp + Vite framework servers.
 
 return {
   {
@@ -13,11 +13,11 @@ return {
       local lspconfig = require("lspconfig")
       local configs = require("lspconfig.configs")
 
-      -- tsgo is not in nvim-lspconfig yet; register manually.
-      if not configs.tsgo then
-        configs.tsgo = {
+      -- TS 7's native `tsc --lsp` has no nvim-lspconfig entry; register manually.
+      if not configs.tsc then
+        configs.tsc = {
           default_config = {
-            cmd = { "tsgo", "--lsp", "--stdio" },
+            cmd = { "tsc", "--lsp", "--stdio" },
             filetypes = {
               "typescript", "typescriptreact", "typescript.tsx",
               "javascript", "javascriptreact", "javascript.jsx",
@@ -34,7 +34,7 @@ return {
           },
         }
       end
-      lspconfig.tsgo.setup({})
+      lspconfig.tsc.setup({})
 
       -- oxlint --lsp as second LSP for diagnostics.
       lspconfig.oxlint.setup({})        -- shipped in nvim-lspconfig
@@ -92,13 +92,5 @@ return {
         },
       })
     end,
-  },
-
-  -- Optional: nvim-vtsls for the rare project that still needs tsserver
-  -- plugins. Activate per-project via :LspStart vtsls.
-  {
-    "yioneko/nvim-vtsls",
-    ft = { "typescript", "typescriptreact", "javascript", "javascriptreact" },
-    opts = {},
   },
 }

@@ -1,8 +1,8 @@
 {
-  "$comment": "Vite + React project. Stack: tsgo for TS/TSX, oxlint for fast lint (react-specific rules), tailwindcss-language-server for utility classes. Drop at project root as .lsp.json.",
+  "$comment": "Vite + React project. Stack: tsc --lsp for TS/TSX, oxlint for fast lint (react-specific rules), tailwindcss-language-server for utility classes. Drop at project root as .lsp.json.",
   "lspServers": {
-    "tsgo": {
-      "command": "tsgo",
+    "tsc": {
+      "command": "tsc",
       "args": ["--lsp", "--stdio"],
       "extensionToLanguage": {
         ".ts": "typescript",

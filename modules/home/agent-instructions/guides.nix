@@ -53,6 +53,7 @@ let
       startupTarget = "AGENTS.md";
       startupAdapter = ./AGENTS.md;
       developmentTarget = ".config/agent-guidance/development.md";
+      humanDocumentsTarget = ".config/agent-guidance/human-documents.md";
     };
     codex = mkHost {
       name = "codex";
@@ -60,6 +61,7 @@ let
       startupAdapter = ./codex/AGENTS.md;
       developmentTarget = ".codex/guidance/development.md";
       developmentAdapter = ./codex/guidance/development.md;
+      humanDocumentsTarget = ".codex/guidance/human-documents.md";
     };
     omp = mkHost {
       name = "omp";

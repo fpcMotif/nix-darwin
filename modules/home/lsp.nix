@@ -14,24 +14,21 @@
 #
 # Modern Rust/Go-first TS stack:
 #
-#   tsgo --lsp     →  TypeScript 7 beta native LSP (10-30x faster than
+#   tsc --lsp      →  TypeScript 7 native LSP (10-30x faster than
 #                     tsserver). Provides hover/definitions/references/
 #                     diagnostics for .ts/.tsx/.js/.jsx/.mts/.cts/.mjs/
-#                     .cjs. Effect-TS plugins load via tsconfig.json
-#                     compilerOptions.plugins in interactive mode.
-#   oxlint --lsp   →  oxc-based linter LSP (Rust). Runs alongside tsgo
+#                     .cjs. TS 7 loads no tsserver plugins; Effect
+#                     projects use @effect/tsgo, a TS 7 build with the
+#                     Effect diagnostics compiled in.
+#   oxlint --lsp   →  oxc-based linter LSP (Rust). Runs alongside tsc
 #                     as a second LSP server for the same files. Vite
 #                     ecosystem native (rolldown is also oxc-powered).
-#   vtsls          →  Fallback drop-in tsserver wrapper kept for the
-#                     rare projects that need tsserver plugins not yet
-#                     supported by tsgo. Opt-in via per-project .lsp.json.
 #
 # Vite framework support: astro/svelte LSPs cover SFCs; emmet covers
 # HTML completion; tailwind handles utility-class intellisense. Vue SFCs
 # get oxlint diagnostics only — vue-language-server is deliberately not
 # installed (nixpkgs builds it via pnpm, and neither has an aarch64-darwin
-# binary in cache.nixos.org, so it compiled locally on every bump). Opt in
-# per project with templates/lsp-overrides/vite-vue.lsp.json.
+# binary in cache.nixos.org, so it compiled locally on every bump).
 #
 # Versions are pinned by the flake; clients just call the binary name.
 # Project-level `.lsp.json` and devShell flakes shadow at the project
@@ -46,10 +43,8 @@ let
 
   lspServers = with pkgs; [
     # === TypeScript / JavaScript — modern Rust/Go stack ===
-    typescript # `tsgo --lsp` — TS 7 native LSP + tsserver for vtsls/tsls
-    # (formerly typescript-go; nixpkgs merged both into `typescript`)
+    typescript # `tsc --lsp` — TS 7 native LSP
     oxlint # `oxlint --lsp` — oxc lint LSP
-    vtsls # tsserver wrapper, opt-in fallback
     typescript-language-server
     astro-language-server # Astro components (Vite-based)
     svelte-language-server # Svelte (Vite-based)
@@ -82,9 +77,9 @@ let
   # Plugin interaction:
   #   - claude-plugins-official's `typescript-lsp` plugin registers a
   #     `typescript` server-id using typescript-language-server. Our
-  #     `tsgo` server-id is different — both would run for .ts files.
+  #     `tsc` server-id is different — both would run for .ts files.
   #     Disable the plugin in ~/.claude/settings.json if you want
-  #     tsgo to be the sole TS server (recommended).
+  #     tsc to be the sole TS server (recommended).
   #   - `gopls-lsp`, `rust-analyzer-lsp`, `lua-lsp` plugins are
   #     congruent with our gopls/rust-analyzer/lua entries; leaving
   #     them enabled is harmless (same binary on PATH).
@@ -95,14 +90,14 @@ let
   #   rootMarkers, restartOnCrash, maxRestarts.
   claudeLspJson = pkgs.writeText "claude-lsp.json" (builtins.toJSON {
     lspServers = {
-      # Primary TS intelligence — TS 7 / tsgo native LSP.
-      tsgo = {
-        command = "tsgo";
+      # Primary TS intelligence — TS 7 native LSP.
+      tsc = {
+        command = "tsc";
         args = [ "--lsp" "--stdio" ];
         extensionToLanguage = jsExtensions;
       };
 
-      # Linter — runs in parallel with tsgo on the same files plus
+      # Linter — runs in parallel with tsc on the same files plus
       # Vite-ecosystem SFCs.
       oxlint = {
         command = "oxlint";

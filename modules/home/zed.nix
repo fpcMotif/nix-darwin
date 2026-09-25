@@ -20,11 +20,18 @@
 # package (e.g. `pkgs.zed-editor` from nixpkgs) if a Linux Zed becomes useful.
 #
 # Toolchain choices:
-#   TypeScript / JS  — tsgo (typescript, the Go rewrite from the TS team)
-#                      as the type-checker; oxlint (oxc family) for linting;
-#                      oxfmt (oxc family) for formatting.
-#                      vtsls is kept on PATH as a fallback for projects that
-#                      can't use tsgo yet.
+#   TypeScript / JS  — Zed's official `tsgo` extension (server `typescript-ls`)
+#                      running the Nix TS 7 `tsc --lsp`; the `oxc` extension's
+#                      `oxlint` (lint + fix-all) and `oxfmt` (format) servers.
+#   Formatting       — oxfmt for JS/TS/JSON/CSS/HTML/Markdown/YAML/TOML;
+#                      Prettier is off.
+#   Effect projects  — TS 7 loads no tsserver plugins. After
+#                      `bunx @effect/tsgo setup`, point the project's
+#                      .zed/settings.json at the Effect build of tsc
+#                      (a relative path resolves from the project root):
+#                        "lsp": { "typescript-ls": { "binary": {
+#                          "path": "node_modules/@effect/tsgo-darwin-arm64/lib/tsc",
+#                          "arguments": ["--lsp", "--stdio"] } } }
 #   Python           — ruff (Astral, same team as uv) as both linter AND
 #                      formatter via `ruff server`; basedpyright for type
 #                      checking. No black, no flake8, no isort needed.
@@ -43,6 +50,21 @@ let
     enable_thinking = true;
     effort = routing.effort job;
   };
+
+  # oxfmt formats through the oxc extension's `oxfmt` server. Prettier stays
+  # off so Zed never tries to npm-install it (npm is the bun shim here).
+  oxfmtFormatted = {
+    formatter.language_server.name = "oxfmt";
+    prettier.allowed = false;
+    format_on_save = "on";
+  };
+
+  # A list without "..." replaces Zed's defaults (vtsls, eslint, tailwind),
+  # so only these servers run.
+  jsLanguage = oxfmtFormatted // {
+    language_servers = [ "typescript-ls" "oxlint" "oxfmt" ];
+    code_actions_on_format."source.fixAll.oxc" = true;
+  };
 in
 {
   xdg.configFile = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
@@ -58,8 +80,7 @@ in
       nixd
 
       # TypeScript / JavaScript
-      typescript # provides `tsgo` binary (formerly typescript-go)
-      vtsls # fallback TS LSP for projects tsgo can't handle yet
+      typescript # TS 7 native `tsc`, also the LSP via `tsc --lsp`
       oxlint # fast linter (oxc)
       oxfmt # fast formatter (oxc)
 
@@ -87,6 +108,8 @@ in
       # language workflow (code actions, diagnostics surfacing, etc.).
       "ruff"
       "basedpyright"
+      "tsgo"
+      "oxc"
     ];
 
     mutableUserSettings = false;
@@ -253,16 +276,20 @@ in
         # Nix
         nixd.binary.path = "${pkgs.nixd}/bin/nixd";
 
-        # TypeScript / JS — use tsgo as the language server. tsgo speaks the
-        # standard tsserver protocol and Zed's built-in TypeScript adapter
-        # routes to whatever binary is on PATH or pinned here.
-        typescript-language-server.binary = {
-          path = "${pkgs.typescript}/bin/tsgo";
-          arguments = [ "lsp" "--stdio" ];
+        # A pinned `binary.path` makes Zed launch that binary directly and
+        # skip the extension's npm install, which fails on the bun shim.
+        typescript-ls.binary = {
+          path = "${pkgs.typescript}/bin/tsc";
+          arguments = [ "--lsp" "--stdio" ];
         };
-        # Keep vtsls available as an explicit fallback profile for projects
-        # that opt out of tsgo via .zed/settings.json.
-        vtsls.binary.path = "${pkgs.vtsls}/bin/vtsls";
+        oxlint.binary = {
+          path = "${pkgs.oxlint}/bin/oxlint";
+          arguments = [ "--lsp" ];
+        };
+        oxfmt.binary = {
+          path = "${pkgs.oxfmt}/bin/oxfmt";
+          arguments = [ "--lsp" ];
+        };
 
         # Python — ruff serves as LSP via its built-in `ruff server`.
         ruff.binary = {
@@ -271,59 +298,14 @@ in
         };
         # basedpyright for types.
         basedpyright.binary.path = "${pkgs.basedpyright}/bin/basedpyright-langserver";
-
-        # CSS
-        vscode-css-language-server.settings.css.lint.unknownAtRules = "ignore";
       };
 
       # ---- Per-language overrides ------------------------------------------
       languages = {
-        TypeScript = {
-          language_servers = [ "typescript-language-server" "!vtsls" ];
-          formatter = {
-            external = {
-              command = "${pkgs.oxfmt}/bin/oxfmt";
-              arguments = [ "--stdin" "--stdin-filepath" "{buffer_path}" ];
-            };
-          };
-          format_on_save = "on";
-          # Have oxlint surface code actions on save when its Zed extension
-          # is installed manually; harmless when it isn't.
-          code_actions_on_format = { "source.fixAll.oxc" = true; };
-        };
-
-        TSX = {
-          language_servers = [ "typescript-language-server" "!vtsls" ];
-          formatter = {
-            external = {
-              command = "${pkgs.oxfmt}/bin/oxfmt";
-              arguments = [ "--stdin" "--stdin-filepath" "{buffer_path}" ];
-            };
-          };
-          format_on_save = "on";
-        };
-
-        JavaScript = {
-          language_servers = [ "typescript-language-server" "!vtsls" ];
-          formatter = {
-            external = {
-              command = "${pkgs.oxfmt}/bin/oxfmt";
-              arguments = [ "--stdin" "--stdin-filepath" "{buffer_path}" ];
-            };
-          };
-          format_on_save = "on";
-        };
-
-        JSX = {
-          language_servers = [ "typescript-language-server" "!vtsls" ];
-          formatter = {
-            external = {
-              command = "${pkgs.oxfmt}/bin/oxfmt";
-              arguments = [ "--stdin" "--stdin-filepath" "{buffer_path}" ];
-            };
-          };
-          format_on_save = "on";
-        };
+        # JavaScript also covers .jsx; Zed has no separate JSX language.
+        TypeScript = jsLanguage;
+        TSX = jsLanguage;
+        JavaScript = jsLanguage;
 
         Python = {
           # ruff first (lint + format), basedpyright for types. The "!"
@@ -341,6 +323,26 @@ in
           language_servers = [ "nixd" ];
           format_on_save = "on";
         };
+
+        # No VS Code-derived language servers (vscode-langservers-extracted).
+        # Zed installs them through `npm`, which is the bun shim here, so the
+        # install fails. Syntax highlighting still comes from the grammars;
+        # "..." keeps the other servers (oxfmt, tailwind, package-version).
+        HTML = oxfmtFormatted // {
+          language_servers = [ "!vscode-html-language-server" "..." ];
+        };
+        CSS = oxfmtFormatted // {
+          language_servers = [ "!vscode-css-language-server" "..." ];
+        };
+        JSON = oxfmtFormatted // {
+          language_servers = [ "!json-language-server" "..." ];
+        };
+        JSONC = oxfmtFormatted // {
+          language_servers = [ "!json-language-server" "..." ];
+        };
+        Markdown = oxfmtFormatted;
+        YAML = oxfmtFormatted;
+        TOML = oxfmtFormatted;
       };
 
 

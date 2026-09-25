@@ -14,7 +14,7 @@ let
   # plugin-namespaced agent id becomes the bare id ~/.claude/agents registers,
   # Claude model slugs become the Agent tool's aliases, and
   # `plugin-dev:skill-development` becomes writing-for-agents, the authoring
-  # reference in this bundle (ADR-0008 keeps skill-creator off the global
+  # reference in this bundle (ADR-0017 keeps skill-creator off the global
   # catalog).
   #
   # Scope: only what nothing installed here already does. poteto-mode (the
@@ -88,7 +88,9 @@ let
     let
       body = lib.replaceStrings
         [
-          "\"pstack:poteto-agent\""
+          "pstack:poteto-agent"
+          "pstack:effort-"
+          "Plugin agents register under the plugin namespace. The bare name `poteto-agent` errors."
           "Plugin agents register under the plugin namespace; the bare name `poteto-agent` errors."
           "plugin-dev:skill-development"
           "- Before commit → the **deslop** skill (`/deslop`).\n"
@@ -113,7 +115,9 @@ let
           "—"
         ]
         [
-          "\"poteto-agent\""
+          "poteto-agent"
+          "effort-"
+          "The agent lives in `~/.claude/agents`, so the bare name resolves."
           "The agent lives in `~/.claude/agents`, so the bare name resolves."
           "writing-for-agents"
           (pstackTddTrigger + "- Before commit → the **simplify** skill (`/simplify`).\n")

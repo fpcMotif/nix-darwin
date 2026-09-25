@@ -36,12 +36,40 @@ in
       ${../.github}
     touch $out
   '';
-  unit-justfile = pkgs.runCommand "unit-justfile" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
+  unit-justfile = pkgs.runCommand "unit-justfile" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep pkgs.gawk ]; } ''
     bash ${./unit/justfile-test.sh} ${../justfile}
+    touch $out
+  '';
+  unit-build-workflow = pkgs.runCommand "unit-build-workflow" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
+    bash ${./unit/build-workflow-test.sh} ${../.github/workflows/build.yml}
     touch $out
   '';
   unit-rolling-pins = pkgs.runCommand "unit-rolling-pins" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
     bash ${./unit/rolling-pins-test.sh} ${../pkgs} ${../scripts}
+    touch $out
+  '';
+
+  # Current-state integrity for the maintained documents: file-level checks
+  # fast enough to run on every change.
+  unit-adr-files = pkgs.runCommand "unit-adr-files" { nativeBuildInputs = [ pkgs.bash pkgs.findutils ]; } ''
+    bash ${./unit/adr-files-test.sh} ${../docs/adr}
+    touch $out
+  '';
+  unit-adr-numbers = pkgs.runCommand "unit-adr-numbers" { nativeBuildInputs = [ pkgs.bash pkgs.findutils pkgs.gnugrep ]; } ''
+    bash ${./unit/adr-numbers-test.sh} ${../docs/adr}
+    touch $out
+  '';
+  # Link targets can sit anywhere in the repo, so this one reads the whole
+  # flake source.
+  unit-doc-links = pkgs.runCommand "unit-doc-links" { nativeBuildInputs = [ pkgs.bash pkgs.findutils pkgs.gawk ]; } ''
+    bash ${./unit/doc-links-test.sh} ${self}
+    touch $out
+  '';
+  unit-doc-checks-fixtures = pkgs.runCommand "unit-doc-checks-fixtures" { nativeBuildInputs = [ pkgs.bash pkgs.findutils pkgs.gnugrep pkgs.gawk ]; } ''
+    bash ${./unit/doc-checks-fixtures-test.sh} \
+      ${./unit/adr-files-test.sh} \
+      ${./unit/adr-numbers-test.sh} \
+      ${./unit/doc-links-test.sh}
     touch $out
   '';
   unit-agent-guides =
@@ -67,13 +95,21 @@ in
         "## Python"
         "## Version control"
         "## Code quality"
+        "## Current-state integrity"
         "## Writing"
       ];
       onceSections = [
         "## Working contract"
         "## Code quality"
+        "## Current-state integrity"
         "## Command routing"
       ];
+      # The adapter line that links human-documents.md must name ADRs, or an
+      # agent writing one never loads the ADR rules.
+      documentsTriggerNamesAdr = host:
+        lib.any
+          (line: lib.hasInfix "~/${host.humanDocuments.target}" line && lib.hasInfix "ADR" line)
+          (lib.splitString "\n" host.startup.content);
       bannedTerms = [ "gemini" "deepwiki" "mgrep" "lazygit" "deep-research" "chezmoi" ];
       requiredTools = [ "fd" "rg" "bat" "eza" "dust" "procs" "btm" "ax" "delta" "hyperfine" ];
       noModelCache = text: lib.all (term: !(lib.hasInfix term text)) [
@@ -108,6 +144,9 @@ in
     assert !(hasWord "bat" "batch");
     assert lib.all (passed: passed) hostChecks;
     assert lib.hasInfix "The document is done when" hosts.claude.humanDocuments.content;
+    assert lib.hasInfix "## ADRs and domain documents" hosts.claude.humanDocuments.content;
+    assert lib.all documentsTriggerNamesAdr
+      (builtins.filter (host: host ? humanDocuments) (lib.attrValues hosts));
     pkgs.runCommand "unit-agent-guides" { } ''
       touch $out
     '';

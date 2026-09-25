@@ -12,9 +12,9 @@
 # — throws instead of escaping. That makes it safe to run inside the offline Nix
 # sandbox.
 #
-# This derivation is the ONLY automated gate on the spawn seam: `nix flake check`
-# now runs it on every check system, so the protection that previously ran only
-# by hand (`bun test` in tools/skill-router) regresses loudly in CI.
+# This derivation is the ONLY automated gate on the spawn seam: CI builds every
+# checks.<system> attribute on both runners, so the protection that previously
+# ran only by hand (`bun test` in tools/skill-router) regresses loudly in CI.
 { pkgs, lib, ... }:
 
 let

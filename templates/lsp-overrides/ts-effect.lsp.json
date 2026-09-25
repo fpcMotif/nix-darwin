@@ -1,8 +1,8 @@
 {
-  "$comment": "TypeScript + Effect-TS project. Stack: tsgo (TS 7 native, 10-30x faster than tsserver) for types, oxlint for diagnostics. Effect-TS's @effect/language-service plugin loads via tsconfig.json compilerOptions.plugins — tsgo --lsp respects plugins in interactive mode. Drop at project root as .lsp.json.",
+  "$comment": "TypeScript + Effect-TS project. Stack: tsc --lsp (TS 7 native, 10-30x faster than tsserver) for types, oxlint for diagnostics. TS 7 loads no tsserver plugins, so stock tsc --lsp has no Effect diagnostics. Run `bunx @effect/tsgo setup`, then set tsc.command to the absolute path printed by `bunx effect-tsgo get-exe-path` (the Effect build of TS 7; use it instead of tsc, not alongside it). Drop at project root as .lsp.json.",
   "lspServers": {
-    "tsgo": {
-      "command": "tsgo",
+    "tsc": {
+      "command": "tsc",
       "args": ["--lsp", "--stdio"],
       "extensionToLanguage": {
         ".ts": "typescript",

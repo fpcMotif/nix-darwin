@@ -14,17 +14,15 @@ same `[lsp]` / `[lsp.servers.*]` schema.
 
 ## Modern TypeScript stack
 
-The default stack uses Microsoft's TS 7 / `tsgo --lsp` for type
+The default stack uses Microsoft's TS 7 native `tsc --lsp` for type
 intelligence and `oxlint --lsp` for lint — both Rust/Go-native, both
 10-30x faster than the legacy `tsserver`. Vite ecosystem is the
 reference target (rolldown, Vue/Astro/Svelte SFCs, Tailwind).
 
 | Template | Stack | When |
 |---|---|---|
-| [`ts-effect.lsp.json`](./ts-effect.lsp.json) | tsgo + oxlint | TypeScript + Effect-TS |
-| [`vite-vue.lsp.json`](./vite-vue.lsp.json) | tsgo + vue-language-server + oxlint + tailwindcss | Vite + Vue 3 |
-| [`vite-react.lsp.json`](./vite-react.lsp.json) | tsgo + oxlint + tailwindcss | Vite + React |
-| [`tsserver-fallback.lsp.json`](./tsserver-fallback.lsp.json) | vtsls + oxlint | Legacy projects needing tsserver plugins |
+| [`ts-effect.lsp.json`](./ts-effect.lsp.json) | tsc + oxlint | TypeScript + Effect-TS |
+| [`vite-react.lsp.json`](./vite-react.lsp.json) | tsc + oxlint + tailwindcss | Vite + React |
 | [`rust-nightly.lsp.json`](./rust-nightly.lsp.json) | rust-analyzer (nightly via devShell) | Rust |
 | [`python-strict.lsp.json`](./python-strict.lsp.json) | basedpyright strict + ruff | Python |
 | [`go-modules.lsp.json`](./go-modules.lsp.json) | gopls + workspace settings | Multi-module Go |
@@ -32,20 +30,20 @@ reference target (rolldown, Vue/Astro/Svelte SFCs, Tailwind).
 | [`neovim.lua`](./neovim.lua) | nvim-lspconfig | Neovim, same servers |
 | [`mcp-bridge.json`](./mcp-bridge.json) | mcp-language-server | Claude Desktop / Codex App |
 
-## Why tsgo + oxlint as default
+## Why tsc + oxlint as default
 
-| Concern | tsgo --lsp | oxlint --lsp | What it replaces |
+| Concern | tsc --lsp | oxlint --lsp | What it replaces |
 |---|---|---|---|
 | Type-checking, hover, definitions | ✅ | — | typescript-language-server (tsserver wrapper) |
 | Lint diagnostics | — | ✅ | eslint-language-server |
 | Vue/Astro/Svelte SFC type-checking | partial (delegate to vue-language-server) | ✅ lint only | volar / astro / svelte LSPs supplement |
-| Plugins (`@effect/language-service`) | ✅ in interactive mode | n/a | tsserver |
+| Effect diagnostics | via `@effect/tsgo` (TS 7 loads no tsserver plugins) | n/a | `@effect/language-service` tsserver plugin |
 | Startup time | ~10x faster | ~30x faster | both |
 | Memory | ~3x less | ~5x less | both |
 
 The two servers register the same filetypes and run in parallel —
 Claude Code/Codex merges diagnostics from both. `oxlint` is marked
-`isLinter: true` so hover/definitions only come from `tsgo`.
+`isLinter: true` so hover/definitions only come from `tsc`.
 
 ## Schema reminder
 
@@ -73,7 +71,7 @@ binding.
 
 The `typescript-lsp@claude-plugins-official` plugin registers a
 `typescript` server-id pointing at `typescript-language-server`. With
-tsgo as our primary, that plugin becomes redundant. To disable it:
+tsc as our primary, that plugin becomes redundant. To disable it:
 
 ```bash
 jq '.enabledPlugins["typescript-lsp@claude-plugins-official"] = false' \
