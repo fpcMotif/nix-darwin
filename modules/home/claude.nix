@@ -207,8 +207,6 @@ let
   # match wins, and specificity does NOT reorder them. So a deny beats an allow
   # for the same path, and an ask beats a more specific allow.
   claudeAllowRules = [
-    "Bash(cliproxyapi -codex-login)"
-    "Bash(cliproxyapi:*)"
     "Bash(lsof:*)"
     "Bash(xargs kill -9)"
     "Bash(nix:*)"
