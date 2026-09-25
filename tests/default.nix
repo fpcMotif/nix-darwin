@@ -205,6 +205,54 @@ in
         touch $out
       '';
 
+  # Tier-1 hermetic check for martin.shell.interactive = "fish": builds the
+  # shell modules' real Home Manager files and runs a sandboxed fish in all
+  # four startup modes -- PATH tiers, exported variables, exit status, quiet
+  # output, vi and search-plane bindings, wrapper argv/env isolation, direnv,
+  # zoxide, and a probe-free prompt (#385).
+  unit-fish-shell =
+    let
+      shellHome = (import ./lib/shell-home.nix { inherit inputs pkgs lib; }) { interactive = "fish"; };
+      sessionPath = pkgs.writeText "session-path"
+        (lib.concatStringsSep "\n" shellHome.config.home.sessionPath + "\n");
+    in
+    pkgs.runCommand "unit-fish-shell"
+      {
+        # home.path is the package set this config installs (fish, fzf,
+        # direnv, zoxide, ...), standing in for the user profile.
+        nativeBuildInputs = [
+          shellHome.config.home.path
+          pkgs.bash
+          pkgs.coreutils
+          pkgs.gnugrep
+          pkgs.gnused
+          pkgs.jq
+        ];
+      }
+      ''
+        bash ${./unit/fish-shell-test.sh} ${shellHome.config.home-files} ${sessionPath}
+        touch $out
+      '';
+
+  # The switch generates exactly one shell's config: flipping it is the
+  # whole rollback (#385).
+  unit-shell-switch =
+    let
+      shellHome = interactive: ((import ./lib/shell-home.nix { inherit inputs pkgs lib; }) { inherit interactive; }).config;
+      fish = shellHome "fish";
+      zsh = shellHome "zsh";
+      hasZshrc = cfg: cfg.home.file ? "./.zshrc";
+      hasFishConfig = cfg: cfg.xdg.configFile ? "fish/config.fish";
+    in
+    assert fish.programs.fish.enable && !fish.programs.zsh.enable;
+    assert hasFishConfig fish && !(hasZshrc fish);
+    assert zsh.programs.zsh.enable && !zsh.programs.fish.enable;
+    assert hasZshrc zsh && !(hasFishConfig zsh);
+    pkgs.runCommand "unit-shell-switch" { } ''
+      echo "PASS unit-shell-switch"
+      touch $out
+    '';
+
   # Integration tests
   integration-configurations-eval =
     if pkgs.stdenv.hostPlatform.isDarwin then

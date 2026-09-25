@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Tier 2 (opt-in, real machine): prove zsh builds a duplicate-free PATH in all
-# four modes (-c, -lc, -ic, -lic), both fresh and forked from a login session,
+# Tier 2 (opt-in, real machine): prove the interactive shell (zsh or fish,
+# per martin.shell.interactive) builds a duplicate-free PATH in all four
+# modes (-c, -lc, -ic, -lic), both fresh and forked from a login session,
 # and that the intended executables win: mbx's cargo shim for cargo, and the
 # Nix copy of every command that also sits in a user directory.
 #
@@ -10,6 +11,18 @@
 #
 #     HOME_FILES_DIR=$(nix build --no-link --print-out-paths \
 #       .#darwinConfigurations.f.config.home-manager.users.martinfan.home-files)
+#
+# The shell under test is the one the target configures: fish when it has
+# .config/fish/config.fish and no .zshrc, zsh otherwise. VSP_SHELL=zsh|fish
+# overrides that; VSP_FISH names the fish binary (default: the system
+# profile's, else the first on PATH).
+#
+# Before a switch that first enables fish, /etc/fish does not yet run
+# nix-darwin's environment. VSP_SYSTEM_ENV=<built set-environment> runs it in
+# each fresh process first, as /etc/fish/nixos-env-preinit.fish will:
+#
+#     VSP_SYSTEM_ENV=$(nix build --no-link --print-out-paths \
+#       .#darwinConfigurations.f.config.system.build.setEnvironment)
 #
 # Not part of `nix flake check`: it spawns real shells and reads real $HOME
 # state. The project dev-shell case has its own section and exit bit, because a
@@ -77,7 +90,6 @@ need() {
     exit 2
   }
 }
-need zsh
 need awk
 
 HOME_FILES_DIR="${1:-}"
@@ -86,25 +98,56 @@ if [ -n "$HOME_FILES_DIR" ] && [ ! -d "$HOME_FILES_DIR" ]; then
   exit 2
 fi
 
+. "$(dirname -- "${BASH_SOURCE[0]}")/lib/interactive-shell.sh"
+
+SHELL_KIND=$(interactive_shell_kind "${HOME_FILES_DIR:-$HOME}" "${VSP_SHELL:-}")
+case "$SHELL_KIND" in
+  zsh)
+    need zsh
+    SHELL_BIN=/bin/zsh
+    ;;
+  fish)
+    SHELL_BIN=$(fish_binary "${VSP_FISH:-}")
+    [ -n "$SHELL_BIN" ] || need fish
+    ;;
+  *)
+    printf 'verify-session-path: VSP_SHELL must be zsh or fish, got %s\n' "$SHELL_KIND" >&2
+    exit 2
+    ;;
+esac
+
 USER="${USER:-$(id -un)}"
 MBX_SHIM="${HOME}/Library/Application Support/mbx/bin/cargo"
 REQUIRED_NAMES=(cargo rustc bun opencode)
 MODES=(-c -lc -ic -lic)
 
-declare -a zdotdir_args=()
-target_label="LIVE dotfiles"
-if [ -n "$HOME_FILES_DIR" ]; then
-  zdotdir_args=(ZDOTDIR="$HOME_FILES_DIR")
-  target_label="BUILT home-files ($HOME_FILES_DIR)"
-fi
-
 WORKDIR=$(mktemp -d "${TMPDIR:-/tmp}/verify-session-path.XXXXXX")
 trap 'rm -rf "$WORKDIR"' EXIT
 
-printf 'verify-session-path: testing %s\n' "$target_label"
+# Point the shell at the built config.
+declare -a config_args=()
+target_label="LIVE dotfiles"
+if [ -n "$HOME_FILES_DIR" ]; then
+  target_label="BUILT home-files ($HOME_FILES_DIR)"
+  if [ "$SHELL_KIND" = zsh ]; then
+    config_args=(ZDOTDIR="$HOME_FILES_DIR")
+  else
+    link_fish_config "$HOME_FILES_DIR" "$WORKDIR/xdg-config"
+    config_args=(XDG_CONFIG_HOME="$WORKDIR/xdg-config")
+  fi
+fi
+
+declare -a system_env_launch=()
+if [ -n "${VSP_SYSTEM_ENV:-}" ]; then
+  # shellcheck disable=SC2016 # expanded by the inner sh
+  system_env_launch=(/bin/sh -c '. "$0" && exec "$@"' "$VSP_SYSTEM_ENV")
+  target_label="$target_label + system env $VSP_SYSTEM_ENV"
+fi
+
+printf 'verify-session-path: testing %s with %s (%s)\n' "$target_label" "$SHELL_KIND" "$SHELL_BIN"
 
 # Nix-owned: under /etc/profiles/, /run/current-system/ or /nix/, or exactly
-# ~/.nix-profile/bin. The probe below repeats this rule in zsh.
+# ~/.nix-profile/bin. The probes below repeat this rule in zsh and fish.
 is_nix_owned_dir() { # $1 = dir
   case "$1" in
     /etc/profiles/*|/run/current-system/*|/nix/*) return 0 ;;
@@ -169,6 +212,55 @@ for _name in "${(k)_to_check[@]}"; do
 done
 ZSH_PROBE
 
+# The same records from fish. `command -s` resolves on PATH only, like
+# whence -p; `type -t` reports a function or builtin shadowing the name,
+# rendered in whence -w's "name: kind" form.
+FISH_PROBE="$WORKDIR/probe.fish"
+cat >"$FISH_PROBE" <<'FISH_PROBE'
+for guard in __NIX_DARWIN_SET_ENVIRONMENT_DONE __HM_SESS_VARS_SOURCED
+    set -q $guard; and printf 'GUARD\t%s=%s\n' $guard "$$guard"; or printf 'GUARD\t%s=<unset>\n' $guard
+end
+
+for p in $PATH
+    printf 'PATHENTRY\t%s\n' $p
+end
+
+set -l nix_names
+set -l other_names
+for d in $PATH
+    test -d $d; or continue
+    set -l names (path filter -fx -- $d/* | path basename)
+    switch $d
+        case '/etc/profiles/*' '/run/current-system/*' '/nix/*' "$HOME/.nix-profile/bin"
+            set -a nix_names $names
+        case '*'
+            set -a other_names $names
+    end
+end
+
+set -l overlap (comm -12 (printf '%s\n' $nix_names | sort -u | psub) (printf '%s\n' $other_names | sort -u | psub))
+printf 'OVERLAP_COUNT\t%s\n' (count $overlap)
+for name in $overlap
+    printf 'OVERLAPNAME\t%s\n' $name
+end
+
+set -l required (string split -n ' ' -- $VSP_REQUIRED)
+printf 'REQCOUNT\t%s\n' (count $required)
+for name in (printf '%s\n' $overlap $required | sort -u)
+    set -l p (command -s -- $name; or echo '<not-found>')
+    set -l kind (type -t -- $name 2>/dev/null; or echo none)
+    test "$kind" = file; and set kind command
+    printf 'WHENCE\t%s\t%s\t%s: %s\n' $name $p[1] $name $kind[1]
+end
+FISH_PROBE
+
+if [ "$SHELL_KIND" = fish ]; then
+  PROBE=$FISH_PROBE
+  source_probe="source '$PROBE'"
+else
+  source_probe=". '$PROBE'"
+fi
+
 # Keep only tagged probe records, minus any trailing CR.
 clean_probe_output() {
   awk '
@@ -216,7 +308,7 @@ process_shell_output() {
   local mode="$1" session="$2" out="$3" err="$4"
   local had_fail=0 n_err _line name p w
   local guard_nix_darwin="" guard_hm_sess="" guard_hm_zsh=""
-  section "zsh ${mode}  (${session}, ${target_label})"
+  section "${SHELL_KIND} ${mode}  (${session}, ${target_label})"
 
   local unexpected_err
   unexpected_err=$(filter_benign_stderr "$err")
@@ -350,14 +442,15 @@ process_shell_output() {
 }
 
 # ---------------------------------------------------------------------------
-section "=== A. Clean: fresh env -i process, all four zsh modes ==="
+section "=== A. Clean: fresh env -i process, all four ${SHELL_KIND} modes ==="
 # ---------------------------------------------------------------------------
 for mode in "${MODES[@]}"; do
   out="$WORKDIR/clean${mode}.out"
   err="$WORKDIR/clean${mode}.err"
   env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" TERM=xterm-256color \
     VSP_REQUIRED="${REQUIRED_NAMES[*]}" \
-    ${zdotdir_args[@]+"${zdotdir_args[@]}"} /bin/zsh "$mode" ". '$PROBE'" \
+    ${config_args[@]+"${config_args[@]}"} ${system_env_launch[@]+"${system_env_launch[@]}"} \
+    "$SHELL_BIN" "$mode" "$source_probe" \
     >"$out" 2>"$err" </dev/null || true
   process_shell_output "$mode" "clean" "$out" "$err"
 done
@@ -366,22 +459,28 @@ done
 section "=== B. Inherited: children forked from one clean login session ==="
 # ---------------------------------------------------------------------------
 # Children run without env -i, so they inherit the login parent's exports,
-# including the Home Manager and nix-darwin guards.
-INH_PARENT="$WORKDIR/inh-parent.zsh"
+# including the Home Manager and nix-darwin guards. The parent file parses
+# in both zsh and fish. zsh children resolve `zsh` on the parent's PATH.
+child_bin=zsh
+[ "$SHELL_KIND" = fish ] && child_bin=$SHELL_BIN
+INH_PARENT="$WORKDIR/inh-parent.$SHELL_KIND"
 cat >"$INH_PARENT" <<EOF
-zsh -c   ". '$PROBE'" >"$WORKDIR/inh-c.out"   2>"$WORKDIR/inh-c.err"   </dev/null
-zsh -lc  ". '$PROBE'" >"$WORKDIR/inh-lc.out"  2>"$WORKDIR/inh-lc.err"  </dev/null
-zsh -ic  ". '$PROBE'" >"$WORKDIR/inh-ic.out"  2>"$WORKDIR/inh-ic.err"  </dev/null
-zsh -lic ". '$PROBE'" >"$WORKDIR/inh-lic.out" 2>"$WORKDIR/inh-lic.err" </dev/null
+$child_bin -c   "$source_probe" >"$WORKDIR/inh-c.out"   2>"$WORKDIR/inh-c.err"   </dev/null
+$child_bin -lc  "$source_probe" >"$WORKDIR/inh-lc.out"  2>"$WORKDIR/inh-lc.err"  </dev/null
+$child_bin -ic  "$source_probe" >"$WORKDIR/inh-ic.out"  2>"$WORKDIR/inh-ic.err"  </dev/null
+$child_bin -lic "$source_probe" >"$WORKDIR/inh-lic.out" 2>"$WORKDIR/inh-lic.err" </dev/null
 EOF
 
+parent_source=". '$INH_PARENT'"
+[ "$SHELL_KIND" = fish ] && parent_source="source '$INH_PARENT'"
 env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" TERM=xterm-256color \
   VSP_REQUIRED="${REQUIRED_NAMES[*]}" \
-  ${zdotdir_args[@]+"${zdotdir_args[@]}"} /bin/zsh -lc ". '$INH_PARENT'" \
+  ${config_args[@]+"${config_args[@]}"} ${system_env_launch[@]+"${system_env_launch[@]}"} \
+  "$SHELL_BIN" -lc "$parent_source" \
   >"$WORKDIR/inh-parent.out" 2>"$WORKDIR/inh-parent.err" </dev/null || true
 
 if [ -s "$WORKDIR/inh-parent.err" ]; then
-  section "zsh -lc  (inherited parent, ${target_label})"
+  section "${SHELL_KIND} -lc  (inherited parent, ${target_label})"
   bad "stderr not clean -- printed verbatim:"
   while IFS= read -r _line; do printf '        %s\n' "$_line"; done <"$WORKDIR/inh-parent.err"
   BASE_FAIL=1

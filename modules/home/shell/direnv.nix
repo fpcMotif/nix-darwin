@@ -4,6 +4,7 @@
   programs.direnv = {
     enable = true;
     enableZshIntegration = true;
+    enableFishIntegration = true;
     nix-direnv.enable = true;
     # Trust my own project roots so `cd` never re-prompts with
     # "direnv: error .envrc is blocked. Run 'direnv allow'": that prompt fires

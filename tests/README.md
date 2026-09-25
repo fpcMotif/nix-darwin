@@ -10,6 +10,7 @@ tests/
 |-- default.nix                              # entry point, builds the check set
 |-- lib/
 |   |-- assertions.nix                       # tiny assertTest / testSuite helpers
+|   |-- shell-home.nix                       # real Home Manager eval of only the shell modules
 |   `-- zsh-module-eval.nix                  # evaluates modules/home/zsh.nix standalone for cheap toggles
 |-- unit/
 |   |-- mksystem-test.nix                    # lib/mkSystem.nix shape and current host contract
@@ -18,6 +19,7 @@ tests/
 |   |-- skill-router-test.nix                # runs the tools/skill-router bun suite offline (spawn-seam gate)
 |   |-- claude-settings-ownership-test.nix   # generated settings reconciler fixture
 |   |-- claude-settings-ownership-test.sh    # temporary-home behavior checks
+|   |-- fish-shell-test.sh                   # generated fish config in a sandboxed fish, all four modes
 |   `-- zsh-vi-mode-test.sh                  # martin.shell.viMode keymap contract in a sandboxed zsh
 `-- integration/
     `-- configurations-eval-test.nix         # current darwin/nixos configs and module outputs
@@ -57,6 +59,8 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `smoke-build-toolchain`             | Required Prek, Oxlint/Oxfmt, Tsgolint, Tsgo, Uv, and Ruff commands exist, plus the shipped canary Bun (and its `bunx` symlink) on Darwin. |
 | `unit-auto-update`                  | Colored update summaries and the ownership-safe archived auto-switch source. |
 | `unit-zsh-vi-mode`                  | Loads the rendered zshrc (home-manager section order emulated) in a sandboxed zsh and asserts the post-load keymap tables: fzf ^R/^T/alt-c widgets in BOTH viins and vicmd, prefix-history Up/Down, fn-Delete/Home/End/PageUp/PageDown/Shift-Tab, the keepEmacsKeys set in viins, v -> edit-command-line in vicmd, plugin widgets present, autosuggestions still wired. The regression gate for "enabling vi mode ate fzf ^R" (#328). |
+| `unit-fish-shell`                   | Builds the shell modules' real Home Manager files with `martin.shell.interactive = "fish"` and runs a sandboxed fish in `-c`, `-lc`, `-ic`, and `-lic`: silent startup, exit status, no zsh launched or sourced, duplicate-free PATH with session tiers in order (clean and forked), exported variables and inherited terminfo, vi and search-plane bindings after the first-prompt load, abbreviations, interactive-only wrappers with argv and child-only env isolation (recording stubs, no real AI CLI reachable), direnv load and unload, zoxide, and a prompt that runs no external command (#385). |
+| `unit-shell-switch`                 | `martin.shell.interactive` generates exactly one shell's config: fish without `.zshrc`, zsh without `config.fish`. |
 | `unit-mksystem`                     | `lib/mkSystem.nix` shape plus current user, host platform, Home Manager, host module, and skill-target wiring. |
 | `unit-overlay`                      | `pkgs/default.nix` is a valid overlay and exposes the expected `pkgs.martin.*` attributes, descriptions, and CLI main programs. Darwin-only package evaluation is skipped on Linux. |
 | `unit-format`                       | `formatter.<system>` is configured as `nixpkgs-fmt`, evaluates, and all flake Nix files are formatted. |

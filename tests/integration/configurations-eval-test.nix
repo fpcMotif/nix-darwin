@@ -169,6 +169,11 @@ let
       homePrograms = homeConfig.programs;
       homeActivation = homeData.activation;
       homeXdg = homeConfig.xdg;
+      interactive = homeConfig.martin.shell.interactive;
+      zshSelected = interactive == "zsh";
+      interactiveBin = builtins.unsafeDiscardStringContext (
+        if zshSelected then "${pkgs.zsh}/bin/zsh" else lib.getExe homePrograms.fish.package
+      );
       homePackageSet = builtins.listToAttrs (map
         (pkg: {
           name = lib.getName pkg;
@@ -198,9 +203,14 @@ let
         (!(hasHomePackage "jj-starship"))
         "${prefix} Home Manager package list should not include jj-starship")
 
-      (helpers.assertTest "${prefix}-home-zsh-enabled"
-        (homePrograms.zsh.enable == true)
-        "${prefix} Home Manager should own zsh config")
+      (helpers.assertTest "${prefix}-home-shell-switch-selects-one"
+        (homePrograms.zsh.enable == zshSelected
+          && homePrograms.fish.enable == (interactive == "fish"))
+        "${prefix} martin.shell.interactive = ${interactive} must configure exactly that shell")
+
+      (helpers.assertTest "${prefix}-home-shell-interactive-per-platform"
+        (interactive == (if prefix == "darwin" then "fish" else "zsh"))
+        "${prefix} the Fish trial runs on darwin only; Linux hosts stay on zsh")
 
       (helpers.assertTest "${prefix}-home-zsh-history-substring-disabled"
         (homePrograms.zsh.historySubstringSearch.enable == false)
@@ -211,12 +221,23 @@ let
         "${prefix} Home Manager should enable martin.shell.viMode (vi editing at the prompt)")
 
       (helpers.assertTest "${prefix}-home-zsh-vi-mode-default-keymap-viins"
-        (homePrograms.zsh.defaultKeymap == "viins")
+        (zshSelected -> homePrograms.zsh.defaultKeymap == "viins")
         "${prefix} Home Manager should land zsh in viins when vi mode is enabled")
 
       (helpers.assertTest "${prefix}-home-zsh-vi-mode-native-zero-plugins"
         (homePrograms.zsh.plugins == [ ])
         "${prefix} Home Manager should use native Zsh vi mode with zero third-party plugins")
+
+      (helpers.assertTest "${prefix}-home-fish-native-and-quiet"
+        (!zshSelected -> (
+          homePrograms.fish.generateCompletions == false
+            && homePrograms.fish.plugins == [ ]
+            && homePrograms.starship.enableFishIntegration == false
+            && homePrograms.worktrunk.enableFishIntegration == false
+            && homePrograms.eza.enableFishIntegration == false
+            && lib.hasInfix "fish_vi_key_bindings" homePrograms.fish.interactiveShellInit
+        ))
+        "${prefix} fish should use native vi bindings and prompt, no plugins, no runtime-rendered integrations, and no per-package completion builds")
 
       (helpers.assertTest "${prefix}-home-session-path-no-duplicates"
         (builtins.length (lib.unique homeData.sessionPath) == builtins.length homeData.sessionPath)
@@ -245,25 +266,33 @@ let
           homeData.sessionVariables.PNPM_HOME == "$HOME/.local/share/pnpm")
         "${prefix} home.sessionVariables must set platform-correct PNPM_HOME")
       (helpers.assertTest "${prefix}-ghostty-opens-intended-shell"
-        (homePrograms.zsh.enable == true
-          && (prefix == "darwin" -> homeData.sessionVariables.SHELL == "/bin/zsh"))
-        "${prefix} Ghostty opens intended login shell (zsh enabled, SHELL=/bin/zsh on Darwin)")
+        (homeConfig.martin.terminal.ghostty.shellIntegration.shell == interactive
+          && (prefix == "darwin" -> homeData.sessionVariables.SHELL
+          == (if zshSelected then "/bin/zsh" else "/run/current-system/sw/bin/fish")))
+        "${prefix} Ghostty integration and SHELL must follow martin.shell.interactive (${interactive})")
 
       (helpers.assertTest "${prefix}-tmux-opens-intended-shell"
         (
           let
-            zshBin = builtins.unsafeDiscardStringContext "${pkgs.zsh}/bin/zsh";
             tmuxCfg = builtins.unsafeDiscardStringContext homePrograms.tmux.extraConfig;
           in
-          homePrograms.tmux.shell == "${pkgs.zsh}/bin/zsh"
-          && lib.hasInfix "default-command \"${zshBin} -l\"" tmuxCfg
+          builtins.unsafeDiscardStringContext homePrograms.tmux.shell == interactiveBin
+          && lib.hasInfix "default-command \"${interactiveBin} -l\"" tmuxCfg
         )
-        "${prefix} tmux must explicitly configure zsh as default shell and login default-command")
+        "${prefix} tmux must start the ${interactive} shell as default shell and login default-command")
+
+      # Zed is darwin-only (modules/home/zed.nix).
+      (helpers.assertTest "${prefix}-zed-opens-intended-shell"
+        (prefix == "darwin" ->
+          builtins.unsafeDiscardStringContext homePrograms.zed-editor.userSettings.terminal.shell.program == interactiveBin)
+        "${prefix} Zed's terminal must start the ${interactive} shell")
+
       (helpers.assertTest "${prefix}-direnv-activates-projects"
         (homePrograms.direnv.enable == true
           && homePrograms.direnv.nix-direnv.enable == true
-          && homePrograms.direnv.enableZshIntegration == true)
-        "${prefix} direnv and nix-direnv with zsh integration must be enabled")
+          && homePrograms.direnv.enableZshIntegration == true
+          && homePrograms.direnv.enableFishIntegration == true)
+        "${prefix} direnv and nix-direnv with zsh and fish integration must be enabled")
 
       (helpers.assertTest "${prefix}-agent-noninteractive-receives-environment"
         (homeData.sessionVariables ? EDITOR
@@ -607,6 +636,23 @@ let
     (helpers.assertTest "darwin-zsh-enabled"
       (darwinConfig.programs.zsh.enable == true)
       "Darwin should enable zsh at the system level")
+
+    (helpers.assertTest "darwin-login-shell-follows-switch"
+      (
+        let
+          fishSelected = darwinHome.martin.shell.interactive == "fish";
+          shells = map toString darwinConfig.environment.shells;
+        in
+        builtins.elem user darwinConfig.users.knownUsers
+          && (if fishSelected then
+          darwinConfig.programs.fish.enable
+            && darwinConfig.programs.fish.useBabelfish
+            && darwinConfig.users.users.${user}.shell.pname or null == "fish"
+            && lib.any (lib.hasSuffix "/bin/fish") shells
+        else
+          darwinConfig.users.users.${user}.shell == "/bin/zsh")
+      )
+      "Darwin must register the selected shell and write it as ${user}'s login shell (babelfish, no foreign-env bash fork)")
 
     (helpers.assertTest "darwin-security-gatekeeper-not-disabled"
       (

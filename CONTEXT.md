@@ -27,13 +27,17 @@ The preferred coding-layout control path: split, move between, resize, and equal
 _Avoid_: treating every window split as a Finder/Dock/Spaces concern; most coding splits belong inside the terminal session.
 
 
+**Interactive shell**:
+The one shell that owns interactive sessions, chosen by `martin.shell.interactive` (`"zsh"` or `"fish"`, in `modules/home/shell/options.nix`). It is the Darwin login shell, the exported `SHELL`, and the shell Ghostty, tmux, and Zed start. Only the selected shell's Home Manager config is generated, so switching back is one rebuild. macOS `/bin/zsh` stays for scripts and agent shells either way.
+_Avoid_: calling `/bin/zsh` "the shell" when Fish is selected; it is the system script shell, not the interactive one.
+
 **Prompt vi mode**:
-Vi keybindings for zsh's line editor (ZLE), provided by the `zsh-vi-mode` plugin behind `martin.shell.viMode` in `modules/home/zsh.nix`. It governs the input line only: normal/insert modes, motions, text objects, surround, per-mode cursor shape. Distinct surfaces keep their own names: tmux copy-mode (`mode-keys vi`, scrollback selection), Zed's `vim_mode` (editor), and the vim modes built into AI CLI TUIs.
+Vi keybindings at the interactive shell's prompt, from the shell's native keymaps (ZLE `viins`/`vicmd`, or `fish_vi_key_bindings`) behind `martin.shell.viMode`. It governs the input line only: normal/insert modes, motions, and text objects. Distinct surfaces keep their own names: tmux copy-mode (`mode-keys vi`, scrollback selection), Zed's `vim_mode` (editor), and the vim modes built into AI CLI TUIs.
 _Avoid_: calling tmux copy-mode, Zed's `vim_mode`, or an AI CLI TUI's vim mode "vi mode" without a qualifier.
 
 
 **Prompt search plane**:
-The zsh-owned, prefix-chord key plane over the fzf pickers (`^G` + key, behind `martin.shell.search` in `modules/home/zsh.nix`): ripgrep content search, zoxide directory jump, and process kill on plain-letter chords; fzf-git.sh's git-object pickers on ctrl chords. The optional Ghostty cmd-key layer (`martin.terminal.ghostty.search`) only *types* those chords — it is a veneer over the one definition, never a second one.
+The shell-owned, prefix-chord key plane over the fzf pickers (`^G` + key, behind `martin.shell.search`, bound by `modules/home/shell/zsh.nix` or `fish.nix`): ripgrep content search, zoxide directory jump, and process kill on plain-letter chords; fzf-git's git-object pickers on ctrl chords. The optional Ghostty cmd-key layer (`martin.terminal.ghostty.search`) only *types* those chords — it is a veneer over the one definition, never a second one.
 _Avoid_: calling it a hotkey plane — that term is reserved for the retired skhd global-shortcut layer.
 
 

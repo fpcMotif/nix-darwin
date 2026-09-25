@@ -1,7 +1,12 @@
 { pkgs, currentSystemUser, currentSystemUserHome, ... }:
 
 {
-  users.users.${currentSystemUser}.home = currentSystemUserHome;
+  users.users.${currentSystemUser} = {
+    home = currentSystemUserHome;
+    # nix-darwin needs the uid to own this user's login shell
+    # (modules/darwin/shell.nix).
+    uid = 501;
+  };
 
   system = {
     primaryUser = currentSystemUser;
@@ -17,7 +22,10 @@
       cleanMyMacManualOnly = true;
     };
 
-    autoSwitch.enable = true;
+    # Off for the Fish trial (#385): a nightly switch to origin/main drops
+    # fish from the system profile but not from the login shell, which would
+    # then name a missing binary. Turn back on with the rollback or adoption.
+    autoSwitch.enable = false;
     fonts.enable = true;
     hammerspoon.enable = true;
     healthCheck.enable = true;
@@ -93,6 +101,10 @@
   };
 
   home-manager.users.${currentSystemUser}.martin = {
+    # The one switch: "fish" or "zsh". Login shell, SHELL, Ghostty, tmux, and
+    # Zed follow it; only the selected shell's config is generated.
+    shell.interactive = "fish";
+
     prompt.starship = {
       enable = true;
       palette.enable = true;
@@ -153,10 +165,7 @@
       clipboard.enable = true;
       scrollback.lines = 500000;
 
-      shellIntegration = {
-        shell = "zsh";
-        features = [ "cursor" "sudo" "title" ];
-      };
+      shellIntegration.features = [ "cursor" "sudo" "title" ];
 
       quickTerminal = {
         enable = true;

@@ -2,6 +2,7 @@
   programs.fzf = {
     enable = true;
     enableZshIntegration = true;
+    enableFishIntegration = true;
     defaultCommand = "fd --type f --hidden --follow --exclude .git";
     fileWidget = {
       command = "fd --type f --hidden --exclude .git --color=always";

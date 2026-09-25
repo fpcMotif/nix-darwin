@@ -1,4 +1,4 @@
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 # Zed editor — fully Nix-managed via Home Manager's `programs.zed-editor`
 # module. The editor binary comes from `pkgs.martin.zed-nightly-bin`, which
@@ -245,7 +245,7 @@ in
       terminal = {
         font_family = "JetBrains Mono";
         font_size = 13;
-        shell.program = "${pkgs.zsh}/bin/zsh";
+        shell.program = config.martin.shell.interactiveProgram;
       };
 
       # ---- LSP servers ------------------------------------------------------

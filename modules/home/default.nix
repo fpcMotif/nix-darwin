@@ -6,6 +6,7 @@
     ./packages.nix
     ./session.nix
     ./shell/zsh.nix
+    ./shell/fish.nix
     ./shell/direnv.nix
     ./shell/fzf.nix
     ./shell/zoxide.nix

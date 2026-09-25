@@ -71,6 +71,11 @@ in
     OBSIDIAN_VAULT = "$HOME/Documents/obsidian";
     TERMINFO = "$HOME/.terminfo";
   } // lib.optionalAttrs isDarwin {
-    SHELL = "/bin/zsh";
+    # The login shell modules/darwin/shell.nix writes for this user: the
+    # system profile path in /etc/shells, not a store path that changes.
+    SHELL =
+      if config.martin.shell.interactive == "fish"
+      then "/run/current-system/sw/bin/fish"
+      else "/bin/zsh";
   };
 }

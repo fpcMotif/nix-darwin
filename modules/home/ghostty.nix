@@ -127,7 +127,7 @@ let
   ];
 
   # Search veneer: convert the martin.shell.search "^X" prefix into its
-  # control byte so Ghostty literally types the chord the zsh widgets bind.
+  # control byte so Ghostty literally types the chord the shell binds.
   ctrlByteHex = c:
     let
       code = builtins.substring 0 1 c;
@@ -166,7 +166,7 @@ let
     in
     if !enabled then [ ]
     else
-      [ "# Search — types the prompt search plane chords (zsh owns the meaning)" ]
+      [ "# Search — types the prompt search plane chords (the shell owns the meaning)" ]
       ++ lib.optionals (search.keys.contentSearch != null)
         (line pfx "cmd+f" "${search.keys.contentSearch}" "${search.prefix} ${search.keys.contentSearch} — ripgrep content search")
       ++ lib.optionals (search.keys.dirJump != null)
@@ -424,7 +424,8 @@ in
     shellIntegration = {
       shell = lib.mkOption {
         type = lib.types.enum [ "none" "detect" "bash" "fish" "zsh" ];
-        default = "zsh";
+        default = config.martin.shell.interactive;
+        defaultText = lib.literalExpression "config.martin.shell.interactive";
         description = "Shell integration mode.";
       };
 
