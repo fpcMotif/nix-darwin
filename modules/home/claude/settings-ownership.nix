@@ -75,27 +75,23 @@ let
       type == "object" and .type == "command" and .command == $hook.command;
 
     def remove_hook($hook):
-      if (.hooks | type) == "object" and (.hooks[$hook.event] | type) == "array" then
-        .hooks[$hook.event] as $groups
-        | [ $groups[]
-            | if type == "object" and .matcher == $hook.matcher
-                and (.hooks | type) == "array" and any(.hooks[]; is_owned_command($hook)) then
-                (.hooks | map(select(is_owned_command($hook) | not))) as $rest
-                | if ($rest | length) == 0 then empty else .hooks = $rest end
-              else
-                .
-              end
-          ] as $kept
-        | if $kept == $groups then
-            .
-          elif ($kept | length) == 0 then
-            del(.hooks[$hook.event])
-          else
-            .hooks[$hook.event] = $kept
-          end
-      else
-        .
-      end;
+      event_groups(.; $hook.event) as $groups
+      | [ $groups[]
+          | if type == "object" and .matcher == $hook.matcher
+              and (.hooks | type) == "array" and any(.hooks[]; is_owned_command($hook)) then
+              (.hooks | map(select(is_owned_command($hook) | not))) as $rest
+              | if ($rest | length) == 0 then empty else .hooks = $rest end
+            else
+              .
+            end
+        ] as $kept
+      | if $kept == $groups then
+          .
+        elif ($kept | length) == 0 then
+          del(.hooks[$hook.event])
+        else
+          .hooks[$hook.event] = $kept
+        end;
 
     def path_changed($before; $after; $path):
       lookup($before; $path) as $old

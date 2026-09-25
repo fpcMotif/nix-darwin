@@ -19,6 +19,7 @@
 , inputs
 , evalScope ? "auto"
 , darwinConfigurationInput ? null
+, darwinDojjoConfigurationInput ? null
 , x230ConfigurationInput ? null
 , vmConfigurationInput ? null
 , ...
@@ -65,17 +66,9 @@ let
   hasPackage = name: packages:
     lib.any (pkg: lib.getName pkg == name) packages;
 
-  # The real host with the experimental backend selected, the way a user would
-  # select it. Only the default host is built by `just switch`.
-  darwinDojjo =
-    if darwinConfiguration != null then
-      import ../lib/with-workspace-backend.nix
-        {
-          configuration = darwinConfiguration;
-          inherit user;
-          backend = "dojjo";
-        }
-    else null;
+  # The real host with the experimental backend selected (tests/default.nix).
+  # Only the default host is built by `just switch`.
+  darwinDojjo = if selectedScope == "darwin" then darwinDojjoConfigurationInput else null;
   darwinDojjoHome = darwinDojjo.config.home-manager.users.${user};
 
   # workspace-backend.nix alone, for platforms this host cannot evaluate in

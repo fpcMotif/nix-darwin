@@ -50,6 +50,15 @@ expect_output() {
   local log=$1 pattern=$2 message=$3
   grep -qF -- "$pattern" "$log" || { cat "$log" >&2; fail "$message"; }
 }
+# Runs a command from a directory without moving this script.
+in_dir() {
+  local dir=$1
+  shift
+  (cd -- "$dir" && "$@")
+}
+jj_workspaces() {
+  in_dir "$1" jj workspace list -T 'name ++ "\n"'
+}
 
 # Home Manager swaps only its own links on a backend switch. This does the same
 # with the generated files, so fixtures observe what activation would leave.
@@ -203,7 +212,7 @@ expect_output "$work/djo-config.log" "dojjo user: $XDG_CONFIG_HOME/dojjo/config.
 for name in a b; do
   [ -f "$work/jjrepo.$name/shared.txt" ] || fail "djo did not create the sibling workspace $name"
 done
-(cd "$jj_repo" && jj workspace list -T 'name ++ "\n"') > "$work/jj-workspaces.log"
+jj_workspaces "$jj_repo" > "$work/jj-workspaces.log"
 for name in a b default; do
   grep -qxF "$name" "$work/jj-workspaces.log" || fail "jj does not register workspace $name"
 done
@@ -247,30 +256,30 @@ new_jj_repo "$colocated" --colocate
   || fail "the colocated JJ workspace is not a plain JJ workspace"
 [ "$(git -C "$colocated" worktree list --porcelain | grep -c '^worktree ')" -eq 1 ] \
   || fail "a JJ workspace was registered as a Git worktree"
-(cd "$colocated" && jj workspace list -T 'name ++ "\n"') | grep -qxF c \
+jj_workspaces "$colocated" | grep -qxF c \
   || fail "jj does not register the colocated workspace"
 pass "a colocated repository gets a JJ workspace, not a Git worktree"
 
 mkdir "$work/jjrepo.taken"
 echo keep > "$work/jjrepo.taken/keep.txt"
-expect_failure "$work/djo-taken.log" sh -c "cd '$jj_repo' && djo switch --create taken --base main"
+expect_failure "$work/djo-taken.log" in_dir "$jj_repo" djo switch --create taken --base main
 expect_output "$work/djo-taken.log" "not an empty directory" "djo did not explain the existing destination"
 [ "$(cat "$work/jjrepo.taken/keep.txt")" = keep ] || fail "djo changed an existing destination"
-(cd "$jj_repo" && jj workspace list -T 'name ++ "\n"') | grep -qxF taken && fail "djo registered a failed workspace"
+jj_workspaces "$jj_repo" | grep -qxF taken && fail "djo registered a failed workspace"
 pass "djo refuses an existing destination and leaves it intact"
 
 echo unsnapshotted > "$work/jjrepo.b/dirty.txt"
-expect_failure "$work/djo-dirty.log" sh -c "cd '$jj_repo' && djo remove b </dev/null"
+expect_failure "$work/djo-dirty.log" in_dir "$jj_repo" djo remove b </dev/null
 expect_output "$work/djo-dirty.log" "Aborted" "djo remove did not abort without confirmation"
 [ -f "$work/jjrepo.b/dirty.txt" ] || fail "djo remove deleted dirty work"
-(cd "$jj_repo" && jj workspace list -T 'name ++ "\n"') | grep -qxF b || fail "djo remove forgot b without confirmation"
+jj_workspaces "$jj_repo" | grep -qxF b || fail "djo remove forgot b without confirmation"
 
 (cd "$jj_repo" && echo trunk-side > shared.txt && jj commit -m trunk-side >/dev/null 2>&1)
 (cd "$work/jjrepo.a" && echo a-side > shared.txt && jj describe -m a-side >/dev/null 2>&1)
 (cd "$jj_repo" && jj rebase -r 'a@' -d @- >/dev/null 2>&1)
 [ "$(cd "$jj_repo" && jj log --no-graph -r 'a@' -T conflict)" = true ] || fail "fixture did not produce a conflict"
 (cd "$jj_repo" && djo list) | grep -F ' a ' | grep -qF '✘' || fail "djo list does not flag the conflict"
-expect_failure "$work/djo-conflict.log" sh -c "cd '$jj_repo' && djo remove a </dev/null"
+expect_failure "$work/djo-conflict.log" in_dir "$jj_repo" djo remove a </dev/null
 [ -d "$work/jjrepo.a" ] || fail "djo remove deleted a conflicted workspace"
 pass "djo remove refuses dirty and conflicted workspaces without confirmation"
 
@@ -297,7 +306,7 @@ printf 'ignore-worktrunk-hooks = true\n[hooks]\npre-start = "echo dup >> %s/djo-
   || fail "ignore-worktrunk-hooks did not leave exactly one hook run"
 rm "$jj_repo/dojjo.toml"
 printf '[hooks]\npre-start = "exit 3"\n' > "$jj_repo/.config/wt.toml"
-expect_failure "$work/djo-hook-fail.log" sh -c "cd '$jj_repo' && djo switch --create broken --base main"
+expect_failure "$work/djo-hook-fail.log" in_dir "$jj_repo" djo switch --create broken --base main
 expect_output "$work/djo-hook-fail.log" "failed with exit code 3" "djo hid a failing hook"
 [ ! -e "$work/jjrepo.broken" ] || fail "djo created a workspace after a failing pre-start hook"
 pass "djo runs project wt.toml hooks once, without approval, and surfaces failures"
@@ -342,9 +351,9 @@ pass "djo rewrites wt step to djo run, and rewrites wt inside other hook text"
 # Squashing a described working copy into a described parent asks jj for an
 # editor. djo gives jj no terminal, so the merge stops at its first step.
 (cd "$work/jjrepo.precedence" && echo draft > draft.txt && jj describe -m draft >/dev/null 2>&1)
-expect_failure "$work/djo-merge-editor.log" sh -c "cd '$work/jjrepo.precedence' && djo merge main --yes"
+expect_failure "$work/djo-merge-editor.log" in_dir "$work/jjrepo.precedence" djo merge main --yes
 expect_output "$work/djo-merge-editor.log" "jj op undo" "djo merge hid the squash failure"
-(cd "$jj_repo" && jj workspace list -T 'name ++ "\n"') | grep -qxF precedence \
+jj_workspaces "$jj_repo" | grep -qxF precedence \
   || fail "a failed merge forgot the workspace"
 (cd "$work/jjrepo.precedence" && rm draft.txt && jj describe -m '' >/dev/null 2>&1)
 pass "djo merge stops visibly when jj squash needs an editor"
@@ -357,15 +366,15 @@ pass "djo merge stops visibly when jj squash needs an editor"
 # djo 0.2.2 forgets with `jj workspace forget @`; jj reads "@" as a workspace
 # name, warns, and exits 0. Upstream's merge.remove = true would then delete a
 # still-registered workspace. Revisit docs/workspace-backends.md when this fails.
-(cd "$jj_repo" && jj workspace list -T 'name ++ "\n"') | grep -qxF precedence \
+jj_workspaces "$jj_repo" | grep -qxF precedence \
   || fail "djo merge now forgets the workspace; update docs/workspace-backends.md"
 (cd "$jj_repo" && jj git remote list) | grep -q . && fail "a fixture gained a remote"
 pass "djo merge moves main, keeps the directory, and pushes nowhere under the generated config"
 
-jj_before=$(cd "$jj_repo" && jj workspace list -T 'name ++ "\n"')
-expect_failure "$work/djo-no-jj.log" sh -c "cd '$jj_repo' && env PATH='$(dirname -- "$(command -v djo)")' djo list"
+jj_before=$(jj_workspaces "$jj_repo")
+expect_failure "$work/djo-no-jj.log" in_dir "$jj_repo" env PATH="$(dirname -- "$(command -v djo)")" djo list
 expect_output "$work/djo-no-jj.log" "Failed to run jj" "djo hid the missing jj binary"
-expect_failure "$work/djo-mismatch.log" sh -c "cd '$git_repo' && djo list"
+expect_failure "$work/djo-mismatch.log" in_dir "$git_repo" djo list
 expect_output "$work/djo-mismatch.log" "There is no jj repo" "djo did not name the repository mismatch"
 [ ! -e "$git_repo/.jj" ] || fail "djo initialized JJ inside a Git repository"
 pass "djo fails visibly without jj and in a Git-only repository"
@@ -376,7 +385,7 @@ snapshot_tree "$work/jjrepo.a" > "$work/a-tree.before"
 # Roll back to Worktrunk. JJ workspaces and Git worktrees both survive.
 # ---------------------------------------------------------------------------
 select_backend worktrunk
-[ "$(cd "$jj_repo" && jj workspace list -T 'name ++ "\n"')" = "$jj_before" ] \
+[ "$(jj_workspaces "$jj_repo")" = "$jj_before" ] \
   || fail "rollback changed JJ workspace registration"
 snapshot_tree "$work/jjrepo.a" | cmp -s - "$work/a-tree.before" || fail "rollback changed a JJ workspace"
 git -C "$git_repo" worktree list --porcelain | cmp -s - "$work/git-worktrees.before" \
