@@ -19,6 +19,7 @@ let
 
   expected = [
     "bun-canary-bin"
+    "dojjo-bin"
     "hammerspoon"
     "oh-my-pi"
     "pi-coding-agent"
@@ -27,6 +28,7 @@ let
 
   expectedMainPrograms = {
     bun-canary-bin = "bun";
+    dojjo-bin = "djo";
     oh-my-pi = "omp";
     pi-coding-agent = "pi";
     sourcegraph-amp = "amp";
@@ -40,6 +42,7 @@ let
   # we settle for "attribute exists" instead of evaluating the derivation.
   darwinOnly = [
     "bun-canary-bin"
+    "dojjo-bin"
     "hammerspoon"
     "oh-my-pi"
     "pi-coding-agent"

@@ -19,7 +19,10 @@ let
 
   mkSkill = from: path: packages: { inherit from path packages; };
 
-  guideCatalog = import ./agent-instructions/guides.nix { inherit lib pkgs; };
+  guideCatalog = import ./agent-instructions/guides.nix {
+    inherit lib pkgs;
+    workspaceBackend = config.martin.development.workspaceBackend;
+  };
 
   # `link` makes every target a tree of `home.file` symlinks pointing at
   # the same /nix/store/...-agent-skills-bundle/<skill>/SKILL.md. Pi's
@@ -519,14 +522,16 @@ let
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/search-guard.sh"; }
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/shell-guard.sh"; }
     { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
-  ] ++ lib.optionals config.programs.worktrunk.enable worktrunkMarkerHooks;
+  ] ++ worktrunkMarkers.add;
 
-  # Worktrunk activity markers, shown per branch in `wt list`: 🤖 while Claude
-  # works, 💬 while it waits, cleared at session end. Same events as upstream's
-  # plugin (worktrunk.dev/claude-code/#activity-tracking). The hook path is
-  # stable so a wt bump never strands a store path in the additive hook policy.
+  # Hook list and backend selection: claude/worktrunk-markers.nix.
   # Claude's own worktree creation stays native on purpose: a WorktreeCreate
   # hook would drop symlinkDirectories, .worktreeinclude, and the stale sweep.
+  # Under the dojjo backend it still makes Git worktrees, outside that workflow.
+  worktrunkMarkers = import ./claude/worktrunk-markers.nix {
+    inherit lib;
+    enable = config.programs.worktrunk.enable;
+  };
   worktrunkMarker = pkgs.writeShellApplication {
     name = "worktrunk-marker";
     runtimeInputs = [ config.programs.worktrunk.package ];
@@ -542,18 +547,6 @@ let
       wt config state marker "''${args[@]}" </dev/null >/dev/null 2>&1 || true
     '';
   };
-  worktrunkMarkerHooks =
-    let
-      marker = state: "$HOME/.claude/hooks/worktrunk-marker.sh ${state}";
-    in
-    [
-      { event = "UserPromptSubmit"; matcher = ""; command = marker "working"; }
-      { event = "Notification"; matcher = ""; command = marker "waiting"; }
-      { event = "PreToolUse"; matcher = "AskUserQuestion"; command = marker "waiting"; }
-      { event = "PermissionRequest"; matcher = ""; command = marker "waiting"; }
-      { event = "Stop"; matcher = ""; command = marker "waiting"; }
-      { event = "SessionEnd"; matcher = ""; command = marker "clear"; }
-    ];
   guardEntries = event:
     map (g: { inherit (g) matcher; hooks = [{ type = "command"; inherit (g) command; }]; })
       (builtins.filter (g: g.event == event) claudeGuardHooks);
@@ -631,6 +624,7 @@ let
     ++ lib.mapAttrsToList (key: value: { path = [ "worktree" key ]; inherit value; }) claudeWorktreeSettings;
     default = lib.mapAttrsToList (key: value: { path = [ "env" key ]; inherit value; }) claudeSeedEnv;
     add = claudeGuardHooks;
+    inherit (worktrunkMarkers) remove;
   };
   claudeSettingsOwnership = import ./claude/settings-ownership.nix {
     inherit pkgs;

@@ -11,7 +11,7 @@ let
 in
 {
   programs.worktrunk = {
-    enable = true;
+    enable = config.martin.development.workspaceBackend == "worktrunk";
     enableZshIntegration = false;
 
     # Home Manager links config.toml read-only. Command approvals live in the
@@ -37,7 +37,7 @@ in
 
   # Default order 1000 runs after compinit (570), so the wrapper's compdef
   # registration takes effect.
-  programs.zsh.initContent = ''
+  programs.zsh.initContent = lib.mkIf cfg.enable ''
     source ${zshInit}
   '';
 }
