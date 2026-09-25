@@ -77,7 +77,7 @@ File one issue to Agile Tortoise (repo per package.json; fallback: forums.getdra
 
 Extend the existing nix-built `martin-macos-health-report` with a `Drafts MCP` section, and add a second, lighter launchd timer running just that section every 30 minutes (the daily full report alone leaves the 24h gap):
 
-- osascript round-trip: `tell application "Drafts" to get name of workspaces` with the perl-alarm timeout (no `timeout` binary on this host); record latency.
+- osascript round-trip: `tell application "Drafts" to get name of workspaces` bounded by `timeout 15`; record latency.
 - scan newest `~/Library/Caches/claude-cli-nodejs/*/mcp-logs-drafts/*.jsonl` for the failure taxonomy (§7) since last run.
 - verify both defaults keys still read `1`; verify no client config references `~/.bun/`; count live `drafts-mcp-server` processes (alert threshold: >6).
 - closes the current up-to-24h detection gap.

@@ -53,6 +53,8 @@ let
     jwt-cli
     step-cli
     hyperfine
+    # Only `timeout` from GNU coreutils; the full set would shadow the BSD tools.
+    (writeShellScriptBin "timeout" ''exec ${coreutils}/bin/timeout "$@"'')
 
     neovim
     gnupg

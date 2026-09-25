@@ -16,6 +16,7 @@ Use a purpose-built tool before its shell equivalent. Confirm it is exposed; use
 | HTTP | `ax URL` |
 | View a diff | `delta` |
 | Time a command | `hyperfine` |
+| Stop a command after N seconds | `timeout N COMMAND` |
 | Structural search | `sg -p 'PATTERN' --lang LANGUAGE` |
 
 Bound discovery output with `head -n 20`. Narrow a lookup that exceeds ten seconds.
