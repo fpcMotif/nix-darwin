@@ -171,9 +171,10 @@ let
       homeXdg = homeConfig.xdg;
       interactive = homeConfig.martin.shell.interactive;
       zshSelected = interactive == "zsh";
-      interactiveBin = builtins.unsafeDiscardStringContext (
-        if zshSelected then "${pkgs.zsh}/bin/zsh" else lib.getExe homePrograms.fish.package
-      );
+      # The host's own shell package: the test's pkgs is the runner's
+      # platform, which differs from vm-aarch64-utm's on the x86_64 runner.
+      interactiveBin = builtins.unsafeDiscardStringContext (lib.getExe
+        (if zshSelected then homePrograms.zsh.package else homePrograms.fish.package));
       homePackageSet = builtins.listToAttrs (map
         (pkg: {
           name = lib.getName pkg;
