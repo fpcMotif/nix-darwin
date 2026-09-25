@@ -113,13 +113,16 @@ au_bump_mode() {
 # artefact. The guard inspects a dry-run build plan and fails if it plans any
 # from-source build outside the glue/vendored exemptions.
 #
-# Classification is by derivation NAME against two exemption classes:
+# Classification checks the derivation NAME first, then (impure, gated) the
+# derivation itself:
 #
 #   Glue derivation — profile/activation/generated-config derivations that
 #     appear in every build plan and rebuild in milliseconds. Never offenders.
+#     The name list holds only glue that does not set preferLocalBuild.
 #   Vendored derivation — packages defined in this repo (pkgs/*.nix pnames).
 #     No binary cache will ever hold them; they always build locally by design.
 #     The list is derived from the tree, so it cannot rot into fiction.
+#   Fetch or local-build derivation — see au_is_fetch_or_local_drv.
 #
 # Everything else IS a source build and fails. Erring toward failure means new
 # noise surfaces immediately instead of silently green-lighting a compile.
@@ -129,39 +132,31 @@ au_is_glue_drv_name() {
   local name=$1
   case "$name" in
     # Top-level system / generation / activation derivations
-    darwin-system-*|nixos-system-*|system-configurations*|\
-    user-environment*|activation-*|*-activation-*|etc|etc-*|\
-    system-path*|system-applications*)
+    nixos-system-*|system-configurations*|*-activation-*)
       return 0 ;;
-    # home-manager profiles, file trees, fonts, option docs
-    home-manager-*|hm_*|options.json|fonts|source|patches)
+    # home-manager profiles, file trees, option docs
+    home-manager-*|options.json|source)
       return 0 ;;
     # Generated system files and activation helpers
-    npm-config-hook|hm-session-vars.sh|set-environment|ca-certificates.crt|\
-    martin-auto-switch|*-auto-switch|*.plist|*.json|*.md|*.sh|*.yaml|*.yml|*.zsh|*.toml|\
-    pstack-skill-*|tsgo|worktrunk-marker|\
-    *-config|*-settings|*-keymaps|*-models|*-report|*-report.domain|\
-    *-extension-update.domain|python3-*-env|nix.conf|hm-modules-messages|\
-    activate-system-start|link|cleanup|launchd|darwin-rebuild|\
-    darwin-option|darwin-version*|darwin-uninstaller|check-link-targets.sh)
+    npm-config-hook|ca-certificates.crt|martin-auto-switch|*-auto-switch|\
+    *.json|*.sh|*.yaml|*.zsh|worktrunk-marker|\
+    *-config|*-models|*-report|hm-modules-messages|darwin-uninstaller)
       return 0 ;;
-    # Generated LSP config files (claude-lsp.json, codex-lsp.toml, …)
-    *-lsp.*)
-      return 0 ;;
-    # Manuals and help pages
-    darwin-manual*|darwin-help*|darwin-manpages*|*-manual-html|*-manpage*)
+    # Manuals
+    darwin-manual*|darwin-manpages*|*-manual-html|*-manpage*)
       return 0 ;;
   esac
   return 1
 }
 
-# Fixed-output derivations download a source/archive and do not compile it.
-# Fresh CI runners legitimately rebuild these when the binary cache lacks the
-# exact hash, so they must not be mistaken for source compilation.
-au_is_fixed_output_drv() {
-  local drv=$1
-  nix derivation show "$drv" 2>/dev/null \
-    | jq -e 'any(.derivations[]?.outputs[]?; .hash? != null)' >/dev/null
+# Neither kind compiles. Fixed-output derivations download a source/archive;
+# fresh CI runners rebuild them when the binary cache lacks the exact hash.
+# preferLocalBuild marks the nixpkgs trivial builders (writeText,
+# runCommandLocal, …): a JSON boolean with structured attrs, else env "1".
+au_is_fetch_or_local_drv() {
+  nix derivation show "$1" 2>/dev/null | jq -e 'any(.derivations[]?;
+    any(.outputs[]?; .hash != null)
+    or .structuredAttrs.preferLocalBuild == true or .env.preferLocalBuild == "1")' >/dev/null
 }
 
 # Is <drv-name> covered by the given vendored pname list? A drv whose name
@@ -199,11 +194,10 @@ au_plan_offenders() {
         [[ "$line" =~ (/nix/store/[a-z0-9]{32}-([^[:space:]]+)\.drv) ]] || continue
         drv=${BASH_REMATCH[1]}
         name=${BASH_REMATCH[2]}
-        if [ "${AU_SKIP_FIXED_OUTPUTS:-0}" = 1 ] && au_is_fixed_output_drv "$drv"; then
-          continue
-        fi
+        # Name checks first: the impure check costs a nix call.
         au_is_glue_drv_name "$name" && continue
         au_is_vendored_drv_name "$name" "$@" && continue
+        [ "${AU_INSPECT_DRVS:-0}" = 1 ] && au_is_fetch_or_local_drv "$drv" && continue
         printf '%s\n' "$name"
         ;;
     esac
@@ -221,7 +215,7 @@ au_guard_source_builds() {
     return 1
   fi
   # shellcheck disable=SC2046  # pnames are single words (validated by unit test)
-  offenders=$(printf '%s\n' "$log" | AU_SKIP_FIXED_OUTPUTS=1 au_plan_offenders $(au_vendored_drv_names))
+  offenders=$(printf '%s\n' "$log" | AU_INSPECT_DRVS=1 au_plan_offenders $(au_vendored_drv_names))
   if [ -n "$offenders" ]; then
     {
       echo "::error::source-build-guard: $attr would BUILD FROM SOURCE:"
