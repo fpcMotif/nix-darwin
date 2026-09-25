@@ -16,6 +16,12 @@ let
   lib = pkgs.lib;
 
   callTest = path: extraArgs: import path ({ inherit inputs system pkgs lib self; } // extraArgs);
+
+  # Host "f" with the experimental workspace backend, the way its user would
+  # select it. Evaluated once and shared by every check that reads it.
+  darwinDojjo = self.darwinConfigurations."f".extendModules {
+    modules = [{ home-manager.users.martinfan.martin.development.workspaceBackend = "dojjo"; }];
+  };
 in
 {
   smoke = pkgs.runCommand "smoke-test" { } ''
@@ -148,11 +154,7 @@ in
       let
         user = "martinfan";
         worktrunkHome = self.darwinConfigurations.f.config.home-manager.users.${user};
-        dojjoHome = (import ./lib/with-workspace-backend.nix {
-          configuration = self.darwinConfigurations.f;
-          inherit user;
-          backend = "dojjo";
-        }).config.home-manager.users.${user};
+        dojjoHome = darwinDojjo.config.home-manager.users.${user};
         zshSourceLines = home: marker: pkgs.writeText "${marker}-lines"
           (lib.concatMapStrings (line: line + "\n")
             (builtins.filter (lib.hasInfix marker) (lib.splitString "\n" home.programs.zsh.initContent)));
@@ -272,6 +274,7 @@ in
         {
           evalScope = "darwin";
           darwinConfigurationInput = self.darwinConfigurations."f";
+          darwinDojjoConfigurationInput = darwinDojjo;
         }
     else
       callTest ./integration/configurations-eval-test.nix {
