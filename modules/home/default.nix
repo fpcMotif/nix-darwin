@@ -4,7 +4,11 @@
   imports = [
     ./cleanup.nix
     ./packages.nix
-    ./zsh.nix
+    ./session.nix
+    ./shell/zsh.nix
+    ./shell/direnv.nix
+    ./shell/fzf.nix
+    ./shell/zoxide.nix
     ./ai-cli.nix
     ./pi.nix
     ./ai-model-routing.nix
@@ -13,7 +17,9 @@
     ./tmux.nix
     ./git.nix
     ./jujutsu.nix
+    ./workspace-backend.nix
     ./worktrunk.nix
+    ./dojjo.nix
     ./ghostty.nix
     ./kitty.nix
     ./yazi.nix

@@ -4,20 +4,9 @@
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
-FILE="pkgs/hunk-bin.nix"
-
 latest=$(au_latest_github_release modem-dev/hunk)
-current=$(au_current_version "$FILE")
-if [ "$current" = "$latest" ]; then
-  echo "hunk already at $latest"; exit 0
-fi
-
-au_set_version "$FILE" "$latest"
-
 asset="hunkdiff-darwin-arm64.tar.gz"
-url="https://github.com/modem-dev/hunk/releases/download/v${latest}/${asset}"
-echo "  hunk: $asset"
-au_set_block_hash "$FILE" "/${asset}\"" "$(au_prefetch_sri "$url")"
 
-au_build_darwin .#martin.hunk-bin
-au_report_change hunk "$current" "$latest"
+au_bump_release --name hunk --file pkgs/hunk-bin.nix --version "$latest" \
+  --attr .#martin.hunk-bin \
+  --asset "https://github.com/modem-dev/hunk/releases/download/v${latest}/${asset}" "/${asset}\""

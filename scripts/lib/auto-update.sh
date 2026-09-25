@@ -305,34 +305,6 @@ au_latest_github_release() {
   printf '%s\n' "$v"
 }
 
-# Latest npm version, prioritizing bleeding-edge tags (canary, dev, next, etc.)
-# when 'latest' is requested.
-#   au_latest_npm <pkg> [dist-tag]
-au_latest_npm() {
-  local pkg=$1 tag=${2:-latest}
-  local encoded="${pkg//\//%2f}"
-  local v
-  if [ "$tag" = latest ]; then
-    # Bleeding-edge priority: pick the first available tag. A single jq query
-    # filters the priority list natively instead of spawning jq once per tag.
-    local meta
-    meta=$(au_http_get "https://registry.npmjs.org/${encoded}")
-    v=$(printf '%s\n' "$meta" | jq -r '
-      .["dist-tags"] |
-      [ .canary, .dev, .next, .preview, .beta, .alpha, .rc, .latest ] |
-      map(select(. != null and . != "")) |
-      .[0] // ""
-    ')
-  else
-    v=$(au_http_get "https://registry.npmjs.org/${encoded}" \
-          | jq -r --arg t "$tag" '."dist-tags"[$t] // ""')
-  fi
-  [ -n "$v" ] && [ "$v" != "null" ] || {
-    echo "au_latest_npm: empty version for ${pkg}@${tag}" >&2; return 1
-  }
-  printf '%s\n' "$v"
-}
-
 # Read the first `version = "..."` literal in a file. Pass an awk address
 # range (`/start/,/end/`) to scope to a nested block.
 #   au_current_version <file> [awk-range]
@@ -378,41 +350,6 @@ au_prefetch_sri_path() {
   printf '%s\n%s\n' \
     "$(nix hash convert --to sri --hash-algo sha256 "$nar")" \
     "$path"
-}
-
-# Compute npmDepsHash directly from a package-lock.json — no fake-hash dance.
-#   au_prefetch_npm_deps <dir-containing-package-lock.json>
-au_prefetch_npm_deps() {
-  local lockdir=$1
-  [ -f "$lockdir/package-lock.json" ] || {
-    echo "au_prefetch_npm_deps: $lockdir/package-lock.json not found" >&2
-    return 1
-  }
-  nix run --quiet nixpkgs#prefetch-npm-deps -- "$lockdir/package-lock.json"
-}
-
-# Last-resort fake-hash dance: stub the chosen attr with a placeholder, run
-# the build, and parse the resulting `got: sha256-…` from the failure log.
-# Use only for cargoDeps / vendorHash / npmDepsHash where no direct prefetch
-# exists.
-#
-#   au_extract_got_hash <flake-attr>
-AU_FAKE_HASH='sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
-au_extract_got_hash() {
-  local attr=$1
-  local log
-  set +e
-  log=$(nix build "$attr" --no-link 2>&1)
-  set -e
-  local got
-  got=$(printf '%s\n' "$log" | grep -oE 'got:[[:space:]]+sha256-[A-Za-z0-9+/=]+' \
-          | head -1 | sed -E 's/got:[[:space:]]+//')
-  [ -n "$got" ] || {
-    echo "au_extract_got_hash: no 'got: sha256-…' line in build output" >&2
-    printf '%s\n' "$log" | tail -20 >&2
-    return 1
-  }
-  printf '%s\n' "$got"
 }
 
 # ---------------------------------------------------------------------------
@@ -510,6 +447,163 @@ au_build_darwin() {
 }
 
 # ---------------------------------------------------------------------------
+# Release pin bump
+# ---------------------------------------------------------------------------
+
+# Bump a release pin (CONTEXT.md): one upstream version plus the hash of each
+# file the package downloads. The caller resolves the upstream version; this
+# owns compare, download, hash, rewrite, build, and report.
+#
+#   au_bump_release --name NAME --file FILE --version VERSION --attr FLAKE_ATTR
+#                   [--reverify]
+#                   --asset URL ANCHOR [--asset URL ANCHOR ...]
+#                   [--unpacked-asset URL ANCHOR ...]
+#
+# ANCHOR is text unique to the block that holds that download's `hash = "…"`
+# (see au_set_block_hash); it must not contain a literal `${version}`.
+# --unpacked-asset hashes the unpacked tree (fetchzip / fetchFromGitHub).
+# --reverify re-downloads and re-pins every hash even when the version is
+# unchanged, for upstreams that re-publish a release in place.
+#
+# Guarantee: on any failure (a download, a malformed hash, an anchor that
+# matches nothing, or the Darwin build) FILE is left byte-identical. The
+# version and every hash move together or not at all.
+au_bump_release() {
+  local name="" file="" version="" attr="" reverify=false
+  local urls=() anchors=() unpacked=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --name) name=$2; shift 2 ;;
+      --file) file=$2; shift 2 ;;
+      --version) version=$2; shift 2 ;;
+      --attr) attr=$2; shift 2 ;;
+      --reverify) reverify=true; shift ;;
+      --asset | --unpacked-asset)
+        [ $# -ge 3 ] || { echo "au_bump_release: $1 needs URL and ANCHOR" >&2; return 2; }
+        urls+=("$2"); anchors+=("$3")
+        if [ "$1" = --unpacked-asset ]; then unpacked+=(true); else unpacked+=(false); fi
+        shift 3 ;;
+      *) echo "au_bump_release: unknown argument '$1'" >&2; return 2 ;;
+    esac
+  done
+  if [ -z "$name" ] || [ -z "$file" ] || [ -z "$attr" ] || [ ${#urls[@]} -eq 0 ]; then
+    echo "au_bump_release: --name, --file, --attr, and one --asset are required" >&2
+    return 2
+  fi
+  if [ -z "$version" ] || [ "$version" = null ]; then
+    echo "${name}: empty upstream version" >&2
+    return 1
+  fi
+
+  local current
+  current=$(au_current_version "$file")
+  if [ "$current" = "$version" ] && [ "$reverify" = false ]; then
+    echo "$name already at $version"
+    return 0
+  fi
+
+  # Download every asset before touching FILE, concurrently: the network is
+  # the bottleneck. Wait for every job so none outlives this function.
+  local work i failed=0 pids=()
+  work=$(mktemp -d)
+  for i in "${!urls[@]}"; do
+    if [ "${unpacked[$i]}" = true ]; then
+      (au_prefetch_unpacked_sri "${urls[$i]}" > "$work/hash.$i") &
+    else
+      (au_prefetch_sri "${urls[$i]}" > "$work/hash.$i") &
+    fi
+    pids+=($!)
+  done
+  for i in "${!pids[@]}"; do
+    wait "${pids[$i]}" || { echo "${name}: download failed: ${urls[$i]}" >&2; failed=1; }
+  done
+  if [ "$failed" -ne 0 ]; then
+    rm -rf -- "$work"
+    return 1
+  fi
+
+  # Apply every edit to a scratch copy; FILE changes only once all succeed.
+  cp -- "$file" "$work/new.nix"
+  if [ "$current" != "$version" ]; then
+    au_set_version "$work/new.nix" "$version"
+  fi
+  for i in "${!urls[@]}"; do
+    if ! au_set_block_hash "$work/new.nix" "${anchors[$i]}" "$(< "$work/hash.$i")"; then
+      rm -rf -- "$work"
+      return 1
+    fi
+  done
+
+  if cmp -s "$work/new.nix" "$file"; then
+    rm -rf -- "$work"
+    echo "$name already at $version (asset hashes re-verified)"
+    return 0
+  fi
+
+  cp -- "$file" "$work/old.nix"
+  cp -- "$work/new.nix" "$file"
+  if ! au_build_darwin "$attr"; then
+    cp -- "$work/old.nix" "$file"
+    rm -rf -- "$work"
+    echo "${name}: build failed; restored $file" >&2
+    return 1
+  fi
+  rm -rf -- "$work"
+
+  if [ "$current" = "$version" ]; then
+    au_report_change "$name" "$version" "$version (re-published assets re-pinned)"
+  else
+    au_report_change "$name" "$current" "$version"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Updater runner
+# ---------------------------------------------------------------------------
+
+# Run updaters in turn and tolerate each failure. Before each updater, copy
+# pkgs/ and flake.lock aside; when it fails, put them back, so a half-finished
+# bump never reaches the nightly PR or a local switch. Plain file copies, not
+# git: the local checkout is jj-colocated, and git writes desync jj
+# (CONTEXT.md, Colocated contract). Run from the repo root.
+#   au_run_updaters [script...]    (default: every scripts/update-*.sh)
+au_run_updaters() {
+  local scripts=("$@") snap s failed=0
+  if [ ${#scripts[@]} -eq 0 ]; then
+    scripts=(scripts/update-*.sh)
+    [ -e "${scripts[0]}" ] || scripts=()
+  fi
+  snap=$(mktemp -d)
+  for s in "${scripts[@]}"; do
+    if [ "${GITHUB_ACTIONS:-}" = true ]; then echo "::group::$s"; else echo "=== $s ==="; fi
+    rm -rf -- "$snap/pkgs" "$snap/flake.lock"
+    cp -a pkgs "$snap/pkgs"
+    if [ -f flake.lock ]; then cp -a flake.lock "$snap/flake.lock"; fi
+
+    if ! bash "$s"; then
+      failed=$((failed + 1))
+      rm -rf -- pkgs.au-restore
+      cp -a "$snap/pkgs" pkgs.au-restore
+      rm -rf -- pkgs
+      mv -- pkgs.au-restore pkgs
+      if [ -f "$snap/flake.lock" ]; then cp -a "$snap/flake.lock" flake.lock; fi
+      if [ "${GITHUB_ACTIONS:-}" = true ]; then
+        echo "::warning::$s failed; restored pkgs/ and flake.lock"
+      else
+        echo "$s failed; restored pkgs/ and flake.lock" >&2
+      fi
+    fi
+    if [ "${GITHUB_ACTIONS:-}" = true ]; then echo "::endgroup::"; fi
+  done
+  rm -rf -- "$snap"
+  if [ "${GITHUB_ACTIONS:-}" = true ]; then
+    echo "::notice::$failed updater(s) failed (tolerated)"
+  else
+    echo "$failed updater(s) failed (tolerated)"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Workflow-level invariant guard
 # ---------------------------------------------------------------------------
 
@@ -559,6 +653,11 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
       shift
       au_guard_source_builds "${1:-}"
       ;;
-    *) echo "usage: $0 {assert-clean|bump-mode [day]|guard-source-builds [attr]}" >&2; exit 2 ;;
+    run-updaters)
+      shift
+      cd "$(dirname "${BASH_SOURCE[0]}")/../.."
+      au_run_updaters "$@"
+      ;;
+    *) echo "usage: $0 {assert-clean|bump-mode [day]|guard-source-builds [attr]|run-updaters [script...]}" >&2; exit 2 ;;
   esac
 fi

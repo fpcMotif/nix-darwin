@@ -1,0 +1,63 @@
+Issue #378 verification evidence
+Captured 2026-09-23 after commit 48097eebd8e4.
+
+Updater no-op after the pin was committed:
+$ bash scripts/update-fff-mcp.sh
+fff-mcp already at 0.11.0
+
+Darwin package build:
+$ nix build .#martin.fff-mcp --no-link --print-build-logs
+these 2 derivations will be built:
+  /nix/store/7wny4gdnl5iysi7yh7ss6yyykgjmxmjv-fff-mcp-aarch64-apple-darwin.drv
+  /nix/store/prfx1ycs4r8ni8v2v5zx7fv25z5zky3q-fff-mcp-0.11.0.drv
+building '/nix/store/7wny4gdnl5iysi7yh7ss6yyykgjmxmjv-fff-mcp-aarch64-apple-darwin.drv'...
+trying https://github.com/dmtrKovalenko/fff/releases/download/v0.11.0/fff-mcp-aarch64-apple-darwin
+100  7.04M 100  7.04M 0 0 2.30M 0 00:03 00:03 00:00 2.51M
+building '/nix/store/prfx1ycs4r8ni8v2v5zx7fv25z5zky3q-fff-mcp-0.11.0.drv'...
+fff-mcp> Running phase: installPhase
+fff-mcp> Running phase: fixupPhase
+The command completed successfully.
+
+Focused auto-update check:
+$ nix build .#checks.aarch64-darwin.unit-auto-update --no-link --print-build-logs
+this derivation will be built:
+  /nix/store/1iqrpvzshwslqcazbj6705hy15x33sj3-unit-auto-update.drv
+unit-auto-update> auto-update-test: all assertions passed
+The command completed successfully.
+
+Package formatting:
+$ nixpkgs-fmt --check pkgs/fff-mcp.nix
+0 / 1 would have been reformatted
+The command completed successfully.
+
+Formatter gate failure (targeted reproduction; not a second full-suite run):
+$ nix build .#checks.aarch64-darwin.unit-format --no-link --print-build-logs
+format-test> ./modules/home/lsp.nix
+format-test> 1 / 95 would have been reformatted
+format-test> error: fail on changes
+format-test> FAIL Some Nix files are not formatted.
+format-test> Run: nix fmt
+error: Cannot build '/nix/store/y8w58waya6cjwfc1npgpnlfv63raxmck-format-test.drv'.
+The command exited with status 1; the failing path is unchanged by issue #378.
+
+Evidence limits:
+The initial updater run's 0.10.0-to-0.11.0 output was not retained as a local artifact after session compaction. The no-op rerun, committed package pin, and successful Darwin build confirm the current state but do not independently preserve the original update transaction's output. The one full `nix flake check --print-build-logs` run is recorded in `.audit/issue-378.tsv`; its complete output was not saved, so the targeted formatter reproduction above confirms the known blocker but does not independently prove there were no additional suite failures. The Claude per-project transcript requested by the audit skill is unavailable in this process; the cross-review used the TSV and supplied execution facts instead.
+
+Commit boundary after the selective split:
+$ jj show --summary 48097eebd8e4
+Commit ID: 48097eebd8e430ed432b55baac7fcaaddae39f20
+    feat(auto-update): add fff-mcp release updater
+M pkgs/fff-mcp.nix
+A scripts/update-fff-mcp.sh
+$ jj status
+Working copy changes:
+A .audit/issue-377.tsv
+A .audit/issue-378-evidence.txt
+A .audit/issue-378.tsv
+Parent commit (@-): vnuqpspr 48097eeb local-bumps | feat(auto-update): add fff-mcp release updater
+
+Cross-family audit limitation:
+Author: openai-codex/gpt-6-luna (OpenAI Codex).
+Audit reviewers: openai-codex/gpt-6-astra (oracle and task) and openai-codex/gpt-6-sol (scout and reviewer); all are OpenAI Codex family.
+The available reviewer routes did not provide a different model family, so the required cross-family review remains unmet. These were independent model-variant reviews, not cross-family reviews.
+Final review correction: the full-suite run's formatter failure is verified by the targeted unit-format output, but the missing full output means other suite failures cannot be excluded.

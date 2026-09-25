@@ -16,8 +16,10 @@
 #     packaged) and its Ghostty keybind veneer appears only on darwin
 { pkgs
 , lib
+, inputs
 , evalScope ? "auto"
 , darwinConfigurationInput ? null
+, darwinDojjoConfigurationInput ? null
 , x230ConfigurationInput ? null
 , vmConfigurationInput ? null
 , ...
@@ -25,6 +27,8 @@
 
 let
   helpers = import ../lib/assertions.nix { inherit pkgs lib; };
+  guideCatalog = import ../../modules/home/agent-instructions/guides.nix { inherit lib pkgs; };
+  guideTargets = guideCatalog.targets;
 
   user = "martinfan";
   selectedScope =
@@ -62,6 +66,87 @@ let
   hasPackage = name: packages:
     lib.any (pkg: lib.getName pkg == name) packages;
 
+  # The real host with the experimental backend selected (tests/default.nix).
+  # Only the default host is built by `just switch`.
+  darwinDojjo = if selectedScope == "darwin" then darwinDojjoConfigurationInput else null;
+  darwinDojjoHome = darwinDojjo.config.home-manager.users.${user};
+
+  # workspace-backend.nix alone, for platforms this host cannot evaluate in
+  # full (see toplevelEvaluatesOnNative). Returns the failed assertion messages.
+  backendAssertionFailures = system: backend:
+    let
+      evaluated = lib.evalModules {
+        modules = [
+          ../../modules/home/workspace-backend.nix
+          {
+            options.assertions = lib.mkOption {
+              type = lib.types.listOf lib.types.unspecified;
+              default = [ ];
+            };
+            config = {
+              _module.args.pkgs = import inputs.nixpkgs {
+                inherit system;
+                overlays = [ (import ../../pkgs) ];
+              };
+              martin.development.workspaceBackend = backend;
+            };
+          }
+        ];
+      };
+    in
+    map (a: a.message) (builtins.filter (a: !a.assertion) evaluated.config.assertions);
+
+  workspaceBackendChecks = [
+    (helpers.assertTest "darwin-dojjo-evaluates"
+      (evalsOk darwinDojjo.system)
+      "darwinConfigurations.f with workspaceBackend = dojjo should evaluate")
+
+    (helpers.assertTest "darwin-dojjo-replaces-worktrunk"
+      (darwinDojjoHome.martin.development.workspaceBackend == "dojjo"
+        && darwinDojjoHome.programs.worktrunk.enable == false
+        && !(darwinDojjoHome.xdg.configFile ? "worktrunk/config.toml")
+        && darwinDojjoHome.xdg.configFile ? "dojjo/config.toml"
+        && hasPackage "dojjo-bin" darwinDojjoHome.home.packages
+        && !(hasPackage "worktrunk" darwinDojjoHome.home.packages))
+      "dojjo backend should install djo and its config.toml, and drop wt and its config.toml")
+
+    (helpers.assertTest "darwin-dojjo-zsh-integration"
+      (lib.hasInfix "-dojjo-init.zsh" darwinDojjoHome.programs.zsh.initContent
+        && !(lib.hasInfix "-worktrunk-init.zsh" darwinDojjoHome.programs.zsh.initContent))
+      "dojjo backend should source the build-rendered djo wrapper and completion, not wt's")
+
+    (helpers.assertTest "darwin-dojjo-drops-worktrunk-markers"
+      (!(darwinDojjoHome.home.file ? ".claude/hooks/worktrunk-marker.sh")
+        && darwinDojjoHome.home.activation ? "claudeSettingsOwnership")
+      "dojjo backend should stop installing the Worktrunk marker script and keep the settings reconciler")
+
+    (helpers.assertTest "darwin-dojjo-agent-guidance"
+      (lib.all
+        (target:
+          let guide = darwinDojjoHome.home.file.${target}.source.text;
+          in lib.hasInfix "djo switch --create" guide && !(lib.hasInfix "wt switch" guide))
+        [ ".claude/guidance/development.md" ".codex/guidance/development.md" ".config/agent-guidance/development.md" ])
+      "dojjo backend should render dojjo guidance for every agent host")
+
+    (helpers.assertTest "darwin-default-agent-guidance"
+      (lib.hasInfix "wt switch --create" darwinHome.home.file.".claude/guidance/development.md".source.text)
+      "the default backend should keep Worktrunk guidance")
+
+    (helpers.assertTest "workspace-backend-dojjo-fails-clearly-on-linux"
+      (
+        let failures = backendAssertionFailures "x86_64-linux" "dojjo";
+        in builtins.length failures == 1
+          && lib.hasInfix "aarch64-darwin" (lib.head failures)
+          && lib.hasInfix "x86_64-linux" (lib.head failures)
+      )
+      "selecting dojjo on Linux should fail evaluation with a message naming the supported platform")
+
+    (helpers.assertTest "workspace-backend-assertion-passes-when-supported"
+      (backendAssertionFailures "x86_64-linux" "worktrunk" == [ ]
+        && backendAssertionFailures "aarch64-darwin" "dojjo" == [ ])
+      "the platform assertion should pass for Worktrunk anywhere and dojjo on aarch64-darwin")
+  ];
+
   # Standalone re-evaluation of modules/home/zsh.nix with martin.shell.viMode
   # toggled (see tests/lib/zsh-module-eval.nix): proves the escape hatch
   # restores today's emacs shape without paying for a second full-host
@@ -85,20 +170,16 @@ let
       (!(lib.hasInfix "ZVM_INIT_MODE" zshViOff.programs.zsh.initContent))
       "Disabling martin.shell.viMode must leave no ZVM_* wiring behind")
 
-    (helpers.assertTest "home-zsh-vi-mode-on-plugin-single-and-keymap"
+    (helpers.assertTest "home-zsh-vi-mode-on-native-keymap"
       (zshViOn.programs.zsh.defaultKeymap == "viins"
-        && builtins.length zshViOn.programs.zsh.plugins == 1)
-      "Default-evaluated module must land in viins with exactly the zsh-vi-mode plugin (runtime wiring is the unit seam's job)")
+        && zshViOn.programs.zsh.plugins == [ ])
+      "Default-evaluated module must land in viins with zero plugins (native Zsh vi mode)")
   ];
 
   # Same seam, second plane: martin.shell.search. Proves the toggle drops
   # every trace of the search machinery and that per-key nulls remove only
   # their own chord.
   searchToggleChecks = [
-    (helpers.assertTest "home-zsh-search-off-no-stty"
-      (!(lib.hasInfix "stty -ixon" zshSearchOff.programs.zsh.initContent))
-      "Disabling martin.shell.search must drop the stty -ixon preamble")
-
     (helpers.assertTest "home-zsh-search-off-no-widgets"
       (!(lib.hasInfix "martin-content-search" zshSearchOff.programs.zsh.initContent))
       "Disabling martin.shell.search must leave no content-search widgets behind")
@@ -107,16 +188,64 @@ let
       (!(lib.any (p: p.name == "fzf-git-sh") zshSearchOff.programs.zsh.plugins)
         && !(hasPackage "fzf-git-sh" (zshSearchOff.home.packages or [ ])))
       "Disabling martin.shell.search must drop fzf-git-sh from both plugins and home.packages")
+
     (helpers.assertTest "home-zsh-search-null-dirjump-chord-gone"
       (!(lib.hasInfix "'^Gd'" zshDirJumpNull.programs.zsh.initContent)
         && lib.hasInfix "'^Gf'" zshDirJumpNull.programs.zsh.initContent)
       "Setting martin.shell.search.keys.dirJump to null must remove only the ^Gd chord")
 
-    (helpers.assertTest "home-zsh-search-default-stty-present"
-      (lib.hasInfix "stty -ixon" zshViOn.programs.zsh.initContent)
-      "The default evaluation must keep the search-plane stty -ixon preamble")
+    (helpers.assertTest "home-zsh-search-default-widgets-present"
+      (lib.hasInfix "martin-content-search" zshViOn.programs.zsh.initContent)
+      "The default evaluation must include the search-plane widgets")
   ];
 
+  # Modular shell evaluation: proves each optional module is independently removable
+  # and that session/PATH remains invariant (issue #381 requirement).
+  evalModularShell = mods: (import ../lib/zsh-module-eval.nix { inherit pkgs lib; })
+    ({ includeSession = true; } // mods);
+
+  shellAll = evalModularShell { includePrompt = true; };
+  shellMinimal = evalModularShell { includeDirenv = false; includeFzf = false; includeZoxide = false; includePrompt = false; };
+  shellNoPrompt = evalModularShell { includePrompt = false; };
+  shellNoFzf = evalModularShell { includeFzf = false; };
+  shellNoZoxide = evalModularShell { includeZoxide = false; };
+  shellNoDirenv = evalModularShell { includeDirenv = false; };
+
+  modularShellChecks = [
+    (helpers.assertTest "modular-shell-minimal-zsh-works"
+      (shellMinimal.programs.zsh.enable == true
+        && lib.hasInfix "PROMPT='%F{cyan}%1~%f %# '" shellMinimal.programs.zsh.initContent)
+      "Minimal shell without optional modules must enable zsh and have native fallback prompt")
+
+    (helpers.assertTest "modular-shell-path-invariant-across-modules"
+      (shellAll.home.sessionPath == shellMinimal.home.sessionPath
+        && shellAll.home.sessionPath == shellNoPrompt.home.sessionPath
+        && shellAll.home.sessionPath == shellNoFzf.home.sessionPath
+        && shellAll.home.sessionPath == shellNoZoxide.home.sessionPath
+        && shellAll.home.sessionPath == shellNoDirenv.home.sessionPath)
+      "home.sessionPath must remain completely invariant whether optional modules are present or removed")
+
+    (helpers.assertTest "modular-shell-delete-prompt-safe"
+      (shellNoPrompt.programs.zsh.enable == true
+        && (!(shellNoPrompt.programs ? starship) || shellNoPrompt.programs.starship.enable == false))
+      "Removing prompt.nix leaves zsh working and disables starship")
+
+    (helpers.assertTest "modular-shell-delete-fzf-safe"
+      (shellNoFzf.programs.zsh.enable == true
+        && (!(shellNoFzf.programs ? fzf) || shellNoFzf.programs.fzf.enable == false)
+        && (!(lib.hasInfix "martin-content-search-widget" shellNoFzf.programs.zsh.initContent)))
+      "Removing fzf.nix leaves zsh working, disables fzf, and omits fzf search widgets")
+
+    (helpers.assertTest "modular-shell-delete-zoxide-safe"
+      (shellNoZoxide.programs.zsh.enable == true
+        && (!(shellNoZoxide.programs ? zoxide) || shellNoZoxide.programs.zoxide.enable == false)
+        && (!(lib.hasInfix "martin-dir-jump-widget" shellNoZoxide.programs.zsh.initContent)))
+      "Removing zoxide.nix leaves zsh working, disables zoxide, and omits zoxide search widget")
+    (helpers.assertTest "modular-shell-delete-direnv-safe"
+      (shellNoDirenv.programs.zsh.enable == true
+        && (!(shellNoDirenv.programs ? direnv) || shellNoDirenv.programs.direnv.enable == false))
+      "Removing direnv.nix leaves zsh working and disables direnv")
+  ];
   homeChecks = prefix: homeConfig: expectedHomeDirectory:
     let
       homeData = homeConfig.home;
@@ -168,11 +297,63 @@ let
         (homePrograms.zsh.defaultKeymap == "viins")
         "${prefix} Home Manager should land zsh in viins when vi mode is enabled")
 
-      (helpers.assertTest "${prefix}-home-zsh-vi-mode-plugin-wired"
-        (lib.any
-          (p: p.name == "zsh-vi-mode" && p.file == "share/zsh-vi-mode/zsh-vi-mode.plugin.zsh")
-          homePrograms.zsh.plugins)
-        "${prefix} Home Manager should source zsh-vi-mode via programs.zsh.plugins")
+      (helpers.assertTest "${prefix}-home-zsh-vi-mode-native-zero-plugins"
+        (homePrograms.zsh.plugins == [ ])
+        "${prefix} Home Manager should use native Zsh vi mode with zero third-party plugins")
+
+      (helpers.assertTest "${prefix}-home-session-path-no-duplicates"
+        (builtins.length (lib.unique homeData.sessionPath) == builtins.length homeData.sessionPath)
+        "${prefix} home.sessionPath must contain no duplicate entries")
+
+      (helpers.assertTest "${prefix}-home-session-path-tiers-order"
+        (
+          let
+            p = homeData.sessionPath;
+            userInstallersStart = lib.elemAt p (if prefix == "darwin" then 5 else 4);
+          in
+          (prefix == "darwin" -> (lib.head p == "$HOME/Library/Application Support/mbx/bin"))
+          && (lib.elem "$HOME/.nix-profile/bin" p)
+          && (userInstallersStart == "$HOME/.local/bin")
+        )
+        "${prefix} home.sessionPath must respect tier ordering: shims -> nixProfiles -> userInstallers")
+
+      (helpers.assertTest "${prefix}-home-session-variables-editor"
+        (homeData.sessionVariables.EDITOR == "nvim" && homeData.sessionVariables.VISUAL == "nvim")
+        "${prefix} home.sessionVariables must set EDITOR and VISUAL to nvim")
+
+      (helpers.assertTest "${prefix}-home-session-variables-pnpm-platform"
+        (if prefix == "darwin" then
+          homeData.sessionVariables.PNPM_HOME == "$HOME/Library/pnpm"
+        else
+          homeData.sessionVariables.PNPM_HOME == "$HOME/.local/share/pnpm")
+        "${prefix} home.sessionVariables must set platform-correct PNPM_HOME")
+      (helpers.assertTest "${prefix}-ghostty-opens-intended-shell"
+        (homePrograms.zsh.enable == true
+          && (prefix == "darwin" -> homeData.sessionVariables.SHELL == "/bin/zsh"))
+        "${prefix} Ghostty opens intended login shell (zsh enabled, SHELL=/bin/zsh on Darwin)")
+
+      (helpers.assertTest "${prefix}-tmux-opens-intended-shell"
+        (
+          let
+            zshBin = builtins.unsafeDiscardStringContext "${pkgs.zsh}/bin/zsh";
+            tmuxCfg = builtins.unsafeDiscardStringContext homePrograms.tmux.extraConfig;
+          in
+          homePrograms.tmux.shell == "${pkgs.zsh}/bin/zsh"
+          && lib.hasInfix "default-command \"${zshBin} -l\"" tmuxCfg
+        )
+        "${prefix} tmux must explicitly configure zsh as default shell and login default-command")
+      (helpers.assertTest "${prefix}-direnv-activates-projects"
+        (homePrograms.direnv.enable == true
+          && homePrograms.direnv.nix-direnv.enable == true
+          && homePrograms.direnv.enableZshIntegration == true)
+        "${prefix} direnv and nix-direnv with zsh integration must be enabled")
+
+      (helpers.assertTest "${prefix}-agent-noninteractive-receives-environment"
+        (homeData.sessionVariables ? EDITOR
+          && homeData.sessionVariables ? BUN_INSTALL
+          && homeData.sessionVariables ? CLAUDE_CODE_EFFORT_LEVEL
+          && homeData.sessionVariables ? CDPATH)
+        "${prefix} non-interactive and agent shells receive session environment variables")
 
       (helpers.assertTest "${prefix}-home-zoxide-enabled"
         (homePrograms.zoxide.enable == true)
@@ -187,17 +368,36 @@ let
         "${prefix} Home Manager should own jj config")
 
       (helpers.assertTest "${prefix}-home-worktrunk-config"
-        (homePrograms.worktrunk.enable == true
+        (homeConfig.martin.development.workspaceBackend == "worktrunk"
+          && homePrograms.worktrunk.enable == true
           && homeXdg.configFile ? "worktrunk/config.toml"
-          && homePrograms.worktrunk.settings.skip-shell-integration-prompt == true)
-        "${prefix} Home Manager should own worktrunk config.toml and pre-answer the prompt that writes it")
+          && homePrograms.worktrunk.settings.skip-shell-integration-prompt == true
+          && homePrograms.worktrunk.settings.worktree-path == "{{ repo_path }}/../{{ repo }}.{{ branch | sanitize }}")
+        "${prefix} Worktrunk should stay the default backend, own config.toml, and pre-answer the prompt that writes it")
 
-      (helpers.assertTest "${prefix}-claude-worktrunk-marker-hooks"
+      (helpers.assertTest "${prefix}-default-backend-excludes-dojjo"
+        (!(homeXdg.configFile ? "dojjo/config.toml")
+          && !(hasHomePackage "dojjo-bin")
+          && lib.hasInfix "-worktrunk-init.zsh" homePrograms.zsh.initContent
+          && !(lib.hasInfix "-dojjo-init.zsh" homePrograms.zsh.initContent))
+        "${prefix} the default backend should source only the Worktrunk wrapper and install no dojjo")
+
+      (helpers.assertTest "${prefix}-claude-settings-ownership-activation"
         (homeData.file ? ".claude/hooks/worktrunk-marker.sh"
-          && lib.hasInfix "worktrunk-marker.sh working" homeActivation.claudeHooksAssert.data
-          && lib.hasInfix "worktrunk-marker.sh clear" homeActivation.claudeHooksAssert.data
-          && !(lib.hasInfix "WorktreeCreate" homeActivation.claudeHooksAssert.data))
-        "${prefix} Claude hooks should set worktrunk activity markers but leave worktree creation native")
+          && homeActivation ? "claudeSettingsOwnership"
+          && builtins.elem "writeBoundary" homeActivation.claudeSettingsOwnership.after
+          && builtins.all
+          (name: !(builtins.hasAttr name homeActivation))
+          [
+            "claudeSkillSurfaceDedup"
+            "claudeSettingsSeed"
+            "claudePermissionsAssert"
+            "claudeDisableGlobalMcpPlugins"
+            "claudeMemorySettingsAssert"
+            "claudeWorktreeSettingsAssert"
+            "claudeHooksAssert"
+          ])
+        "${prefix} should use one post-writeBoundary Claude settings reconciliation activation")
 
       (helpers.assertTest "${prefix}-home-tmux-enabled"
         (homePrograms.tmux.enable == true)
@@ -274,54 +474,6 @@ let
         )
         "${prefix} should prune removed skills without mutating during Home Manager dry runs")
 
-      (helpers.assertTest "${prefix}-claude-global-mcp-plugin-disable-lever-wired"
-        (
-          let activation = homeActivation.claudeDisableGlobalMcpPlugins.data;
-          in
-          lib.hasInfix "enabledPlugins" activation
-          && lib.hasInfix "reduce $ids[]" activation
-        )
-        "${prefix} should keep the reproducible global-plugin-disable lever wired, even with no ids currently parked")
-
-      # Permissions are nix-owned and AUTHORITATIVE: the live settings.json had
-      # drifted to 68/47/45 rules against a 13/0/0 seed, so a fresh host got no
-      # ~/.ssh deny at all. Pin the three properties that make it reproducible.
-      (helpers.assertTest "${prefix}-claude-permissions-asserted"
-        (
-          let activation = homeActivation.claudePermissionsAssert.data;
-          in
-          # The security boundary that still bites under bypassPermissions.
-          lib.hasInfix ''Read(~/.ssh/**)'' activation
-          && lib.hasInfix ''"defaultMode":"bypassPermissions"'' activation
-          # `+` not `=`: overwrite the declared keys, keep sibling keys Claude
-          # Code may add later (additionalDirectories, …).
-          && lib.hasInfix "((.permissions // {}) + $perms)" activation
-          && lib.hasInfix "DRY_RUN" activation
-        )
-        "${prefix} should re-assert the nix-owned permission rules on every switch, not just seed them once")
-
-      # The deny key has exactly one writer in steady state. If the dedup block
-      # stopped running after the assert block, the two would disagree about
-      # grill-me and rewrite settings.json on every single switch, forever.
-      (helpers.assertTest "${prefix}-claude-permissions-single-deny-writer"
-        (homeActivation.claudeSkillSurfaceDedup.data or null != null
-          && builtins.elem "claudePermissionsAssert" homeActivation.claudeSkillSurfaceDedup.after)
-        "${prefix} should order the skill-dedup deny append after the authoritative permissions assert")
-
-      # The three assertions below pin the Claude-only de-duplication contract:
-      # hide the bundle copy from Claude (and ONLY Claude), un-list the refused
-      # plugin skills, and never let either lever reach the shared bundle that
-      # Codex/Droid/OpenCode/Crush read.
-      (helpers.assertTest "${prefix}-agent-skills-claude-dedup-wired"
-        (
-          let activation = homeActivation.claudeSkillSurfaceDedup.data;
-          in
-          lib.hasInfix "skillOverrides" activation
-          && lib.hasInfix ''"off"'' activation
-          && lib.hasInfix "permissions" activation
-          && lib.hasInfix "DRY_RUN" activation
-        )
-        "${prefix} should hide plugin-duplicated skills from Claude Code only, via settings.json skillOverrides")
 
       (helpers.assertTest "${prefix}-claude-plugin-skill-prune-wired"
         (
@@ -402,27 +554,20 @@ let
         )
         "${prefix} Codex LSP must have no activation writer; desktop scaffolding must respect dry runs")
 
-      (helpers.assertTest "${prefix}-codex-declarative-files"
+      (helpers.assertTest "${prefix}-agent-guide-files"
         (prefix != "darwin" || lib.all
           (path: builtins.hasAttr path homeData.file && !homeData.file.${path}.force)
-          [
+          ([
             ".codex/fast.config.toml"
             ".codex/fast-low.config.toml"
             ".codex/plan.config.toml"
             ".codex/deep.config.toml"
-            ".codex/AGENTS.md"
-            ".codex/guidance/development.md"
             ".codex/guidance/setup.md"
-            ".config/agent-guidance/development.md"
             ".config/agent-routing/omp.yml"
             ".config/agent-routing/omp-economy.yml"
             ".config/agent-routing/README.md"
-            ".omp/agent/AGENTS.md"
-            ".claude/CLAUDE.md"
-            ".claude/guidance/development.md"
-            ".claude/guidance/human-documents.md"
-          ])
-        "${prefix} immutable agent guidance and profiles must use Home Manager files without forced overwrite")
+          ] ++ guideTargets))
+        "${prefix} catalog guides and agent profiles must use non-forced Home Manager files")
 
       (helpers.assertTest "${prefix}-omp-guide-self-contained"
         (prefix != "darwin" || (
@@ -518,10 +663,9 @@ let
         builtins.hasAttr "codex/config.toml" darwinConfig.environment.etc
           && lib.hasInfix "[lsp.servers.tsgo]" codexDefaults
           && lib.hasInfix "[mcp_servers.fff]" codexDefaults
-          && lib.hasInfix ''PI_PLAN_MODEL = "openai-codex/gpt-5.6-terra:xhigh"'' codexDefaults
+          && lib.hasInfix ''PI_PLAN_MODEL = "openai-codex/gpt-6-astra:xhigh"'' codexDefaults
           && !(lib.hasInfix "@PI_" codexDefaults)
-          && !(lib.hasInfix "gpt-5.5" codexDefaults)
-          && !(lib.hasInfix "gpt-5.6-sol" codexDefaults)
+          && !(lib.hasInfix "gpt-5." codexDefaults)
           && !(lib.hasInfix ''
           model = "''
           codexDefaults)
@@ -529,19 +673,21 @@ let
       )
       "Darwin should keep Codex machine defaults in /etc without locking the user model choice")
 
-    (helpers.assertTest "darwin-agent-routing-no-retired-models"
+    (helpers.assertTest "darwin-agent-routing-gpt-6-only"
       (
         let
           crush = darwinHome.xdg.configFile."crush/crush.json".text;
           zed = builtins.toJSON darwinHome.programs.zed-editor.userSettings;
           rendered = crush + zed;
         in
-        lib.hasInfix "gpt-5.6-terra" rendered
-          && lib.hasInfix "gpt-5.3-codex-spark" rendered
-          && !(lib.hasInfix "gpt-5.5" rendered)
-          && !(lib.hasInfix "gpt-5.6-sol" rendered)
+        lib.all (model: lib.hasInfix model rendered) [
+          "gpt-6-astra"
+          "gpt-6-sol"
+          "gpt-6-luna"
+        ]
+        && !(lib.hasInfix "gpt-5." rendered)
       )
-      "Darwin Crush and Zed adapters should render only current semantic routes")
+      "Darwin Crush and Zed adapters should render only GPT-6 semantic routes")
 
     # BetterMouse left Nix on 2026-08-17 and BetterDisplay on 2026-08-19, for
     # the same reason: both ship Sparkle, which self-updated the writable
@@ -776,7 +922,8 @@ let
     (helpers.assertTest "darwin-zed-settings-force-managed"
       (darwinHome.xdg.configFile."zed/settings.json".force == true)
       "Darwin Home Manager should force-manage Zed settings so an equivalent regular file cannot block activation")
-  ] ++ viModeToggleChecks ++ searchToggleChecks ++ (homeChecks "darwin" darwinHome "/Users/${user}");
+  ] ++ viModeToggleChecks ++ searchToggleChecks ++ modularShellChecks ++ workspaceBackendChecks
+  ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
   nixosChecks = [
     (toplevelEvaluatesOnNative "x230" "x86_64-linux" x230Config)

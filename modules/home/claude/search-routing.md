@@ -1,67 +1,11 @@
-# Code search routing: examples, wrappers, traps
+# Code search routing: tool semantics, wrappers, traps
 
-Reference behind the Search section of `~/.claude/CLAUDE.md`. That section names the tool per branch; this file carries what only some branches need. Numbers and failure modes measured 2026-09: `~/.claude/search-eval.md`.
-
-## Worked examples (nix-config, 2026-09-09)
-
-### A symbol: codedb_explain for structural context
-
-`codedb_explain name=resolveContext project=/Users/martinfan/nix-config`, one call:
-
-```
-## definition
-tools/skill-router/src/config.ts:53 (function) resolveContext
-   53 | export async function resolveContext(runtime: RouterRuntime = defaultRuntime()): Promise<RouterContext> {
-   54 |   return { runtime, config: await loadConfig(runtime) };
-   55 | }
-## callers
-6 call sites for 'resolveContext':
-  tools/skill-router/src/catalog.ts:75: const ctx = opts.ctx ?? (await resolveContext());  [in ctx (constant)]
-  tools/skill-router/src/discover.ts:13: ... [in discoverAllSkills (function, L12-L65)]
-  tools/skill-router/test/subprocess-gating.test.ts:116: return resolveContext(  [in ctxFor (function, L111-L129)]
-```
-
-`rg -n -w resolveContext` returned the same 17 lines flat: no definition body, no enclosing function, docs mixed with code.
-
-### One identifier, definition and usages in one bounded reply: fff grep
-
-`fff grep query=resolveContext`:
-
-```
-→ Read tools/skill-router/src/config.ts [def]
-tools/skill-router/src/config.ts
- 53: export async function resolveContext(runtime: RouterRuntime = defaultRuntime()): Promise<RouterContext> {
-CONTEXT.md
- 82: …pair resolved at the `cli.ts` edge by `resolveContext` and threaded through every module…
-tools/skill-router/src/cli.ts
- 65: const ctx = await resolveContext();
-```
-
-Definition marked `[def]`, usages in code and docs, 12 lines. Read the header: `N/M matches`; `0 exact matches` means none in that indexed search scope, not absence from the whole checkout.
-
-### Two or three spellings at once: fff multi_grep
-
-`multi_grep patterns=["hunk-bin","hunkBin","hunk_bin"] constraints="!references/"` returned 8 lines across 4 files. The rg equivalent needs an alternation and a glob: `rg -n "hunk-bin|hunkBin|hunk_bin" --glob '!references/**'`.
-
-### A half-remembered file name: fff find_files
-
-`find_files query="hunk bin"`:
-
-```
-pkgs/hunk-bin.nix git:modified
-scripts/update-hunk.sh git:modified
-pkgs/bun-canary-bin.nix git:clean
-```
-
-Recent and git-dirty files rank first. Keep queries to one or two terms; each extra word narrows, it does not widen.
-
-### Words only: rw --for
-
-`rw --for="resolve context config runtime"` returned 33 ranked signatures in about 4k tokens: rank 1 `resolveContext` with `in=6` callers and `tested=1`, then the CONTEXT.md and ADR sections that mention it. Outline the rank-1 file next.
+Reference behind the Search section of `~/.claude/CLAUDE.md`. That section names the tool per branch; this file carries what only some branches need. Numbers and failure modes measured 2026-09: `~/.claude/search-eval.md`. Dated output traces of each route: `~/.claude/references/search-routing-examples.md`.
 
 ## Wrappers on PATH
 
 - `rw`: ripwire with node_modules excluded and legends stripped. `rw --verb=...` inside `<repo>`, `rw <repo> --verb=...` elsewhere.
+- `rw --for="TERMS"` returns ranked signatures with caller (`in=`) and test (`tested=`) counts, then the doc sections that mention them. Outline the rank-1 file next.
 
 ## MCP or CLI
 
@@ -70,7 +14,7 @@ In the recorded September 2026 setup, codedb, fff, and zg run as MCP servers wit
 Loaded schemas do not guarantee a ready server or current index. Use scoped `rg`, `fd`, or Read when MCP is unavailable, warming up, or stale; do not wait or retry solely to enforce routing. Read known paths directly. Read more only when returned context is insufficient or freshness is uncertain.
 
 - codedb: `codedb_explain` for a symbol; `codedb_context` for a task, only with `semantic=local` (the default sends snippets to a remote reranker). Outline and read are CLI only.
-- fff: `find_files` (fuzzy file names, frecency), `grep` (one bare identifier, plain text, no regex), `multi_grep` (OR over literal patterns). The recorded setup caps replies at 50 hits; check the installed schema and result header rather than assuming this limit is universal. Use `rg -c` for matching-line counts, `rg -l` for matching-file lists, or untruncated `rg -n` for matching lines. fff honours `.ignore`. fff has no CLI on this machine: inside a subagent, load its MCP schema with ToolSearch or use rg.
+- fff: `find_files` (fuzzy file names, frecency, git-dirty first; each extra word narrows), `grep` (one bare identifier, plain text, no regex), `multi_grep` (OR over literal patterns). `grep` marks the definition `[def]`. Read its header: `N/M matches`; `0 exact matches` means none in that indexed search scope, not absence from the whole checkout. The recorded setup caps replies at 50 hits; check the installed schema and result header rather than assuming this limit is universal. Use `rg -c` for matching-line counts, `rg -l` for matching-file lists, or untruncated `rg -n` for matching lines. fff honours `.ignore`. fff has no CLI on this machine: inside a subagent, load its MCP schema with ToolSearch or use rg.
 - zg: `zvec_grep_search` for word-only orientation on one TypeScript repo, `fts: SYM` when you know a name. It returns vector neighbours even when nothing matched lexically, so a zg hit never proves presence; confirm with rg.
 
 ## rg flags

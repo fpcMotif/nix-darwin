@@ -4,19 +4,8 @@
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
-FILE="pkgs/hammerspoon.nix"
-
 latest=$(au_latest_github_release Hammerspoon/hammerspoon)
-current=$(au_current_version "$FILE")
-if [ "$current" = "$latest" ]; then
-  echo "hammerspoon already at $latest"; exit 0
-fi
 
-url="https://github.com/Hammerspoon/hammerspoon/releases/download/${latest}/Hammerspoon-${latest}.zip"
-sri=$(au_prefetch_sri "$url")
-
-au_set_version "$FILE" "$latest"
-au_inplace_sed "$FILE" -e "s|hash = \"sha256-[^\"]*\"|hash = \"${sri}\"|"
-
-au_build_darwin .#martin.hammerspoon
-au_report_change hammerspoon "$current" "$latest"
+au_bump_release --name hammerspoon --file pkgs/hammerspoon.nix --version "$latest" \
+  --attr .#martin.hammerspoon \
+  --asset "https://github.com/Hammerspoon/hammerspoon/releases/download/${latest}/Hammerspoon-${latest}.zip" 'Hammerspoon/hammerspoon/releases/download/'
