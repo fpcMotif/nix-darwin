@@ -504,6 +504,10 @@ let
     # guard only pays for itself above ~300 lines.
     RIPGREP_CONFIG_PATH = "${homeDir}/.config/ripgrep/agent-config";
     READ_GUARD_MAX_LINES = "300";
+    # Nix-built node/openssl find root CAs only via $NIX_SSL_CERT_FILE, which
+    # the desktop app (launched from the Dock) never inherits, so hooks such as
+    # the Convex plugin's `convex codegen` failed TLS. Same fix as git.nix.
+    NIX_SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
     # Bash tool: 10 s default before a command is backgrounded (lookups answer
     # in under a second); the tiers above it are in CLAUDE.md, up to the ceiling.
     BASH_DEFAULT_TIMEOUT_MS = "10000";
