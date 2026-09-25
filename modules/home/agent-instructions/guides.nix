@@ -1,4 +1,4 @@
-{ lib, pkgs }:
+{ lib, pkgs, workspaceBackend ? "worktrunk" }:
 
 let
   renderAgentGuide = import ./render-agent-guide.nix { inherit lib; };
@@ -7,6 +7,10 @@ let
     development = ./shared/development.md;
     qualityAndStyle = ./shared/quality-and-style.md;
     humanDocuments = ./shared/human-documents.md;
+    workspaces = {
+      worktrunk = ./shared/workspaces-worktrunk.md;
+      dojjo = ./shared/workspaces-dojjo.md;
+    }.${workspaceBackend};
   };
   mkGuide = name: target: adapter: sections:
     let
@@ -33,6 +37,7 @@ let
           ];
           development = mkGuide "${name}-development.md" developmentTarget developmentAdapter [
             shared.development
+            shared.workspaces
           ];
         }
         // lib.optionalAttrs (humanDocumentsTarget != null) {

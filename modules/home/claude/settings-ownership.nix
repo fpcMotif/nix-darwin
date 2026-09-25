@@ -69,6 +69,34 @@ let
           ]
       end;
 
+    # Removes only the exact entry Nix once added: same event, matcher, and full
+    # command. A group or event that held nothing else goes with it.
+    def is_owned_command($hook):
+      type == "object" and .type == "command" and .command == $hook.command;
+
+    def remove_hook($hook):
+      if (.hooks | type) == "object" and (.hooks[$hook.event] | type) == "array" then
+        .hooks[$hook.event] as $groups
+        | [ $groups[]
+            | if type == "object" and .matcher == $hook.matcher
+                and (.hooks | type) == "array" and any(.hooks[]; is_owned_command($hook)) then
+                (.hooks | map(select(is_owned_command($hook) | not))) as $rest
+                | if ($rest | length) == 0 then empty else .hooks = $rest end
+              else
+                .
+              end
+          ] as $kept
+        | if $kept == $groups then
+            .
+          elif ($kept | length) == 0 then
+            del(.hooks[$hook.event])
+          else
+            .hooks[$hook.event] = $kept
+          end
+      else
+        .
+      end;
+
     def path_changed($before; $after; $path):
       lookup($before; $path) as $old
       | lookup($after; $path) as $new
@@ -82,6 +110,7 @@ let
         ($policy.own // []) as $own
         | ($policy.default // []) as $defaults
         | ($policy.add // []) as $additions
+        | ($policy.remove // []) as $removals
         | (if ($oldState | type) == "object" and ($oldState.owned | type) == "array"
            then $oldState.owned
            else []
@@ -108,11 +137,13 @@ let
             set_owned($entry.path; $entry.value))) as $ownedSettings
         | (reduce $defaults[] as $entry ($ownedSettings;
             if has_path(.; $entry.path) then . else set_default($entry.path; $entry.value) end)) as $defaultSettings
-        | (reduce $additions[] as $hook ($defaultSettings; add_hook($hook))) as $updated
+        | (reduce $removals[] as $hook ($defaultSettings; remove_hook($hook))) as $prunedSettings
+        | (reduce $additions[] as $hook ($prunedSettings; add_hook($hook))) as $updated
         | { version: 1, owned: ($own | map({ path: .path, value: .value })) } as $newState
         | ((($own | map(.path))
             + ($defaults | map(.path))
             + ($additions | map(["hooks", .event]))
+            + ($removals | map(["hooks", .event]))
             + ($oldOwned | map(.path))
             + (if $targetMissing then ($seed | keys_unsorted | map([.])) else [] end))
             | unique) as $candidatePaths

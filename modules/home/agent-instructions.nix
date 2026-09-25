@@ -1,7 +1,10 @@
 { config, lib, pkgs, ... }:
 
 let
-  guideCatalog = import ./agent-instructions/guides.nix { inherit lib pkgs; };
+  guideCatalog = import ./agent-instructions/guides.nix {
+    inherit lib pkgs;
+    workspaceBackend = config.martin.development.workspaceBackend;
+  };
   modelRouting = import ../shared/agent-model-routing.nix { inherit lib; };
   toml = pkgs.formats.toml { };
   yaml = pkgs.formats.yaml { };

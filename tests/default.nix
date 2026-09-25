@@ -76,6 +76,17 @@ in
     let
       guideCatalog = import ../modules/home/agent-instructions/guides.nix { inherit lib pkgs; };
       hosts = guideCatalog.hosts;
+      dojjoHosts = (import ../modules/home/agent-instructions/guides.nix {
+        inherit lib pkgs;
+        workspaceBackend = "dojjo";
+      }).hosts;
+      # Each backend's guide names only its own isolation commands.
+      workspaceGuideFits = backendHosts: required: forbidden:
+        lib.all
+          (host:
+            lib.all (text: lib.hasInfix text host.development.content) required
+            && lib.all (text: !(lib.hasInfix text host.development.content)) forbidden)
+          (lib.attrValues backendHosts);
       hasWord = word: text:
         lib.any
           (line:
@@ -94,6 +105,7 @@ in
         "## Code search"
         "## Python"
         "## Version control"
+        "## Parallel checkouts"
         "## Code quality"
         "## Current-state integrity"
         "## Writing"
@@ -103,6 +115,7 @@ in
         "## Code quality"
         "## Current-state integrity"
         "## Command routing"
+        "## Parallel checkouts"
       ];
       # The adapter line that links human-documents.md must name ADRs, or an
       # agent writing one never loads the ADR rules.
@@ -143,6 +156,10 @@ in
     in
     assert !(hasWord "bat" "batch");
     assert lib.all (passed: passed) hostChecks;
+    assert workspaceGuideFits hosts [ "wt switch --create" ] [ "djo" ];
+    assert workspaceGuideFits dojjoHosts
+      [ "djo switch --create" "jj workspace forget" "never a Git worktree" ]
+      [ "wt switch" "wt remove" ];
     assert lib.hasInfix "The document is done when" hosts.claude.humanDocuments.content;
     assert lib.hasInfix "## ADRs and domain documents" hosts.claude.humanDocuments.content;
     assert lib.all documentsTriggerNamesAdr
@@ -161,6 +178,49 @@ in
     touch $out
   '';
   unit-claude-settings-ownership = callTest ./unit/claude-settings-ownership-test.nix { };
+
+  # Drives wt and djo through create, switch, list, remove, hooks, and a
+  # backend switch in disposable repositories. It uses the config files and Zsh
+  # lines host "f" ships under each backend, so it runs where "f" builds.
+  unit-workspace-backend-lifecycle =
+    if system == "aarch64-darwin" then
+      let
+        user = "martinfan";
+        worktrunkHome = self.darwinConfigurations.f.config.home-manager.users.${user};
+        dojjoHome = (import ./lib/with-workspace-backend.nix {
+          configuration = self.darwinConfigurations.f;
+          inherit user;
+          backend = "dojjo";
+        }).config.home-manager.users.${user};
+        zshSourceLines = home: marker: pkgs.writeText "${marker}-lines"
+          (lib.concatMapStrings (line: line + "\n")
+            (builtins.filter (lib.hasInfix marker) (lib.splitString "\n" home.programs.zsh.initContent)));
+      in
+      pkgs.runCommand "unit-workspace-backend-lifecycle"
+        {
+          nativeBuildInputs = [
+            pkgs.bash
+            pkgs.git
+            pkgs.jq
+            pkgs.zsh
+            worktrunkHome.programs.jujutsu.package
+            worktrunkHome.programs.worktrunk.package
+            pkgs.martin.dojjo-bin
+          ];
+        }
+        ''
+          bash ${./unit/workspace-backend-lifecycle-test.sh} \
+            ${worktrunkHome.xdg.configFile."worktrunk/config.toml".source} \
+            ${zshSourceLines worktrunkHome "-worktrunk-init.zsh"} \
+            ${dojjoHome.xdg.configFile."dojjo/config.toml".source} \
+            ${zshSourceLines dojjoHome "-dojjo-init.zsh"}
+          touch $out
+        ''
+    else
+      pkgs.runCommand "unit-workspace-backend-lifecycle-skipped" { } ''
+        echo "Skipping the workspace-backend lifecycle test on ${system}; host f is aarch64-darwin"
+        touch $out
+      '';
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
   unit-pstack-hygiene = callTest ./unit/pstack-hygiene-test.nix { };

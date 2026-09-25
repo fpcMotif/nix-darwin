@@ -2,14 +2,16 @@
 # Exercise the production settings reconciler with fixture policies and homes.
 set -euo pipefail
 
-if [ "$#" -ne 4 ]; then
-  echo "usage: claude-settings-ownership-test.sh CURRENT OLD NEW RETIRED-SEED-NEW" >&2
+if [ "$#" -ne 6 ]; then
+  echo "usage: claude-settings-ownership-test.sh CURRENT OLD NEW RETIRED-SEED-NEW WORKTRUNK DOJJO" >&2
   exit 2
 fi
 current=$1
 old=$2
 new=$3
 retired_seed_new=$4
+worktrunk=$5
+dojjo=$6
 work=$(mktemp -d "${TMPDIR:-/tmp}/claude-settings-ownership.XXXXXX")
 trap 'rm -rf -- "$work"' EXIT
 
@@ -230,5 +232,108 @@ assert_json '
 assert_json '
   ([.owned[] | select(.path == ["autoMemoryEnabled"])] | length) == 0
 ' "$retired_seed_state" "retired seeded key remains in ownership state"
+
+# Workspace backend switch: Worktrunk -> dojjo -> Worktrunk. The marker hooks a
+# Worktrunk generation installed must leave under dojjo, while user hooks in the
+# same events and groups, a hand-moved marker, and Worktrunk approvals survive.
+switch_home="$work/backend-switch-home"
+switch_settings="$switch_home/.claude/settings.json"
+approvals="$switch_home/.config/worktrunk/approvals.toml"
+marker='$HOME/.claude/hooks/worktrunk-marker.sh'
+mkdir -p "$switch_home/.claude" "$(dirname -- "$approvals")"
+cat > "$switch_settings" <<'JSON'
+{
+  "hooks": {
+    "Notification": [
+      {"matcher":null,"hooks":[{"type":"command","command":"$HOME/.user/cc-event-hook.sh Notification"}]}
+    ],
+    "SubagentStop": [
+      {"matcher":"","hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktrunk-marker.sh waiting"}]}
+    ]
+  }
+}
+JSON
+printf '[projects."github.com/example/repo"]\napproved-commands = ["make setup"]\n' > "$approvals"
+cp "$approvals" "$work/approvals.before-switch"
+
+marker_count() {
+  jq --arg command "$1" --arg matcher "$2" --arg event "$3" '
+    [(.hooks[$event] // [])[] | select(.matcher == $matcher) | .hooks[] | select(.command == $command)] | length
+  ' "$switch_settings"
+}
+assert_markers() {
+  local expected=$1 message=$2
+  local event matcher command
+  while IFS='|' read -r event matcher command; do
+    [ "$(marker_count "$marker $command" "$matcher" "$event")" = "$expected" ] \
+      || { jq . "$switch_settings" >&2; fail "$message: $event '$matcher' $command"; }
+  done <<'EOF'
+UserPromptSubmit||working
+Notification||waiting
+PreToolUse|AskUserQuestion|waiting
+PermissionRequest||waiting
+Stop||waiting
+SessionEnd||clear
+EOF
+}
+assert_user_hooks() {
+  assert_json '
+    any(.hooks.Notification[]; .matcher == null and any(.hooks[]; .command == "$HOME/.user/cc-event-hook.sh Notification"))
+    and any(.hooks.SubagentStop[]; any(.hooks[]; .command == "$HOME/.claude/hooks/worktrunk-marker.sh waiting"))
+    and any(.hooks.PreToolUse[]; any(.hooks[]; .command == "$HOME/.claude/hooks/shell-guard.sh"))
+    and any(.hooks.UserPromptSubmit[]; any(.hooks[]; .command == "$HOME/.user/prompt-log.sh"))
+  ' "$switch_settings" "$1"
+}
+
+"$worktrunk" "$switch_home"
+assert_markers 1 "Worktrunk generation did not register the marker exactly once"
+# A user hook added beside a Nix marker in the same group must outlive it.
+jq '
+  .hooks.UserPromptSubmit |= map(
+    if .matcher == "" then .hooks += [{"type":"command","command":"$HOME/.user/prompt-log.sh"}] else . end)
+' "$switch_settings" > "$work/shared-group.json"
+mv -- "$work/shared-group.json" "$switch_settings"
+assert_user_hooks "Worktrunk generation removed a user hook"
+
+dry_log=$(DRY_RUN=1 "$dojjo" "$switch_home" 2>&1) || fail "dojjo dry run failed"
+case "$dry_log" in
+  *"hooks.SessionEnd"*) ;;
+  *) fail "dojjo dry run did not name the stale marker event: $dry_log" ;;
+esac
+
+# A marker variant the user wrote is not an exact Nix-owned entry.
+jq '.hooks.SessionEnd += [{"matcher":"","hooks":[{"type":"command","command":"$HOME/.claude/hooks/worktrunk-marker.sh clear --keep"}]}]' \
+  "$switch_settings" > "$work/variant.json"
+mv -- "$work/variant.json" "$switch_settings"
+
+"$dojjo" "$switch_home"
+assert_markers 0 "dojjo generation left a Worktrunk marker behind"
+assert_user_hooks "dojjo generation removed a hook Nix did not own"
+assert_json '
+  (.hooks | has("PermissionRequest") | not)
+  and (.hooks | has("Stop") | not)
+  and ([.hooks.UserPromptSubmit[] | select(.matcher == "")] | length) == 1
+  and [.hooks.SessionEnd[] | .hooks[] | .command] == ["$HOME/.claude/hooks/worktrunk-marker.sh clear --keep"]
+' "$switch_settings" "stale marker cleanup left empty groups or removed a user variant"
+cmp -s "$work/approvals.before-switch" "$approvals" \
+  || fail "backend switch changed Worktrunk approvals"
+cp "$switch_settings" "$work/dojjo.before-repeat"
+"$dojjo" "$switch_home"
+cmp -s "$work/dojjo.before-repeat" "$switch_settings" \
+  || fail "repeated dojjo activation rewrote settings"
+
+# The additive policy treats any hook on the marker path as present, so the
+# user's variant is dropped before rollback to observe the restored marker.
+jq 'del(.hooks.SessionEnd)' "$switch_settings" > "$work/no-variant.json"
+mv -- "$work/no-variant.json" "$switch_settings"
+"$worktrunk" "$switch_home"
+assert_markers 1 "rollback to Worktrunk did not restore each marker exactly once"
+assert_user_hooks "rollback to Worktrunk removed a user hook"
+cp "$switch_settings" "$work/worktrunk.before-repeat"
+"$worktrunk" "$switch_home"
+cmp -s "$work/worktrunk.before-repeat" "$switch_settings" \
+  || fail "repeated Worktrunk activation rewrote settings"
+cmp -s "$work/approvals.before-switch" "$approvals" \
+  || fail "rollback changed Worktrunk approvals"
 
 printf 'PASS unit-claude-settings-ownership\n'

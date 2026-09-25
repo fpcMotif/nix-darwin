@@ -17,7 +17,9 @@
     ./tmux.nix
     ./git.nix
     ./jujutsu.nix
+    ./workspace-backend.nix
     ./worktrunk.nix
+    ./dojjo.nix
     ./ghostty.nix
     ./kitty.nix
     ./yazi.nix

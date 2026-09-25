@@ -148,6 +148,10 @@ _Avoid_: a second proactive review skill (the dotfiles-pi `review` was retired f
 What a git-reading tool may do in a repo with both `.git` and `.jj`: git HEAD is `@-`, so read-only git sees the current change and code-review, ripwire, calldiff, and hunk work unchanged; git writes (checkout, add, stash, commit, branch) desync the two until the next jj command resets the working copy. Stated once, in the jj skill.
 _Avoid_: "no git in jj repos" (too strict; it excludes every git-reading review tool), or passing a jj revset where a git-reading tool wants a ref (use the bookmark name).
 
+**Workspace backend**:
+The one tool that creates parallel checkouts beside a repository, chosen by `martin.development.workspaceBackend`: Worktrunk (`wt`, Git worktrees, the default) or experimental dojjo (`djo`, JJ workspaces). It selects the package, its config, its Zsh wrapper, agent guidance, and Claude's Worktrunk markers; it never converts repositories or touches existing checkouts (docs/workspace-backends.md).
+_Avoid_: calling a JJ workspace a worktree, or treating dojjo as a replacement for jj (it drives jj).
+
 ### Auto-update cadence
 
 **Heavy input**:

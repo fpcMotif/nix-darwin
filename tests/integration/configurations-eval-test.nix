@@ -16,6 +16,7 @@
 #     packaged) and its Ghostty keybind veneer appears only on darwin
 { pkgs
 , lib
+, inputs
 , evalScope ? "auto"
 , darwinConfigurationInput ? null
 , x230ConfigurationInput ? null
@@ -63,6 +64,95 @@ let
 
   hasPackage = name: packages:
     lib.any (pkg: lib.getName pkg == name) packages;
+
+  # The real host with the experimental backend selected, the way a user would
+  # select it. Only the default host is built by `just switch`.
+  darwinDojjo =
+    if darwinConfiguration != null then
+      import ../lib/with-workspace-backend.nix
+        {
+          configuration = darwinConfiguration;
+          inherit user;
+          backend = "dojjo";
+        }
+    else null;
+  darwinDojjoHome = darwinDojjo.config.home-manager.users.${user};
+
+  # workspace-backend.nix alone, for platforms this host cannot evaluate in
+  # full (see toplevelEvaluatesOnNative). Returns the failed assertion messages.
+  backendAssertionFailures = system: backend:
+    let
+      evaluated = lib.evalModules {
+        modules = [
+          ../../modules/home/workspace-backend.nix
+          {
+            options.assertions = lib.mkOption {
+              type = lib.types.listOf lib.types.unspecified;
+              default = [ ];
+            };
+            config = {
+              _module.args.pkgs = import inputs.nixpkgs {
+                inherit system;
+                overlays = [ (import ../../pkgs) ];
+              };
+              martin.development.workspaceBackend = backend;
+            };
+          }
+        ];
+      };
+    in
+    map (a: a.message) (builtins.filter (a: !a.assertion) evaluated.config.assertions);
+
+  workspaceBackendChecks = [
+    (helpers.assertTest "darwin-dojjo-evaluates"
+      (evalsOk darwinDojjo.system)
+      "darwinConfigurations.f with workspaceBackend = dojjo should evaluate")
+
+    (helpers.assertTest "darwin-dojjo-replaces-worktrunk"
+      (darwinDojjoHome.martin.development.workspaceBackend == "dojjo"
+        && darwinDojjoHome.programs.worktrunk.enable == false
+        && !(darwinDojjoHome.xdg.configFile ? "worktrunk/config.toml")
+        && darwinDojjoHome.xdg.configFile ? "dojjo/config.toml"
+        && hasPackage "dojjo-bin" darwinDojjoHome.home.packages
+        && !(hasPackage "worktrunk" darwinDojjoHome.home.packages))
+      "dojjo backend should install djo and its config.toml, and drop wt and its config.toml")
+
+    (helpers.assertTest "darwin-dojjo-zsh-integration"
+      (lib.hasInfix "-dojjo-init.zsh" darwinDojjoHome.programs.zsh.initContent
+        && !(lib.hasInfix "-worktrunk-init.zsh" darwinDojjoHome.programs.zsh.initContent))
+      "dojjo backend should source the build-rendered djo wrapper and completion, not wt's")
+
+    (helpers.assertTest "darwin-dojjo-drops-worktrunk-markers"
+      (!(darwinDojjoHome.home.file ? ".claude/hooks/worktrunk-marker.sh")
+        && darwinDojjoHome.home.activation ? "claudeSettingsOwnership")
+      "dojjo backend should stop installing the Worktrunk marker script and keep the settings reconciler")
+
+    (helpers.assertTest "darwin-dojjo-agent-guidance"
+      (lib.all
+        (target:
+          let guide = darwinDojjoHome.home.file.${target}.source.text;
+          in lib.hasInfix "djo switch --create" guide && !(lib.hasInfix "wt switch" guide))
+        [ ".claude/guidance/development.md" ".codex/guidance/development.md" ".config/agent-guidance/development.md" ])
+      "dojjo backend should render dojjo guidance for every agent host")
+
+    (helpers.assertTest "darwin-default-agent-guidance"
+      (lib.hasInfix "wt switch --create" darwinHome.home.file.".claude/guidance/development.md".source.text)
+      "the default backend should keep Worktrunk guidance")
+
+    (helpers.assertTest "workspace-backend-dojjo-fails-clearly-on-linux"
+      (
+        let failures = backendAssertionFailures "x86_64-linux" "dojjo";
+        in builtins.length failures == 1
+          && lib.hasInfix "aarch64-darwin" (lib.head failures)
+          && lib.hasInfix "x86_64-linux" (lib.head failures)
+      )
+      "selecting dojjo on Linux should fail evaluation with a message naming the supported platform")
+
+    (helpers.assertTest "workspace-backend-assertion-passes-when-supported"
+      (backendAssertionFailures "x86_64-linux" "worktrunk" == [ ]
+        && backendAssertionFailures "aarch64-darwin" "dojjo" == [ ])
+      "the platform assertion should pass for Worktrunk anywhere and dojjo on aarch64-darwin")
+  ];
 
   # Standalone re-evaluation of modules/home/zsh.nix with martin.shell.viMode
   # toggled (see tests/lib/zsh-module-eval.nix): proves the escape hatch
@@ -285,10 +375,19 @@ let
         "${prefix} Home Manager should own jj config")
 
       (helpers.assertTest "${prefix}-home-worktrunk-config"
-        (homePrograms.worktrunk.enable == true
+        (homeConfig.martin.development.workspaceBackend == "worktrunk"
+          && homePrograms.worktrunk.enable == true
           && homeXdg.configFile ? "worktrunk/config.toml"
-          && homePrograms.worktrunk.settings.skip-shell-integration-prompt == true)
-        "${prefix} Home Manager should own worktrunk config.toml and pre-answer the prompt that writes it")
+          && homePrograms.worktrunk.settings.skip-shell-integration-prompt == true
+          && homePrograms.worktrunk.settings.worktree-path == "{{ repo_path }}/../{{ repo }}.{{ branch | sanitize }}")
+        "${prefix} Worktrunk should stay the default backend, own config.toml, and pre-answer the prompt that writes it")
+
+      (helpers.assertTest "${prefix}-default-backend-excludes-dojjo"
+        (!(homeXdg.configFile ? "dojjo/config.toml")
+          && !(hasHomePackage "dojjo-bin")
+          && lib.hasInfix "-worktrunk-init.zsh" homePrograms.zsh.initContent
+          && !(lib.hasInfix "-dojjo-init.zsh" homePrograms.zsh.initContent))
+        "${prefix} the default backend should source only the Worktrunk wrapper and install no dojjo")
 
       (helpers.assertTest "${prefix}-claude-settings-ownership-activation"
         (homeData.file ? ".claude/hooks/worktrunk-marker.sh"
@@ -814,7 +913,8 @@ let
     (helpers.assertTest "darwin-zed-settings-force-managed"
       (darwinHome.xdg.configFile."zed/settings.json".force == true)
       "Darwin Home Manager should force-manage Zed settings so an equivalent regular file cannot block activation")
-  ] ++ viModeToggleChecks ++ searchToggleChecks ++ modularShellChecks ++ (homeChecks "darwin" darwinHome "/Users/${user}");
+  ] ++ viModeToggleChecks ++ searchToggleChecks ++ modularShellChecks ++ workspaceBackendChecks
+  ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
   nixosChecks = [
     (toplevelEvaluatesOnNative "x230" "x86_64-linux" x230Config)
