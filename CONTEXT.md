@@ -135,8 +135,8 @@ The ISO weekday (Monday, evaluated on the runner's UTC clock) on which heavy inp
 _Avoid_: expressing the cadence rule as a workflow YAML conditional — it must stay runnable locally.
 
 **Glue derivation**:
-A profile, activation, or generated-config derivation present in every build plan that rebuilds in milliseconds (home-manager profiles and file trees, user environment, system etc, activation scripts, top-level system derivation, generated LSP config files). The source-build guard never counts glue as a source build.
-_Avoid_: treating an unfamiliar plan entry as glue without naming it; unknown entries fail the guard until classified.
+A profile, activation, or generated-config derivation present in every build plan that rebuilds in milliseconds (home-manager profiles and file trees, user environment, system etc, activation scripts, top-level system derivation, generated LSP config files). The source-build guard never counts glue as a source build. It recognizes most glue by `preferLocalBuild`, which the nixpkgs trivial builders set, and names the rest (writeShellApplication outputs, option docs, manuals) in a short list.
+_Avoid_: adding a name to the glue list for a derivation that sets `preferLocalBuild`; unknown entries fail the guard until classified.
 
 **Vendored derivation**:
 A package defined in this repo under `pkgs/` and built from vendored sources or lockfiles (drafts-mcp-server, sourcegraph-amp, the agent CLI repacks). No binary cache will ever hold them; they always build locally by design and are exempt from the source-build guard. The exemption list is derived from `pkgs/*.nix` pnames at run time, so it cannot name packages that no longer exist.

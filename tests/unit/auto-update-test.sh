@@ -131,17 +131,15 @@ case "$wd" in [1-7]) ;; *) fail "au_today_weekday returned '$wd'" ;; esac
 # ---------------------------------------------------------------------------
 
 # Fixture: a clean nightly plan — glue derivations plus the vendored zed
-# repack (captured from a real `nix build --dry-run` on the Darwin host).
-clean_plan='these 9 derivations will be built:
+# repack (captured from a real `nix build --dry-run` on the Darwin host,
+# minus its preferLocalBuild entries).
+clean_plan='these 6 derivations will be built:
   /nix/store/92f20s4b80yvh1plpsjjzz119qyyhnlm-darwin-manual-html.drv
-  /nix/store/3gvl3rmw649ivqjjnfm1yiamy062f5qc-darwin-help.drv
   /nix/store/6bw3kksjh7ccgj1fr733cdhwn6s02wbl-home-configuration-reference-manpage.drv
   /nix/store/znnfvw7lxwyx2hybsbppcz25nj4iii77-zed-nightly-bin-wrapped-1.18.0+nightly.3229.drv
   /nix/store/hp7fnv8kw65v4xg2iwiqamxx6yw5wz4v-home-manager-fonts.drv
   /nix/store/9a0gppk2w8qgq3jn8633jny371hh6ipw-home-manager-files.drv
-  /nix/store/mpmiyzr19wdzjkab1aaml9p28p7ddkcy-home-manager-path.drv
-  /nix/store/jbpgb0sqf9qp5d1d8gzg24ldl84cjmpp-etc.drv
-  /nix/store/hvq3xynf8mzpjiqkkz4cp6y39vqhy5p5-darwin-system-26.11.4cff07d.drv'
+  /nix/store/mpmiyzr19wdzjkab1aaml9p28p7ddkcy-home-manager-path.drv'
 
 out=$(printf '%s\n' "$clean_plan" | au_plan_offenders zed-nightly-bin)
 [ -z "$out" ] || fail "clean plan flagged offenders: $out"
@@ -161,10 +159,10 @@ out=$(printf '%s\n' "$cold_plan" | au_plan_offenders)
 
 # A mixed plan names only the genuine offender.
 mixed_plan='these 4 derivations will be built:
-  /nix/store/dddd4444eeee5555ffff6666aaaa7777-user-environment.drv
+  /nix/store/dddd4444eeee5555ffff6666aaaa7777-home-manager-generation.drv
   /nix/store/eeee5555ffff6666aaaa7777bbbb8888-drafts-mcp-server-0.3.1.drv
   /nix/store/ffff6666aaaa7777bbbb8888cccc9999-vue-language-server-3.0.0.drv
-  /nix/store/aaaa7777bbbb8888cccc9999dddd0000-activation-martinfan.drv'
+  /nix/store/aaaa7777bbbb8888cccc9999dddd0000-hm-modules-messages.drv'
 out=$(printf '%s\n' "$mixed_plan" | au_plan_offenders drafts-mcp-server)
 [ "$out" = "vue-language-server-3.0.0" ] || fail "mixed plan verdict wrong: '$out'"
 
@@ -177,19 +175,57 @@ these 40 derivations will be fetched:
 out=$(printf '%s\n' "$fetch_plan" | au_plan_offenders pnpm)
 [ -z "$out" ] || fail "fetched section misclassified: $out"
 
-# Generated LSP config files and hm_* option trees are glue.
-glue_plan='these 9 derivations will be built:
+# Generated config the name list still covers.
+glue_plan='these 3 derivations will be built:
   /nix/store/0000eeee1111ffff2222333344445555-claude-lsp.json.drv
-  /nix/store/1111ffff222233334444555566667777-codex-lsp.toml.drv
-  /nix/store/22223333444455556666777788889999-hm_LibraryFonts.homemanagerfontsversion.drv
-  /nix/store/3333444455556666777788889999aaaa-tsgo.drv
   /nix/store/444455556666777788889999aaaa0000-worktrunk-init.zsh.drv
-  /nix/store/55556666777788889999aaaa00001111-omp-routing.yml.drv
-  /nix/store/6666777788889999aaaa000011112222-pstack-skill-how.drv
-  /nix/store/777788889999aaaa0000111122223333-config.toml.drv
   /nix/store/88889999aaaa00001111222233334444-worktrunk-marker.drv'
 out=$(printf '%s\n' "$glue_plan" | au_plan_offenders)
 [ -z "$out" ] || fail "generated-config glue flagged: $out"
+
+# ---------------------------------------------------------------------------
+# Impure exemption, gated by AU_INSPECT_DRVS=1. A stub `nix` logs each call
+# and serves `nix derivation show` JSON trimmed to the fields the check reads.
+# ---------------------------------------------------------------------------
+
+nix_calls=$(mktemp)
+nix() {
+  printf '%s\n' "$3" >>"$nix_calls"
+  local attrs
+  case "$3" in
+    *-tsgo.drv) attrs='"structuredAttrs":{"preferLocalBuild":true}' ;;
+    *-pstack-skill-how.drv) attrs='"env":{"preferLocalBuild":"1"}' ;;
+    *-vendor-staging.drv) attrs='"outputs":{"out":{"hash":"sha256-heJGLh0MgDPpksWyPLaIkZ5gVEWx8UnaJKv4GvclpmI="}}' ;;
+    # Heavy compiles: attribute absent, false, and false in env ("").
+    *-nodejs-slim-*.drv) attrs='"structuredAttrs":{"strictDeps":true}' ;;
+    *-cocoapods-*.drv) attrs='"structuredAttrs":{"preferLocalBuild":false}' ;;
+    *-vue-language-server-*.drv) attrs='"env":{"preferLocalBuild":""}' ;;
+    *) return 1 ;;
+  esac
+  printf '{"derivations":{"%s":{%s}},"version":4}\n' "${3#/nix/store/}" "$attrs"
+}
+
+# Name-listed glue and vendored derivations never cost a nix call.
+out=$(printf '%s\n' "$clean_plan" | AU_INSPECT_DRVS=1 au_plan_offenders zed-nightly-bin)
+[ -z "$out" ] || fail "clean plan flagged offenders with the gate on: $out"
+[ ! -s "$nix_calls" ] || fail "name-listed derivations reached nix: $(tr '\n' ' ' <"$nix_calls")"
+
+# Both preferLocalBuild encodings and the fixed-output download pass; heavy
+# compiles and a drv nix cannot show (libuv) stay offenders.
+impure_plan='these 7 derivations will be built:
+  /nix/store/0a0a1b1b2c2c3d3d4e4e5f5f6a6a7b7b-tsgo.drv
+  /nix/store/1a1a1b1b2c2c3d3d4e4e5f5f6a6a7b7b-pstack-skill-how.drv
+  /nix/store/2a2a1b1b2c2c3d3d4e4e5f5f6a6a7b7b-cryptography-50.0.0-vendor-staging.drv
+  /nix/store/3a3a1b1b2c2c3d3d4e4e5f5f6a6a7b7b-nodejs-slim-24.20.0.drv
+  /nix/store/4a4a1b1b2c2c3d3d4e4e5f5f6a6a7b7b-cocoapods-1.16.2.drv
+  /nix/store/5a5a1b1b2c2c3d3d4e4e5f5f6a6a7b7b-vue-language-server-3.0.0.drv
+  /nix/store/6a6a1b1b2c2c3d3d4e4e5f5f6a6a7b7b-libuv-1.51.0.drv'
+out=$(printf '%s\n' "$impure_plan" | AU_INSPECT_DRVS=1 au_plan_offenders)
+[ "$out" = $'nodejs-slim-24.20.0\ncocoapods-1.16.2\nvue-language-server-3.0.0\nlibuv-1.51.0' ] \
+  || fail "impure plan verdict wrong: '$out'"
+out=$(printf '%s\n' "$impure_plan" | au_plan_offenders)
+has_word tsgo "$out" || fail "impure exemption applied with the gate off"
+unset -f nix
 
 # ---------------------------------------------------------------------------
 # Vendored-exemption list: derived from the repo, so it cannot rot.
