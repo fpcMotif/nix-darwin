@@ -477,6 +477,22 @@ let
           ] ++ guideTargets))
         "${prefix} catalog guides and agent profiles must use non-forced Home Manager files")
 
+      (helpers.assertTest "${prefix}-omp-guide-self-contained"
+        (prefix != "darwin" || (
+          let guide = homeData.file.".omp/agent/AGENTS.md".source.text; in
+          !(lib.hasInfix "/.omp/agent/guidance/" guide)
+            && lib.all (heading: lib.hasInfix heading guide) [
+            "## Working contract"
+            "## Testing"
+            "## Command routing"
+            "## Waiting and background work"
+            "## Repeatable artifact"
+            "## Final implementation review"
+          ]
+            && lib.hasInfix "op:\"start\"" guide
+        ))
+        "${prefix} OMP auto-loads only @path imports, so its one guide must inline every guidance section")
+
       (helpers.assertTest "${prefix}-codex-user-config-writable"
         (prefix != "darwin" ||
           (!(builtins.hasAttr ".codex/config.toml" homeData.file)

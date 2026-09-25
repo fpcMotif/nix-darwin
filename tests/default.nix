@@ -54,10 +54,8 @@ in
             builtins.match ".*(^|[^A-Za-z0-9_])${word}($|[^A-Za-z0-9_]).*" line != null)
           (lib.splitString "\n" text);
       contentForHost = host:
-        lib.concatStringsSep "\n" (map (guide: guide.content) [
-          host.startup
-          host.development
-        ]);
+        lib.concatStringsSep "\n" (map (guide: guide.content)
+          ([ host.startup ] ++ lib.optional (host ? development) host.development));
       count = marker: text: builtins.length (lib.splitString marker text) - 1;
       requiredSections = [
         "## Working contract"
@@ -72,7 +70,9 @@ in
       onceSections = [
         "## Working contract"
         "## Code quality"
+        "## Testing"
         "## Command routing"
+        "## Waiting and background work"
       ];
       bannedTerms = [ "gemini" "deepwiki" "mgrep" "lazygit" "deep-research" "chezmoi" ];
       requiredTools = [ "fd" "rg" "bat" "eza" "dust" "procs" "btm" "ax" "delta" "hyperfine" ];
