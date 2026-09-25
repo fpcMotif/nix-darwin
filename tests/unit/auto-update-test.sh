@@ -46,6 +46,8 @@ esac
 curl_argv_capture=$(mktemp)
 ax() { printf '%s\n' "$*" > "$curl_argv_capture"; }
 curl() { printf '%s\n' "$*" > "$curl_argv_capture"; }
+# A logged-in gh would supply a real token (and a failure would print it).
+gh() { return 1; }
 unset GITHUB_TOKEN GH_TOKEN 2>/dev/null || true
 au_github_api "https://api.github.com/repos/x/y/releases/latest" >/dev/null
 captured=$(cat "$curl_argv_capture")
@@ -66,7 +68,7 @@ case "$captured" in
 esac
 
 rm -f "$curl_argv_capture"
-unset -f ax curl
+unset -f ax curl gh
 # ---------------------------------------------------------------------------
 # Cadence policy (issue #336): heavy inputs move only on the cadence day.
 # ---------------------------------------------------------------------------
@@ -178,8 +180,10 @@ out=$(printf '%s\n' "$fetch_plan" | au_plan_offenders pnpm)
 [ -z "$out" ] || fail "fetched section misclassified: $out"
 
 # Generated LSP config files and hm_* option trees are glue.
-glue_plan='these 9 derivations will be built:
+glue_plan='these 11 derivations will be built:
   /nix/store/0000eeee1111ffff2222333344445555-claude-lsp.json.drv
+  /nix/store/9999aaaa000011112222333344445555-timeout.drv
+  /nix/store/aaaa0000111122223333444455556666-zim-init.drv
   /nix/store/1111ffff222233334444555566667777-codex-lsp.toml.drv
   /nix/store/22223333444455556666777788889999-hm_LibraryFonts.homemanagerfontsversion.drv
   /nix/store/3333444455556666777788889999aaaa-tsgo.drv
@@ -222,15 +226,137 @@ if [ -n "$scripts_dir" ]; then
   # The crush updater cannot quietly bypass the heavy classification.
   grep -qF 'au_inputs_to_bump' "$scripts_dir/update-crush.sh" \
     || fail "update-crush.sh must adopt the cadence gate for nur"
-  # Squirrel resolves its version from an asset name, not a tag, so it can't
-  # use au_latest_github_release -- but it must still authenticate via
-  # au_github_api rather than curling api.github.com unauthenticated.
-  grep -qF 'au_github_api' "$scripts_dir/update-squirrel.sh" \
-    || fail "update-squirrel.sh must poll the GitHub API via au_github_api (misses token auth)"
-  if grep -qE 'curl[^|;]*api\.github\.com' "$scripts_dir/update-squirrel.sh"; then
-    fail "update-squirrel.sh must not curl api.github.com directly, bypassing au_github_api auth"
-  fi
+  # Every GitHub API poll authenticates: api.github.com may appear in an
+  # updater only on an au_github_api line (update-squirrel.sh once 403'd by
+  # curling it directly).
+  for s in "$scripts_dir"/update-*.sh; do
+    raw=$(grep -n 'api\.github\.com' "$s" | grep -v 'au_github_api' || true)
+    [ -z "$raw" ] \
+      || fail "$(basename "$s") reaches api.github.com outside au_github_api (misses token auth): $raw"
+  done
 fi
+
+# ---------------------------------------------------------------------------
+# au_bump_release: a release pin moves its version and every hash together,
+# or not at all. Downloads and the Darwin build are stubbed.
+# ---------------------------------------------------------------------------
+
+rp=$(mktemp -d)
+export NO_COLOR=1
+
+write_pin() { # write_pin <version> <src-hash> <arm-hash> <x64-hash>
+  cat > "$rp/pin.nix" <<NIX
+{ fetchurl, fetchzip }:
+let
+  version = "$1";
+in {
+  src = fetchzip {
+    url = "https://example.test/archive/refs/tags/v\${version}.tar.gz";
+    hash = "$2";
+  };
+  arm = fetchurl {
+    url = "https://example.test/v\${version}/tool-arm64";
+    hash = "$3";
+  };
+  x64 = fetchurl {
+    url = "https://example.test/v\${version}/tool-x64";
+    hash = "$4";
+  };
+}
+NIX
+  cp "$rp/pin.nix" "$rp/before.nix"
+}
+
+au_prefetch_sri() {
+  case "$1" in
+    *fail*) return 1 ;;
+    *malformed*) echo "" ;;
+    *tool-arm64) echo "sha256-NEWARM=" ;;
+    *tool-x64) echo "sha256-NEWX64=" ;;
+    *) echo "sha256-OTHER=" ;;
+  esac
+}
+au_prefetch_unpacked_sri() { echo "sha256-NEWSRC="; }
+au_build_darwin() { echo "$1" >> "$rp/builds"; [ -z "${AU_TEST_BUILD_FAIL:-}" ]; }
+
+bump() { # bump <version> [extra args...]; x64 URL overridable via X64_URL
+  local v=$1; shift
+  au_bump_release --name tool --file "$rp/pin.nix" --version "$v" --attr .#tool "$@" \
+    --unpacked-asset "https://example.test/archive/refs/tags/v$v.tar.gz" 'archive/refs/tags' \
+    --asset "https://example.test/v$v/tool-arm64" '/tool-arm64"' \
+    --asset "${X64_URL:-https://example.test/v$v/tool-x64}" "${X64_ANCHOR:-/tool-x64\"}"
+}
+
+unchanged() { cmp -s "$rp/before.nix" "$rp/pin.nix"; }
+
+# Already current: no download, no write, no build.
+write_pin 1.0.0 sha256-OLDSRC= sha256-OLDARM= sha256-OLDX64=
+rm -f "$rp/builds"
+out=$(bump 1.0.0)
+[ "$out" = "tool already at 1.0.0" ] || fail "current pin not reported as current: $out"
+unchanged || fail "current pin was rewritten"
+[ ! -e "$rp/builds" ] || fail "current pin triggered a build"
+
+# A bump writes the version and every hash, builds, and reports.
+out=$(bump 2.0.0)
+grep -qF 'version = "2.0.0"' "$rp/pin.nix" || fail "bump did not write the version"
+for h in NEWSRC NEWARM NEWX64; do
+  grep -qF "hash = \"sha256-${h}=\"" "$rp/pin.nix" || fail "bump did not write $h"
+done
+! grep -q 'sha256-OLD' "$rp/pin.nix" || fail "bump left an old hash behind"
+[ "$(cat "$rp/builds")" = ".#tool" ] || fail "bump did not build .#tool once"
+[ "$out" = "tool  1.0.0 --> 2.0.0" ] || fail "bump report wrong: $out"
+
+# Every failure leaves the pin byte-identical.
+write_pin 1.0.0 sha256-OLDSRC= sha256-OLDARM= sha256-OLDX64=
+if X64_URL=https://example.test/fail/tool-x64 bump 2.0.0 2>/dev/null; then fail "failed download reported success"; fi
+unchanged || fail "failed download changed the pin"
+if X64_URL=https://example.test/malformed/tool-x64 bump 2.0.0 2>/dev/null; then fail "malformed hash reported success"; fi
+unchanged || fail "malformed hash changed the pin"
+if X64_ANCHOR='no-such-anchor' bump 2.0.0 2>/dev/null; then fail "unmatched anchor reported success"; fi
+unchanged || fail "unmatched anchor changed the pin"
+if AU_TEST_BUILD_FAIL=1 bump 2.0.0 >/dev/null 2>&1; then fail "failed build reported success"; fi
+unchanged || fail "failed build left the new pin in place"
+
+# --reverify: a re-published asset is re-pinned without a version change;
+# a steady state stays byte-identical and skips the build.
+write_pin 2.0.0 sha256-NEWSRC= sha256-STALE= sha256-NEWX64=
+rm -f "$rp/builds"
+bump 2.0.0 --reverify >/dev/null
+grep -qF 'hash = "sha256-NEWARM="' "$rp/pin.nix" || fail "reverify did not re-pin the stale hash"
+grep -qF 'version = "2.0.0"' "$rp/pin.nix" || fail "reverify changed the version"
+[ -e "$rp/builds" ] || fail "reverify re-pin skipped the build"
+cp "$rp/pin.nix" "$rp/before.nix"
+rm -f "$rp/builds"
+out=$(bump 2.0.0 --reverify)
+unchanged || fail "steady-state reverify rewrote the pin"
+[ ! -e "$rp/builds" ] || fail "steady-state reverify triggered a build"
+case "$out" in *"re-verified"*) ;; *) fail "steady-state reverify report wrong: $out" ;; esac
+
+rm -rf "$rp"
+unset NO_COLOR
+unset -f au_prefetch_sri au_prefetch_unpacked_sri au_build_darwin bump write_pin unchanged
+
+# ---------------------------------------------------------------------------
+# au_run_updaters: a failed updater's edits to pkgs/ and flake.lock are put
+# back; an earlier updater's success is kept.
+# ---------------------------------------------------------------------------
+
+ru=$(mktemp -d)
+mkdir -p "$ru/pkgs" "$ru/scripts"
+echo 'a = 1' > "$ru/pkgs/a.nix"
+echo 'b = 1' > "$ru/pkgs/b.nix"
+echo '{}' > "$ru/flake.lock"
+printf '%s\n' "echo 'a = 2' > pkgs/a.nix" > "$ru/scripts/update-a.sh"
+printf '%s\n' "echo 'b = 2' > pkgs/b.nix" "echo '{\"half\":true}' > flake.lock" \
+  "touch pkgs/stray.nix" "exit 1" > "$ru/scripts/update-b.sh"
+out=$(cd "$ru" && GITHUB_ACTIONS='' au_run_updaters 2>&1)
+[ "$(cat "$ru/pkgs/a.nix")" = 'a = 2' ] || fail "runner lost a successful updater's edit"
+[ "$(cat "$ru/pkgs/b.nix")" = 'b = 1' ] || fail "runner kept a failed updater's edit"
+[ "$(cat "$ru/flake.lock")" = '{}' ] || fail "runner kept a failed updater's flake.lock edit"
+[ ! -e "$ru/pkgs/stray.nix" ] || fail "runner kept a file a failed updater created"
+case "$out" in *"1 updater(s) failed (tolerated)"*) ;; *) fail "runner miscounted failures: $out" ;; esac
+rm -rf "$ru"
 
 if [ -n "$github_dir" ]; then
   # The updater-library unit check actually runs in CI.

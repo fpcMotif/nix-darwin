@@ -9,7 +9,6 @@
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
-FILE="pkgs/pi-coding-agent.nix"
 HOLD_VERSIONS=()
 
 latest=$(au_latest_github_release badlogic/pi-mono)
@@ -20,16 +19,6 @@ for held in "${HOLD_VERSIONS[@]}"; do
   fi
 done
 
-current=$(au_current_version "$FILE")
-if [ "$current" = "$latest" ]; then
-  echo "pi-coding-agent already at $latest"; exit 0
-fi
-
-url="https://github.com/badlogic/pi-mono/releases/download/v${latest}/pi-darwin-arm64.tar.gz"
-sri=$(au_prefetch_sri "$url")
-
-au_set_version "$FILE" "$latest"
-au_inplace_sed "$FILE" -e "s|hash = \"sha256-[^\"]*\"|hash = \"${sri}\"|"
-
-au_build_darwin .#martin.pi-coding-agent
-au_report_change pi-coding-agent "$current" "$latest"
+au_bump_release --name pi-coding-agent --file pkgs/pi-coding-agent.nix --version "$latest" \
+  --attr .#martin.pi-coding-agent \
+  --asset "https://github.com/badlogic/pi-mono/releases/download/v${latest}/pi-darwin-arm64.tar.gz" '/pi-darwin-arm64.tar.gz"'

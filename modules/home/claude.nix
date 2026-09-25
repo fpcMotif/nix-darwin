@@ -19,16 +19,7 @@ let
 
   mkSkill = from: path: packages: { inherit from path packages; };
 
-  renderAgentGuide = import ./agent-instructions/render-agent-guide.nix { inherit lib; };
-  claudeGuide = pkgs.writeText "claude-global-guide.md" (renderAgentGuide [
-    ./claude/CLAUDE.md
-    ./agent-instructions/shared/working-contract.md
-    ./agent-instructions/shared/quality-and-style.md
-  ]);
-  claudeDevelopmentGuide = pkgs.writeText "claude-development-guide.md" (renderAgentGuide [
-    ./claude/development.md
-    ./agent-instructions/shared/development.md
-  ]);
+  guideCatalog = import ./agent-instructions/guides.nix { inherit lib pkgs; };
 
   # `link` makes every target a tree of `home.file` symlinks pointing at
   # the same /nix/store/...-agent-skills-bundle/<skill>/SKILL.md. Pi's
@@ -152,7 +143,7 @@ let
   removedSkillIds = [ "git-workflow" "lazygit" "ralph-loop" ];
   # Claude Code plugins disabled on the GLOBAL surface (CLI + Desktop) by
   # flipping their enabledPlugins flag off each rebuild — see
-  # claudeDisableGlobalMcpPlugins below. claude.ai connectors are
+  # claudeSettingsOwnership below. claude.ai connectors are
   # account-side and unaffected. Currently empty — every plugin previously
   # listed here has since been uninstalled outright instead of parked; add an
   # id back to park (disable-but-keep-installed) rather than uninstall it.
@@ -176,7 +167,7 @@ let
   #
   # Nothing is deleted: the existing memory dirs stay on disk, they just stop
   # being read or appended to. Re-asserted every switch by
-  # claudeMemorySettingsAssert below for the same reason as enabledPlugins —
+  # claudeSettingsOwnership, for the same reason as enabledPlugins —
   # both are one keystroke away in the in-app toggle (`tengu_auto_memory_toggled`
   # writes the key straight back), and a flip back on silently resumes writing.
   claudeMemorySettings = {
@@ -207,8 +198,8 @@ let
   # a machine with NO settings.json, so none of this was reproducible before:
   # a fresh host got 13 allow rules and nothing guarding ~/.ssh.
   #
-  # claudePermissionsAssert below now re-writes these four keys on every switch,
-  # so they survive a `/permissions` edit, a UI toggle, or a wiped settings.json.
+  # claudeSettingsOwnership re-writes these four keys on every switch, so they
+  # survive a `/permissions` edit, a UI toggle, or a wiped settings.json.
   # AUTHORITATIVE: a rule added at runtime and not listed here is dropped on the
   # next switch. Add it here instead — that is the point of the block.
   #
@@ -216,8 +207,6 @@ let
   # match wins, and specificity does NOT reorder them. So a deny beats an allow
   # for the same path, and an ask beats a more specific allow.
   claudeAllowRules = [
-    "Bash(cliproxyapi -codex-login)"
-    "Bash(cliproxyapi:*)"
     "Bash(lsof:*)"
     "Bash(xargs kill -9)"
     "Bash(nix:*)"
@@ -396,10 +385,8 @@ let
     "Write(~/Applications/**)"
   ];
 
-  # The exact object merged over `.permissions` each switch. deny appends
-  # deniedPluginSkills rather than restating it, so this block and
-  # claudeSkillSurfaceDedup can never disagree about grill-me and fight each
-  # other into a rewrite-every-switch loop.
+  # The declaration below owns this exact object, including the plugin-skill
+  # deny rules. Keeping one value avoids competing writers and rewrite loops.
   claudePermissions = {
     defaultMode = "bypassPermissions";
     allow = claudeAllowRules;
@@ -493,8 +480,8 @@ let
   # `review` no longer collides with anything: the dotfiles-pi `review` was
   # retired for the code-review host, ADR-0015.)
 
-  # Settings env, seeded on a fresh machine and filled into the live
-  # settings.json at every switch (live values win, new keys are added).
+  # Settings env is seeded on a fresh machine and defaulted into the live
+  # settings.json at every switch; existing values win.
   claudeSeedEnv = {
     API_TIMEOUT_MS = "3000000";
     ENABLE_LSP_TOOL = "1";
@@ -517,6 +504,10 @@ let
     # guard only pays for itself above ~300 lines.
     RIPGREP_CONFIG_PATH = "${homeDir}/.config/ripgrep/agent-config";
     READ_GUARD_MAX_LINES = "300";
+    # Nix-built node/openssl find root CAs only via $NIX_SSL_CERT_FILE, which
+    # the desktop app (launched from the Dock) never inherits, so hooks such as
+    # the Convex plugin's `convex codegen` failed TLS. Same fix as git.nix.
+    NIX_SSL_CERT_FILE = "/etc/ssl/certs/ca-certificates.crt";
     # Bash tool: 10 s default before a command is backgrounded (lookups answer
     # in under a second); the tiers above it are in CLAUDE.md, up to the ceiling.
     BASH_DEFAULT_TIMEOUT_MS = "10000";
@@ -524,8 +515,8 @@ let
   };
 
   # Tool guards: seeded on a fresh machine and re-asserted into the live
-  # settings.json every switch (claudeHooksAssert), so a guard added here is
-  # live after the next switch without a hand edit.
+  # settings.json every switch (`claudeSettingsOwnership`), so a guard added
+  # here is live after the next switch without a hand edit.
   claudeGuardHooks = [
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/search-guard.sh"; }
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/shell-guard.sh"; }
@@ -535,7 +526,7 @@ let
   # Worktrunk activity markers, shown per branch in `wt list`: 🤖 while Claude
   # works, 💬 while it waits, cleared at session end. Same events as upstream's
   # plugin (worktrunk.dev/claude-code/#activity-tracking). The hook path is
-  # stable so a wt bump never strands a store path in the additive assert.
+  # stable so a wt bump never strands a store path in the additive hook policy.
   # Claude's own worktree creation stays native on purpose: a WorktreeCreate
   # hook would drop symlinkDirectories, .worktreeinclude, and the stale sweep.
   worktrunkMarker = pkgs.writeShellApplication {
@@ -629,6 +620,25 @@ let
     inputNeededNotifEnabled = true;
     agentPushNotifEnabled = true;
   });
+  claudeOwnedSettings = {
+    own = [
+      { path = [ "permissions" "allow" ]; value = claudePermissions.allow; }
+      { path = [ "permissions" "deny" ]; value = claudePermissions.deny; }
+      { path = [ "permissions" "ask" ]; value = claudePermissions.ask; }
+      { path = [ "permissions" "defaultMode" ]; value = claudePermissions.defaultMode; }
+    ]
+    ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeHiddenSkillIds
+    ++ map (id: { path = [ "enabledPlugins" id ]; value = false; }) disabledClaudePlugins
+    ++ lib.mapAttrsToList (key: value: { path = [ key ]; inherit value; }) claudeMemorySettings
+    ++ lib.mapAttrsToList (key: value: { path = [ "worktree" key ]; inherit value; }) claudeWorktreeSettings;
+    default = lib.mapAttrsToList (key: value: { path = [ "env" key ]; inherit value; }) claudeSeedEnv;
+    add = claudeGuardHooks;
+  };
+  claudeSettingsOwnership = import ./claude/settings-ownership.nix {
+    inherit pkgs;
+    policy = claudeOwnedSettings;
+    seed = claudeSettingsSeed;
+  };
 in
 {
   imports = [ inputs.agent-skills.homeManagerModules.default ];
@@ -672,6 +682,7 @@ in
           pstackDrvs)
         (lib.attrValues skillLinkDirs));
     in
+    lib.mapAttrs (_: source: { inherit source; }) (guideCatalog.filesFor [ "claude" ]) //
     {
       # Contract between this module and scripts/verify-agent-skills.sh (Tier 2),
       # so that script never restates the curation lists and can never drift
@@ -690,10 +701,6 @@ in
         });
 
       ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
-      ".claude/CLAUDE.md".source = claudeGuide;
-      ".claude/guidance/development.md".source = claudeDevelopmentGuide;
-      ".claude/guidance/human-documents.md".source = ./claude/human-documents.md;
-      ".claude/guidance/testing.md".source = ./agent-instructions/shared/testing.md;
       ".claude/statusline-command.sh" = {
         source = ./claude/statusline-command.sh;
         executable = true;
@@ -704,6 +711,7 @@ in
       # mutable). Evidence file is what the routes cite.
       ".claude/search-eval.md".source = ./claude/search-eval.md;
       ".claude/search-routing.md".source = ./claude/search-routing.md;
+      ".claude/references/search-routing-examples.md".source = ./claude/references/search-routing-examples.md;
 
       # pstack subagent (see pstackSkills). A skills tree carries no agents;
       # Claude Code reads user agents from ~/.claude/agents by bare name.
@@ -772,59 +780,6 @@ in
     fi
   '';
 
-  # === Claude-only skill de-duplication ===
-  # Same shape and same reasoning as claudeDisableGlobalMcpPlugins below:
-  # settings.json is seed-once-then-mutable, but these two keys are exactly the
-  # kind of "reproducible off switch" that must survive a UI toggle or a plugin
-  # refresh, so they are re-asserted every switch. Idempotent (only rewrites
-  # when a value actually changes) and runs after the seed so the file exists.
-  #
-  #   skillOverrides   — "off" hides a FILESYSTEM skill from both the model's
-  #                      catalog and the `/` menu. Keyed by the skill's
-  #                      frontmatter `name` (== the directory name for every id
-  #                      here). Claude Code ignores it for plugin skills by
-  #                      design, which is precisely why it de-duplicates here
-  #                      instead of hiding both copies.
-  #   permissions.deny — the only version-independent lever that reaches a
-  #                      plugin's own skill. It blocks EXECUTION, not listing.
-  #
-  # Scope note: ~/.claude/settings.json is user-scope, and Claude Code's
-  # precedence is user < project < local < flag < policy, so a project-level
-  # `"on"` would win. Nothing in this repo sets one; verify-agent-skills.sh
-  # reports it if one appears.
-  # Ordered after claudePermissionsAssert, not just the seed: that block owns
-  # `permissions.deny` outright, so this one must run on the already-asserted
-  # list. Its deny half is a no-op in steady state (claudePermissions folds
-  # deniedPluginSkills in) and survives only as the guard for the window where
-  # a hand-edit strips the Skill rule mid-cycle.
-  home.activation.claudeSkillSurfaceDedup = lib.hm.dag.entryAfter [ "claudePermissionsAssert" ] ''
-    target="${homeDir}/.claude/settings.json"
-    if [ ! -f "$target" ]; then
-      echo "claude-skill-dedup: missing $target, skipping" >&2
-    elif [ -n "''${DRY_RUN:-}" ]; then
-      echo "claude-skill-dedup: would hide ${toString (builtins.length claudeHiddenSkillIds)} duplicate skills and deny ${lib.concatStringsSep ", " deniedPluginSkills}" >&2
-    else
-      tmp=$(mktemp)
-      if ${pkgs.jq}/bin/jq \
-          --argjson hidden ${lib.escapeShellArg (builtins.toJSON claudeHiddenSkillIds)} \
-          --argjson denied ${lib.escapeShellArg (builtins.toJSON deniedPluginSkills)} \
-          --argjson seedenv ${lib.escapeShellArg (builtins.toJSON claudeSeedEnv)} '
-            .env = ($seedenv + (.env // {}))
-            | .skillOverrides = ((.skillOverrides // {})
-              + ($hidden | map({ key: ., value: "off" }) | from_entries))
-            | del(.skillOverrides["writing-great-skills"])
-            | .permissions = (.permissions // {})
-            | .permissions.deny = ((.permissions.deny // [])
-              + ($denied - (.permissions.deny // [])))
-          ' "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
-        mv -- "$tmp" "$target"
-        echo "claude-skill-dedup: hid ${toString (builtins.length claudeHiddenSkillIds)} duplicate skills in $target" >&2
-      else
-        rm -f -- "$tmp"
-      fi
-    fi
-  '';
-
   # === Plugin-manifest prune (the only way to UN-LIST a plugin's skill) ===
   # Claude Code has no setting that filters which of an installed plugin's
   # skills load: `pluginConfigs` carries only MCP/userConfig, and the manifest's
@@ -863,165 +818,15 @@ in
     done
   '';
 
-  # === settings.json: declarative seed, mutable thereafter ===
-  # Claude rewrites theme, env vars, and plugin state into this file at
-  # runtime, so a hard symlink would fight the app. Seed once on first
-  # rebuild, then leave alone — same pattern as opencode.nix.
-
-  home.activation.claudeSettingsSeed = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    target="${homeDir}/.claude/settings.json"
-    if [ ! -e "$target" ]; then
-      run install -m 0644 ${claudeSettingsSeed} "$target"
-    fi
-  '';
-
-  # === permissions: re-asserted every switch ===
-  # Same seed-once-then-own-a-few-keys shape as claudeSkillSurfaceDedup and
-  # claudeDisableGlobalMcpPlugins, but AUTHORITATIVE rather than additive: the
-  # four keys in claudePermissions are set to the nix value, so a rule added by
-  # hand or by a `/permissions` click is reverted on the next switch. That is
-  # deliberate — an additive merge lets the live file accumulate rules nix can
-  # never reproduce, which is exactly the drift this block exists to end.
-  #
-  # `.permissions + $perms` rather than `.permissions = $perms`: it overwrites
-  # only the four keys we declare and preserves any sibling key Claude Code
-  # adds later (additionalDirectories, disableBypassPermissionsMode, …) instead
-  # of silently deleting it.
-  home.activation.claudePermissionsAssert = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
-    target="${homeDir}/.claude/settings.json"
-    if [ ! -f "$target" ]; then
-      echo "claude-permissions: missing $target, skipping" >&2
-    elif [ -n "''${DRY_RUN:-}" ]; then
-      echo "claude-permissions: would assert ${toString (builtins.length claudePermissions.allow)} allow / ${toString (builtins.length claudePermissions.deny)} deny / ${toString (builtins.length claudePermissions.ask)} ask rules, defaultMode ${claudePermissions.defaultMode}" >&2
-    else
-      tmp=$(mktemp)
-      if ${pkgs.jq}/bin/jq \
-          --argjson perms ${lib.escapeShellArg (builtins.toJSON claudePermissions)} \
-          '.permissions = ((.permissions // {}) + $perms)' \
-          "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
-        mv -- "$tmp" "$target"
-        echo "claude-permissions: re-asserted permissions in $target" >&2
-      else
-        rm -f -- "$tmp"
-      fi
-    fi
-  '';
-
-  # === Reproducible global-plugin-disable lever ===
-  # settings.json is otherwise seed-once-then-mutable (above), but
-  # enabledPlugins is exactly the kind of "reproducible disable" lever the
-  # grill-me block already uses: flip any id listed in disabledClaudePlugins
-  # off on every rebuild so a UI re-enable or a plugin-cache refresh can't
-  # quietly bring a parked plugin's MCP server back globally. Idempotent
-  # (only rewrites when a flag actually changes) and runs after the seed so
-  # the file exists. claude.ai connectors are account-side and untouched.
-  # See docs/adr/0003-scope-code-context-mcp-per-project.md for the
-  # plugin-scoping precedent this lever was built for.
-  home.activation.claudeDisableGlobalMcpPlugins = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
-    target="${homeDir}/.claude/settings.json"
-    if [ ! -f "$target" ]; then
-      echo "claude-disable-mcp-plugins: missing $target, skipping" >&2
-    else
-      tmp=$(mktemp)
-      if ${pkgs.jq}/bin/jq \
-          --argjson ids ${lib.escapeShellArg (builtins.toJSON disabledClaudePlugins)} \
-          'reduce $ids[] as $id (.; .enabledPlugins[$id] = false)' \
-          "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
-        mv -- "$tmp" "$target"
-        echo "claude-disable-mcp-plugins: disabled ${lib.concatStringsSep ", " disabledClaudePlugins}" >&2
-      else
-        rm -f -- "$tmp"
-      fi
-    fi
-  '';
-
-  # === Reproducible auto-memory off switch ===
-  # Third instance of the seed-once-then-own-a-few-keys shape (see
-  # claudeSkillSurfaceDedup and claudeDisableGlobalMcpPlugins): authoritative
-  # over exactly the keys in claudeMemorySettings, additive over the rest of
-  # the file, and idempotent — it only rewrites when a value actually differs.
-  # Runs after the seed so the file exists on a fresh host.
-  home.activation.claudeMemorySettingsAssert = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
-    target="${homeDir}/.claude/settings.json"
-    if [ ! -f "$target" ]; then
-      echo "claude-memory-settings: missing $target, skipping" >&2
-    else
-      tmp=$(mktemp)
-      if ${pkgs.jq}/bin/jq \
-          --argjson keys ${lib.escapeShellArg (builtins.toJSON claudeMemorySettings)} \
-          '. + $keys' \
-          "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
-        if [ -n "''${DRY_RUN:-}" ]; then
-          echo "claude-memory-settings: would pin ${lib.concatStringsSep ", " (lib.mapAttrsToList (k: v: "${k}=${lib.boolToString v}") claudeMemorySettings)} in $target" >&2
-          rm -f -- "$tmp"
-        else
-          mv -- "$tmp" "$target"
-          echo "claude-memory-settings: pinned auto-memory and auto-dream off in $target" >&2
-        fi
-      else
-        rm -f -- "$tmp"
-      fi
-    fi
-  '';
-
-  # === Reproducible worktree settings ===
-  # Fourth instance of the seed-once-then-own-a-few-keys shape (see
-  # claudeSkillSurfaceDedup, claudeDisableGlobalMcpPlugins,
-  # claudeMemorySettingsAssert): authoritative over exactly the keys in
-  # claudeWorktreeSettings, additive over any sibling key under .worktree
-  # (baseRef, bgIsolation) so a runtime toggle survives. Idempotent — only
-  # rewrites when a value actually differs. Runs after the seed so the file
-  # exists on a fresh host.
-  home.activation.claudeWorktreeSettingsAssert = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
-    target="${homeDir}/.claude/settings.json"
-    if [ ! -f "$target" ]; then
-      echo "claude-worktree-settings: missing $target, skipping" >&2
-    else
-      tmp=$(mktemp)
-      if ${pkgs.jq}/bin/jq \
-          --argjson wt ${lib.escapeShellArg (builtins.toJSON claudeWorktreeSettings)} \
-          '.worktree = ((.worktree // {}) + $wt)' \
-          "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
-        if [ -n "''${DRY_RUN:-}" ]; then
-          echo "claude-worktree-settings: would pin worktree.symlinkDirectories in $target" >&2
-          rm -f -- "$tmp"
-        else
-          mv -- "$tmp" "$target"
-          echo "claude-worktree-settings: pinned worktree.symlinkDirectories in $target" >&2
-        fi
-      else
-        rm -f -- "$tmp"
-      fi
-    fi
-  '';
-
-  # === hooks: nix-declared tool guards re-asserted every switch ===
-  # Additive by command path under the guard's event: a guard missing from the
-  # live file is appended, hand-added hooks survive, and a present guard leaves
-  # the file byte-identical.
-  home.activation.claudeHooksAssert = lib.hm.dag.entryAfter [ "claudeSettingsSeed" ] ''
-    target="${homeDir}/.claude/settings.json"
-    if [ ! -f "$target" ]; then
-      echo "claude-hooks: missing $target, skipping" >&2
-    else
-      for spec in ${lib.escapeShellArgs (map builtins.toJSON claudeGuardHooks)}; do
-        tmp=$(mktemp)
-        if ${pkgs.jq}/bin/jq --argjson g "$spec" \
-            'if ([.hooks[$g.event][]? | .hooks[]? | .command] | index($g.command)) then . else .hooks[$g.event] += [{matcher: $g.matcher, hooks: [{type: "command", command: $g.command}]}] end' \
-            "$target" > "$tmp" && ! ${pkgs.diffutils}/bin/cmp -s "$tmp" "$target"; then
-          if [ -n "''${DRY_RUN:-}" ]; then
-            echo "claude-hooks: would add $spec to $target" >&2
-            rm -f -- "$tmp"
-          else
-            mv -- "$tmp" "$target"
-            echo "claude-hooks: added $spec" >&2
-          fi
-        else
-          rm -f -- "$tmp"
-        fi
-      done
-    fi
-  '';
+  # One reconciler seeds missing files, applies the declared key policies in a
+  # single jq pass, reports dry-run changes, and records owned values for safe
+  # cleanup when a key leaves the Nix policy.
+  home.activation.claudeSettingsOwnership =
+    assert lib.elem "Read(~/.ssh/**)" claudePermissions.deny;
+    assert claudePermissions.defaultMode == "bypassPermissions";
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      ${claudeSettingsOwnership.command}/bin/claude-settings-ownership ${lib.escapeShellArg homeDir}
+    '';
 
   # === MCP: register fff and codedb with alwaysLoad ===
   # `claude mcp add-json -s user` is the only supported way to write

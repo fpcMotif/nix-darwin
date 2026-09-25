@@ -10,11 +10,8 @@ cd "$(au_repo_root)"
 FILE="pkgs/sourcegraph-amp.nix"
 PKG_DIR="pkgs/sourcegraph-amp"
 
-# Track amp's stable `latest` dist-tag, NOT au_latest_npm's bleeding-edge
-# priority list. Amp's `next` tag is a `-singleexe` side-channel whose build
-# timestamp currently trails `latest`, so the priority list would pin us to an
-# OLDER build and revert manual bumps on the next nightly run. `latest` is
-# amp's stable release channel and matches what `amp` self-updates to.
+# Track the stable `latest` channel used by Amp's self-updater.
+# Its `next` tag is a separate `-singleexe` channel that can trail `latest`.
 latest=$(au_http_get "https://registry.npmjs.org/@sourcegraph%2famp" \
            | jq -r '."dist-tags".latest // ""')
 [ -n "$latest" ] && [ "$latest" != null ] || {
@@ -32,6 +29,10 @@ fi
 # embedded the CLI under lib/node_modules.
 nodejs_out=$(nix eval --raw nixpkgs#nodejs-slim_26.outPath)
 npm_out=$(nix eval --raw nixpkgs#nodejs-slim_26.npm.outPath)
+# `nix eval` only yields the store paths. Realise npm before testing its
+# executable so a fresh machine does not falsely fall through to the legacy
+# embedded-CLI probe.
+nix build --no-link 'nixpkgs#nodejs-slim_26^npm' >/dev/null
 npm_cmd=("$npm_out/bin/npm")
 if [ ! -x "${npm_cmd[0]}" ]; then
   npm_cli="$nodejs_out/lib/node_modules/npm/bin/npm-cli.js"

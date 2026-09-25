@@ -1,16 +1,21 @@
 # Human-reviewed documents
 
-Use this process for an issue, specification, PRD, or analysis that a human reviews.
+Make the document answer these questions, in this order when it helps the reader:
 
-1. Resolve one material choice before writing. Completion: scope and reader are known.
-2. Start with “At a glance”. Completion: three sentences state the problem, cause, and change.
-3. Explain the general mechanism before the instance. Completion: the reader can recognise another occurrence.
-4. Present exact evidence. Completion: estimates are labelled and working cases sit beside failures.
-5. Match each relationship to one useful visual. Completion: every visual answers one question.
-6. When the mechanism remains subtle — including a spec `to-spec` just published — load `eli5` for the picture version; don't sketch a substitute. Completion: the eli5 artifact is linked at the foot.
+- What is wrong?
+- Why does it happen? Explain the general mechanism before the instance, so the reader can recognise another occurrence.
+- What changes?
+- What stays unchanged?
+- What evidence establishes this?
 
-The document is done when “At a glance” lets a reviewer name the cause, change, and unchanged behavior.
+Open with **At a glance**: three sentences that state the problem and cause, the change, and what stays unchanged.
+
+Quote exact evidence and label estimates. Put working cases beside failures.
+Add a visual only when it answers one review question better than prose.
+When the mechanism stays subtle, including in a spec `to-spec` just published, load `eli5` for the picture version and link its artifact at the foot.
 When later evidence changes the analysis, update the body and attach that evidence to the comment.
+
+The document is done when a reviewer can name the cause, change, and unchanged behavior from **At a glance** alone, without reconstructing the author's reasoning.
 
 ## Final implementation review
 

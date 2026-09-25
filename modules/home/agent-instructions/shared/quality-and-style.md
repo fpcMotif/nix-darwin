@@ -5,7 +5,7 @@
 - **Match**: Follow existing patterns and confirm libraries before using them.
 - **Name**: Names carry what the code does. Comments explain only reasons the code cannot show.
 - **Edge**: Validate at the input edge and trust internal callers.
-- **Secret**: Read secrets from the environment. Code and logs contain secret names only.
+- **Secret**: Read secrets from the environment. In a project with `.env.schema`, declare each variable there for Varlock. Code and logs contain secret names only.
 
 ## Testing
 

@@ -8,7 +8,8 @@
 # zed-nightly-bin.nix already solve by fetching the maintainer's own
 # release asset instead.
 #
-# Registered with Claude Code via the `claudeMcpFff` activation script in
+# Registered with Claude Code via the
+# `claudeMcpAlwaysLoaded` activation script in
 # modules/home/claude.nix (shells out to `claude mcp add` — the only way to
 # write ~/.claude.json's mcpServers without risking its CLI-managed schema,
 # same reasoning as claudeDesktopMcpScaffold in lsp.nix).
@@ -17,11 +18,7 @@
 # dmtrKovalenko/fff (old URLs still 301-redirect, but we point at the
 # canonical name now).
 #
-# Update: bump `version` and the four hashes from
-# https://github.com/dmtrKovalenko/fff/releases — each release now publishes
-# a `<asset>.sha256` sidecar right next to the binary, so there's no need to
-# download-and-hash or go via a Formula file: fetch the sidecar, then convert
-# its hex digest to SRI with `nix hash convert --hash-algo sha256 --to sri <hex>`.
+# Update: run `scripts/update-fff-mcp.sh`.
 
 { lib
 , stdenvNoCC
@@ -29,26 +26,26 @@
 }:
 
 let
-  version = "0.10.0";
+  version = "0.11.0";
 
   releaseBase = "https://github.com/dmtrKovalenko/fff/releases/download/v${version}";
 
   sources = {
     aarch64-darwin = {
       asset = "fff-mcp-aarch64-apple-darwin";
-      hash = "sha256-pblapLWGHlx0QP7eYFbMeGEiOr2leW2qvlH3hUWCEcM=";
+      hash = "sha256-zGBtlBjPp3ZDdtzXsyoz5kWabLmkcYvjZrAk3Kbp/q0=";
     };
     x86_64-darwin = {
       asset = "fff-mcp-x86_64-apple-darwin";
-      hash = "sha256-gais3HsXt/9UuqpqI5QpdIVf3+QTP5c0fJsMtE6d958=";
+      hash = "sha256-Mzd6j5ZELryLBtO9KGPPZqUg+XozcA4PuFoJ3XmI6GI=";
     };
     aarch64-linux = {
       asset = "fff-mcp-aarch64-unknown-linux-gnu";
-      hash = "sha256-Nww//NG+jlYMBeq6KygKAW4xPGBho/MHuufHQnxHeMc=";
+      hash = "sha256-9BP9GAnxj3ukRSQBAZLSlWLWuldF4zkmvhi5nKtu24k=";
     };
     x86_64-linux = {
       asset = "fff-mcp-x86_64-unknown-linux-gnu";
-      hash = "sha256-4lLcG7BBLCcZgTzNAJVSNnbzYN3bCvcxp3hXKraWtZI=";
+      hash = "sha256-G2RZR8+ghvgIDNZBmJnjLLLFMbEiYYwRQdkVXkSc5kc=";
     };
   };
 

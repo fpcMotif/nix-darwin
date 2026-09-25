@@ -2,7 +2,7 @@
 
 ## Codex
 
-- **Develop**: Read `~/.codex/guidance/development.md` for tool selection, code navigation, Python environments, or version-control conventions.
+- **Develop**: Read `~/.codex/guidance/development.md` for tool selection, code navigation, Python or Rust environments, environment variables, or version-control conventions.
 - **Test**: Before writing a test, choosing a technique beyond E2E, or recording a test artifact, read `~/.codex/guidance/testing.md`.
 - **Configure**: Before changing Codex instructions, skills, profiles, MCP, or settings, read `~/.codex/guidance/setup.md`.
 - **Edit**: Use `apply_patch` for file changes. Track a plan when dependencies or uncertainty require it.

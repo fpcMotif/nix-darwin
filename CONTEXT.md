@@ -45,6 +45,22 @@ _Avoid_: disabled app, uninstalled app.
 A local diagnostic snapshot for the Mac's own maintenance loop, not telemetry and not a remote monitoring system. It exists to make drift, storage pressure, crashes, backups, and Nix garbage-collection state inspectable.
 _Avoid_: monitoring, analytics, metrics pipeline.
 
+### Shell sessions
+
+**PATH tier**:
+An ordered group of directories in the base session PATH: shims, Nix profiles, then user installers. For an external command, the first executable match wins. Project environments may put their own tools first.
+_Avoid_: PATH priority, PATH layer.
+
+### Writable app files
+
+**Seeded file**:
+A writable app file Nix creates when missing. Nix reconciles declared values and additions each switch; the app owns other data.
+_Avoid_: managed file, symlinked config (a seeded file is a real file, not a link into the Nix store).
+
+**Owned key**:
+A key in a seeded file that Nix sets on every switch. When Nix stops owning a key, Nix removes it only if the live value is still the value Nix wrote.
+_Avoid_: pinned setting, forced setting.
+
 ### Agent-skills curation
 
 **Parked skill**:
@@ -106,6 +122,18 @@ _Avoid_: copying model ids into adapters or treating a model picker as a routing
 An AI coding-agent binary packaged under `pkgs/` and installed via `home.packages` (codex, droid, opencode, amp, pi, oh-my-pi). It lives on the `darwin-rebuild` build path, so its upstream pinning is a maintenance surface for the whole system rebuild — a stale source hash wedges the rebuild, not just that one tool.
 _Avoid_: conflating it with a model used only over its API, or with a GUI app launched from the hotkey plane.
 
+**Agent host**:
+An AI coding agent program that reads agent guides, such as Claude Code, Codex, or omp. The *general* host stands for any other agent that reads the shared `~/AGENTS.md`.
+_Avoid_: "agent" alone (it also means a subagent), client, tool.
+
+**Agent guide**:
+A text file that tells an agent host how to work. Every host has a *startup guide*, which it reads when a session starts (for example `~/.claude/CLAUDE.md`). Every host also has a *development guide*, which it reads only when needed; a line in the startup guide gives its path (for example `~/.claude/guidance/development.md`). Nix builds each agent guide from shared sections, after a host adapter when the host has one.
+_Avoid_: prompt, system prompt, rules file.
+
+**Host adapter**:
+The first part of an agent guide. It has only the text that one host needs: its tool names, its file paths, and the lines that point to its other guides. Text that is correct for every host goes in a shared section, not in a host adapter.
+_Avoid_: host override, per-agent config.
+
 **API-only model access**:
 Use of an AI model purely over its provider API from inside an editor or agent — e.g. a Zed `agent_servers` favorite model plus the provider's `*_API_KEY` env. There is no binary and nothing on the build path.
 _Avoid_: assuming API-only model access implies an installed CLI for that provider.
@@ -141,6 +169,14 @@ _Avoid_: treating an unfamiliar plan entry as glue without naming it; unknown en
 **Vendored derivation**:
 A package defined in this repo under `pkgs/` and built from vendored sources or lockfiles (drafts-mcp-server, sourcegraph-amp, the agent CLI repacks). No binary cache will ever hold them; they always build locally by design and are exempt from the source-build guard. The exemption list is derived from `pkgs/*.nix` pnames at run time, so it cannot name packages that no longer exist.
 _Avoid_: maintaining a hand-written exemption list, or confusing "vendored" (always local builds, seconds to minutes) with "glue" (trivial derivations every rebuild has).
+
+**Release pin**:
+A package under `pkgs/` fixed to one upstream version plus the hash of each file it downloads. A bump detects change by comparing versions and moves the version and every hash together, or not at all.
+_Avoid_: calling a flake-input bump or an npm lockfile regeneration a release pin; those move through `flake.lock` or a lockfile, not per-file hashes.
+
+**Rolling pin**:
+A package whose download URL carries no version, so upstream can republish different bytes at the same URL. A bump detects change by comparing hashes, because there is no version to compare.
+_Avoid_: calling a nightly or prerelease channel rolling when each build has its own versioned URL; that is still a release pin.
 
 ### Hosts & identity
 

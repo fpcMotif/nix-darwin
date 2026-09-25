@@ -7,8 +7,6 @@
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
-FILE="pkgs/squirrel.nix"
-
 latest=$(
   au_github_api "https://api.github.com/repos/rime/squirrel/releases/latest" \
     | jq -r '.assets[].name' \
@@ -18,16 +16,6 @@ latest=$(
 )
 [ -n "$latest" ] || { echo "squirrel: could not parse version from asset name" >&2; exit 1; }
 
-current=$(au_current_version "$FILE")
-if [ "$current" = "$latest" ]; then
-  echo "squirrel already at $latest"; exit 0
-fi
-
-url="https://github.com/rime/squirrel/releases/download/${latest}/Squirrel-${latest}.pkg"
-sri=$(au_prefetch_sri "$url")
-
-au_set_version "$FILE" "$latest"
-au_inplace_sed "$FILE" -e "s|hash = \"sha256-[^\"]*\"|hash = \"${sri}\"|"
-
-au_build_darwin .#martin.squirrel
-au_report_change squirrel "$current" "$latest"
+au_bump_release --name squirrel --file pkgs/squirrel.nix --version "$latest" \
+  --attr .#martin.squirrel \
+  --asset "https://github.com/rime/squirrel/releases/download/${latest}/Squirrel-${latest}.pkg" 'rime/squirrel/releases/download/'

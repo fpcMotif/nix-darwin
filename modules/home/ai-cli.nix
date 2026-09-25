@@ -1,11 +1,6 @@
 { lib, ... }:
 
 {
-  home.sessionVariables = {
-    CLIPROXY_BASE_URL = "http://127.0.0.1:8317";
-    CLIPROXY_CONFIG = "$HOME/CLIProxyAPI/config.yaml";
-  };
-
   programs.zsh.initContent = lib.mkAfter ''
     _unset_ai_env() {
       unset ANTHROPIC_API_KEY ANTHROPIC_API_URL ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN \
@@ -49,66 +44,27 @@
     }
     codex() { _codex_cli "$@" }
 
-    _climode_get() {
-      if [[ -f "$HOME/.config/climode.json" ]]; then
-        if (( $+commands[jq] )); then
-          jq -r --arg key "$1" '.[$key] // "proxy"' "$HOME/.config/climode.json" 2>/dev/null
-        else
-          python3 -c "import json, sys; print(json.load(open(sys.argv[1])).get(sys.argv[2], 'proxy'))" "$HOME/.config/climode.json" "$1" 2>/dev/null
-        fi
-      else
-        printf -- "proxy\n"
-      fi
-    }
-
-    _ai_proxy_available() {
-      (( $+commands[with-cliproxy] || $+functions[with-cliproxy] ))
-    }
-
-    _ai_run_with_optional_proxy() {
-      local tool="$1"
-      local direct_env="''${2:-keep-env}"
-      shift 2
-
-      if [[ "$(_climode_get "$tool")" == "direct" ]] || ! _ai_proxy_available; then
-        if [[ "$direct_env" == "clear-env" ]]; then
-          (_unset_ai_env; command "$tool" "$@")
-        else
-          command "$tool" "$@"
-        fi
-      else
-        with-cliproxy "$tool" "$@"
-      fi
-    }
-
     opencode() {
       case "''${1:-}" in
         auth) (_unset_ai_env; command opencode "$@") ;;
-        *) _ai_run_with_optional_proxy opencode keep-env "$@" ;;
+        *) command opencode "$@" ;;
       esac
     }
 
     amp() {
       case "''${1:-}" in
         login|logout|whoami|auth) (_unset_ai_env; command amp "$@") ;;
-        *) _ai_run_with_optional_proxy amp keep-env "$@" ;;
+        *) command amp "$@" ;;
       esac
     }
-
-    crush() { _ai_run_with_optional_proxy crush keep-env "$@" }
 
     droid() {
       case "''${1:-}" in
         login|logout|whoami|auth) (_unset_ai_env; command droid "$@") ;;
-        *) _ai_run_with_optional_proxy droid keep-env "$@" ;;
+        *) command droid "$@" ;;
       esac
     }
 
-    pi() {
-      case "''${1:-}" in
-        login|logout|whoami|auth) (_unset_ai_env; command pi "$@") ;;
-        *) _ai_run_with_optional_proxy pi clear-env "$@" ;;
-      esac
-    }
+    pi() { (_unset_ai_env; command pi "$@") }
   '';
 }

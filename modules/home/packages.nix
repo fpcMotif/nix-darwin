@@ -53,6 +53,8 @@ let
     jwt-cli
     step-cli
     hyperfine
+    # Only `timeout` from GNU coreutils; the full set would shadow the BSD tools.
+    (writeShellScriptBin "timeout" ''exec ${coreutils}/bin/timeout "$@"'')
 
     neovim
     gnupg
@@ -126,4 +128,16 @@ let
 in
 {
   home.packages = commonPackages ++ lib.optionals isDarwin darwinPackages;
+
+  programs.bat = {
+    enable = true;
+    config = {
+      theme = "Catppuccin Macchiato";
+    };
+  };
+
+  programs.eza = {
+    enable = true;
+    enableZshIntegration = false;
+  };
 }
