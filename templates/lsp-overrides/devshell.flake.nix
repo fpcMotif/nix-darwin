@@ -51,7 +51,7 @@
         shellHook = ''
           echo "devShell: pinned LSP servers loaded for $(pwd)" >&2
           # tsgo version sanity check
-          ${pkgs.typescript}/bin/tsgo --version 2>/dev/null || true
+          ${pkgs.typescript}/bin/tsc --version 2>/dev/null || true
         '';
       };
     });
