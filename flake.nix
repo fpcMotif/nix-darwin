@@ -58,6 +58,11 @@
       url = "github:michael-denyer/pstack-claude";
       flake = false;
     };
+
+    zim-completion = {
+      url = "github:zimfw/completion";
+      flake = false;
+    };
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:

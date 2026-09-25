@@ -81,10 +81,8 @@ in
     programs.zsh = {
       enable = true;
       enableCompletion = true;
-      completionInit = ''
-        fpath=($HOME/.zsh/completions $fpath)
-        autoload -Uz compinit && compinit -C
-      '';
+      # zim.nix replaces this when martin.shell.zim is enabled.
+      completionInit = lib.mkDefault "autoload -Uz compinit && compinit -C";
       autosuggestion.enable = false;
       syntaxHighlighting.enable = false;
       historySubstringSearch.enable = false;
@@ -219,7 +217,11 @@ in
         unset _terminfo_dirs
       '';
 
-      initContent = ''
+      initContent = lib.mkMerge [
+        # User completions (remctl and friends) must be on fpath before
+        # completionInit runs compinit at order 570.
+        (lib.mkOrder 560 "fpath=($HOME/.zsh/completions $fpath)")
+        ''
         setopt AUTO_CD AUTO_MENU COMPLETE_IN_WORD NO_BEEP PROMPT_CR
         setopt HIST_VERIFY INTERACTIVE_COMMENTS HIST_FCNTL_LOCK HIST_FIND_NO_DUPS
         unsetopt NOMATCH AUTO_REMOVE_SLASH
@@ -451,7 +453,8 @@ in
 
         [[ -f "$HOME/.config/zsh/.secret" ]] && source "$HOME/.config/zsh/.secret"
         [[ -r $HOME/.zshrc.local ]] && source $HOME/.zshrc.local
-      '';
+      ''
+      ];
     };
   };
 }

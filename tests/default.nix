@@ -54,8 +54,7 @@ in
             builtins.match ".*(^|[^A-Za-z0-9_])${word}($|[^A-Za-z0-9_]).*" line != null)
           (lib.splitString "\n" text);
       contentForHost = host:
-        lib.concatStringsSep "\n" (map (guide: guide.content)
-          ([ host.startup ] ++ lib.optional (host ? development) host.development));
+        lib.concatStringsSep "\n" (map (guide: guide.content) host.guides);
       count = marker: text: builtins.length (lib.splitString marker text) - 1;
       requiredSections = [
         "## Working contract"
@@ -204,6 +203,18 @@ in
         ${run "off" (mkInit "off" { searchEnable = false; })}
         touch $out
       '';
+
+  # Loads the Zim completionInit in a sandboxed zsh: compinit runs once, the
+  # dump is cached and compiled, and a new completion on fpath is picked up.
+  unit-zim-completion =
+    let
+      completionInit = pkgs.writeText "unit-zim-completion-init"
+        ((import ./lib/zsh-module-eval.nix { inherit pkgs lib inputs; }) { includeZim = true; }).programs.zsh.completionInit;
+    in
+    pkgs.runCommand "unit-zim-completion" { nativeBuildInputs = [ pkgs.bash pkgs.zsh pkgs.gnugrep ]; } ''
+      bash ${./unit/zim-completion-test.sh} ${completionInit}
+      touch $out
+    '';
 
   # Integration tests
   integration-configurations-eval =

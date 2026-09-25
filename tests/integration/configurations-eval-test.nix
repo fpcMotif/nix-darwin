@@ -493,6 +493,18 @@ let
         ))
         "${prefix} OMP auto-loads only @path imports, so its one guide must inline every guidance section")
 
+      (helpers.assertTest "${prefix}-zsh-zim-completion-order"
+        (
+          let
+            zshrc = homePrograms.zsh.initContent;
+            beforeZim = builtins.head (lib.splitString "zim-init/init.zsh" zshrc);
+          in
+          lib.hasInfix "zim-init/init.zsh" zshrc
+          && !(lib.hasInfix "compinit -C" zshrc)
+          && lib.hasInfix "fpath=($HOME/.zsh/completions $fpath)" beforeZim
+        )
+        "${prefix} user completions must join fpath before Zim runs compinit, and Zim must replace compinit -C")
+
       (helpers.assertTest "${prefix}-codex-user-config-writable"
         (prefix != "darwin" ||
           (!(builtins.hasAttr ".codex/config.toml" homeData.file)

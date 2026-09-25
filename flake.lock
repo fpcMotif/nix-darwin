@@ -251,7 +251,8 @@
         "mattpocock-skills": "mattpocock-skills",
         "nixpkgs": "nixpkgs",
         "nur": "nur",
-        "pstack-claude": "pstack-claude"
+        "pstack-claude": "pstack-claude",
+        "zim-completion": "zim-completion"
       }
     },
     "systems": {
@@ -266,6 +267,22 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "zim-completion": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1774617348,
+        "narHash": "sha256-xBurErM7KMMDObN3zPwTSOvKqXl9FDZxGfxugwlX/fk=",
+        "owner": "zimfw",
+        "repo": "completion",
+        "rev": "8d3e0f4e6272f4d3bad659eaa13929f9dd96f123",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zimfw",
+        "repo": "completion",
         "type": "github"
       }
     }
