@@ -45,7 +45,9 @@ _no-conflicts:
 # an unconditional sudo password prompt on every build which then always
 # reported "still down", because the verify loop reused the same broken probe.
 #
-# Only sudos when something is actually missing. Bootstrapping activate-system
+# Only sudos when something is actually missing. A job this generation does not
+# install (no plist, e.g. nix-auto-switch while disabled) is never missing.
+# Bootstrapping activate-system
 # re-runs the activation script (RunAtLoad), which is what restores
 # /run/current-system — exactly what a normal boot would have done.
 _daemon:
@@ -59,6 +61,7 @@ _daemon:
     up || gone="$gone nix-daemon"; \
     { [ -e /run/current-system ] && loaded activate-system; } || gone="$gone activate-system"; \
     for j in nix-gc nix-optimise nix-auto-switch; do \
+        [ -e "/Library/LaunchDaemons/org.nixos.$j.plist" ] || continue; \
         loaded "$j" || gone="$gone $j"; \
     done; \
     [ -n "$gone" ] || exit 0; \
@@ -94,9 +97,7 @@ fix-daemon: _no-sudo _daemon
 # fails the *whole* system build, not just that package.
 # tests/unit/rolling-pins-test.sh keeps this set honest.
 refresh-rolling: _no-sudo _daemon
-    @for s in update-bun-canary update-sf-mono; do \
-        echo "=== $s ==="; bash "scripts/$s.sh" || true; \
-    done
+    @bash scripts/lib/auto-update.sh run-updaters scripts/update-bun-canary.sh scripts/update-sf-mono.sh
 
 # Shared failure hint. A fixed-output hash mismatch is almost always a rolling
 # pin drifting rather than anything wrong with the working tree, and the raw
@@ -138,9 +139,10 @@ update-and-switch: _no-sudo _daemon
 # Run every scripts/update-*.sh updater, then activate. This is what the
 # nightly auto-update GitHub workflow does, but on-demand. Forces the full
 # bump: an explicit human invocation wants fresh nixpkgs too (issue #336).
+# The variable sits on the runner's line: just runs each recipe line in its
+# own shell, so a separate `export` line would never reach the updaters.
 bump-and-switch: _no-sudo _daemon
-    export AU_FORCE_FULL_BUMP=1
-    for s in scripts/update-*.sh; do echo "=== $s ==="; bash "$s" || true; done
+    AU_FORCE_FULL_BUMP=1 bash scripts/lib/auto-update.sh run-updaters
     sudo darwin-rebuild switch --flake .
 
 # Show drift between binaries currently on PATH and the versions pinned
@@ -156,7 +158,6 @@ check:
         '.#darwinConfigurations.f.system' \
         '.#checks.aarch64-darwin.unit-overlay' \
         '.#checks.aarch64-darwin.unit-justfile' \
-        '.#checks.aarch64-darwin.unit-claude-md' \
         '.#checks.aarch64-darwin.unit-agent-guides' \
         '.#checks.aarch64-darwin.unit-shell-guard' \
         '.#checks.aarch64-darwin.unit-edit-batch-nudge' \
@@ -200,6 +201,21 @@ verify-macos: _no-sudo
 verify-skills: _no-sudo
     bash scripts/verify-agent-skills.sh
 
+# Tier 2: spawn real interactive-shell processes (zsh or fish, per
+# martin.shell.interactive; all four modes, clean and forked) and confirm PATH
+# is duplicate-free and the mbx cargo shim / Nix tools win over their user-dir
+# duplicates. Pass a built home-files dir to test it before `just switch`; with
+# none, tests the LIVE dotfiles. Non-hermetic, so it is NOT part of
+# `nix flake check`.
+verify-path home_files="": _no-sudo
+    bash scripts/verify-session-path.sh {{ home_files }}
+
+
+# Benchmark shell startup times (all modes) using hyperfine, then the first prompt
+# and first command in a real pty. Pass a built home-files dir to test a new
+# configuration before `just switch`; with none, tests live dotfiles.
+benchmark-startup home_files="": _no-sudo
+    bash scripts/benchmark-shell-startup.sh {{ home_files }}
 # Garbage-collect old generations older than 30 days.
 gc:
     sudo nix-collect-garbage --delete-older-than 30d

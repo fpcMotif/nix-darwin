@@ -27,13 +27,17 @@ The preferred coding-layout control path: split, move between, resize, and equal
 _Avoid_: treating every window split as a Finder/Dock/Spaces concern; most coding splits belong inside the terminal session.
 
 
+**Interactive shell**:
+The one shell that owns interactive sessions, chosen by `martin.shell.interactive` (`"zsh"` or `"fish"`, in `modules/home/shell/options.nix`). It is the Darwin login shell, the exported `SHELL`, and the shell Ghostty, tmux, and Zed start. Only the selected shell's Home Manager config is generated, so switching back is one rebuild. macOS `/bin/zsh` stays for scripts and agent shells either way.
+_Avoid_: calling `/bin/zsh` "the shell" when Fish is selected; it is the system script shell, not the interactive one.
+
 **Prompt vi mode**:
-Vi keybindings for zsh's line editor (ZLE), provided by the `zsh-vi-mode` plugin behind `martin.shell.viMode` in `modules/home/zsh.nix`. It governs the input line only: normal/insert modes, motions, text objects, surround, per-mode cursor shape. Distinct surfaces keep their own names: tmux copy-mode (`mode-keys vi`, scrollback selection), Zed's `vim_mode` (editor), and the vim modes built into AI CLI TUIs.
+Vi keybindings at the interactive shell's prompt, from the shell's native keymaps (ZLE `viins`/`vicmd`, or `fish_vi_key_bindings`) behind `martin.shell.viMode`. It governs the input line only: normal/insert modes, motions, and text objects. Distinct surfaces keep their own names: tmux copy-mode (`mode-keys vi`, scrollback selection), Zed's `vim_mode` (editor), and the vim modes built into AI CLI TUIs.
 _Avoid_: calling tmux copy-mode, Zed's `vim_mode`, or an AI CLI TUI's vim mode "vi mode" without a qualifier.
 
 
 **Prompt search plane**:
-The zsh-owned, prefix-chord key plane over the fzf pickers (`^G` + key, behind `martin.shell.search` in `modules/home/zsh.nix`): ripgrep content search, zoxide directory jump, and process kill on plain-letter chords; fzf-git.sh's git-object pickers on ctrl chords. The optional Ghostty cmd-key layer (`martin.terminal.ghostty.search`) only *types* those chords — it is a veneer over the one definition, never a second one.
+The shell-owned, prefix-chord key plane over the fzf pickers (`^G` + key, behind `martin.shell.search`, bound by `modules/home/shell/zsh.nix` or `fish.nix`): ripgrep content search, zoxide directory jump, and process kill on plain-letter chords; fzf-git's git-object pickers on ctrl chords. The optional Ghostty cmd-key layer (`martin.terminal.ghostty.search`) only *types* those chords — it is a veneer over the one definition, never a second one.
 _Avoid_: calling it a hotkey plane — that term is reserved for the retired skhd global-shortcut layer.
 
 
@@ -44,6 +48,22 @@ _Avoid_: disabled app, uninstalled app.
 **macOS health report**:
 A local diagnostic snapshot for the Mac's own maintenance loop, not telemetry and not a remote monitoring system. It exists to make drift, storage pressure, crashes, backups, and Nix garbage-collection state inspectable.
 _Avoid_: monitoring, analytics, metrics pipeline.
+
+### Shell sessions
+
+**PATH tier**:
+An ordered group of directories in the base session PATH: shims, Nix profiles, then user installers. For an external command, the first executable match wins. Project environments may put their own tools first.
+_Avoid_: PATH priority, PATH layer.
+
+### Writable app files
+
+**Seeded file**:
+A writable app file Nix creates when missing. Nix reconciles declared values and additions each switch; the app owns other data.
+_Avoid_: managed file, symlinked config (a seeded file is a real file, not a link into the Nix store).
+
+**Owned key**:
+A key in a seeded file that Nix sets on every switch. When Nix stops owning a key, Nix removes it only if the live value is still the value Nix wrote.
+_Avoid_: pinned setting, forced setting.
 
 ### Agent-skills curation
 
@@ -106,6 +126,18 @@ _Avoid_: copying model ids into adapters or treating a model picker as a routing
 An AI coding-agent binary packaged under `pkgs/` and installed via `home.packages` (codex, droid, opencode, amp, pi, oh-my-pi). It lives on the `darwin-rebuild` build path, so its upstream pinning is a maintenance surface for the whole system rebuild — a stale source hash wedges the rebuild, not just that one tool.
 _Avoid_: conflating it with a model used only over its API, or with a GUI app launched from the hotkey plane.
 
+**Agent host**:
+An AI coding agent program that reads agent guides, such as Claude Code, Codex, or omp. The *general* host stands for any other agent that reads the shared `~/AGENTS.md`.
+_Avoid_: "agent" alone (it also means a subagent), client, tool.
+
+**Agent guide**:
+A text file that tells an agent host how to work. Every host has a *startup guide*, which it reads when a session starts (for example `~/.claude/CLAUDE.md`). Every host also has a *development guide*, which it reads only when needed; a line in the startup guide gives its path (for example `~/.claude/guidance/development.md`). Nix builds each agent guide from shared sections, after a host adapter when the host has one.
+_Avoid_: prompt, system prompt, rules file.
+
+**Host adapter**:
+The first part of an agent guide. It has only the text that one host needs: its tool names, its file paths, and the lines that point to its other guides. Text that is correct for every host goes in a shared section, not in a host adapter.
+_Avoid_: host override, per-agent config.
+
 **API-only model access**:
 Use of an AI model purely over its provider API from inside an editor or agent — e.g. a Zed `agent_servers` favorite model plus the provider's `*_API_KEY` env. There is no binary and nothing on the build path.
 _Avoid_: assuming API-only model access implies an installed CLI for that provider.
@@ -141,6 +173,14 @@ _Avoid_: treating an unfamiliar plan entry as glue without naming it; unknown en
 **Vendored derivation**:
 A package defined in this repo under `pkgs/` and built from vendored sources or lockfiles (drafts-mcp-server, sourcegraph-amp, the agent CLI repacks). No binary cache will ever hold them; they always build locally by design and are exempt from the source-build guard. The exemption list is derived from `pkgs/*.nix` pnames at run time, so it cannot name packages that no longer exist.
 _Avoid_: maintaining a hand-written exemption list, or confusing "vendored" (always local builds, seconds to minutes) with "glue" (trivial derivations every rebuild has).
+
+**Release pin**:
+A package under `pkgs/` fixed to one upstream version plus the hash of each file it downloads. A bump detects change by comparing versions and moves the version and every hash together, or not at all.
+_Avoid_: calling a flake-input bump or an npm lockfile regeneration a release pin; those move through `flake.lock` or a lockfile, not per-file hashes.
+
+**Rolling pin**:
+A package whose download URL carries no version, so upstream can republish different bytes at the same URL. A bump detects change by comparing hashes, because there is no version to compare.
+_Avoid_: calling a nightly or prerelease channel rolling when each build has its own versioned URL; that is still a release pin.
 
 ### Hosts & identity
 

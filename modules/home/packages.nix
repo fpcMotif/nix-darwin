@@ -126,4 +126,17 @@ let
 in
 {
   home.packages = commonPackages ++ lib.optionals isDarwin darwinPackages;
+
+  programs.bat = {
+    enable = true;
+    config = {
+      theme = "Catppuccin Macchiato";
+    };
+  };
+
+  programs.eza = {
+    enable = true;
+    enableZshIntegration = false;
+    enableFishIntegration = false;
+  };
 }

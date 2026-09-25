@@ -50,26 +50,6 @@ case "$latest" in
     exit 1 ;;
 esac
 
-current=$(au_current_version "$FILE")
-if [ "$current" = "$latest" ]; then
-  echo "zed-nightly already at $latest"; exit 0
-fi
-
-# Prefetch into an explicit variable BEFORE mutating the Nix file. A
-# command substitution passed straight into au_set_block_hash would, under
-# Bash's `set -e`, swallow a transient prefetch failure and silently write
-# an empty string in place of the pinned hash. Validate the SRI shape too
-# so a future au_prefetch_sri regression can't blank the pin either.
-hash_aarch64=$(au_prefetch_sri "$final_aarch64")
-case "$hash_aarch64" in
-  sha256-?*) ;;
-  *)
-    echo "zed-nightly: invalid SRI hash for aarch64-darwin: '$hash_aarch64'" >&2
-    exit 1 ;;
-esac
-
-au_set_version "$FILE" "$latest"
-au_set_block_hash "$FILE" '"aarch64-darwin"' "$hash_aarch64"
-
-au_build_darwin .#legacyPackages.aarch64-darwin.martin.zed-nightly-bin
-au_report_change zed-nightly "$current" "$latest"
+au_bump_release --name zed-nightly --file "$FILE" --version "$latest" \
+  --attr .#legacyPackages.aarch64-darwin.martin.zed-nightly-bin \
+  --asset "$final_aarch64" '"aarch64-darwin"'

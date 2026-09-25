@@ -57,6 +57,13 @@ let
         zsh-env-extra = home.programs.zsh.envExtra;
         zsh-profile-extra = home.programs.zsh.profileExtra;
         zsh-init-content = home.programs.zsh.initContent;
+        fish-abbrs = lib.concatStringsSep "\n"
+          (lib.mapAttrsToList (n: v: "${n}=${if builtins.isString v then v else toString (v.expansion or "")}") home.programs.fish.shellAbbrs);
+        fish-shell-init = home.programs.fish.shellInit;
+        fish-login-shell-init = home.programs.fish.loginShellInit;
+        fish-interactive-shell-init = home.programs.fish.interactiveShellInit;
+        fish-functions = lib.concatStringsSep "\n"
+          (lib.mapAttrsToList (n: v: "${n}=${if builtins.isString v then v else v.body}") home.programs.fish.functions);
       } // lib.optionalAttrs includeActivation {
         activation-scripts = lib.concatStringsSep "\n"
           (lib.mapAttrsToList (_: v: v.data) home.home.activation);

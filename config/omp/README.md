@@ -8,11 +8,11 @@ Nix also renders repeatable session presets from the same policy.
 
 | Work | Normal model | Effort |
 |---|---|---|
-| Main, vision, task, design | GPT-5.6 Terra | high |
-| Search, scout, explore, librarian, commit | GPT-5.3 Codex Spark | medium |
-| Check, review, security review, sonic, worker | GPT-5.3 Codex Spark | high |
-| Planning, Oracle | GPT-5.6 Terra | xhigh |
-| Economy fallback | GPT-5.6 Luna | medium |
+| Main, vision, task, design | GPT-6 Astra | high |
+| Search, scout, explore, librarian, commit | GPT-6 Sol | medium |
+| Check, review, security review, sonic, worker | GPT-6 Sol | high |
+| Planning, Oracle | GPT-6 Astra | xhigh |
+| Economy fallback | GPT-6 Luna | medium |
 
 ## Change routing
 
@@ -43,23 +43,21 @@ Session presets remain available through `--config`.
 
 The economy preset is complete and does not depend on config merge order.
 It uses Luna for general work, four concurrent tasks, and no passive advisor.
-Search and check jobs remain Spark in both presets. Planning remains Terra.
+Search and check jobs remain Sol in both presets. Planning remains Astra.
 
 ## Subscription limits and fallback
 
 The normal preset enables usage-aware fallback with a 10% reserve and confirmation at the reserve boundary.
-Terra can fall back to Luna. Luna has no automatic fallback.
-Spark has no model fallback: exhausted Spark allowance must stop or wait for reset.
+Astra can fall back to Luna. Luna has no automatic fallback.
+Sol has no model fallback: exhausted Sol allowance must stop or wait for reset.
 Retries are bounded; sessions do not sleep until a distant quota reset.
 
 Every role and fallback chain uses the subscription-backed `openai-codex` provider.
-`enabledModels` also allows `google-antigravity/*`, so those models stay selectable in `/model` and `--model`.
-No role routes to them, and no API-key provider or usage-based route is configured.
-`enabledModels` is an allowlist rewritten on every activation: add a provider here, not in `config.yml`.
-GPT-5.5 and Sol are absent from every rendered adapter.
+The `/model` picker and `--model` expose GPT-6 Astra, Sol, and Luna, plus the
+current Google Antigravity catalog—including Gemini Flash, Claude Opus, and Claude Sonnet.
+No other provider is enabled.
 
-Standard Codex models share allowance. Switching models can conserve usage but cannot create another allowance.
-Spark has a separate, variable preview allowance and requires eligible access.
+GPT-6 models share allowance. Switching models can conserve usage but cannot create another allowance.
 Check `omp usage --redact` and `omp models openai-codex` after login and when availability changes.
 Unknown quota data does not establish available capacity. Next month's allowance is not guaranteed.
 

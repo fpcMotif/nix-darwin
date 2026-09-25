@@ -14,7 +14,7 @@
 # platform, unlike full-host evaluations (see the agent-skills IFD caveat in
 # tests/integration/configurations-eval-test.nix).
 { pkgs, lib }:
-{ viMode ? null, searchEnable ? null, dirJumpNull ? false }:
+{ viMode ? null, searchEnable ? null, dirJumpNull ? false, includeSession ? false, includeDirenv ? true, includeFzf ? true, includeZoxide ? true, includePrompt ? false }:
 
 (lib.evalModules {
   modules =
@@ -78,8 +78,13 @@
         config._module.args.pkgs = pkgs;
         config._module.freeformType = lib.types.attrsOf lib.types.raw;
       }
-      ../../modules/home/zsh.nix
+      ../../modules/home/shell/zsh.nix
     ]
+    ++ lib.optional includeSession ../../modules/home/session.nix
+    ++ lib.optional includeDirenv ../../modules/home/shell/direnv.nix
+    ++ lib.optional includeFzf ../../modules/home/shell/fzf.nix
+    ++ lib.optional includeZoxide ../../modules/home/shell/zoxide.nix
+    ++ lib.optional includePrompt ../../modules/home/prompt.nix
     ++ lib.optionals (viMode != null) [
       { martin.shell.viMode.enable = lib.mkForce viMode; }
     ]

@@ -27,7 +27,7 @@ in
   unit-mksystem = callTest ./unit/mksystem-test.nix { };
   unit-overlay = callTest ./unit/overlay-test.nix { };
   unit-format = callTest ./unit/format-test.nix { };
-  unit-auto-update = pkgs.runCommand "unit-auto-update" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
+  unit-auto-update = pkgs.runCommand "unit-auto-update" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep pkgs.perl ]; } ''
     bash ${./unit/auto-update-test.sh} \
       ${../scripts/lib/auto-update.sh} \
       ${../modules/darwin/auto-switch.nix} \
@@ -44,75 +44,38 @@ in
     bash ${./unit/rolling-pins-test.sh} ${../pkgs} ${../scripts}
     touch $out
   '';
-  unit-claude-md =
-    let
-      renderAgentGuide = import ../modules/home/agent-instructions/render-agent-guide.nix { inherit lib; };
-      renderedClaudeGuide = pkgs.writeText "rendered-claude-guide.md" (renderAgentGuide [
-        ../modules/home/claude/CLAUDE.md
-        ../modules/home/agent-instructions/shared/working-contract.md
-        ../modules/home/agent-instructions/shared/quality-and-style.md
-      ]);
-      renderedClaudeDevelopment = pkgs.writeText "rendered-claude-development.md" (renderAgentGuide [
-        ../modules/home/claude/development.md
-        ../modules/home/agent-instructions/shared/development.md
-      ]);
-    in
-    pkgs.runCommand "unit-claude-md" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
-      bash ${./unit/claude-md-test.sh} \
-        ${renderedClaudeGuide} \
-        ${../modules/home/claude.nix} \
-        ${../modules/home/claude/human-documents.md} \
-        ${renderedClaudeDevelopment}
-      touch $out
-    '';
   unit-agent-guides =
     let
-      renderAgentGuide = import ../modules/home/agent-instructions/render-agent-guide.nix { inherit lib; };
-      sharedContract = ../modules/home/agent-instructions/shared/working-contract.md;
-      sharedDevelopment = ../modules/home/agent-instructions/shared/development.md;
-      sharedQuality = ../modules/home/agent-instructions/shared/quality-and-style.md;
-      guides = {
-        general = renderAgentGuide [
-          ../modules/home/agent-instructions/AGENTS.md
-          sharedContract
-          sharedQuality
-        ];
-        codex = renderAgentGuide [
-          ../modules/home/agent-instructions/codex/AGENTS.md
-          sharedContract
-          sharedQuality
-        ];
-        codexDevelopment = renderAgentGuide [
-          ../modules/home/agent-instructions/codex/guidance/development.md
-          sharedDevelopment
-        ];
-        omp = renderAgentGuide [
-          ../modules/home/agent-instructions/omp/agent/AGENTS.md
-          sharedContract
-          sharedQuality
-          sharedDevelopment
-          ../modules/home/agent-instructions/shared/testing.md
-          ../modules/home/claude/human-documents.md
-        ];
-        claude = renderAgentGuide [
-          ../modules/home/claude/CLAUDE.md
-          sharedContract
-          sharedQuality
-        ];
-        claudeDevelopment = renderAgentGuide [
-          ../modules/home/claude/development.md
-          sharedDevelopment
-        ];
-      };
+      guideCatalog = import ../modules/home/agent-instructions/guides.nix { inherit lib pkgs; };
+      hosts = guideCatalog.hosts;
+      hasWord = word: text:
+        lib.any
+          (line:
+            builtins.match ".*(^|[^A-Za-z0-9_])${word}($|[^A-Za-z0-9_]).*" line != null)
+          (lib.splitString "\n" text);
+      contentForHost = host:
+        lib.concatStringsSep "\n" (map (guide: guide.content)
+          ([ host.startup ] ++ lib.optional (host ? development) host.development));
       count = marker: text: builtins.length (lib.splitString marker text) - 1;
-      once = marker: text: count marker text == 1;
-      commonGuides = with guides; [ general codex omp claude ];
-      developmentGuides = with guides; [
-        (builtins.readFile sharedDevelopment)
-        codexDevelopment
-        omp
-        claudeDevelopment
+      requiredSections = [
+        "## Working contract"
+        "## Completion"
+        "## Command routing"
+        "## Code search"
+        "## Python"
+        "## Version control"
+        "## Code quality"
+        "## Writing"
       ];
+      onceSections = [
+        "## Working contract"
+        "## Code quality"
+        "## Testing"
+        "## Command routing"
+        "## Waiting and background work"
+      ];
+      bannedTerms = [ "gemini" "deepwiki" "mgrep" "lazygit" "deep-research" "chezmoi" ];
+      requiredTools = [ "fd" "rg" "bat" "eza" "dust" "procs" "btm" "ax" "delta" "hyperfine" ];
       noModelCache = text: lib.all (term: !(lib.hasInfix term text)) [
         "gpt-"
         "Gemini"
@@ -121,13 +84,30 @@ in
         "Terra"
         "Luna"
       ];
+      checkHost = name: host:
+        let
+          content = contentForHost host;
+          links = builtins.filter
+            (guide: guide.target != host.startup.target)
+            host.guides;
+          tools = requiredTools ++ lib.optional (name == "claude") "fff";
+        in
+        assert lib.all (section: lib.hasInfix section content) requiredSections;
+        assert lib.all (section: count section content == 1) onceSections;
+        assert lib.all
+          (term: !(lib.hasInfix (lib.toLower term) (lib.toLower content)))
+          bannedTerms;
+        assert noModelCache content;
+        assert lib.all (tool: hasWord tool content) tools;
+        assert lib.all
+          (guide: lib.hasInfix "~/${guide.target}" host.startup.content)
+          links;
+        true;
+      hostChecks = lib.mapAttrsToList checkHost hosts;
     in
-    assert lib.all (once "## Working contract") commonGuides;
-    assert lib.all (once "## Code quality") commonGuides;
-    assert lib.all (once "## Testing") commonGuides;
-    assert lib.all (once "## Command routing") developmentGuides;
-    assert lib.all (once "## Waiting and background work") developmentGuides;
-    assert lib.all noModelCache commonGuides;
+    assert !(hasWord "bat" "batch");
+    assert lib.all (passed: passed) hostChecks;
+    assert lib.hasInfix "The document is done when" hosts.claude.humanDocuments.content;
     pkgs.runCommand "unit-agent-guides" { } ''
       touch $out
     '';
@@ -141,6 +121,7 @@ in
       ${../modules/home/claude/hooks/edit-batch-nudge.sh}
     touch $out
   '';
+  unit-claude-settings-ownership = callTest ./unit/claude-settings-ownership-test.nix { };
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
   unit-pstack-hygiene = callTest ./unit/pstack-hygiene-test.nix { };
@@ -169,8 +150,18 @@ in
     assert fallbackChains.${routing.bareSelector "search"} == [ ];
     assert fallbackChains.${routing.bareSelector "economy"} == [ ];
     assert lib.all (lib.hasPrefix "openai-codex/") (lib.attrValues omp.normal.modelRoles);
-    assert lib.all (lib.hasPrefix "openai-codex/") (lib.filter (m: !(lib.hasSuffix "/*" m)) omp.normal.enabledModels);
+    assert lib.all
+      (model:
+        lib.hasPrefix "openai-codex/gpt-6-" model
+        || model == "google-antigravity/*"
+      )
+      omp.normal.enabledModels;
     assert lib.elem "google-antigravity/*" omp.normal.enabledModels;
+    assert lib.all (model: lib.hasInfix model serializedAdapters) [
+      "gpt-6-astra"
+      "gpt-6-sol"
+      "gpt-6-luna"
+    ];
     assert economy.modelRoles.default == routing.selector "economy";
     assert economy.modelRoles.reviewer == routing.selector "check";
     assert economy.modelRoles.plan == routing.selector "plan";
@@ -178,7 +169,7 @@ in
     assert economy.retry == omp.normal.retry;
     assert routing.adapters.codex.profiles.fast.model == routing.modelId "search";
     assert routing.adapters.codex.profiles.plan.model == routing.modelId "plan";
-    assert lib.all (term: !(lib.hasInfix term serializedAdapters)) [ "gpt-5.5" "gpt-5.6-sol" ];
+    assert !(lib.hasInfix "gpt-5." serializedAdapters);
     pkgs.runCommand "unit-ai-model-routing" { } ''
       ${routingPython}/bin/python3 ${./unit/ai-model-routing-test.py} \
         ${../modules/home/ai-model-routing.py} ${policy}
@@ -199,11 +190,8 @@ in
       mkInit = name: overrides:
         pkgs.writeText "unit-zsh-vi-mode-initContent-${name}"
           (zshEval overrides).programs.zsh.initContent;
-      run = scenario: initFile: fzfGitArg: ''
-        SCENARIO=${scenario} bash ${./unit/zsh-vi-mode-test.sh} ${initFile} \
-          ${pkgs.zsh-vi-mode} ${pkgs.fzf} \
-          ${pkgs.zsh-autosuggestions} ${pkgs.zsh-syntax-highlighting} \
-          ${fzfGitArg}
+      run = scenario: initFile: ''
+        SCENARIO=${scenario} bash ${./unit/zsh-vi-mode-test.sh} ${initFile} ${pkgs.fzf}
       '';
     in
     pkgs.runCommand "unit-zsh-vi-mode"
@@ -211,11 +199,59 @@ in
         nativeBuildInputs = [ pkgs.bash pkgs.zsh pkgs.gnugrep ];
       }
       ''
-        ${run "default" (mkInit "default" { }) "${pkgs.fzf-git-sh}"}
-        ${run "null-dirjump" (mkInit "null-dirjump" { dirJumpNull = true; }) "${pkgs.fzf-git-sh}"}
-        ${run "off" (mkInit "off" { searchEnable = false; }) ""}
+        ${run "default" (mkInit "default" { })}
+        ${run "null-dirjump" (mkInit "null-dirjump" { dirJumpNull = true; })}
+        ${run "off" (mkInit "off" { searchEnable = false; })}
         touch $out
       '';
+
+  # Tier-1 hermetic check for martin.shell.interactive = "fish": builds the
+  # shell modules' real Home Manager files and runs a sandboxed fish in all
+  # four startup modes -- PATH tiers, exported variables, exit status, quiet
+  # output, vi and search-plane bindings, wrapper argv/env isolation, direnv,
+  # zoxide, and a probe-free prompt (#385).
+  unit-fish-shell =
+    let
+      shellHome = (import ./lib/shell-home.nix { inherit inputs pkgs lib; }) { interactive = "fish"; };
+      sessionPath = pkgs.writeText "session-path"
+        (lib.concatStringsSep "\n" shellHome.config.home.sessionPath + "\n");
+    in
+    pkgs.runCommand "unit-fish-shell"
+      {
+        # home.path is the package set this config installs (fish, fzf,
+        # direnv, zoxide, ...), standing in for the user profile.
+        nativeBuildInputs = [
+          shellHome.config.home.path
+          pkgs.bash
+          pkgs.coreutils
+          pkgs.gnugrep
+          pkgs.gnused
+          pkgs.jq
+        ];
+      }
+      ''
+        bash ${./unit/fish-shell-test.sh} ${shellHome.config.home-files} ${sessionPath}
+        touch $out
+      '';
+
+  # The switch generates exactly one shell's config: flipping it is the
+  # whole rollback (#385).
+  unit-shell-switch =
+    let
+      shellHome = interactive: ((import ./lib/shell-home.nix { inherit inputs pkgs lib; }) { inherit interactive; }).config;
+      fish = shellHome "fish";
+      zsh = shellHome "zsh";
+      hasZshrc = cfg: cfg.home.file ? "./.zshrc";
+      hasFishConfig = cfg: cfg.xdg.configFile ? "fish/config.fish";
+    in
+    assert fish.programs.fish.enable && !fish.programs.zsh.enable;
+    assert hasFishConfig fish && !(hasZshrc fish);
+    assert zsh.programs.zsh.enable && !zsh.programs.fish.enable;
+    assert hasZshrc zsh && !(hasFishConfig zsh);
+    pkgs.runCommand "unit-shell-switch" { } ''
+      echo "PASS unit-shell-switch"
+      touch $out
+    '';
 
   # Integration tests
   integration-configurations-eval =

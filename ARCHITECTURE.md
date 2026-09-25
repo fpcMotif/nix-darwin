@@ -108,7 +108,7 @@ Three layers, one writer per concern:
 |----------------|---------------------|---------------------------------------------------------------|
 | System         | nix-darwin / NixOS  | OS settings, users, shells, services, system apps             |
 | User packages  | Home Manager        | per-user CLI/dev packages, activation scripts                 |
-| Config text    | Home Manager        | zsh, git, starship, tmux, Ghostty, shell/terminal preferences |
+| Config text    | Home Manager        | zsh or fish, git, starship, tmux, Ghostty, shell/terminal preferences |
 
 Home Manager now owns the selected shell, prompt, terminal, and git config text in Nix, including generated files like `~/.zshrc`, `~/.config/starship.toml`, `~/.config/tmux/tmux.conf`, `~/.config/ghostty/config`, and `~/.config/git/config`. Legacy Stow/Homebrew dotfiles are inventory only; they are not an active writer for migrated concerns.
 
@@ -209,7 +209,13 @@ The platform-specific home path is computed once in `lib/mkSystem.nix` and expos
 modules/home/
 ├── default.nix          # username, homeDirectory, stateVersion, imports
 ├── packages.nix         # common + Darwin-only packages
-├── zsh.nix              # zsh, fzf, direnv, aliases/functions, editor env
+├── session.nix          # session variables and PATH tiers, shared by both shells
+├── shell/
+│   ├── options.nix      # martin.shell.{interactive,viMode,search}: the one shell switch
+│   ├── shared.nix       # alias list and terminfo dirs both shells read
+│   ├── zsh.nix          # zsh config, generated only when interactive = "zsh"
+│   ├── fish.nix         # fish config, generated only when interactive = "fish"
+│   └── direnv.nix, fzf.nix, zoxide.nix  # integrations for both shells
 ├── prompt.nix           # option-gated Starship config (enabled on active Mac)
 ├── tmux.nix             # tmux behavior from legacy dotfiles, without TPM bootstrap
 ├── ghostty.nix          # Ghostty config managed as XDG text

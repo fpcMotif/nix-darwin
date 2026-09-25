@@ -3,7 +3,7 @@
 ## Claude
 
 - **Memory**: Auto memory is off. Durable instructions live in these guides, never in memory notes.
-- **Develop**: Before choosing a shell command, running Python, or using version control, read `~/.claude/guidance/development.md`.
+- **Develop**: Before choosing a shell command, running Python or Rust, adding an environment variable, or using version control, read `~/.claude/guidance/development.md`.
 - **Documents**: Before writing an issue, specification, PRD, analysis, or final review, read `~/.claude/guidance/human-documents.md`.
 - **Test**: Before writing a test, choosing a technique beyond E2E, or recording a test artifact, read `~/.claude/guidance/testing.md`.
 
@@ -20,6 +20,6 @@ fff is the default discovery tool. codedb is the default structural tool. `rg` i
 - **Coverage**: Use scoped `rg` for text listings, counts, or absence checks. State scope and exclusions; do not truncate completeness checks.
 - **Other repository**: Use its explicit `project` in codedb, or scoped `rg`. Confirm the checkout/worktree before editing.
 - **Fallback**: When MCP is unavailable, warming up, or stale, use scoped `rg`, `fd`, or Read. Do not retry merely to obey routing.
-- **Detail**: Read `~/.claude/search-routing.md` only for unclear routing, tool limits, or examples.
+- **Detail**: Read `~/.claude/search-routing.md` only for unclear routing or tool limits.
 
 Ranked or indexed results do not guarantee every caller or repo-wide absence. Read additional source only when needed context is missing or freshness is uncertain.

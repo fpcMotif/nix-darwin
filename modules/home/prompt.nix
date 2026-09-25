@@ -176,6 +176,8 @@ in
       enable = true;
       enableZshIntegration = true;
       enableBashIntegration = true;
+      # Fish keeps its native, probe-free fish_prompt (modules/home/shell/fish.nix).
+      enableFishIntegration = false;
 
       settings = {
         add_newline = false;

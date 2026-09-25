@@ -135,6 +135,8 @@
         in
         {
           crush = pkgs.nur.repos.charmbracelet.crush;
+          # Overlay override of nixpkgs' codex; exposed so update-codex.sh can build it.
+          codex = pkgs.codex;
           martin = pkgs.martin;
         };
     in

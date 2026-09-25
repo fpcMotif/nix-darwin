@@ -1,6 +1,8 @@
-{ lib, pkgs, ... }:
+{ config, lib, ... }:
 
 let
+  shell = config.martin.shell.interactiveProgram;
+
   copyPipe = ''sh -c 'b64=$(dd bs=1 count=100000 status=none | base64 | tr -d "\n"); printf "\033]52;c;%s\a" "$b64" > "$1"' sh #{client_tty}'';
 in
 {
@@ -23,11 +25,11 @@ in
     focusEvents = true;
     aggressiveResize = true;
     terminal = "tmux-256color";
-    shell = "${pkgs.zsh}/bin/zsh";
+    inherit shell;
     plugins = [ ];
 
     extraConfig = ''
-      set -g default-command "${pkgs.zsh}/bin/zsh -l"
+      set -g default-command "${shell} -l"
       set -g display-time 4000
       set -g status-interval 5
       set -g status-keys emacs
