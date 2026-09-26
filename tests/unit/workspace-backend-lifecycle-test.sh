@@ -56,6 +56,9 @@ in_dir() {
   shift
   (cd -- "$dir" && "$@")
 }
+# Match a command's piped output with `grep ... >/dev/null`, not `grep -q`: -q
+# exits at the first match, the writer dies of SIGPIPE, and pipefail flips the
+# result.
 jj_workspaces() {
   in_dir "$1" jj workspace list -T 'name ++ "\n"'
 }
@@ -106,7 +109,7 @@ git -C "$git_repo" commit -qm base
 (cd "$git_repo" && wt switch --create feat --no-cd >"$work/wt-create.log" 2>&1) \
   || { cat "$work/wt-create.log" >&2; fail "wt could not create a worktree"; }
 [ -f "$work/gitrepo.feat/shared.txt" ] || fail "wt did not create the sibling worktree"
-git -C "$git_repo" worktree list --porcelain | grep -qxF "worktree $work/gitrepo.feat" \
+git -C "$git_repo" worktree list --porcelain | grep -xF "worktree $work/gitrepo.feat" >/dev/null \
   || fail "git does not register the wt worktree"
 (cd "$git_repo" && wt list --format json) | jq -e 'any(.items[]; .branch == "feat")' >/dev/null \
   || fail "wt list does not show the worktree"
@@ -158,7 +161,7 @@ pass "wt gates project hooks behind approval and runs them once"
 
 (cd "$git_repo" && wt remove hooked --foreground --no-hooks >/dev/null 2>&1) || fail "wt could not remove a clean worktree"
 [ ! -e "$work/gitrepo.hooked" ] || fail "wt left a removed worktree directory"
-if git -C "$git_repo" worktree list --porcelain | grep -qxF "worktree $work/gitrepo.hooked"; then
+if git -C "$git_repo" worktree list --porcelain | grep -xF "worktree $work/gitrepo.hooked" >/dev/null; then
   fail "git still registers a removed worktree"
 fi
 pass "wt removes a clean worktree and its registration"
@@ -256,7 +259,7 @@ new_jj_repo "$colocated" --colocate
   || fail "the colocated JJ workspace is not a plain JJ workspace"
 [ "$(git -C "$colocated" worktree list --porcelain | grep -c '^worktree ')" -eq 1 ] \
   || fail "a JJ workspace was registered as a Git worktree"
-jj_workspaces "$colocated" | grep -qxF c \
+jj_workspaces "$colocated" | grep -xF c >/dev/null \
   || fail "jj does not register the colocated workspace"
 pass "a colocated repository gets a JJ workspace, not a Git worktree"
 
@@ -265,14 +268,14 @@ echo keep > "$work/jjrepo.taken/keep.txt"
 expect_failure "$work/djo-taken.log" in_dir "$jj_repo" djo switch --create taken --base main
 expect_output "$work/djo-taken.log" "not an empty directory" "djo did not explain the existing destination"
 [ "$(cat "$work/jjrepo.taken/keep.txt")" = keep ] || fail "djo changed an existing destination"
-jj_workspaces "$jj_repo" | grep -qxF taken && fail "djo registered a failed workspace"
+jj_workspaces "$jj_repo" | grep -xF taken >/dev/null && fail "djo registered a failed workspace"
 pass "djo refuses an existing destination and leaves it intact"
 
 echo unsnapshotted > "$work/jjrepo.b/dirty.txt"
 expect_failure "$work/djo-dirty.log" in_dir "$jj_repo" djo remove b </dev/null
 expect_output "$work/djo-dirty.log" "Aborted" "djo remove did not abort without confirmation"
 [ -f "$work/jjrepo.b/dirty.txt" ] || fail "djo remove deleted dirty work"
-jj_workspaces "$jj_repo" | grep -qxF b || fail "djo remove forgot b without confirmation"
+jj_workspaces "$jj_repo" | grep -xF b >/dev/null || fail "djo remove forgot b without confirmation"
 
 (cd "$jj_repo" && echo trunk-side > shared.txt && jj commit -m trunk-side >/dev/null 2>&1)
 (cd "$work/jjrepo.a" && echo a-side > shared.txt && jj describe -m a-side >/dev/null 2>&1)
@@ -289,7 +292,7 @@ kept=$(cd "$jj_repo" && jj log --no-graph -r 'b@' -T change_id)
 (cd "$jj_repo" && jj workspace forget b)
 (cd "$jj_repo" && jj log --no-graph -r "$kept" -T 'change_id') >/dev/null 2>&1 \
   || fail "jj workspace forget lost the workspace's change"
-(cd "$jj_repo" && jj file list -r "$kept") | grep -qxF dirty.txt || fail "forgotten change lost the dirty file"
+(cd "$jj_repo" && jj file list -r "$kept") | grep -xF dirty.txt >/dev/null || fail "forgotten change lost the dirty file"
 [ -f "$work/jjrepo.b/dirty.txt" ] || fail "jj workspace forget deleted files"
 rm -rf -- "$work/jjrepo.b"
 pass "jj workspace forget keeps the change and files for manual cleanup"
@@ -353,7 +356,7 @@ pass "djo rewrites wt step to djo run, and rewrites wt inside other hook text"
 (cd "$work/jjrepo.precedence" && echo draft > draft.txt && jj describe -m draft >/dev/null 2>&1)
 expect_failure "$work/djo-merge-editor.log" in_dir "$work/jjrepo.precedence" djo merge main --yes
 expect_output "$work/djo-merge-editor.log" "jj op undo" "djo merge hid the squash failure"
-jj_workspaces "$jj_repo" | grep -qxF precedence \
+jj_workspaces "$jj_repo" | grep -xF precedence >/dev/null \
   || fail "a failed merge forgot the workspace"
 (cd "$work/jjrepo.precedence" && rm draft.txt && jj describe -m '' >/dev/null 2>&1)
 pass "djo merge stops visibly when jj squash needs an editor"
@@ -362,11 +365,11 @@ pass "djo merge stops visibly when jj squash needs an editor"
 (cd "$work/jjrepo.precedence" && djo merge main --yes >"$work/djo-merge.log" 2>&1) \
   || { cat "$work/djo-merge.log" >&2; fail "djo merge failed in a fixture"; }
 [ -f "$work/jjrepo.precedence/merged.txt" ] || fail "merge.remove = false still deleted the workspace directory"
-(cd "$jj_repo" && jj file list -r main) | grep -qxF merged.txt || fail "djo merge did not move main"
+(cd "$jj_repo" && jj file list -r main) | grep -xF merged.txt >/dev/null || fail "djo merge did not move main"
 # djo 0.2.2 forgets with `jj workspace forget @`; jj reads "@" as a workspace
 # name, warns, and exits 0. Upstream's merge.remove = true would then delete a
 # still-registered workspace. Revisit docs/workspace-backends.md when this fails.
-jj_workspaces "$jj_repo" | grep -qxF precedence \
+jj_workspaces "$jj_repo" | grep -xF precedence >/dev/null \
   || fail "djo merge now forgets the workspace; update docs/workspace-backends.md"
 (cd "$jj_repo" && jj git remote list) | grep -q . && fail "a fixture gained a remote"
 pass "djo merge moves main, keeps the directory, and pushes nowhere under the generated config"
