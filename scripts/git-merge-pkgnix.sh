@@ -14,7 +14,7 @@
 # rotates only the hash while a local edit bumps only the version, on
 # different lines: git unions them cleanly into a pairing that existed in
 # neither side), so the churn check runs before any clean merge is accepted.
-# Build metadata after `+` is ignored (semver precedence: bun canary builds
+# Build metadata after `+` is ignored (semver precedence: zed nightly builds
 # share one semver); ties keep "ours", which during rebase/stash-apply is the
 # freshly pulled upstream whose hashes CI already verified. Structural
 # differences keep stock git behavior: clean unions are accepted, real

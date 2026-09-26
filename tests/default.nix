@@ -33,7 +33,7 @@ in
   unit-mksystem = callTest ./unit/mksystem-test.nix { };
   unit-overlay = callTest ./unit/overlay-test.nix { };
   unit-format = callTest ./unit/format-test.nix { };
-  unit-auto-update = pkgs.runCommand "unit-auto-update" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep pkgs.perl ]; } ''
+  unit-auto-update = pkgs.runCommand "unit-auto-update" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep pkgs.jq pkgs.perl ]; } ''
     bash ${./unit/auto-update-test.sh} \
       ${../scripts/lib/auto-update.sh} \
       ${../modules/darwin/auto-switch.nix} \

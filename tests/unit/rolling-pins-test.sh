@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Guards the class of failure that takes down `just switch` with
 #
-#   error: hash mismatch in fixed-output derivation '...bun-darwin-aarch64.zip.drv'
+#   error: hash mismatch in fixed-output derivation '...SF-Mono.dmg.drv'
 #
 # A package whose download URL carries no ${version} is pinned to a *rolling*
 # asset: upstream republishes different bytes at the same URL, the recorded
@@ -21,9 +21,8 @@ scripts_dir=$2
 # file basename -> updater script basename
 declared_rolling() {
   case "$1" in
-    bun-canary-bin.nix) echo "update-bun-canary.sh" ;;
-    sf-mono.nix)        echo "update-sf-mono.sh" ;;
-    *)                  echo "" ;;
+    sf-mono.nix) echo "update-sf-mono.sh" ;;
+    *)           echo "" ;;
   esac
 }
 
@@ -64,8 +63,15 @@ done
 
 # Every declared entry must still correspond to a real rolling pin, so the list
 # cannot rot into fiction after a package switches to a versioned URL.
-for base in bun-canary-bin.nix sf-mono.nix; do
-  [ -f "$pkgs_dir/$base" ] || { echo "rolling-pins: declared ${base} no longer exists" >&2; fail=1; }
+for base in sf-mono.nix; do
+  if [ ! -f "$pkgs_dir/$base" ]; then
+    echo "rolling-pins: declared ${base} no longer exists" >&2
+    fail=1
+  elif ! grep -oE 'url = "https://[^"]*"' "$pkgs_dir/$base" | grep -qv '\${'; then
+    echo "rolling-pins: declared ${base} no longer pins an unversioned URL;" >&2
+    echo "  drop it from declared_rolling() and this list" >&2
+    fail=1
+  fi
 done
 
 [ "$fail" -eq 0 ] || exit 1

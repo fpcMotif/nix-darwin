@@ -195,7 +195,7 @@ Symptom: a switch that worked yesterday fails on a package you did not touch,
 followed by a cascade of `Cannot build` lines for everything downstream of it:
 
 ```
-error: hash mismatch in fixed-output derivation '/nix/store/…-bun-darwin-aarch64.zip.drv':
+error: hash mismatch in fixed-output derivation '/nix/store/…-SF-Mono.dmg.drv':
          specified: sha256-BDtiIIVVMgpx1IIj0rHevHn8aS6OtkLJrhvWSUW2bCI=
             got:    sha256-FNlizVvP0TwsBBKY0ITEuJdvUd1aeJysxpSHf5I8KeA=
 error: Cannot build '…-home-manager-path.drv'. Reason: 1 dependency failed.
@@ -206,13 +206,14 @@ error: Cannot build '…-darwin-system-…drv'. Reason: 1 dependency failed.
 Only the *first* error matters — everything after it is fallout from that one
 derivation, so read the top of the output, not the bottom.
 
-Cause: a **rolling pin**. A few packages are pinned to a URL that carries no
-version, and upstream republishes different bytes at the same address:
+Cause: a **rolling pin**. A rolling pin is a package pinned to a URL that
+carries no version, where upstream republishes different bytes at the same
+address:
 
 | package | rolling URL |
 |---|---|
-| `pkgs/bun-canary-bin.nix` | bun force-pushes the `canary` tag in place |
 | `pkgs/sf-mono.nix` | Apple's `SF-Mono.dmg` |
+
 When upstream republishes, the recorded sha256 is stale and the fixed-output
 derivation fails — and because these sit under `home-manager-path`, the stale
 hash takes down the **entire system build**, not just that one package.

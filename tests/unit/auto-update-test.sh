@@ -336,6 +336,39 @@ unset NO_COLOR
 unset -f au_prefetch_sri au_prefetch_unpacked_sri au_build_darwin bump write_pin unchanged
 
 # ---------------------------------------------------------------------------
+# update-bun-canary.sh: npm published no bun canary from 2026-05-19 to
+# 2026-08-20. A canary built more than a week ago fails the updater instead of
+# passing as "already at". The registry (ax) and the clock (date) are stubbed.
+# ---------------------------------------------------------------------------
+
+if [ -n "$scripts_dir" ]; then
+  bc=$(mktemp -d)
+  mkdir -p "$bc/scripts/lib" "$bc/pkgs" "$bc/bin"
+  cp "$scripts_dir/update-bun-canary.sh" "$bc/scripts/"
+  cp "$lib" "$bc/scripts/lib/auto-update.sh"
+  echo 'version = "1.4.2-canary.20260925.1";' > "$bc/pkgs/bun-canary-bin.nix"
+  printf '%s\n' '#!/bin/sh' 'printf "{\"canary\":\"%s\"}\n" "$BC_CANARY"' > "$bc/bin/ax"
+  printf '%s\n' '#!/bin/sh' 'echo "$BC_CUTOFF"' > "$bc/bin/date"
+  chmod +x "$bc/bin/ax" "$bc/bin/date"
+  bun_canary() { # bun_canary <npm canary version> <cutoff YYYYMMDD>
+    PATH="$bc/bin:$PATH" BC_CANARY=$1 BC_CUTOFF=$2 NO_COLOR=1 \
+      bash "$bc/scripts/update-bun-canary.sh" 2>&1
+  }
+
+  out=$(bun_canary 1.4.2-canary.20260925.1 20260918) || fail "fresh canary failed: $out"
+  [ "$out" = "bun-canary already at 1.4.2-canary.20260925.1" ] \
+    || fail "fresh current canary misreported: $out"
+  if out=$(bun_canary 1.4.2-canary.20260925.1 20261003); then fail "stale canary passed: $out"; fi
+  case "$out" in *"over a week old"*) ;; *) fail "stale canary message wrong: $out" ;; esac
+  if out=$(bun_canary 1.4.2 20260918); then fail "non-canary version passed: $out"; fi
+  case "$out" in *"unexpected npm canary version"*) ;; *) fail "bad version message wrong: $out" ;; esac
+  [ "$(cat "$bc/pkgs/bun-canary-bin.nix")" = 'version = "1.4.2-canary.20260925.1";' ] \
+    || fail "a refused canary changed the pin"
+  rm -rf "$bc"
+  unset -f bun_canary
+fi
+
+# ---------------------------------------------------------------------------
 # au_run_updaters: a failed updater's edits to pkgs/ and flake.lock are put
 # back; an earlier updater's success is kept.
 # ---------------------------------------------------------------------------

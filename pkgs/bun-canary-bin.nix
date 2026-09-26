@@ -3,40 +3,53 @@
 # Why this exists: `bun upgrade` rewrites its own executable in place, which
 # fails on Nix because the running binary lives in the read-only /nix/store
 # (EACCES: "Failed to move new version of Bun to /nix/store/…/bin/bun"). The
-# Nix-native way to follow bun's bleeding-edge `canary` channel is to fetch the
-# prebuilt release asset, exactly as pkgs/zed-nightly-bin.nix does for Zed.
-# Updates land via scripts/update-bun-canary.sh (hourly, through
+# Nix-native way to follow bun's bleeding-edge `canary` channel is to fetch a
+# prebuilt canary binary, as pkgs/zed-nightly-bin.nix does for Zed.
+# Updates land via scripts/update-bun-canary.sh (nightly, through
 # .github/workflows/auto-update.yml).
 #
-# Rolling tag: bun force-pushes the `canary` git tag in place, so there is no
-# per-build download URL — `url` is the rolling canary asset and the pin is the
-# zip's sha256. The updater is HASH-driven (re-prefetches the rolling URL and
-# diffs the sha256) because no cross-platform API reports the live canary
-# semver: npm's `canary` dist-tag lags weeks behind (it read 1.3.13-canary
-# while the tag already served 1.4.0-canary). The `version` below is parsed out
-# of the binary's own bytes by the updater and is informational only.
+# Source: a release pin on bun's npm canary. Once a day bun publishes
+# @oven/bun-darwin-aarch64@<last stable>-canary.<YYYYMMDD>.<n> under the npm
+# `canary` dist-tag. npm versions are immutable, so the hash below stays valid
+# on every machine and every CI run. The binary inside is byte-identical to the
+# GitHub `canary` release asset built from the same commit (checked on
+# 1.4.2-canary.20260925.1, commit 29d9638da).
+#
+# Not the GitHub `canary` release: bun re-uploads
+# releases/download/canary/bun-darwin-aarch64.zip at one URL several times a
+# day. A hash pinned to it went stale within hours, so the darwin CI job, often
+# queued for longer than that, failed with a fixed-output hash mismatch even
+# right after a repin. Any `just switch` without the old zip in its store
+# failed the same way.
+#
+# npm published no canary from 2026-05-19 to 2026-08-20, which is why this pin
+# once used the GitHub asset. The updater now fails when npm's newest canary
+# is over a week old, so a stall shows in the nightly run.
+#
+# Version naming: npm names a canary after the last stable release, while the
+# binary reports the next patch. `bun --revision` on 1.4.2-canary.20260925.1
+# prints 1.4.3-canary.1+29d9638da.
 #
 # Output shape mirrors nixpkgs `bun`: $out/bin/bun plus $out/bin/bunx -> bun.
-# The bunx symlink backs the `npx = "bunx"` alias in modules/home/zsh.nix.
+# The bunx symlink backs the `npx = "bunx"` alias in modules/home/shell/zsh.nix.
 #
 # Platforms: aarch64-darwin only, matching flake.nix's supportedSystems. Add
 # x86_64-darwin / linux here AND in supportedSystems AND in build.yml's runner
-# matrix if those become targets (assets: bun-darwin-x64.zip, bun-linux-x64.zip,
-# bun-linux-aarch64.zip).
+# matrix if those become targets (npm packages: @oven/bun-darwin-x64,
+# @oven/bun-linux-x64, @oven/bun-linux-aarch64).
 
 { lib
 , stdenvNoCC
 , fetchurl
-, unzip
 }:
 
 let
-  version = "1.4.3-canary.1+b12539ce2";
+  version = "1.4.2-canary.20260925.1";
 
   sources = {
     "aarch64-darwin" = {
-      url = "https://github.com/oven-sh/bun/releases/download/canary/bun-darwin-aarch64.zip";
-      hash = "sha256-CiYo5jm3VAe2FvyKzf37xX6zDfbuEd2vfvC3giU17fM=";
+      url = "https://registry.npmjs.org/@oven/bun-darwin-aarch64/-/bun-darwin-aarch64-${version}.tgz";
+      hash = "sha256-UoYq09wLpwelR2Q4Mme6bQb9oqKyZYxt7SxFfOBAIbY=";
     };
   };
 
@@ -49,26 +62,16 @@ stdenvNoCC.mkDerivation {
 
   src = fetchurl { inherit (source) url hash; };
 
-  nativeBuildInputs = [ unzip ];
-
-  # The asset is a flat zip (bun-<target>/bun); stay at the extraction root and
-  # let installPhase locate the binary so this is robust to the inner dir name.
-  sourceRoot = ".";
-
   # Stripping would rewrite the Mach-O and break bun's code signature, so leave
   # the downloaded binary byte-for-byte intact — the same bytes `bun upgrade`
   # would have placed.
   dontStrip = true;
 
+  # The npm tarball unpacks to package/ (the default sourceRoot), which holds
+  # bin/bun beside package.json and README.md.
   installPhase = ''
     runHook preInstall
-    bin="$(find . -maxdepth 2 -name bun -type f -print -quit)"
-    test -n "$bin" || {
-      echo "bun-canary-bin: no bun binary in canary zip" >&2
-      ls -R >&2
-      exit 1
-    }
-    install -Dm755 "$bin" "$out/bin/bun"
+    install -Dm755 bin/bun "$out/bin/bun"
     ln -s bun "$out/bin/bunx"
     runHook postInstall
   '';
