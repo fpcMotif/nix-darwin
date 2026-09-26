@@ -139,7 +139,7 @@ au_is_glue_drv_name() {
     # Generated system files and activation helpers
     npm-config-hook|hm-session-vars.sh|set-environment|ca-certificates.crt|\
     martin-auto-switch|*-auto-switch|*.plist|*.json|*.md|*.sh|*.yaml|*.yml|*.zsh|*.toml|\
-    pstack-skill-*|worktrunk-marker|\
+    pstack-skill-*|worktrunk-marker|claude-settings-ownership|\
     *-config|*-settings|*-keymaps|*-models|*-report|*-report.domain|\
     *-extension-update.domain|python3-*-env|nix.conf|hm-modules-messages|\
     activate-system-start|link|cleanup|launchd|darwin-rebuild|\
