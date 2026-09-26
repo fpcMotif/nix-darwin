@@ -21,6 +21,17 @@ Use a purpose-built tool before its shell equivalent. Confirm it is exposed; use
 Bound discovery output with `head -n 20`. Narrow a lookup that exceeds ten seconds.
 Use `ax` for HTTP. Use `curl` only after `ax` lacks the capability or returns a concrete failure.
 
+## Waiting and background work
+
+Launch once, let the runner wait, inspect only for a reason, verify before reporting success.
+
+- **Launch**: Start each job once. Run short commands and immediate dependencies in the foreground. Use managed background execution when independent work can continue; keep the task ID and output path.
+- **Continue**: While a job runs, do independent work. When none remains and the runner resumes this session on completion, end the turn; dependent work stays pending. Finish required shell work before a foreground subagent or one-shot run ends.
+- **Waiting calls**: `sleep`, repeated `ps`/`pgrep`/`top`, repeated status checks, and rereads of an unfinished log are turns spent on the clock; skip them. A second timer, watcher, or agent whose purpose is waiting is the same call in disguise. A running job is not a reason to restart it.
+- **Inspect for a reason**: a user request, a specific failure or stall to diagnose, or a completion missing past its deadline. An unchanged check needs a new reason.
+- **Condition, not clock**: For readiness or an external system without a completion event, wait on the condition, not the clock. Use one bounded operation with a deadline and explicit success and failure states.
+- **Verify**: After completion, read the terminal status and the relevant output before claiming success. A launch, a partial log, or elapsed time is not a result.
+
 ## Code search
 
 The Search section of the host guide names the first tool for each case. These rules hold on every host. Stop when the evidence supports action.

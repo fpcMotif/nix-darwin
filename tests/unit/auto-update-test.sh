@@ -180,10 +180,15 @@ out=$(printf '%s\n' "$fetch_plan" | au_plan_offenders pnpm)
 [ -z "$out" ] || fail "fetched section misclassified: $out"
 
 # Generated LSP config files and hm_* option trees are glue.
-glue_plan='these 3 derivations will be built:
+glue_plan='these 8 derivations will be built:
   /nix/store/0000eeee1111ffff2222333344445555-claude-lsp.json.drv
   /nix/store/1111ffff222233334444555566667777-codex-lsp.toml.drv
-  /nix/store/22223333444455556666777788889999-hm_LibraryFonts.homemanagerfontsversion.drv'
+  /nix/store/22223333444455556666777788889999-hm_LibraryFonts.homemanagerfontsversion.drv
+  /nix/store/444455556666777788889999aaaa0000-worktrunk-init.zsh.drv
+  /nix/store/55556666777788889999aaaa00001111-omp-routing.yml.drv
+  /nix/store/6666777788889999aaaa000011112222-pstack-skill-how.drv
+  /nix/store/777788889999aaaa0000111122223333-config.toml.drv
+  /nix/store/88889999aaaa00001111222233334444-worktrunk-marker.drv'
 out=$(printf '%s\n' "$glue_plan" | au_plan_offenders)
 [ -z "$out" ] || fail "generated-config glue flagged: $out"
 
