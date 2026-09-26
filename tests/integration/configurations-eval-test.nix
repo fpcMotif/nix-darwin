@@ -335,10 +335,12 @@ let
       (helpers.assertTest "${prefix}-tmux-opens-intended-shell"
         (
           let
-            zshBin = builtins.unsafeDiscardStringContext "${pkgs.zsh}/bin/zsh";
+            # The configuration's own zsh: the test's pkgs can be another
+            # system, as when the x86_64-linux checks inspect the aarch64 VM.
+            zshBin = builtins.unsafeDiscardStringContext "${homePrograms.zsh.package}/bin/zsh";
             tmuxCfg = builtins.unsafeDiscardStringContext homePrograms.tmux.extraConfig;
           in
-          homePrograms.tmux.shell == "${pkgs.zsh}/bin/zsh"
+          homePrograms.tmux.shell == zshBin
           && lib.hasInfix "default-command \"${zshBin} -l\"" tmuxCfg
         )
         "${prefix} tmux must explicitly configure zsh as default shell and login default-command")
