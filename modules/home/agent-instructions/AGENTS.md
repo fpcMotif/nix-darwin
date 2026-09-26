@@ -4,6 +4,7 @@ User: f.
 
 - **Develop**: Before choosing a shell command, running Python or Rust, adding an environment variable, or using version control, read `~/.config/agent-guidance/development.md`.
 - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or CONTEXT.md, read `~/.config/agent-guidance/human-documents.md`.
+- **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/.config/agent-guidance/development.md`.
 
 ## Search
 

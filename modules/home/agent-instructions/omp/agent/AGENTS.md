@@ -11,6 +11,7 @@
 - **Complete**: For bulk work or blocking advisor notes, load `/Users/martinfan/.omp/agent/managed-skills/omp-completion-and-advisor/SKILL.md`.
 - **Develop**: Before choosing a shell command, running Python or Rust, adding an environment variable, or using version control, read `~/.omp/agent/guidance/development.md`.
 - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or CONTEXT.md, read `~/.omp/agent/guidance/human-documents.md`.
+- **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/.omp/agent/guidance/development.md`.
 
 ## Search
 

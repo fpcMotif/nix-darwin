@@ -129,6 +129,12 @@ in
         lib.any
           (line: lib.hasInfix "~/${host.humanDocuments.target}" line && lib.hasInfix "ADR" line)
           (lib.splitString "\n" host.startup.content);
+      # The adapter line that links development.md must name JJ workspaces, or
+      # an agent reaches for a Git worktree before it loads Parallel checkouts.
+      workspacesTriggerNamesJj = host:
+        lib.any
+          (line: lib.hasInfix "~/${host.development.target}" line && lib.hasInfix "JJ workspace" line)
+          (lib.splitString "\n" host.startup.content);
       bannedTerms = [ "gemini" "deepwiki" "mgrep" "lazygit" "deep-research" "chezmoi" ];
       requiredTools = [ "fd" "rg" "bat" "eza" "dust" "procs" "btm" "ax" "delta" "hyperfine" ];
       noModelCache = text: lib.all (term: !(lib.hasInfix term text)) [
@@ -170,6 +176,7 @@ in
     assert lib.hasInfix "## ADRs and domain documents" hosts.claude.humanDocuments.content;
     assert lib.all documentsTriggerNamesAdr
       (builtins.filter (host: host ? humanDocuments) (lib.attrValues hosts));
+    assert lib.all workspacesTriggerNamesJj (lib.attrValues hosts ++ lib.attrValues dojjoHosts);
     pkgs.runCommand "unit-agent-guides" { } ''
       touch $out
     '';
