@@ -500,6 +500,13 @@
     ".gemini/skills/labs-hero-carousel-anatomy",
     ".omp/agent/managed-skills/labs-hero-carousel-anatomy"
   ],
+  "implement-spec": [
+    ".agents/skills/implement-spec",
+    ".codex/skills/implement-spec",
+    ".gemini/skills/implement-spec",
+    ".omp/agent/skills/implement-spec",
+    ".skillshub/implement-spec"
+  ],
   "labsgoogle-measured-slides": [
     ".agents/skills/labsgoogle-measured-slides",
     ".gemini/skills/labsgoogle-measured-slides",
@@ -728,6 +735,13 @@
     ".gemini/skills/procedural-ascii-canvas-shaders",
     ".omp/agent/managed-skills/procedural-ascii-canvas-shaders"
   ],
+  "pr": [
+    ".agents/skills/pr",
+    ".codex/skills/pr",
+    ".gemini/skills/pr",
+    ".omp/agent/skills/pr",
+    ".skillshub/pr"
+  ],
   "qa": [
     ".agents/skills/qa",
     ".claude/skills/qa",
@@ -769,6 +783,13 @@
     ".codex/skills/review-animations",
     ".gemini/skills/review-animations",
     ".skillshub/review-animations"
+  ],
+  "retro": [
+    ".agents/skills/retro",
+    ".codex/skills/retro",
+    ".gemini/skills/retro",
+    ".omp/agent/skills/retro",
+    ".skillshub/retro"
   ],
   "ripwire-before-you-build": [
     ".agents/skills/ripwire-before-you-build",
