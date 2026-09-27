@@ -114,6 +114,7 @@ build: _no-sudo _daemon _no-conflicts
 # Activate the working-tree configuration (system + home-manager).
 switch: _no-sudo _daemon _no-conflicts
     @sudo darwin-rebuild switch --flake . || { just _drift-hint; exit 1; }
+    @command -v codedb >/dev/null 2>&1 && ( codedb . status >/dev/null 2>&1 & ) || true
 
 # Pull latest origin/main (rebase + autostash). Version/hash bumps that raced
 # an auto-update run resolve themselves to the newer side via the pkgnix
