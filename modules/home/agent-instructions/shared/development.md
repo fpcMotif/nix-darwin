@@ -47,15 +47,16 @@ Launch once, let the runner wait, inspect only for a reason, verify before repor
 
 ## Code search
 
-The Search section of the host guide names the first tool for each case. These rules hold on every host. Stop when the evidence supports action.
+Search with FFF and CodeDB first: one call returns a ranked, bounded answer.
 
-1. **Scope**: Search inside one repository. The `~/devv` umbrella holds 65k files of sibling checkouts.
-2. **Fallback**: Without the MCP servers, run `codedb <repo> file NAME`, `codedb <repo> explain SYM`, or `codedb <repo> context --local TASK`.
-3. **Words**: When no name is known, use ranked search to find an anchor, then inspect its symbol or file.
-4. **Exhaustive**: Use `rg` for every mention, count, or absence claim. Name the searched scope.
+1. **File name or path**: FFF `find_files` or `codedb <repo> file NAME`.
+2. **Symbol definition & callgraph**: `codedb_explain` / `codedb <repo> explain SYM`.
+3. **Task neighborhood**: `codedb_context` / `codedb <repo> context --local TASK`.
+4. **Call chain**: `codedb_callpath` / `codedb <repo> callpath FROM TO`.
+5. **Known words**: `rw --for="TERMS"` when no symbol or file name is known yet.
+6. **Exhaustive literal search**: Scoped `rg -n PAT DIR` for every mention, count, or absence claim.
 
-Ranked results alone cannot prove absence.
-
+Ranked results alone cannot prove absence. Scope all searches to the target repository.
 ## JavaScript and TypeScript
 
 - Run scripts with `bun` and executables with `bunx`.
