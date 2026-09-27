@@ -21,6 +21,19 @@ Use a purpose-built tool before its shell equivalent. Confirm it is exposed; use
 Bound discovery output with `head -n 20`. Narrow a lookup that exceeds ten seconds.
 Use `ax` for HTTP. Use `curl` only after `ax` lacks the capability or returns a concrete failure.
 
+## Text and regex routing
+
+Do not use Perl.
+
+- text / regex search: `rg`
+- structural source search or rewrite: `sg`
+- JSON: `jq`
+- file changes: Edit / Write
+- shell-native predicate: `[[ ... =~ ... ]]` when clearer
+- multi-step parsing or transformation: a script run through `uv`
+
+Do not introduce Python, Rust, or Swift merely to replace a simple `rg`, `jq`, `sg`, or shell expression.
+
 ## Waiting and background work
 
 Launch once, let the runner wait, inspect only for a reason, verify before reporting success.
