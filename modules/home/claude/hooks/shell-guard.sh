@@ -95,8 +95,8 @@ while IFS= read -r seg; do
       [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: sed is denied. A span: 'bat -pp --line-range A:B FILE'. A stream rewrite: 'rg -o PAT -r REPL' or awk. A file change: the Edit tool." ;;
     find|find[[:space:]]*)
       [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: find is denied. Use 'fd PATTERN [DIR]' (-e EXT, -t f|d, -H for hidden)." ;;
-    perl|perl[[:space:]]*|awk[[:space:]]-i*)
-      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: perl one-liners are denied. A stream rewrite: 'rg -o PAT -r REPL'; structured data: jq; a file change: the Edit tool; a rule across files: 'sg -p PAT -r REPL --lang X DIR' then -U; anything larger: a script file run with 'uv run'." ;;
+    perl|perl[[:space:]]*|*/perl|*/perl[[:space:]]*|awk[[:space:]]-i*)
+      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: perl is denied. A regex check or stream rewrite: 'rg -o PAT -r REPL'; structured data: 'jq'; structural code: 'sg'; a file change: the Edit tool; anything larger: a script file run with 'uv run'." ;;
   esac
 done <<EOF
 $(segments)
