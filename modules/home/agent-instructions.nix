@@ -4,6 +4,7 @@ let
   guideCatalog = import ./agent-instructions/guides.nix {
     inherit lib pkgs;
     workspaceBackend = config.martin.development.workspaceBackend;
+    inherit (config.martin.development) docLock;
   };
   modelRouting = import ../shared/agent-model-routing.nix { inherit lib; };
   toml = pkgs.formats.toml { };

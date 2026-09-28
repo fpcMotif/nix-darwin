@@ -92,3 +92,11 @@ Ranked results alone cannot prove absence.
 - Read the diff before every commit. Use `type(scope): message`.
 - Use `gh` for GitHub when no host-specific GitHub tool applies.
 - Inspect diff shape first, then read path-scoped changes.
+
+## Git hooks
+
+- **hk**: Run Git hooks and project linters through hk. Its hooks are installed once for every repository, so `hk install` is already done.
+- **Opt in**: A repository runs hooks once it has `hk.pkl` at its root. When a task sets up linting, formatting, or hooks, run `hk init`, review its steps, and commit `hk.pkl`. In a project with `mise.toml`, pin hk there with `mise use hk`.
+- **Check**: `hk check` covers changed files; `hk check --all` covers the tree. `hk fix` applies fixes without staging them.
+- **JJ**: `jj commit` runs no Git hooks. In a Jujutsu workspace, run `hk check` before `jj commit`.
+- **Skip**: `HK=0` skips every hk hook for one command. Use it only when the user asks.

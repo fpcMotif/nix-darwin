@@ -86,6 +86,10 @@ in
         inherit lib pkgs;
         workspaceBackend = "dojjo";
       }).hosts;
+      unlockedHosts = (import ../modules/home/agent-instructions/guides.nix {
+        inherit lib pkgs;
+        docLock = false;
+      }).hosts;
       # Each backend's guide names only its own isolation commands.
       workspaceGuideFits = backendHosts: required: forbidden:
         lib.all
@@ -111,10 +115,12 @@ in
         "## Code search"
         "## Python"
         "## Version control"
+        "## Git hooks"
         "## Parallel checkouts"
         "## Code quality"
         "## Current-state integrity"
         "## Writing"
+        "## Docs lock"
       ];
       onceSections = [
         "## Working contract"
@@ -122,6 +128,7 @@ in
         "## Current-state integrity"
         "## Command routing"
         "## Parallel checkouts"
+        "## Docs lock"
       ];
       # The adapter line that links human-documents.md must name ADRs, or an
       # agent writing one never loads the ADR rules.
@@ -177,12 +184,20 @@ in
     assert lib.all documentsTriggerNamesAdr
       (builtins.filter (host: host ? humanDocuments) (lib.attrValues hosts));
     assert lib.all workspacesTriggerNamesJj (lib.attrValues hosts ++ lib.attrValues dojjoHosts);
+    assert lib.all
+      (name: hosts.${name}.startup.content
+        == unlockedHosts.${name}.startup.content + "\n" + builtins.readFile ../modules/home/agent-instructions/shared/doc-lock.md)
+      (builtins.attrNames hosts);
     pkgs.runCommand "unit-agent-guides" { } ''
       touch $out
     '';
   unit-shell-guard = pkgs.runCommand "unit-shell-guard" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.gawk ]; } ''
     bash ${../modules/home/claude/hooks/shell-guard-test.sh} \
       ${../modules/home/claude/hooks/shell-guard.sh}
+    touch $out
+  '';
+  unit-doc-lock = pkgs.runCommand "unit-doc-lock" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.git pkgs.coreutils ]; } ''
+    bash ${../modules/home/claude/hooks/doc-lock-test.sh} ${lib.getExe pkgs.martin.doc-lock}
     touch $out
   '';
   unit-edit-batch-nudge = pkgs.runCommand "unit-edit-batch-nudge" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnused pkgs.coreutils ]; } ''

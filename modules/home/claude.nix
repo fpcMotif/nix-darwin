@@ -20,7 +20,7 @@ let
   mkSkill = from: path: packages: { inherit from path packages; };
 
   guideCatalog = import ./agent-instructions/guides.nix {
-    inherit lib pkgs;
+    inherit lib pkgs docLock;
     workspaceBackend = config.martin.development.workspaceBackend;
   };
 
@@ -472,7 +472,7 @@ let
   effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 
   # pstack: see modules/home/claude/pstack.nix (shared with its hygiene test).
-  pstack = import ./claude/pstack.nix { inherit lib pkgs inputs mkSource mkSkill; };
+  pstack = import ./claude/pstack.nix { inherit lib pkgs inputs mkSource mkSkill docLock; };
   inherit (pstack) pstackSources pstackExplicit pstackAgentFile pstackModelsSheet pstackDrvs;
 
   # There is deliberately no `in-progress/` source any more. It existed to pull
@@ -522,7 +522,13 @@ let
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/search-guard.sh"; }
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/shell-guard.sh"; }
     { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
-  ] ++ worktrunkMarkers.add;
+  ] ++ worktrunkMarkers.add ++ lib.optionals docLock docLockHooks;
+
+  inherit (config.martin.development) docLock;
+  docLockHooks = [
+    { event = "UserPromptSubmit"; matcher = ""; command = "$HOME/.claude/hooks/doc-lock.sh grant"; }
+    { event = "PreToolUse"; matcher = "Edit|Write|MultiEdit"; command = "$HOME/.claude/hooks/doc-lock.sh edit"; }
+  ];
 
   # Hook list and backend selection: claude/worktrunk-markers.nix.
   # Claude's own worktree creation stays native on purpose: a WorktreeCreate
@@ -624,7 +630,7 @@ let
     ++ lib.mapAttrsToList (key: value: { path = [ "worktree" key ]; inherit value; }) claudeWorktreeSettings;
     default = lib.mapAttrsToList (key: value: { path = [ "env" key ]; inherit value; }) claudeSeedEnv;
     add = claudeGuardHooks;
-    inherit (worktrunkMarkers) remove;
+    remove = worktrunkMarkers.remove ++ lib.optionals (!docLock) docLockHooks;
   };
   claudeSettingsOwnership = import ./claude/settings-ownership.nix {
     inherit pkgs;
@@ -726,6 +732,9 @@ in
     } // localSkillFiles // pstackSkillFiles
     // lib.optionalAttrs config.programs.worktrunk.enable {
       ".claude/hooks/worktrunk-marker.sh".source = lib.getExe worktrunkMarker;
+    }
+    // lib.optionalAttrs docLock {
+      ".claude/hooks/doc-lock.sh".source = lib.getExe pkgs.martin.doc-lock;
     };
 
   # Git-flow style automation was removed from the curated sources instead of

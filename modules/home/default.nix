@@ -16,6 +16,8 @@
     ./obsidian.nix
     ./tmux.nix
     ./git.nix
+    ./hk.nix
+    ./doc-lock.nix
     ./jujutsu.nix
     ./workspace-backend.nix
     ./worktrunk.nix

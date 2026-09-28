@@ -62,9 +62,11 @@ final: _prev:
     squirrel = final.callPackage ./squirrel.nix { };
 
     bun-canary-bin = final.callPackage ./bun-canary-bin.nix { };
+    doc-lock = final.callPackage ./doc-lock.nix { };
     dojjo-bin = final.callPackage ./dojjo-bin.nix { };
     drafts-mcp-server = final.callPackage ./drafts-mcp-server.nix { };
     fff-mcp = final.callPackage ./fff-mcp.nix { };
+    hk-bin = final.callPackage ./hk-bin.nix { };
     hunk-bin = final.callPackage ./hunk-bin.nix { };
     nub = final.callPackage ./nub.nix { };
     oh-my-pi = final.callPackage ./oh-my-pi.nix { };

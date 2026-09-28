@@ -3,7 +3,7 @@
 # tests/unit/pstack-hygiene-test.nix, which asserts on the same rewrite
 # results, so a port sync that moves a transform anchor fails the build.
 # Pure string work on the pinned input; nothing here is realized at eval.
-{ lib, pkgs, inputs, mkSource, mkSkill }:
+{ lib, pkgs, inputs, mkSource, mkSkill, docLock ? true }:
 
 let
   # pstack (Lauren Tan's Cursor plugin, cursor/plugins/pstack) through
@@ -83,6 +83,10 @@ let
     This skill lives in a read-only Nix store, so `scripts/` cannot install its own `node_modules`. Before the first `orch` or `watch-pr` call, copy it somewhere writable: `cp -RL ~/.claude/skills/poteto-mode/scripts /tmp/pstack-scripts && cd /tmp/pstack-scripts && bun install`, then run the tools from there.
   '';
   pstackTddTrigger = "- Test-first work, or a bug with a cheap local test target → the **tdd** skill (`/tdd`). It is the mattpocock skill installed here: one red-green slice at a time, tests at seams, and the failing run quoted before the fix.\n";
+  pstackCommentRule =
+    if docLock
+    then "Comments change only in docs work, per the Docs lock in CLAUDE.md. There, keep a comment only for a non-obvious *why* the code can't show."
+    else "Keep a comment only for a non-obvious *why* the code can't show.";
   pstackModelsIntro = "Role defaults. The Agent tool's `model` parameter takes an alias: `fable` is Fable 5.1, `opus` is Opus 5, `sonnet` is Sonnet 5, `haiku` is Haiku 4.5. `~/.claude/pstack-models.md` is installed by nix with every role and overrides each line below; change a model there, not here.";
   pstackTransform = id: { original, dependencies }:
     let
@@ -102,7 +106,10 @@ let
           "- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`."
           "Read the leaf skill in full for any principle you apply. Each entry names when it applies."
           "Cite only principles whose leaf SKILL.md you read this session."
-          "Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in `~/.claude/pstack-models.md` overrides each at runtime; see `/setup-pstack`."
+          "Keep a comment only for a non-obvious *why* the code can't show."
+          "Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in the `pstack-models.md` override sheet overrides each at runtime; `/setup-pstack` writes it and lists its path per runtime."
+          "`/setup-pstack` writes it and lists its path per runtime"
+          "(`/setup-pstack` lists its path per runtime)"
           "`/setup-pstack`"
           "claude-opus-5"
           "claude-opus-4-8"
@@ -129,7 +136,10 @@ let
           "- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`. A bug that resists a first look builds its red loop with the **diagnosing-bugs** skill first, then the regression test with **tdd**."
           "Every **principle-…** id below is a section of the **pstack-principles** skill. Read that section in full for any principle you apply. Each entry names when it applies."
           "Cite only principles whose section you read this session."
+          pstackCommentRule
           pstackModelsIntro
+          "nix installs it at `~/.claude/pstack-models.md`"
+          "(nix installs it at `~/.claude/pstack-models.md`)"
           "`~/.claude/pstack-models.md`"
           "opus"
           "opus"
