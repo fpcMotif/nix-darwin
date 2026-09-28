@@ -20,13 +20,14 @@ cd "$(au_repo_root)"
 latest=$(au_latest_github_release openai/codex '^rust-v' prerelease)
 
 assets=()
-for asset in \
-  codex-aarch64-apple-darwin \
-  codex-x86_64-apple-darwin \
-  codex-aarch64-unknown-linux-musl \
-  codex-x86_64-unknown-linux-musl
+for triple in \
+  aarch64-apple-darwin \
+  x86_64-apple-darwin \
+  aarch64-unknown-linux-musl \
+  x86_64-unknown-linux-musl
 do
-  assets+=(--asset "https://github.com/openai/codex/releases/download/rust-v${latest}/${asset}.tar.gz" "asset = \"${asset}\";")
+  assets+=(--asset "https://github.com/openai/codex/releases/download/rust-v${latest}/codex-${triple}.tar.gz" "asset = \"codex-${triple}\";")
+  assets+=(--asset "https://github.com/openai/codex/releases/download/rust-v${latest}/codex-code-mode-host-${triple}.tar.gz" "host.asset = \"codex-code-mode-host-${triple}\";")
 done
 
 au_bump_release --name codex --file pkgs/codex.nix --version "$latest" \
