@@ -335,25 +335,22 @@ Default policy: **pure Nix first.**
 - **GUI apps with native updaters / privileged helpers** — Google Drive, Raycast, Dropbox, BetterMouse, BetterDisplay — are installed natively via GUI / self-updater and deliberately not Nix-vendored (see `docs/adr/0005`, `0011`, `0012`, `0013`).
 - **Agent / dev tooling** — Amp, Pi, Oh My Pi — packaged in `pkgs/` as custom derivations.
 
-A tool should never be installed simultaneously through Nix and a brew variant unless it is a temporary migration step; record the migration intent in the same commit if so.
+Avoid installing a tool through both Nix and Homebrew, except during a documented migration.
 
 ### Pinning policy for vendored Mac apps
 
 Fixed-output derivations under `pkgs.martin.*` must point at **immutable bytes**, not a "latest" alias, so CI does not break every time upstream rotates a release. Each derivation pins both `version = "X.Y.Z"` and a versioned URL — bumps become explicit reviewable changes, and a future hash mismatch signals real upstream tampering rather than a routine release.
-## Homebrew family policy
+## Homebrew policy
 
-Brew-family tools are real Darwin options but stay dormant by default:
+Homebrew is an opt-in Darwin option and stays disabled by default:
 
 ```nix
 martin.brew.homebrew.enable = false;
-martin.brew.zerobrew.enable = false;
-martin.brew.zigbrew.enable  = false;
 ```
 
 - Target Homebrew usage is effectively zero.
 - Prefer Nix / custom derivations for declarative apps.
 - Homebrew is reserved as an emergency / ad-hoc scaffold.
-- `zerobrew` and `zigbrew` are documentation-only scaffolds for now.
 - **Never** use Homebrew `cleanup = "zap"` unless every cask of value is declaratively owned.
 
 If `martin.brew.homebrew.enable = true` is set explicitly, nix-darwin's Homebrew integration uses `onActivation.cleanup = "none"` to avoid destructive cleanup.
@@ -527,7 +524,7 @@ Borrow patterns selectively. Do not copy Linux-specific NixOS concepts into nix-
 - `modules/home` is cross-platform: macOS-only paths (`/Applications`, `~/Library`) and tools (`pbcopy`, `xcrun`, `darwin-rebuild`, OrbStack) must sit behind `pkgs.stdenv.isDarwin`. The `integration-home-linux-purity` check fails CI on regressions.
 - Home Manager activation blocks that write or delete files must run after `writeBoundary`, be idempotent, and respect `DRY_RUN` without mutating the filesystem.
 - Keep Home Manager from clobbering unmanaged config files without explicit migration intent (each new `programs.*` module must ship the activation-guard pattern from `modules/home/prompt.nix`).
-- Keep brew variants disabled unless explicitly testing an escape hatch.
+- Keep Homebrew disabled unless explicitly testing an escape hatch.
 - Treat sample repos as references, never as active configuration.
 - Adding an agent-skills target enables rsync-with-delete on that directory; enable deliberately.
 - The agent-skill bundle is shared by nine picker dirs; only Claude Code has a plugin system. Where an installed Claude Code plugin supplies the same id as the bundle, de-duplicate **on the Claude surface only** — `skillOverrides: "off"` in `~/.claude/settings.json`, which no other agent reads. Never de-duplicate by dropping the id from the bundle: Codex, Droid, OpenCode, Crush and Pi have no plugin to fall back on. A plugin's *own* skill cannot be hidden this way (Claude Code ignores `skillOverrides` for `source: "plugin"`); un-listing one means pruning it from the cached plugin manifest every switch, backed by a `permissions.deny` rule for the window after a plugin update. Verify with `just verify-skills`.
@@ -539,7 +536,7 @@ Update this doc in the same PR when you:
 - change `lib/mkSystem.nix` semantics,
 - add or remove a flake output,
 - add or retire a host or module directory,
-- change the Homebrew/zerobrew/zigbrew default,
+- change the Homebrew default,
 - change the agent-skills target set or policy,
 - add CI, formatter, or secrets management,
 - promote Omakub or any inactive scaffold to active.

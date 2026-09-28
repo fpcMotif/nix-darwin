@@ -7,7 +7,7 @@
 Usage: uv run search-routing-trial.py [--runs 2] [--model sonnet] [--workers 4] [--out results.json]
 
 Arm "base": fff and codedb registered without alwaysLoad, no Search section beyond the installed CLAUDE.md.
-Arm "routes": fff and codedb with alwaysLoad, plus the Search section of modules/home/claude/CLAUDE.md
+Arm "routes": fff and codedb with alwaysLoad, plus the Search section of modules/home/claude/claude-adapter.md
 appended to the system prompt. Both arms keep the user's settings and hooks. Each run answers a read-only
 question in a real repository; the census is the ordered tool calls and whether the answer names the target.
 """
@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-CLAUDE_MD = HERE.parent / "CLAUDE.md"
+CLAUDE_ADAPTER = HERE.parent / "claude-adapter.md"
 REPO = Path.home() / "devv/outlook-feishu-bridge-pr427"
 FFF = "/etc/profiles/per-user/martinfan/bin/fff-mcp"
 CODEDB = str(Path.home() / "bin/codedb")
@@ -63,7 +63,7 @@ def mcp_config(always_load: bool) -> dict:
 
 
 def search_section() -> str:
-    text = CLAUDE_MD.read_text()
+    text = CLAUDE_ADAPTER.read_text()
     return text[text.index("## Search") :]
 
 

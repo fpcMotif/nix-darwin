@@ -1,6 +1,6 @@
 ---
 name: deterministic-motion-screenshot-bench
-description: "Build deterministic frozen-time screenshot benchmarks for animated web apps (CSS/WAAPI + rAF + GSAP): virtual clock injection, population-stable animation pinning, virtual-frame gesture spacing, double-capture nondeterminism tripwire."
+description: "Build deterministic frozen-time screenshot benchmarks for animated web apps (CSS/WAAPI + rAF + GSAP): virtual clock injection, population-stable animation pinning, virtual-frame gesture spacing, double-capture nondeterminism check."
 ---
 
 # Deterministic screenshot benchmark for animated web apps

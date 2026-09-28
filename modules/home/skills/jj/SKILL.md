@@ -26,6 +26,11 @@ already produce syntax-highlighted hunks.
 
 ## Core loop
 
+Clone with `jj git clone URL PATH`. Choose the destination explicitly.
+Keep unfamiliar repositories outside automatically trusted direnv project roots.
+Use `jj workspace add --name NAME ../REPO.NAME` for parallel JJ work.
+Reserve Worktrunk for Git-only checkouts; Git worktrees are not JJ workspaces.
+
 | Task | Command |
 |------|---------|
 | What changed in the working copy | `jj status` (alias `jj st`) |
@@ -73,6 +78,10 @@ hunks.
 
 ## Interactive review in Hunk
 
+Use `jj diff` for changes and Hunk for the human walkthrough.
+The shared development guide owns optional call-flow analysis and review evidence.
+Load Hunk's bundled skill before driving sessions. Preserve the user's existing comments.
+
 `hunk` is the TUI the user reviews agent changes in. It detects `.jj/`, so
 `hunk diff [revset]` and `hunk show <rev>` take revsets. Steer the open window
 from this terminal with `hunk session ...`; run `hunk skill path` and load that
@@ -108,9 +117,8 @@ ranges (the 0.22 beta folds it into `hunk log`).
 
 When co-located with git (`.git` present), jj and git share the same commits:
 - Initialize an existing git repo with `jj git init --colocate`.
-- In colocated workspaces, `jj git export` is automatic (no-op). Commits made in jj
-  immediately reflect in git history; run `git checkout <branch>` if git's HEAD is
-  detached and you want git tools to track the branch.
+- In colocated workspaces, refs are exported automatically. Keep Git HEAD detached;
+  give Git-reading tools explicit bookmarks or resolved commit hashes.
 - When rewriting/splitting a branch or updating a bookmark to a non-descendant commit,
   pass `--allow-backwards` to `jj bookmark move`.
 - Run `jj git import` if you used a `git` command directly so jj sees external changes.
@@ -143,7 +151,7 @@ Common: `jj log -r 'trunk()..@'`, `jj diff -r 'description("WIP")'`.
 - Inspect with `jj status` + `jj diff` before changing anything.
 - **Colocated contract** (`.git` beside `.jj`): git HEAD is `@-`, so read-only
   git sees the current change (`git diff HEAD` equals `jj diff`), and tools
-  that read git (code-review, ripwire, calldiff, hunk) work as they are. Git
+  that read git (code-review, calldiff, hunk) work as they are. Git
   writes (`checkout`, `add`, `stash`, `commit`, `branch`) desync the two: the
   next jj command resets the working copy onto the new HEAD and abandons the
   old working-copy commit.

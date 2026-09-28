@@ -62,6 +62,7 @@ final: _prev:
     squirrel = final.callPackage ./squirrel.nix { };
 
     bun-canary-bin = final.callPackage ./bun-canary-bin.nix { };
+    calldiff = final.callPackage ./calldiff.nix { };
     doc-lock = final.callPackage ./doc-lock.nix { };
     doc-lock-extension = final.replaceVars ../modules/home/doc-lock/agent-extension.ts {
       docLock = final.lib.getExe final.martin.doc-lock;

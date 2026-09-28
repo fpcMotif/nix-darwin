@@ -23,25 +23,25 @@ BODY=$(printf '%s\n' "$CMD" | awk '
 # Separators count only outside quotes, so `rg "ls|find"` stays one segment; $( and ` still open a
 # command inside double quotes. Newlines inside quotes become spaces; a # comment runs to end of line.
 segments() {
-  printf '%s\n' "$BODY" | awk -v q="'" '
+  printf '%s\n' "$BODY" | awk -v q="'" -v blank="${1:-}" '
     { s = s $0 "\n" }
     END {
       n = length(s); d = 0; st[0] = "N"; prev = "\n"
       for (i = 1; i <= n; i++) {
         c = substr(s, i, 1); c2 = substr(s, i, 2)
         if (st[d] == "D") {
-          if (c == "\\") { printf "%s", c2; i++ }
+          if (c == "\\") { printf "%s", (blank ? "__" : c2); i++ }
           else if (c == "\"") { d--; printf "%s", c }
           else if (c2 == "$(") { st[++d] = "P"; printf "\n"; i++ }
           else if (c == "`") { st[++d] = "B"; printf "\n" }
-          else printf "%s", (c == "\n" ? " " : c)
+          else printf "%s", (blank ? "_" : c == "\n" ? " " : c)
           continue
         }
-        if (c == "\\") { printf "%s", c2; i++ }
+        if (c == "\\") { printf "%s", (blank ? "\\_" : c2); i++ }
         else if (c == q || c2 == "$" q) {
           j = i + (c == q ? 1 : 2)
           while (j <= n && substr(s, j, 1) != q) j += (c != q && substr(s, j, 1) == "\\") ? 2 : 1
-          t = substr(s, i, j - i + 1); gsub(/\n/, " ", t); printf "%s", t; i = j
+          t = substr(s, i, j - i + 1); gsub(/\n/, " ", t); if (blank) gsub(/./, "_", t); printf "%s", t; i = j
         }
         else if (c == "\"") { st[++d] = "D"; printf "%s", c }
         else if (c == "#" && prev ~ /[[:space:];&|(`]/) { while (i < n && substr(s, i + 1, 1) != "\n") i++ }
@@ -78,8 +78,7 @@ if [ -z "${EDIT_GUARD_OFF:-}" ]; then
   fi
 
   # 4. echo/printf of literal text into a file (> or >>): the model authored the text, so Write or Edit carries it.
-  if printf '%s' "$BODY" | grep -Eq '(^|[;&|(`[:space:]])(echo|printf)[[:space:]][^|;&]*>>?[[:space:]]*[^&[:space:]>/][^[:space:]]*' \
-     || printf '%s' "$BODY" | grep -Eq '(^|[;&|(`[:space:]])(echo|printf)[[:space:]][^|;&]*>>?[[:space:]]*/(Users|home|private|tmp|var|opt|etc)/'; then
+  if segments blank-quoted | grep -Eq '(^|[&[:space:]])(echo|printf)[[:space:]][^&]*>>?[[:space:]]*([^&[:space:]>/]|/(Users|home|private|tmp|var|opt|etc)/)'; then
     deny "shell-guard: append with the Edit tool (old_string = the current last line, new_string = that line plus the addition) or create the file with the Write tool. echo/printf into a file is denied."
   fi
 fi

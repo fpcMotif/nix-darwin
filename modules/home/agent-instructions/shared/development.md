@@ -93,6 +93,18 @@ Ranked results alone cannot prove absence.
 - Use `gh` for GitHub when no host-specific GitHub tool applies.
 - Inspect diff shape first, then read path-scoped changes.
 
+## Human review evidence
+
+1. Review the native diff. Use Hunk for a guided walkthrough; load its skill with `hunk skill path`.
+2. Explain intent and point to important lines. Add before/after screenshots or actual CLI output when behavior changes.
+3. Use `calldiff diff BASE TARGET` only when call relationships change. The wrapper pins `bunx calldiff@0.5.0`.
+4. Give Git-reading tools commit hashes. Resolve JJ revisions with `jj log --no-graph -r REV -T commit_id`.
+5. Keep views and evidence on the same revisions. Recheck hashes after edits; regenerate evidence when they differ.
+6. Report executed checks and limitations. Empty call graphs do not establish correctness; preserve human review notes.
+7. Use `better-github-skill` with explicit PR numbers and `-R owner/repo` under JJ. Posting requires user authorization.
+
+Calldiff needs network access on first use. Its CLI version is pinned; Bun resolves transitive dependencies into its cache.
+
 ## Git hooks
 
 - **hk**: Run Git hooks and project linters through hk. Its hooks are installed once for every repository, so `hk install` is already done.

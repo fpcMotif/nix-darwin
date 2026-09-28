@@ -1,11 +1,6 @@
-# Code search routing: tool semantics, wrappers, traps
+# Code search routing: tool semantics and traps
 
 Reference behind the Search section of `~/.claude/CLAUDE.md`. That section names the tool per branch; this file carries what only some branches need. Numbers and failure modes measured 2026-09: `~/.claude/search-eval.md`. Dated output traces of each route: `~/.claude/references/search-routing-examples.md`.
-
-## Wrappers on PATH
-
-- `rw`: ripwire with node_modules excluded and legends stripped. `rw --verb=...` inside `<repo>`, `rw <repo> --verb=...` elsewhere.
-- `rw --for="TERMS"` returns ranked signatures with caller (`in=`) and test (`tested=`) counts, then the doc sections that mention them. Outline the rank-1 file next.
 
 ## MCP or CLI
 
@@ -25,16 +20,13 @@ For completeness checks, account for ignore rules, configuration, result limits,
 
 ## Traps
 
-- codedb's enclosing-function labels are wrong inside loops and lambdas; for the enclosing function or the flags a caller tests, `rw --callers=SYM`.
-- `rw --uses=CONST` returns 0 for TypeScript constants; use `rg -w`.
-- `rw --callers` misses calls inside anonymous callbacks such as test `it()` blocks.
+- codedb's enclosing-function labels are wrong inside loops and lambdas; read the call-site span to confirm the enclosing function.
 - codedb skips node_modules and files over 2 MiB; rg covers them.
 - `codedb word` is uncapped (27k lines for `Config`); a hook denies it without a pipe to head.
 - The shell `grep` binary as a command is denied by a hook; `| grep` as a filter is fine.
 - `rg -r` means `--replace`; never pass it.
 - `~/devv` itself is 65k files of sibling checkouts; a hook denies rg there without a sub-path.
 - A client-side limit is often mirrored by a differently named server constant joined only by a comment: after locating one, `rg -w` the identifier its comment names.
-- `rw --edit-check=SYM` lists callers broken by a new arity. `rw --test-gate` exit 4 names tests to run and does not run them. `rw --quality-delta` exit 2 means a pre-existing symbol got materially worse.
 
 ## Structural patterns
 

@@ -11,6 +11,5 @@
 - **Condition**: For readiness without a completion event, arm `Monitor` with a bounded until-loop. Foreground `sleep` is blocked.
 - **Lifetime**: A foreground subagent's shell job stops at its final response. Under `claude -p`, background jobs end about five seconds after the final result. Finish required shell work before either point.
 - **Search**: The Search section of `~/.claude/CLAUDE.md` names the tool for each case.
-- **Words**: Use `rw --for="TERMS"` when no file, identifier, or symbol name is known yet.
 - **Spans**: An `rg` line hit drops an item's wrapped lines. Read the span it lands in.
-- **Review**: Use `code-review`, `ripwire-change-check`, `better-github-skill`, and `hunk` for their named branches.
+- **Review**: Use `code-review`, `better-github-skill`, and `hunk` for their named branches.

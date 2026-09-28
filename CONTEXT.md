@@ -77,7 +77,7 @@ A *discovered* skill exists in the catalog (its source is wired up) but is not p
 Rejected workflow skills should be removed from source filters instead of left discovered-but-disabled.
 
 **Transformed skill**:
-A skill sourced from a flake input whose `SKILL.md` is rewritten at build time by a Nix `transform` (pure string replacement on the pinned text) so plugin-only or foreign-runtime spellings resolve here; every other file in the skill ships verbatim. pstack is the instance (ADR-0014, `modules/home/claude/pstack.nix`); `unit-pstack-hygiene` is its tripwire. _Avoid_: fork, patch (nothing is vendored; the input stays pinned and bumps nightly).
+A skill sourced from a flake input whose `SKILL.md` is rewritten at build time by a Nix `transform` (pure string replacement on the pinned text) so plugin-only or foreign-runtime spellings resolve here; every other file in the skill ships verbatim. pstack is the instance (ADR-0014, `modules/home/claude/pstack.nix`); `unit-pstack-hygiene` is its regression test. _Avoid_: fork, patch (nothing is vendored; the input stays pinned and bumps nightly).
 
 **Alias section**:
 The "Names used in the playbooks" section a transformed router skill carries so that names in files the module cannot rewrite (playbooks, references) resolve to installed skills in one place. Single source for that mapping; the trigger-line rewrites in the transform follow it.
@@ -141,11 +141,11 @@ _Avoid_: assuming API-only model access implies an installed CLI for that provid
 ### Version control & review
 
 **Review host**:
-The one proactive skill that owns "review this", a branch, a PR, or "review since X": mattpocock's `code-review`, installed verbatim (plugin copy on Claude, bundle copy for the other agents). Everything else in the area is a read adapter it composes with (better-github-skill for PR state, threads, and CI; ripwire-change-check for the still-open change) or a user-invoked writer (`/code-review` posts). Routing lives in the Git section of CLAUDE.md, never in the host (ADR-0015).
+The one proactive skill that owns "review this", a branch, a PR, or "review since X": mattpocock's `code-review`, installed verbatim (plugin copy on Claude, bundle copy for the other agents). Everything else in the area is a read adapter it composes with (better-github-skill for PR state, threads, and CI) or a user-invoked writer (`/code-review` posts). Routing lives in the Git section of CLAUDE.md, never in the host (ADR-0015).
 _Avoid_: a second proactive review skill (the dotfiles-pi `review` was retired for this), or editing the host by fork, transform, or upstream request.
 
 **Colocated contract**:
-What a git-reading tool may do in a repo with both `.git` and `.jj`: git HEAD is `@-`, so read-only git sees the current change and code-review, ripwire, calldiff, and hunk work unchanged; git writes (checkout, add, stash, commit, branch) desync the two until the next jj command resets the working copy. Stated once, in the jj skill.
+What a git-reading tool may do in a repo with both `.git` and `.jj`: git HEAD is `@-`, so read-only git sees the current change and code-review, calldiff, and hunk work unchanged; git writes (checkout, add, stash, commit, branch) desync the two until the next jj command resets the working copy. Stated once, in the jj skill.
 _Avoid_: "no git in jj repos" (too strict; it excludes every git-reading review tool), or passing a jj revset where a git-reading tool wants a ref (use the bookmark name).
 
 **Workspace backend**:

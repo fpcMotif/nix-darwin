@@ -80,7 +80,7 @@ let
     claude = mkHost {
       name = "claude";
       startupTarget = ".claude/CLAUDE.md";
-      startupAdapter = ../claude/CLAUDE.md;
+      startupAdapter = ../claude/claude-adapter.md;
       developmentTarget = ".claude/guidance/development.md";
       developmentAdapter = ../claude/development.md;
       humanDocumentsTarget = ".claude/guidance/human-documents.md";

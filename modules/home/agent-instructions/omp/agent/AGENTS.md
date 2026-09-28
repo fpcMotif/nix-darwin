@@ -23,7 +23,6 @@ Search with the `codedb` CLI first: one call returns a ranked, bounded answer.
 - **Call chain**: `codedb <repo> callpath FROM TO`.
 - **Task**: `codedb <repo> context --local TASK`.
 - **Identifier**: Native `grep` for one bare name; `lsp` for references CodeDB misses.
-- **Words**: `rw --for="TERMS"` when no name is known yet.
 - **Folder**: `eza --tree -L 2 DIR`.
 - **Trust**: Act on a result that answers the question.
 - **Coverage**: Scoped `rg` confirms a full listing, count, or absence. CodeDB skips node_modules and files over 2 MiB.

@@ -65,7 +65,6 @@
     remove_legacy_path "$HOME/.claude/hooks/read-guard.sh"
     remove_legacy_path "$HOME/.claude/hooks/search-warmup.sh"
     remove_legacy_path "$HOME/.local/bin/tg"
-    remove_legacy_path "$HOME/.local/bin/rw"
     remove_legacy_path "$HOME/.config/ripgrep/agent-config"
     # tgrep was retired 2026-09-14: a hand-installed binary plus a 43 GB index cache.
     remove_legacy_path "$HOME/.local/bin/tgrep"

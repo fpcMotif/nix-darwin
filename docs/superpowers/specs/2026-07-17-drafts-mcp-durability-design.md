@@ -40,9 +40,9 @@ Three layers, shipped in order A → B → C even within the approved full scope
   5. result cap (`DRAFTS_MCP_MAX_RESULTS`, default 200)
   6. NaN/ISO-date guard in `isoDateToAppleScriptDate`
   7. exit on stdin EOF/close (orphan-process fix)
-  8. version string `1.0.5` → `${version}` (tripwire: build fails if the literal moves)
+  8. version string `1.0.5` → `${version}` (anchor check: build fails if the literal moves)
 - Wrapper sets env defaults; `meta.mainProgram = "drafts-mcp-server"`.
-- **Tripwire principle:** an upstream bump that invalidates any patch is a red `nix build`, never a silently unpatched server.
+- **Fail-loud principle:** an upstream bump that invalidates any patch is a red `nix build`, never a silently unpatched server.
 
 ### 4.2 Defaults
 
@@ -112,12 +112,12 @@ Design:
 | `AppleScript execution failed: unknown error` | osascript died, empty stderr | ~25s | app mid-reap; retry once |
 | `AppleScript timed out after Nms` | watchdog fired | 20s | do not retry bulk; check app state |
 | `MCP error -32000: Connection closed` | server process died | any | reconnect session; health probe territory |
-| `The variable NaN is not defined. (-2753)` | pre-guard date bug | 0s | fixed by patch 6; appearance = tripwire failure |
+| `The variable NaN is not defined. (-2753)` | pre-guard date bug | 0s | fixed by patch 6; appearance = anchor check failure |
 
 ## 8. Verification plan
 
 1. `nix build .#drafts-mcp-server` green; run binary directly: stdio handshake returns patched version string.
-2. Tripwire test: sabotage one anchor string in a vendored copy → build must fail.
+2. Anchor test: sabotage one anchor string in a vendored copy → build must fail.
 3. `darwin-rebuild switch` → `defaults read` shows both keys; `~/.claude.json` and codex config show store paths.
 4. Kill-test: quit Drafts, call a tool → relaunch + success; verify `-609`/timeout mapping fires the hook.
 5. Transport-death test: kill the server mid-session → does `PostToolUseFailure` fire? (decides §5.2 open item).

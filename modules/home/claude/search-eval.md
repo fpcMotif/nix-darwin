@@ -1,18 +1,18 @@
 # Code search tier evaluation (2026-09-08, M4 Pro, ~/devv)
 
-Evidence behind the Search section of `~/.claude/CLAUDE.md`. tgrep and its `tg` wrapper were removed on 2026-09-14; their rows below are historical measurements, and `rg` is the exhaustive route. Tools: codedb 0.2.5854, fff-mcp 0.10.0 (not 0.10.5), tgrep 1.0.4, ripwire 0.5.0, ripgrep 15.2.0. Tree: 65,163 files rg walks (18,924 in node_modules; ~/devv is not a git repo), 59,527 text files tgrep indexes, 16,375 files codedb indexes (skips node_modules and files > 2 MiB).
+Evidence behind the Search section of `~/.claude/CLAUDE.md`. tgrep and its `tg` wrapper were removed on 2026-09-14; their rows below are historical measurements, and `rg` is the exhaustive route. Tools: codedb 0.2.5854, fff-mcp 0.10.0 (not 0.10.5), tgrep 1.0.4, ripgrep 15.2.0. Tree: 65,163 files rg walks (18,924 in node_modules; ~/devv is not a git repo), 59,527 text files tgrep indexes, 16,375 files codedb indexes (skips node_modules and files > 2 MiB).
 
 ## Latency (hyperfine mean, warm cache, whole ~/devv)
 
-| Query | codedb CLI | fff MCP | tgrep (indexed) | rg (14 threads) | rg -j6 | ripwire --grep |
-|---|---|---|---|---|---|---|
-| Config (-w) | word 4.1 ms, 27,064 hits, 1.7 MB uncapped | ~40 ms, "20/51 shown" (true 24,528 lines) | 185 ms | 1,752 ms | 819 ms | 4,430 ms |
-| TODO | search 2.4 ms, 50 of 1,238 | | 80 ms | 2,037 ms | | |
-| export interface | search 2.4 ms, 50 of 9,539 | "20/51 shown" | 156 ms | 1,830 ms | | |
-| WeComError (absent) | 2.3 ms, 0 | 69 ms, "0 exact matches. 50 approximate" | 21 ms, 0 | 1,890 ms, exit 1 | | 3,850 ms, 0 + did-you-mean |
-| pub (async )?fn \w+\( | 2.8 ms, 50 of 14,220 (regex works; claim "fails syntax" not reproduced) | "20/50 shown" (true 14,220) | 101 ms, 14,220 | 1,870 ms, 14,220 | | |
+| Query | codedb CLI | fff MCP | tgrep (indexed) | rg (14 threads) | rg -j6 |
+|---|---|---|---|---|---|
+| Config (-w) | word 4.1 ms, 27,064 hits, 1.7 MB uncapped | ~40 ms, "20/51 shown" (true 24,528 lines) | 185 ms | 1,752 ms | 819 ms |
+| TODO | search 2.4 ms, 50 of 1,238 | | 80 ms | 2,037 ms | |
+| export interface | search 2.4 ms, 50 of 9,539 | "20/51 shown" | 156 ms | 1,830 ms | |
+| WeComError (absent) | 2.3 ms, 0 | 69 ms, "0 exact matches. 50 approximate" | 21 ms, 0 | 1,890 ms, exit 1 | |
+| pub (async )?fn \w+\( | 2.8 ms, 50 of 14,220 (regex works; claim "fails syntax" not reproduced) | "20/50 shown" (true 14,220) | 101 ms, 14,220 | 1,870 ms, 14,220 | |
 
-Setup costs: tgrep index 6.7 s / 672 MB for ~/devv, 0.1 s / 9.6 MB per repo. codedb MCP loads its 627 MB snapshot for ~12 s after session start (500 MB RSS); the CLI is instant. ripwire re-parses per call: ~4 s at umbrella scale even with --cache, 50-200 ms per repo. Inside one 600-file repo: rg 15 ms, tgrep 5 ms, codedb explain 2.5 ms, ripwire --callers 47 ms; latency is not the argument there, token shape is.
+Setup costs: tgrep index 6.7 s / 672 MB for ~/devv, 0.1 s / 9.6 MB per repo. codedb MCP loads its 627 MB snapshot for ~12 s after session start (500 MB RSS); the CLI is instant. Inside one 600-file repo: rg 15 ms, tgrep 5 ms, codedb explain 2.5 ms; latency is not the argument there, token shape is.
 
 rg thread scaling on this machine (APFS syscall contention, sys time 17 s at 14 threads): -j2 1.00 s, -j4 0.84, -j6 0.82, -j8 1.36, default 1.75-1.97 s. ~/.config/ripgrep/agent-config sets --threads=6, --max-columns=240, and excludes node_modules; it is applied only in Claude Code's Bash via env.RIPGREP_CONFIG_PATH.
 
@@ -24,13 +24,12 @@ rg thread scaling on this machine (APFS syscall contention, sys time 17 s at 14 
 - B1 fff cap: CONFIRMED. Hard cap 50 (shown as "20/51"), so 24,528 real lines read as 51.
 - B2 fff false positives: PARTLY. Output is labelled "0 exact matches. 50 approximate:"; the hazard is a model that skims the label.
 - C1 CI: PARTLY. At 65k files, 50 literal checks: tgrep 6.7 s + 50 x 0.22 s = 18 s vs rg default 95 s (5x) or rg -j6 31 s (1.8x). In a 600-file repo rg (0.73 s / 50) beats tgrep (1.7 s / 50). The 11x claim assumed 30 ms tgrep queries; common tokens cost 80-220 ms.
-- C2 ripwire gates: CONFIRMED on a real diff (throwaway worktree, isOversizeAttachment gained a required parameter): --edit-check = contract-change, 6/6 callers incompatible; --test-gate exit 4 (3 tests to run, 16 untested symbols); --quality-delta exit 0; --quality-delta=BASE..HEAD 1.2 s; --pr-context 0.45 s, 9.3 KB.
 
-Additional: the ~/devv codedb index mixes three checkouts of outlook-feishu-bridge (explain returned 29 call sites, 8 real); a per-repo root (`codedb <repo> ...` or MCP project=) fixes it. codedb context (hybrid default) sends ~3 KB of snippets to a remote reranker; semantic=local exists; with identifiers seeded it is excellent, with words only it missed the target in both modes. ripwire --for="words" found MAX_ATTACHMENT_BYTES at rank 1 in 0.17 s. ripwire XML legends are 60-80% of output bytes (rw strips them: callers 3,987 -> 842 B). ripwire --uses on a TypeScript constant returns 0; --callers misses calls inside anonymous callbacks. The previous hook codedb-block-legacy.sh blocked rg for an opus agent, which fell back to perl one-liners and produced wrong line numbers; other agents bypassed it with `cd X && rg`.
+Additional: the ~/devv codedb index mixes three checkouts of outlook-feishu-bridge (explain returned 29 call sites, 8 real); a per-repo root (`codedb <repo> ...` or MCP project=) fixes it. codedb context (hybrid default) sends ~3 KB of snippets to a remote reranker; semantic=local exists; with identifiers seeded it is excellent, with words only it missed the target in both modes. The previous hook codedb-block-legacy.sh blocked rg for an opus agent, which fell back to perl one-liners and produced wrong line numbers; other agents bypassed it with `cd X && rg`.
 
 ## Agent trials (subagent_tokens / tool calls; all 18 answers correct on core facts)
 
-Tasks on outlook-feishu-bridge: T1 signature-change caller audit of isOversizeAttachment; T2 "where is an attachment decided too large, limit, enforcement sites, boundary test, user message". Baseline = Grep/Read/rg only. v1 = 13-row routing table. v2 = the shipped procedure (tg, rw, codedb explain/outline/read -L, count-first, batching). Calibration: an agent that does nothing costs 35.35k; three trivial tool calls add ~6k (~2k per round trip).
+Tasks on outlook-feishu-bridge: T1 signature-change caller audit of isOversizeAttachment; T2 "where is an attachment decided too large, limit, enforcement sites, boundary test, user message". Baseline = Grep/Read/rg only. v1 = 13-row routing table. v2 = the shipped procedure (tg, codedb explain/outline/read -L, count-first, batching). Calibration: an agent that does nothing costs 35.35k; three trivial tool calls add ~6k (~2k per round trip).
 
 | Model | Task | Baseline | v1 | v2 |
 |---|---|---|---|---|
@@ -47,25 +46,20 @@ Marginal over the 35.35k floor, v2 vs baseline: opus -23%, haiku -9%, sonnet 0% 
 
 - ~/.claude/hooks/search-guard.sh  PreToolUse(Bash): denies uncapped `codedb word`, rg/grep launched at the ~/devv root with no sub-path, cat/bat of files > 300 KB, and a leading rg/grep/tg listing with 4+ alternations and no narrowing. Everything else passes. SEARCH_GUARD_OFF=1 disables.
 - ~/.claude/hooks/read-guard.sh  PreToolUse(Read): denies a limit-less Read of a code file > 200 lines (READ_GUARD_MAX_LINES) and names the outline + span commands; offset+limit is the escape hatch.
-- ~/.claude/hooks/search-warmup.sh  SessionStart: builds the per-repo tgrep index and ripwire cache in the background under ~/.cache, warms codedb, injects one context line, warns when cwd is the umbrella.
-- ~/.local/bin/tg (tgrep with a per-repo index kept out of the repo, root from the path argument) and ~/.local/bin/rw (ripwire with node_modules excluded, legends stripped, exit codes preserved).
+- ~/.claude/hooks/search-warmup.sh  SessionStart: builds the per-repo tgrep index in the background under ~/.cache, warms codedb, injects one context line, warns when cwd is the umbrella.
+- ~/.local/bin/tg (tgrep with a per-repo index kept out of the repo, root from the path argument).
 - ~/.config/ripgrep/agent-config, wired via settings.json env.RIPGREP_CONFIG_PATH.
 - ~/.claude/settings.json: PreToolUse Bash hook codedb-block-legacy.sh -> search-guard.sh; SessionStart codedb-warmup.sh -> search-warmup.sh; PreToolUse Read read-guard.sh added. Backups: ~/.claude/backup-2026-09-08-search-routing/.
 - ~/nix-config/modules/home/claude/CLAUDE.md: "Search" section replaced by "Code search routing" (uncommitted). ~/.claude/CLAUDE.md is a store symlink; rebuild (darwin-rebuild switch) to apply.
-- codedb per-repo index for outlook-feishu-bridge (~/.codedb/projects/57c16973635265dc). Caches: ~/.cache/tgrep/{devv-348eed37 (547 MB), outlook-feishu-bridge-beae2311}, ~/.cache/ripwire/outlook-feishu-bridge-beae2311.bin.
+- codedb per-repo index for outlook-feishu-bridge (~/.codedb/projects/57c16973635265dc). Caches: ~/.cache/tgrep/{devv-348eed37 (547 MB), outlook-feishu-bridge-beae2311}.
 
-Revert: `cp ~/.claude/backup-2026-09-08-search-routing/settings.json ~/.claude/settings.json; git -C ~/nix-config checkout modules/home/claude/CLAUDE.md`, and delete the three hook scripts and the two wrappers.
+Revert: `cp ~/.claude/backup-2026-09-08-search-routing/settings.json ~/.claude/settings.json; git -C ~/nix-config checkout modules/home/claude/CLAUDE.md`, and delete the three hook scripts and the wrapper.
 
-To make the hooks and wrappers reproducible, add to claude.nix's home.file: `".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };` (same for read-guard.sh, search-warmup.sh) and `".local/bin/tg"`, `".local/bin/rw"`, `".config/ripgrep/agent-config"`, after copying the files into modules/home/claude/.
+To make the hooks and wrappers reproducible, add to claude.nix's home.file: `".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };` (same for read-guard.sh, search-warmup.sh) and `".local/bin/tg"`, `".config/ripgrep/agent-config"`, after copying the files into modules/home/claude/.
 
 ## CI (GitHub Actions) sketch
-(Superseded by the validated recipe under "Corrections after external review" below; kept for the numbers.)
 
 ```yaml
-- run: ripwire . --quality-delta=${{ github.event.pull_request.base.sha }}..HEAD --exclude=node_modules --json > quality.json   # exit 2 = a pre-existing symbol got worse
-- run: |
-    changed=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..HEAD | paste -sd, -)
-    ripwire . --test-gate="$changed" --exclude=node_modules --json > test-gate.json || [ $? -eq 4 ]   # 4 = tests to run / untested radius; parse tests_to_run
 - run: tgrep index . && for p in TODO FIXME 'as any' '@ts-ignore' debugger; do tgrep -c "$p" src; done   # worth it only above ~5k files; below that plain rg
 ```
 
@@ -92,7 +86,7 @@ A second reviewer audited the original benchmark brief against the tools' source
 | Layer | Fixed task | Metric used here | Where |
 |---|---|---|---|
 | Exact retrieval | same literal/regex, whole tree | wall time, hit counts, output bytes | Latency table, size scaling |
-| Navigation | first useful file/symbol for a name or a phrase | did r=1 / first result land on the target | ripwire --for, codedb context notes |
+| Navigation | first useful file/symbol for a name or a phrase | did r=1 / first result land on the target | codedb context notes |
 | Coding task | same question, same repo, same ground truth | subagent_tokens, tool calls, correctness | Agent trials |
 The latency table mixes tools that do different jobs (fff shows 20 of a 50-capped set; codedb search caps at 50; rg/tgrep enumerate). Read it as "time to the answer each tool gives", never as engine speed.
 
@@ -103,16 +97,15 @@ The latency table mixes tools that do different jobs (fff shows 20 of a 50-cappe
 | rg agent config | same minus node_modules, .tgrep, *.snapshot; 240-column cap | |
 | tgrep | 59,271 text files | binary (5,635 + 256 by content), 1 file > 64 MiB |
 | codedb (umbrella index) | 43,169 files tracked, 16,375 with trigram entries | node_modules, > 2 MiB (skipped entirely), 1-2 MiB (no trigram; search falls back to a 2-7 s scan on first query, then cached; word index instant) |
-| ripwire | parsed 15 languages; 63 files dropped as oversize | unsupported extensions scanned only by --grep as "unindexed" |
 | fff | live scan of the tree, hidden dirs included (it indexed .tgrep/) | |
 
 ### Lifecycle (cold vs warm), measured
-| Scenario | codedb | tgrep | ripwire | fff |
-|---|---|---|---|---|
-| No index, first query | reindex 4.3 s (umbrella) | build 6.7 s (65k), 2.3 s (19k), 0.1 s (600) | parse 4.4 s (65k), 0.2 s (600) | startup scan + RAM content index |
-| Disk index, new process | CLI 2-4 ms; MCP server 12 s to load the 627 MB snapshot (status reports 0 files until then) | 5-185 ms | cache 227 MB, 3.8 s at 65k; 70 ms at 600 | n/a |
-| Persistent service | MCP warm ~ms | `tgrep serve` not tested | `--mcp` not tested | MCP warm 8-120 ms |
-| Editing loop | polling; `hot` lists recent files | `tg` re-indexes every call up to 2k files (no-change reindex ~100 us/file: 60 ms at 606, 381 ms at 3.8k, 2.3 s at 19k), else 10-min window; new file found immediately, deleted file no ghost hit | content-hash cache | watcher |
+| Scenario | codedb | tgrep | fff |
+|---|---|---|---|
+| No index, first query | reindex 4.3 s (umbrella) | build 6.7 s (65k), 2.3 s (19k), 0.1 s (600) | startup scan + RAM content index |
+| Disk index, new process | CLI 2-4 ms; MCP server 12 s to load the 627 MB snapshot (status reports 0 files until then) | 5-185 ms | n/a |
+| Persistent service | MCP warm ~ms | `tgrep serve` not tested | MCP warm 8-120 ms |
+| Editing loop | polling; `hot` lists recent files | `tg` re-indexes every call up to 2k files (no-change reindex ~100 us/file: 60 ms at 606, 381 ms at 3.8k, 2.3 s at 19k), else 10-min window; new file found immediately, deleted file no ghost hit | watcher |
 
 ### Claims from the brief, final verdicts
 - "tgrep regex 1,690 ms": that was a no-index run. Indexed: 101 ms for `pub (async )?fn \w+\(` (14,220 hits), because the planner keeps `pub`, `fn`, `(` as required trigrams and verifies candidates in parallel.
@@ -120,25 +113,12 @@ The latency table mixes tools that do different jobs (fff shows 20 of a 50-cappe
 - "fff returns 50 fuzzy hits as if exact": overstated. Output reads "0 exact matches. 50 approximate:" and shows 3. The hazard is a model skimming past the label, and the 50 cap on real enumerations (24,528 lines shown as "20/51").
 - "codedb 2 MiB cap": confirmed for > 2 MiB (4.2 MB HTML token: rg/tgrep hit, codedb search and word miss). 1-2 MiB: found, slow first time (see coverage).
 - "tgrep 11x in CI": at 65k files, 50 checks: tgrep 6.7 s build + 11 s = 18 s; rg -j6 31 s; rg default 95 s. Inside a 600-file repo rg wins (0.7 s vs 1.7 s). With the brief's own parameters the break-even is q > 6.6/(1.8-0.05) = 3.8 queries and T(50) = 9.1 s, not 8.1 s.
-- "--quality-delta blocks new debt": no. Exit 2 only when a pre-existing symbol got materially worse and is unacked; new-symbol rows print but never gate; renames read as new. "--test-gate blocks untested changes": no. Exit 4 names tests to run and an untested radius; it never runs tests and cannot know you did.
-- Token accounting: subagent_tokens is the harness's own usage, not an estimate. Base cost of an idle subagent 35.4k; each trivial round trip ~2k. The gains measured came from answer shape (bodies + callers in one call, spans instead of files, legends stripped: 75% fewer ripwire bytes), not from engine latency.
-
-### CI recipe, validated on this repo
-Base for a PR is not implicit: --quality-delta compares working tree vs HEAD, --test-gate reads the current diff. Validated flow (HEAD stays at the merge-base, the PR tree is restored on top):
-```bash
-BASE=$(git merge-base "$PR_BASE_SHA" "$PR_HEAD_SHA")
-git worktree add --detach "$WT" "$BASE"
-rw "$WT" --quality-baseline                       # baseline on the clean base
-git -C "$WT" restore --source="$PR_HEAD_SHA" --staged --worktree -- .
-rw "$WT" --quality-delta > quality.xml;  qd=$?    # 2 = pre-existing regression, else 0
-rw "$WT" --test-gate     > gate.xml;     tg=$?    # 4 = obligations listed, 0 = none, other = tool failure
-```
-Checked: after restore, `git rev-parse HEAD` = merge-base and `git diff --cached --stat` = the PR's 6 files; both gates ran (0/0 on a config-only PR; 2/4 shapes were exercised earlier on a synthetic signature change). Rules: treat any exit other than {0,2} / {0,4} as tool failure, never `|| true`; do not exec `run="..."` strings from the report, map named test files to your own runner; run PR checks under `pull_request`, not `pull_request_target`; skip actions/cache for the index (fresh build 0.1-6.7 s beats a download); protect .ripwire_quality_baseline and ack files from the restore step.
+- Token accounting: subagent_tokens is the harness's own usage, not an estimate. Base cost of an idle subagent 35.4k; each trivial round trip ~2k. The gains measured came from answer shape (bodies + callers in one call, spans instead of files), not from engine latency.
 
 ### Not done (would change conclusions if done)
 - Crossed design: same candidates x {bare lines, fixed window, function bundle} x {rg, tgrep, codedb}. The trials varied both at once, so "bundle beats bare lines" and "engine X" are confounded.
 - Consistency stress test after a rebase (create/delete/rename/same-size rewrite/truncate/ignore change): p95 of "edit to visible", misses, ghost hits.
-- A result contract (searched set, completeness, snapshot id) across tools; today only ripwire --grep emits complete=/corpus_oversize=.
+- A result contract (searched set, completeness, snapshot id) across tools.
 - Version 2 routing trials: 1 of 6 agents finished (haiku caller audit, 67.0k tokens, 19 calls) before the session ended.
 
 ## Round 2 candidates: zoekt, reflex, trigrep (2026-09-08, test only, not wired)
@@ -183,7 +163,7 @@ zoekt as a persistent server (`zoekt-webserver -rpc`, JSON API): server-side 0-1
 | reflex | no | 1.8 s incremental, and the untracked file was STILL missing; `rfx index -f` (2.4 s) found it | after -f | no |
 
 ### Answer shape for "definition + every use of isOversizeAttachment" (bytes)
-codedb explain 1,713 (def body + 8 call sites + enclosing fn) | rw --callers 842 (6 callers + tested flags) | rfx --symbols --json 435 (definition only, with body span) | rfx MCP find_references 2,383 (definition + 15 references incl. imports/re-exports, no enclosing fn) | rfx list_locations 551 (file:line only) | rfx count_occurrences 73 | zoekt plain 1,710, ranked with the definition first (ctags) | zoekt -jsonl 6,228 | trigrep --json 2,627 | rg -n 1,742.
+codedb explain 1,713 (def body + 8 call sites + enclosing fn) | rfx --symbols --json 435 (definition only, with body span) | rfx MCP find_references 2,383 (definition + 15 references incl. imports/re-exports, no enclosing fn) | rfx list_locations 551 (file:line only) | rfx count_occurrences 73 | zoekt plain 1,710, ranked with the definition first (ctags) | zoekt -jsonl 6,228 | trigrep --json 2,627 | rg -n 1,742.
 reflex also answers file-level `deps --reverse` (6 importers of attachmentPolicy.ts) and `find_hotspots/circular/unused`, which none of the other engines do.
 
 ### Verdict
@@ -204,10 +184,10 @@ Node CLI (`~/.local/bin/zg`), local embedding model `local/potion-code-16m-v2` (
 | Freshness | server background refresh saw a new file within 5 s; `--refresh wait` immediate; incremental `zg index` 0.96 s; deleted file ghosts with refresh off | | |
 
 Retrieval quality on the ground-truth task (decision function isOversizeAttachment, constant MAX_ATTACHMENT_BYTES):
-- The full natural-language question returned 10 hits, all prose (a flow-exploration note, a handoff, ADR-0004 "> 20 MB attachments"): topically right, code target absent. ripwire --for had the constant at rank 1; codedb_context with identifiers seeded had both.
+- The full natural-language question returned 10 hits, all prose (a flow-exploration note, a handoff, ADR-0004 "> 20 MB attachments"): topically right, code target absent. codedb_context with identifiers seeded had both.
 - Code-vocabulary phrasings: "attachment size limit" and "maximum attachment bytes" landed on attachmentPolicy.ts / isOversizeAttachment (lexical side carried it); "oversize attachment check" and "is attachment too large" missed.
-- Vector-only paraphrase with no shared tokens ("throttling backoff when the API says slow down") put convex/feishu/call.ts:49-71 (the rate-limit retry) at rank 1, where the fts route alone did not surface call.ts. That is the one measured case where the vector route added something. A second paraphrase ("avoid sending the same document twice") returned stress-test report HTML/JSON for zg and unrelated components for ripwire: both missed.
-- `--fts SYM` groups hits by enclosing symbol with the span (definition 122-124, then sendableMailAttachments 36-42, uploadRejectionReason 128-137, useIntakeAttachments 150-253): the same shape as codedb explain + rw --callers, in one call, and with `--preview short` it inlines the bodies (5.6 KB for 11 hits; 12 KB with full previews).
+- Vector-only paraphrase with no shared tokens ("throttling backoff when the API says slow down") put convex/feishu/call.ts:49-71 (the rate-limit retry) at rank 1, where the fts route alone did not surface call.ts. That is the one measured case where the vector route added something. A second paraphrase ("avoid sending the same document twice") returned stress-test report HTML/JSON for zg: a miss.
+- `--fts SYM` groups hits by enclosing symbol with the span (definition 122-124, then sendableMailAttachments 36-42, uploadRejectionReason 128-137, useIntakeAttachments 150-253): the same shape as codedb explain, and with `--preview short` it inlines the bodies (5.6 KB for 11 hits; 12 KB with full previews).
 - Absent symbol: CLI `--fts WeComError` says "hits: 0 / No matches". The MCP tool, given the same word, returned 3.8 KB of vector-only neighbours with no "no lexical match" statement: the fff hazard again, now without the label.
 - Docs/report assets (HTML, JSON under docs/reports) dominate vector results; index with `-T html -g '!docs/reports/**'`.
 

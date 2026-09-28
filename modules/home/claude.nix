@@ -727,7 +727,6 @@ in
       ".claude/hooks/pre-compact-save.sh" = { source = ./claude/hooks/pre-compact-save.sh; executable = true; };
       ".claude/hooks/post-compact-reload.sh" = { source = ./claude/hooks/post-compact-reload.sh; executable = true; };
       ".claude/hooks/codedb-warmup.sh" = { source = ./claude/hooks/codedb-warmup.sh; executable = true; };
-      ".local/bin/rw" = { source = ./claude/bin/rw; executable = true; };
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
     } // localSkillFiles // pstackSkillFiles
     // lib.optionalAttrs config.programs.worktrunk.enable {

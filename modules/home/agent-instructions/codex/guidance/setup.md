@@ -58,7 +58,6 @@ For ordinary UI work, select the relevant `better-*` skill for layout, typograph
 Explicit requests for another design skill take precedence; load its distinct requirements without repeating equivalent audits.
 
 Use `development.md` for file search and code navigation.
-Use ripwire for specialized analysis when it answers an additional question; avoid repeating orientation through both tools.
 Use file-search tools for file discovery and exact text evidence when that is the question.
 Use remote documentation tools for remote repository questions; distinguish that evidence from the local checkout.
 Use the relevant browser or desktop skill for live interaction, then follow the exposed tool contract.

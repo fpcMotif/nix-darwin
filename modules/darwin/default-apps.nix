@@ -12,6 +12,17 @@
 let
   duti = lib.getExe pkgs.duti;
   iina = "com.colliderli.iina";
+  canary = "com.google.Chrome.canary";
+  browserSchemes = [
+    "http"
+    "https"
+  ];
+  browserExtensions = [
+    "html"
+    "htm"
+    "shtml"
+    "xhtml"
+  ];
   videoExtensions = [
     "mp4"
     "m4v"
@@ -49,5 +60,14 @@ in
       ext: ''${duti} -s ${iina} .${ext} all >/dev/null 2>&1 || true; sleep 0.15''
     ) videoExtensions}
     ${duti} -s ${iina} public.movie all >/dev/null 2>&1 || true
+    echo "[default-apps] setting Chrome Canary as default browser"
+    ${lib.concatMapStringsSep "\n    " (
+      scheme: ''${duti} -s ${canary} ${scheme} >/dev/null 2>&1 || true; sleep 0.15''
+    ) browserSchemes}
+    ${lib.concatMapStringsSep "\n    " (
+      ext: ''${duti} -s ${canary} .${ext} all >/dev/null 2>&1 || true; sleep 0.15''
+    ) browserExtensions}
+    ${duti} -s ${canary} public.html all >/dev/null 2>&1 || true
+    ${duti} -s ${canary} public.xhtml all >/dev/null 2>&1 || true
   '';
 }

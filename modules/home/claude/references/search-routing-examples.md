@@ -50,7 +50,3 @@ pkgs/hunk-bin.nix git:modified
 scripts/update-hunk.sh git:modified
 pkgs/bun-canary-bin.nix git:clean
 ```
-
-## Words only: rw --for
-
-`rw --for="resolve context config runtime"` returned 33 ranked signatures in about 4k tokens: rank 1 `resolveContext` with `in=6` callers and `tested=1`, then the CONTEXT.md and ADR sections that mention it.

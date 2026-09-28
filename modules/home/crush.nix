@@ -17,13 +17,12 @@ let
     options = { };
   };
 
-  modelDefaults = provider: model: effort: {
-    inherit provider model;
-    reasoning_effort = effort;
+  routeDefaults = job: {
+    provider = "chatgpt-sub";
+    model = routing.modelId job;
+    reasoning_effort = routing.effort job;
     max_tokens = 32000;
   };
-  routeDefaults = job:
-    modelDefaults "chatgpt-sub" (routing.modelId job) (routing.effort job);
 
   config = {
     "$schema" = "https://charm.land/crush.json";

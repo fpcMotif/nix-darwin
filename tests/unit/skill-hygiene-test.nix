@@ -100,7 +100,7 @@ helpers.testSuite "skill-hygiene" (
       "personal skill targets must be unique home-relative paths outside native plugin and system-skill directories")
 
     # 3. Vendored dirs on disk == the ids this test knows about. claude.nix now
-    #    derives localSkillIds from readDir, so this is the tripwire that a new
+    #    derives localSkillIds from readDir, so this is the check that a new
     #    modules/home/skills/<id> got added without a decision.
     (helpers.assertTest "skill-hygiene-vendored-dirs-match"
       (sorted vendoredOnDisk == sorted vendored)

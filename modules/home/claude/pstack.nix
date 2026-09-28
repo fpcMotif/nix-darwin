@@ -27,11 +27,10 @@ let
   #   no-comments         the CLAUDE.md Code Quality comment rule
   #   technical-writing   CLAUDE.md Writing Style + mattpocock writing-for-agents
   #   bro                 mattpocock wait-what
-  #   blast-radius        ripwire --edit-check (ripwire-change-check)
   #   setup-pstack        hand-written ~/.claude/pstack-models.md
   #   Prototype playbook  mattpocock prototype
   #   verify (no skill)   dotfiles web-browser, or the harness's browser tools
-  # Also out: bot tooling (make-bot-ui, automate-me), transcript mining
+  # Also out: blast-radius, bot tooling (make-bot-ui, automate-me), transcript mining
   # (recall), reflect, typescript-best-practices, and the port's PR extras
   # (babysit would collide with the brooklyn id; fix-ci and friends duplicate
   # better-github-skill). The source regex keeps unselected ids out of

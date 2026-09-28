@@ -1,4 +1,4 @@
-# Cross-source tripwire for the pstack skill source: the pinned pstack-claude
+# Cross-source regression test for the pstack skill source: the pinned pstack-claude
 # input text vs. the rewrite rules in modules/home/claude/pstack.nix.
 #
 # The rules anchor on exact upstream sentences. A port sync that rewords one

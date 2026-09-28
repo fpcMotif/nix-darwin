@@ -17,14 +17,25 @@ report() {
   printf 'FAIL %s: want=%s got=%s\n%s\n' "$1" "$2" "$3" "$4"
 }
 
-edit_case() {
+run_edit() {
   local out rc got=allow
-  out=$(jq -cn --arg s "$3" --arg p "$4" --argjson t "$5" '{session_id: $s, tool_input: ({file_path: $p} + $t)}' |
-    (cd "$repo" && "$LOCK" edit) 2>&1)
+  out=$(printf '%s' "$3" | (cd "$repo" && "$LOCK" edit) 2>&1)
   rc=$?
   [ "$rc" -eq 2 ] && got=deny
   [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ] && got="error($rc)"
-  report "edit $2" "$1" "$got" "$out"
+  report "$2" "$1" "$got" "$out"
+}
+
+edit_case() {
+  run_edit "$1" "edit $2" "$(jq -cn --arg s "$3" --arg p "$4" --argjson t "$5" '{session_id: $s, tool_input: ({file_path: $p} + $t)}')"
+}
+
+patch_case() {
+  run_edit "$1" "patch $2" "$(jq -cn --arg s "$3" --arg cwd "$repo" --arg c "$4" '{session_id: $s, cwd: $cwd, tool_name: "apply_patch", tool_input: {command: $c}}')"
+}
+
+tool_case() {
+  run_edit "$1" "tool $2" "$(jq -cn --arg cwd "$repo" --argjson t "$3" '{session_id: "s0", cwd: $cwd, tool_input: $t}')"
 }
 
 grant_case() {
@@ -74,16 +85,6 @@ edit_case allow "Markdown outside a repo"      s0 "$tmp/outside.md" '{"content":
 edit_case allow "language without a parser"    s0 "$repo/a.toml" '{"content":"# c\nx = 1\n"}'
 DOC_LOCK_OFF=1 edit_case allow "DOC_LOCK_OFF"  s0 "$repo/notes.md" '{"content":"# x\n"}'
 
-patch_case() {
-  local out rc got=allow
-  out=$(jq -cn --arg s "$3" --arg cwd "$repo" --arg c "$4" '{session_id: $s, cwd: $cwd, tool_name: "apply_patch", tool_input: {command: $c}}' |
-    "$LOCK" edit 2>&1)
-  rc=$?
-  [ "$rc" -eq 2 ] && got=deny
-  [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ] && got="error($rc)"
-  report "patch $2" "$1" "$got" "$out"
-}
-
 patch_case deny  "adds a comment"        s0 $'*** Begin Patch\n*** Update File: a.ts\n@@\n-const a = 1;\n+// new\n+const a = 1;\n*** End Patch'
 patch_case deny  "rewords a comment"     s0 $'*** Begin Patch\n*** Update File: a.ts\n@@\n-// keep\n+// kept\n*** End Patch'
 patch_case allow "moves a comment"       s0 $'*** Begin Patch\n*** Update File: a.ts\n@@\n-// keep\n const a = 1;\n+// keep\n*** End Patch'
@@ -96,15 +97,6 @@ patch_case deny  "adds Markdown"         s0 $'*** Begin Patch\n*** Add File: doc
 patch_case deny  "deletes Markdown"      s0 $'*** Begin Patch\n*** Delete File: notes.md\n*** End Patch'
 patch_case deny  "renames into Markdown" s0 $'*** Begin Patch\n*** Update File: a.ts\n*** Move to: a.md\n*** End Patch'
 patch_case allow "ignored Markdown"      s0 $'*** Begin Patch\n*** Add File: scratch/plan.md\n+# plan\n*** End Patch'
-
-tool_case() {
-  local out rc got=allow
-  out=$(jq -cn --arg cwd "$repo" --argjson t "$3" '{session_id: "s0", cwd: $cwd, tool_input: $t}' | "$LOCK" edit 2>&1)
-  rc=$?
-  [ "$rc" -eq 2 ] && got=deny
-  [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ] && got="error($rc)"
-  report "tool $2" "$1" "$got" "$out"
-}
 
 tool_case deny  "pi edit adds a comment"        '{"path":"a.ts","edits":[{"oldText":"const a = 1;","newText":"// new\nconst a = 1;"}]}'
 tool_case allow "pi edit changes code"          '{"path":"a.ts","edits":[{"oldText":"const a = 1;","newText":"const a = 2;"}]}'

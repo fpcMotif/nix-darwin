@@ -97,6 +97,17 @@ check deny  "find . -name x"
 check deny  "rg -n 'a|b' x; find . -name y"
 check deny  "echo \"v=\$(cat VERSION)\""
 check deny  $'ls # don\'t\nfind .'
+check allow 'echo "$p -> $(readlink -f "$p")"'
+check allow 'for p in a b; do echo "$p -> $(readlink -f "$p")"; done'
+check allow "printf '%s -> ' x"
+check allow "echo 'a >> b' | tr a b"
+check allow 'echo 1 \> 2'
+check allow "echo x 2>&1"
+check allow "echo x >/dev/null"
+check deny  "echo x > file"
+check deny  "echo x >> /tmp/f"
+check deny  'echo "a -> b" > out.txt'
+check deny  'printf "%s\n" x > "$out"'
 
 printf '%s/%s rows passed\n' "$((n - fail))" "$n"
 [ "$fail" -eq 0 ]

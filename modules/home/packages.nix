@@ -26,6 +26,7 @@ let
     git
     delta
     jujutsu
+    martin.calldiff
 
     # Shell UX and terminal tools.
     starship
