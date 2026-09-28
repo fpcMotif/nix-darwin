@@ -1,3 +1,5 @@
+{ lib, pkgs, ... }:
+
 {
   programs.fzf = {
     enable = true;
@@ -27,4 +29,16 @@
       "--color=info:yellow,prompt:cyan,pointer:green,marker:yellow,spinner:green,header:cyan"
     ];
   };
+
+  # When fzf is enabled, enhance zsh completion with fzf-tab
+  programs.zsh.initContent = lib.mkAfter ''
+    if (( $+functions[compdef] )) && [[ -r "${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh" ]]; then
+      source "${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh"
+      zstyle ':completion:*:git-checkout:*' sort false
+      zstyle ':completion:*:descriptions' format '[%d]'
+      zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza -1 --color=always $realpath 2>/dev/null'
+      zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'eza -1 --color=always $realpath 2>/dev/null'
+      zstyle ':fzf-tab:*' switch-group '<' '>'
+    fi
+  '';
 }

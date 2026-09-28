@@ -225,6 +225,16 @@ in
         unsetopt NOMATCH AUTO_REMOVE_SLASH
         KEYTIMEOUT=1
 
+        # Native completion configuration
+        zmodload -i zsh/complist
+        zstyle ':completion:*:*:*:*:*' menu select
+        zstyle ':completion:*' use-cache yes
+        zstyle ':completion:*' special-dirs true
+        zstyle ':completion:*' squeeze-slashes true
+        zstyle ':completion:*' file-sort change
+        zstyle ':completion:*' matcher-list 'm:{[:lower:][:upper:]}={[:upper:][:lower:]}' 'r:|=*' 'l:|=* r:|=*'
+        zstyle ':completion:*' list-colors ''${(s.:.)LS_COLORS}
+
         # Minimal native prompt: independent of Starship
         PROMPT='%F{cyan}%1~%f %# '
 
@@ -291,11 +301,11 @@ in
           martin-content-search-widget() {
             local query sel
             query="''${LBUFFER##*[[:space:]]}"
-            if [[ -z $query ]]; then
-              zle -M 'search plane: type a search term first, then press the chord again'
-              return
+            if [[ -n "$query" ]]; then
+              sel=$(fif "$query")
+            else
+              sel=$(fif)
             fi
-            sel=$(fif "$query")
             zle -I
             [[ -n "$sel" ]] && LBUFFER+="$sel"
             zle reset-prompt
@@ -377,11 +387,22 @@ in
         }
 
         fif() {
-          (( $# )) || return
-          rg --files-with-matches --no-messages -- "$1" | \
-            FIF_QUERY="$1" fzf \
+          if (( $# )); then
+            rg --files-with-matches --no-messages -- "$1" | \
+              FIF_QUERY="$1" fzf \
+                --prompt='󰈞 ' \
+                --preview 'rg --ignore-case --pretty --context 10 -- "$FIF_QUERY" {}'
+          else
+            local sel
+            sel=$(fzf --ansi --disabled \
               --prompt='󰈞 ' \
-              --preview 'rg --ignore-case --pretty --context 10 -- "$FIF_QUERY" {}'
+              --bind "start:reload(rg --column --line-number --no-heading --color=always --smart-case -- . || true)" \
+              --bind "change:reload(rg --column --line-number --no-heading --color=always --smart-case -- {q} || true)" \
+              --delimiter : \
+              --preview 'bat --style=numbers --color=always --highlight-line {2} {1} 2>/dev/null || rg --context 5 --color=always -- {q} {1} 2>/dev/null' \
+              --preview-window 'right,60%,border-left,+{2}+3/3,~3')
+            [[ -n "$sel" ]] && echo "''${sel%%:*}"
+          fi
         }
 
         fkill() {
