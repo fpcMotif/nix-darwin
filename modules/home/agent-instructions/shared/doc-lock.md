@@ -7,4 +7,4 @@ Comments and Markdown change only in docs work. Docs work is a request that name
 - **Markdown**: Keep Markdown files as they are. Put what a doc should say in your reply.
 - **Stale text**: Report a stale comment or doc in your reply. Outside docs work, this narrows Reconcile and Present.
 - **Strip**: `doc-lock strip FILE...` deletes the comments each named file gained since HEAD. Name only files you changed.
-- **Lock**: In Claude Code, `doc-lock` blocks these edits until a docs request opens it for the session. In a repository with `hk.pkl`, the `doc-lock` pre-commit step blocks them at commit.
+- **Lock**: Claude Code, Codex, pi, and omp run `doc-lock` before every edit, and it blocks these changes until a docs request opens it for the session. In a repository with `hk.pkl`, the `doc-lock` pre-commit step blocks them at commit.

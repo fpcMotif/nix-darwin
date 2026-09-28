@@ -49,8 +49,8 @@ def new_comments:
       ($c.text | norm) as $t
       | if (.counts[$t] // 0) > 0 then .counts[$t] -= 1 else .new += [$c] end)
   | .new;
-def report:
-  (.[:5][] | "  line \(.range.start.line + 1): \(.text | norm | .[:160])"),
+def report($lines):
+  (.[:5][] | "  \(if $lines then "line \(.range.start.line + 1): " else "" end)\(.text | norm | .[:160])"),
   (select(length > 5) | "  and \(length - 5) more");
 '
 
@@ -71,7 +71,7 @@ rule: { any: [$(printf '{kind: %s},' "${kinds[@]}")] }"
 comments() { scan "$1" | jq -r "$jq_lib code_comments | .text | norm"; }
 
 added_comments() {
-  scan "$1" <"$3" | jq -r --rawfile kept <(comments "$1" <"$2") "$jq_lib new_comments | report"
+  scan "$1" <"$3" | jq -r --rawfile kept <(comments "$1" <"$2") "$jq_lib new_comments | report(${4:-true})"
 }
 
 in_work_tree() {
@@ -97,7 +97,7 @@ grant() {
 }
 
 proposed='
-def swap($e): ($e.old_string // "") as $o | ($e.new_string // "") as $n
+def swap($e): ($e.old_string // $e.oldText // "") as $o | ($e.new_string // $e.newText // "") as $n
   | if $o == "" then $n
     elif $e.replace_all == true then split($o) | join($n)
     else split($o) as $p | if ($p | length) < 2 then . else $p[0] + $n + ($p[1:] | join($o)) end
@@ -107,13 +107,15 @@ def swap($e): ($e.old_string // "") as $o | ($e.new_string // "") as $n
   else reduce ($t.edits // [$t])[] as $e ($before; swap($e))
   end'
 
-edit() {
-  local input path old lang added
-  input=$(cat)
-  path=$(jq -r '.tool_input.file_path // empty' <<<"$input")
+keep_hint="Keep existing comments as written and carry intent in names, types, and tests. Deleting a comment together with its code is fine. Put what a Markdown doc should say in your reply. $unlock_hint"
+
+file_edit() {
+  local input=$1 cwd path old lang added
+  cwd=$(jq -r '.cwd // empty' <<<"$input")
+  [ -n "$cwd" ] || cwd=$PWD
+  path=$(jq -r '.tool_input.file_path // .tool_input.path // empty' <<<"$input")
   [ -n "$path" ] || return 0
-  is_open "$(jq -r '.session_id // empty' <<<"$input")" && return 0
-  case "$path" in /*) ;; *) path="$PWD/$path" ;; esac
+  case "$path" in /*) ;; *) path="$cwd/$path" ;; esac
   in_work_tree "$path" || return 0
 
   if is_markdown "$path"; then
@@ -130,15 +132,115 @@ edit() {
   {
     echo "doc-lock: this change adds or rewrites comments in $path:"
     printf '%s\n' "$added"
-    echo "Keep existing comments as written and carry intent in names, types, and tests. Deleting a comment together with its code is fine. $unlock_hint"
+    echo "$keep_hint"
   } >&2
   exit 2
 }
 
+edit_kind='
+.tool_input as $t | ($t.command // $t.input) as $text
+| if ($text | type) == "string" and ($text | test("(?m)^\\[.+#[0-9A-Fa-f]{4}\\]\\s*$")) then "hashline"
+  elif ($text | type) == "string" and ($text | test("^\\s*\\*\\*\\* Begin Patch")) then "patch"
+  elif ($t.edits | type) == "array" and ($t.edits | any(has("diff") or has("op") or has("rename"))) then "diffs"
+  else "file"
+  end'
+
+diffs_to_patch='
+.tool_input as $t
+| .tool_input.command = "*** Begin Patch\n" + ([$t.edits[]
+    | (if .op == "create" then "*** Add File: " elif .op == "delete" then "*** Delete File: " else "*** Update File: " end)
+      + $t.path + "\n"
+      + (if .rename then "*** Move to: " + .rename + "\n" else "" end)
+      + (.diff // "") + "\n"] | join("")) + "*** End Patch"'
+
+patch_files='
+(.tool_input.command // .tool_input.input) | split("\n")
+| reduce .[] as $l ({files: [], cur: null};
+    if ($l | test("^\\*\\*\\* (Add|Update|Delete) File: ")) then
+      .files += [{op: ($l | capture("^\\*\\*\\* (?<op>\\w+)").op),
+                  path: ($l | sub("^\\*\\*\\* \\w+ File: "; "")), base: "lines", added: "", removed: ""}]
+      | .cur = (.files | length) - 1
+    elif .cur == null or ($l | startswith("*** ")) then
+      if ($l | startswith("*** Move to: ")) and .cur != null then .files[.cur].move = ($l | ltrimstr("*** Move to: ")) else . end
+    elif ($l | startswith("+")) then .files[.cur].added += $l[1:] + "\n"
+    elif ($l | startswith("-")) then .files[.cur].removed += $l[1:] + "\n"
+    else .
+    end)
+| .files[]'
+
+hashline_files='
+(.tool_input.command // .tool_input.input) | split("\n")
+| reduce .[] as $l ({files: [], cur: null};
+    if ($l | test("^\\[.+#[0-9A-Fa-f]{4}\\]\\s*$")) then
+      .files += [{op: "Update", path: ($l | capture("^\\[(?<p>.+)#[0-9A-Fa-f]{4}\\]").p), base: "file", added: ""}]
+      | .cur = (.files | length) - 1
+    elif .cur == null then .
+    elif ($l | rtrimstr(" ")) == "REM" then .files[.cur].op = "Delete"
+    elif ($l | startswith("MV ")) then .files[.cur].move = ($l | ltrimstr("MV "))
+    elif ($l | startswith("+")) then .files[.cur].added += $l[1:] + "\n"
+    else .
+    end)
+| .files[]'
+
+envelope_edit() {
+  local input=$1 files=$2 cwd entry op base path target old lang added found=0
+  cwd=$(jq -r '.cwd // empty' <<<"$input")
+  [ -n "$cwd" ] || cwd=$PWD
+  while IFS= read -r entry; do
+    IFS=$'\t' read -r op base path target < <(jq -r '[.op, .base, .path, .move // .path] | @tsv' <<<"$entry")
+    case "$path" in /*) ;; *) path="$cwd/$path" ;; esac
+    case "$target" in /*) ;; *) target="$cwd/$target" ;; esac
+    in_work_tree "$path" || in_work_tree "$target" || continue
+    if is_markdown "$path" || is_markdown "$target"; then
+      echo "doc-lock: $target is Markdown, which stays unchanged outside docs work." >&2
+      found=1
+      continue
+    fi
+    [ "$op" = Delete ] && continue
+    lang=$(language "$target") || continue
+    if [ "$base" = file ]; then
+      old=/dev/null
+      [ -f "$path" ] && old=$path
+      added=$(added_comments "$lang" "$old" <(jq -r '.added' <<<"$entry") false)
+    else
+      added=$(added_comments "$lang" <(jq -r '.removed' <<<"$entry") <(jq -r '.added' <<<"$entry") false)
+    fi
+    if [ -n "$added" ]; then
+      echo "doc-lock: this patch adds or rewrites comments in $target:" >&2
+      printf '%s\n' "$added" >&2
+      found=1
+    fi
+  done < <(jq -c "$files" <<<"$input")
+  [ "$found" = 0 ] && return 0
+  echo "$keep_hint" >&2
+  exit 2
+}
+
+edit() {
+  local input
+  input=$(cat)
+  is_open "$(jq -r '.session_id // empty' <<<"$input")" && return 0
+  case $(jq -r "$edit_kind" <<<"$input") in
+    patch) envelope_edit "$input" "$patch_files" ;;
+    diffs) envelope_edit "$(jq -c "$diffs_to_patch" <<<"$input")" "$patch_files" ;;
+    hashline) envelope_edit "$input" "$hashline_files" ;;
+    *) file_edit "$input" ;;
+  esac
+}
+
+agent_session() {
+  if [ "${CLAUDECODE:-}" = 1 ]; then echo "${CLAUDE_CODE_SESSION_ID:-}"
+  elif [ -n "${CODEX_SESSION_ID:-}" ]; then echo "$CODEX_SESSION_ID"
+  elif [ "${PI_CODING_AGENT:-}" = true ]; then echo "${PI_SESSION_ID:-}"
+  elif [ "${AGENT:-}" = 1 ]; then echo "${DOC_LOCK_SESSION:-}"
+  else return 1
+  fi
+}
+
 staged() {
-  [ "${CLAUDECODE:-}" = 1 ] || return 0
-  is_open "${CLAUDE_CODE_SESSION_ID:-}" && return 0
-  local status path lang added found=0
+  local session status path lang added found=0
+  session=$(agent_session) || return 0
+  is_open "$session" && return 0
   while IFS= read -r -d '' status && IFS= read -r -d '' path; do
     if is_markdown "$path"; then
       echo "doc-lock: $path: Markdown change (git status $status)" >&2

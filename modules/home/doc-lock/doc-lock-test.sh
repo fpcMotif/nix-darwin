@@ -5,7 +5,7 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 export HOME="$tmp/home" XDG_STATE_HOME="$tmp/state"
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
-unset DOC_LOCK_OFF CLAUDECODE CLAUDE_CODE_SESSION_ID
+unset DOC_LOCK_OFF CLAUDECODE CLAUDE_CODE_SESSION_ID CODEX_SESSION_ID PI_CODING_AGENT PI_SESSION_ID AGENT DOC_LOCK_SESSION
 mkdir -p "$HOME"
 repo="$tmp/repo"
 fail=0 n=0
@@ -74,6 +74,54 @@ edit_case allow "Markdown outside a repo"      s0 "$tmp/outside.md" '{"content":
 edit_case allow "language without a parser"    s0 "$repo/a.toml" '{"content":"# c\nx = 1\n"}'
 DOC_LOCK_OFF=1 edit_case allow "DOC_LOCK_OFF"  s0 "$repo/notes.md" '{"content":"# x\n"}'
 
+patch_case() {
+  local out rc got=allow
+  out=$(jq -cn --arg s "$3" --arg cwd "$repo" --arg c "$4" '{session_id: $s, cwd: $cwd, tool_name: "apply_patch", tool_input: {command: $c}}' |
+    "$LOCK" edit 2>&1)
+  rc=$?
+  [ "$rc" -eq 2 ] && got=deny
+  [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ] && got="error($rc)"
+  report "patch $2" "$1" "$got" "$out"
+}
+
+patch_case deny  "adds a comment"        s0 $'*** Begin Patch\n*** Update File: a.ts\n@@\n-const a = 1;\n+// new\n+const a = 1;\n*** End Patch'
+patch_case deny  "rewords a comment"     s0 $'*** Begin Patch\n*** Update File: a.ts\n@@\n-// keep\n+// kept\n*** End Patch'
+patch_case allow "moves a comment"       s0 $'*** Begin Patch\n*** Update File: a.ts\n@@\n-// keep\n const a = 1;\n+// keep\n*** End Patch'
+patch_case allow "changes code only"     s0 $'*** Begin Patch\n*** Update File: a.ts\n@@\n-const a = 1;\n+const a = 2;\n*** End Patch'
+patch_case allow "deletes a comment"     s0 $'*** Begin Patch\n*** Update File: a.ts\n@@\n-// keep\n const a = 1;\n*** End Patch'
+patch_case deny  "new file with comment" s0 $'*** Begin Patch\n*** Add File: new.py\n+# note\n+x = 1\n*** End Patch'
+patch_case allow "new script, shebang"   s0 $'*** Begin Patch\n*** Add File: run.sh\n+#!/usr/bin/env bash\n+echo "# no"\n*** End Patch'
+patch_case deny  "second file comments"  s0 $'*** Begin Patch\n*** Update File: a.ts\n@@\n-const a = 1;\n+const a = 2;\n*** Update File: flake.nix\n@@\n-  x = 1;\n+  # why\n+  x = 1;\n*** End Patch'
+patch_case deny  "adds Markdown"         s0 $'*** Begin Patch\n*** Add File: docs/adr/0002-x.md\n+# x\n*** End Patch'
+patch_case deny  "deletes Markdown"      s0 $'*** Begin Patch\n*** Delete File: notes.md\n*** End Patch'
+patch_case deny  "renames into Markdown" s0 $'*** Begin Patch\n*** Update File: a.ts\n*** Move to: a.md\n*** End Patch'
+patch_case allow "ignored Markdown"      s0 $'*** Begin Patch\n*** Add File: scratch/plan.md\n+# plan\n*** End Patch'
+
+tool_case() {
+  local out rc got=allow
+  out=$(jq -cn --arg cwd "$repo" --argjson t "$3" '{session_id: "s0", cwd: $cwd, tool_input: $t}' | "$LOCK" edit 2>&1)
+  rc=$?
+  [ "$rc" -eq 2 ] && got=deny
+  [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ] && got="error($rc)"
+  report "tool $2" "$1" "$got" "$out"
+}
+
+tool_case deny  "pi edit adds a comment"        '{"path":"a.ts","edits":[{"oldText":"const a = 1;","newText":"// new\nconst a = 1;"}]}'
+tool_case allow "pi edit changes code"          '{"path":"a.ts","edits":[{"oldText":"const a = 1;","newText":"const a = 2;"}]}'
+tool_case deny  "pi write Markdown"             '{"path":"notes.md","content":"# x\n"}'
+tool_case deny  "omp replace adds a comment"    '{"path":"flake.nix","old_string":"x = 1;","new_string":"# why\n  x = 1;"}'
+tool_case deny  "omp apply_patch comment"       '{"input":"*** Begin Patch\n*** Update File: a.ts\n@@\n-const a = 1;\n+const a = 1; // tail\n*** End Patch"}'
+tool_case deny  "omp patch mode comment"        '{"path":"a.ts","edits":[{"op":"update","diff":"@@\n-const a = 1;\n+/* new */ const a = 1;"}]}'
+tool_case allow "omp patch mode code"           '{"path":"a.ts","edits":[{"op":"update","diff":"@@\n-const a = 1;\n+const a = 3;"}]}'
+tool_case deny  "omp patch renames to Markdown" '{"path":"a.ts","edits":[{"rename":"a.md"}]}'
+tool_case deny  "hashline adds a comment"       '{"input":"[a.ts#1a2b]\nPUT <2:\n+// new","path":"a.ts","paths":["a.ts"]}'
+tool_case deny  "hashline in an envelope"       '{"input":"*** Begin Patch\n[a.ts#1a2b]\nPUT <2:\n+// new\n*** End Patch"}'
+tool_case allow "hashline re-puts a comment"    '{"input":"[a.ts#1a2b]\nPUT 1.=2:\n+// keep\n+const a = 9;","path":"a.ts"}'
+tool_case allow "hashline changes code"         '{"input":"[a.ts#5494]\nPUT 1.=1:\n+const a = 2;","path":"a.ts","paths":["a.ts"]}'
+tool_case deny  "hashline edits Markdown"       '{"input":"[notes.md#00ff]\nPUT >$:\n+more","path":"notes.md"}'
+tool_case deny  "hashline removes Markdown"     '{"input":"[notes.md#00ff]\nREM","path":"notes.md"}'
+tool_case deny  "hashline moves into Markdown"  '{"input":"[a.ts#1a2b]\nMV a.md","path":"a.ts"}'
+
 grant_case closed "plain task"                s1 "fix the failing test in auth.ts"
 grant_case open   "ADR request"               s2 "please update the ADR for the cache"
 grant_case open   "CONTEXT request"           s3 "Update CONTEXT with the new term"
@@ -95,6 +143,11 @@ git -C "$repo" add a.ts
 staged_case pass "human commit"               CLAUDECODE=
 staged_case fail "agent adds a comment"       CLAUDECODE=1 CLAUDE_CODE_SESSION_ID=s1
 staged_case pass "agent with a grant"         CLAUDECODE=1 CLAUDE_CODE_SESSION_ID=s2
+staged_case fail "Codex adds a comment"       CLAUDECODE= CODEX_SESSION_ID=c1
+staged_case pass "Codex with a grant"         CLAUDECODE= CODEX_SESSION_ID=s2
+staged_case fail "pi adds a comment"          CLAUDECODE= PI_CODING_AGENT=true PI_SESSION_ID=p1
+staged_case fail "omp adds a comment"         CLAUDECODE= AGENT=1
+staged_case pass "omp with a grant"           CLAUDECODE= AGENT=1 DOC_LOCK_SESSION=s2
 git -C "$repo" reset -q --hard
 
 printf 'const a = 1;\n// dup\n' >"$repo/a.ts"

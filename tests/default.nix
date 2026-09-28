@@ -197,7 +197,12 @@ in
     touch $out
   '';
   unit-doc-lock = pkgs.runCommand "unit-doc-lock" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.git pkgs.coreutils ]; } ''
-    bash ${../modules/home/claude/hooks/doc-lock-test.sh} ${lib.getExe pkgs.martin.doc-lock}
+    bash ${../modules/home/doc-lock/doc-lock-test.sh} ${lib.getExe pkgs.martin.doc-lock}
+    touch $out
+  '';
+  unit-doc-lock-extension = pkgs.runCommand "unit-doc-lock-extension" { nativeBuildInputs = [ pkgs.bun pkgs.git ]; } ''
+    export HOME=$TMPDIR
+    bun ${../modules/home/doc-lock/agent-extension-test.ts} ${pkgs.martin.doc-lock-extension}
     touch $out
   '';
   unit-edit-batch-nudge = pkgs.runCommand "unit-edit-batch-nudge" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnused pkgs.coreutils ]; } ''

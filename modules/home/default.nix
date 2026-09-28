@@ -17,7 +17,7 @@
     ./tmux.nix
     ./git.nix
     ./hk.nix
-    ./doc-lock.nix
+    ./doc-lock
     ./jujutsu.nix
     ./workspace-backend.nix
     ./worktrunk.nix
