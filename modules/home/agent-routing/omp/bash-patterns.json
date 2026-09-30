@@ -1,0 +1,8 @@
+{
+  "bash": {
+    "patterns": [
+      { "match": "gh pr comment*", "approval": "prompt" },
+      { "match": "gh pr review*", "approval": "prompt" }
+    ]
+  }
+}

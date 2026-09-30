@@ -1,0 +1,2 @@
+- **Review**: Run the shared review default (`code-review`) in the main agent. The native `reviewer` and `security-reviewer` agents run only when named.
+- **Posting**: `bash.patterns` in `config.yml` prompt on `gh pr comment*` and `gh pr review*`, reasserted at activation. They gate the `bash` tool only; a shell spawned through `eval` is not covered.
