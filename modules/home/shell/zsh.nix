@@ -86,8 +86,8 @@ in
         autoload -Uz compinit && compinit -C
       '';
       autosuggestion.enable = true;
-      syntaxHighlighting.enable = false;
-      historySubstringSearch.enable = false;
+      syntaxHighlighting.enable = true;
+      historySubstringSearch.enable = true;
 
       defaultKeymap = if viMode.enable then "viins" else "emacs";
 

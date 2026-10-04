@@ -285,10 +285,6 @@ let
         (homePrograms.zsh.enable == true)
         "${prefix} Home Manager should own zsh config")
 
-      (helpers.assertTest "${prefix}-home-zsh-history-substring-disabled"
-        (homePrograms.zsh.historySubstringSearch.enable == false)
-        "${prefix} Home Manager should not enable zsh-history-substring-search -- Up/Down uses the native zle prefix widget instead")
-
       (helpers.assertTest "${prefix}-home-zsh-vi-mode-enabled"
         (homeConfig.martin.shell.viMode.enable == true)
         "${prefix} Home Manager should enable martin.shell.viMode (vi editing at the prompt)")
