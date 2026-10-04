@@ -1,4 +1,4 @@
-{ lib, pkgs, ... }:
+{ inputs, lib, pkgs, currentSystemUser, ... }:
 
 # IINA is the preferred video player, but macOS/App updates keep re-claiming
 # video UTIs for QuickTime Player (or whichever app installs most recently).
@@ -52,7 +52,7 @@ let
   ];
 in
 {
-  system.activationScripts.postActivation.text = lib.mkAfter ''
+  home-manager.users.${currentSystemUser}.home.activation.defaultApps = inputs.home-manager.lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     echo "[default-apps] setting IINA as default video player"
     # `duti -s` talks to LaunchServices/cfprefsd; firing calls back-to-back with
     # no gap silently drops all but the first few writes, so pace the loop.

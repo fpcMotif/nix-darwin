@@ -27,6 +27,11 @@ export default function (pi: {
   pi.on("tool_call", (event: { toolName: string; input: unknown }, ctx) => {
     if (!editTools.has(event.toolName)) return;
     const result = run("edit", ctx, { tool_name: event.toolName, tool_input: event.input });
-    if (result.status === 2) return { block: true, reason: result.stderr };
+    if (result.status !== 0) {
+      return {
+        block: true,
+        reason: result.stderr || result.error?.message || `doc-lock exited with status ${result.status}`,
+      };
+    }
   });
 }

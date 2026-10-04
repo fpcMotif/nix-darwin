@@ -43,7 +43,10 @@ const checks: [string, boolean][] = [
   ["other tools pass", toolCall("s1", "bash", { command: "echo '// x' > a.ts" }) === undefined],
   ["typed docs request opens the lock", toolCall("s2", "write", { path: "notes.md", content: "# x\n" }) === undefined],
   ["machine input opens nothing", toolCall("s3", "write", { path: "notes.md", content: "# x\n" })?.block === true],
-  ["session id reaches child shells", process.env.DOC_LOCK_SESSION === "s3"],
+  ["checker startup failure blocks edits", (handlers.get("tool_call")!(
+    { toolName: "write", input: { path: "notes.md", content: "# x\n" } },
+    { ...ctx("missing-cwd"), cwd: join(repo, "missing") },
+  ) as { block?: boolean } | undefined)?.block === true],
 ];
 
 const failed = checks.filter(([, ok]) => !ok);

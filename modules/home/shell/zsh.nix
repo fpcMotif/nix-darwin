@@ -85,7 +85,7 @@ in
         fpath=($HOME/.zsh/completions $fpath)
         autoload -Uz compinit && compinit -C
       '';
-      autosuggestion.enable = false;
+      autosuggestion.enable = true;
       syntaxHighlighting.enable = false;
       historySubstringSearch.enable = false;
 
