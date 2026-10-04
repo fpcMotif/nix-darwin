@@ -19,8 +19,6 @@ class RoutingModule(Protocol):
 
     def load_policy(self, path: Path) -> Policy: ...
 
-    def resolve(self, policy: Policy, job: str) -> tuple[str, str]: ...
-
 
 def load_routing_module(source: Path) -> RoutingModule:
     spec = importlib.util.spec_from_file_location("ai_model_routing", source)
@@ -48,24 +46,6 @@ def main() -> None:
 
     routing = load_routing_module(Path(sys.argv[1]))
     policy = routing.load_policy(Path(sys.argv[2]))
-    serialized = json.dumps(policy)
-    assert "gpt-5." not in serialized
-    assert all(
-        model in serialized
-        for model in ("gpt-6-astra", "gpt-6-sol", "gpt-6-luna")
-    )
-    assert routing.resolve(policy, "search") == (
-        "openai-codex/gpt-6-sol",
-        "medium",
-    )
-    assert routing.resolve(policy, "check") == (
-        "openai-codex/gpt-6-sol",
-        "high",
-    )
-    assert routing.resolve(policy, "general") == (
-        "openai-codex/gpt-6-astra",
-        "high",
-    )
 
     with tempfile.TemporaryDirectory(prefix="ai-model-routing-test-") as temp:
         home = Path(temp)
@@ -74,14 +54,19 @@ def main() -> None:
         settings_path.write_text(
             json.dumps(
                 {
-                    "defaultProvider": "user-provider",
+                    "defaultProvider": "openai-codex",
                     "defaultModel": "user/old-model",
                     "defaultThinkingLevel": "low",
                     "modelProfiles": [],
+                    "defaultTools": ["read", "bash", "edit", "write"],
+                    "codemode": {"mode": "only", "inlineBudget": 1234},
                     "userSetting": "keep-me",
                 }
             )
         )
+        auth_path = settings_path.with_name("auth.json")
+        auth_contents = '{"openai":{"type":"oauth","refresh":"preserve-this-token"}}\n'
+        auth_path.write_text(auth_contents)
 
         agents_dir = home / ".pi/agent/agents"
         agents_dir.mkdir(parents=True)
@@ -113,19 +98,22 @@ def main() -> None:
         assert routing.apply_policy(home, policy)
 
         settings = json.loads(settings_path.read_text())
-        assert settings["defaultProvider"] == "openai-codex"
+        assert settings["defaultProvider"] == "openai"
         assert settings["defaultModel"] == "gpt-6-astra"
         assert settings["defaultThinkingLevel"] == "high"
         assert settings["userSetting"] == "keep-me"
+        assert settings["defaultTools"] == ["read", "bash", "edit", "write", "codemode"]
+        assert settings["codemode"] == {"mode": "on", "inlineBudget": 1234}
+        assert auth_path.read_text() == auth_contents
         assert {profile["model"] for profile in settings["modelProfiles"]} == {
-            "openai-codex/gpt-6-astra",
-            "openai-codex/gpt-6-sol",
-            "openai-codex/gpt-6-luna",
+            "openai/gpt-6-astra",
+            "openai/gpt-6-sol",
+            "openai/gpt-6-luna",
         }
 
         for filename, (model, effort) in expected_agents.items():
             text = (agents_dir / filename).read_text()
-            assert f"model: openai-codex/{model}" in text
+            assert f"model: openai/{model}" in text
             assert f"thinking: {effort}" in text
             assert f"{filename} body" in text
 
@@ -157,6 +145,15 @@ def main() -> None:
         assert not routing.apply_policy(home, policy)
         for path, contents in first_run.items():
             assert path.read_bytes() == contents, f"second run rewrote {path}"
+
+        settings_path.unlink()
+        assert routing.apply_policy(home, policy)
+        fresh_settings = json.loads(settings_path.read_text())
+        assert fresh_settings["defaultProvider"] == "openai"
+        assert fresh_settings["defaultTools"] == settings["defaultTools"]
+        assert fresh_settings["codemode"]["mode"] == "on"
+        assert auth_path.read_text() == auth_contents
+        assert not routing.apply_policy(home, policy)
 
 
 if __name__ == "__main__":

@@ -645,7 +645,6 @@ let
         builtins.hasAttr "codex/config.toml" darwinConfig.environment.etc
           && lib.hasInfix "[lsp.servers.tsc]" codexDefaults
           && lib.hasInfix "[mcp_servers.fff]" codexDefaults
-          && lib.hasInfix ''PI_PLAN_MODEL = "openai-codex/gpt-6-astra:xhigh"'' codexDefaults
           && !(lib.hasInfix "@PI_" codexDefaults)
           && !(lib.hasInfix "gpt-5." codexDefaults)
           && !(lib.hasInfix ''

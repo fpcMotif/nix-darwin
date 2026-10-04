@@ -25,26 +25,25 @@ def load_policy(path: Path) -> Policy:
     return policy
 
 
-def resolve(policy: Policy, job: str) -> tuple[str, str]:
+def resolve_pi(policy: Policy, job: str) -> tuple[str, str]:
     assignment = policy["jobs"][job]
     model = policy["models"][assignment["model"]]
-    return f"{model['provider']}/{model['id']}", assignment["effort"]
+    provider = policy["adapters"]["pi"]["provider"]
+    return f"{provider}/{model['id']}", assignment["effort"]
 
 
 def reconcile_pi_settings(home: Path, policy: Policy) -> bool:
     path = home / ".pi/agent/settings.json"
-    if not path.exists():
-        log("pi: settings.json absent, skipping")
-        return False
-
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text()) if path.exists() else {}
     before = json.dumps(data, indent=2, ensure_ascii=False)
     adapter = policy["adapters"]["pi"]
     default_assignment = policy["jobs"][adapter["defaultJob"]]
     default_model = policy["models"][default_assignment["model"]]
-    data["defaultProvider"] = default_model["provider"]
+    data["defaultProvider"] = adapter["provider"]
     data["defaultModel"] = default_model["id"]
     data["defaultThinkingLevel"] = default_assignment["effort"]
+    data["defaultTools"] = adapter["defaultTools"]
+    data.setdefault("codemode", {}).update(adapter["codemode"])
     data["modelProfiles"] = [
         {
             "model": model,
@@ -52,13 +51,14 @@ def reconcile_pi_settings(home: Path, policy: Policy) -> bool:
             "label": f"{job.title()} · {model.rsplit('/', 1)[-1]}",
         }
         for job in adapter["profiles"]
-        for model, effort in [resolve(policy, job)]
+        for model, effort in [resolve_pi(policy, job)]
     ]
 
     after = json.dumps(data, indent=2, ensure_ascii=False)
     if after == before:
         log("pi: settings already in sync")
         return False
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(after + "\n")
     log("pi: settings updated")
     return True
@@ -103,7 +103,7 @@ def reconcile_pi_agents(home: Path, policy: Policy) -> bool:
         path = directory / filename
         if not path.exists():
             continue
-        model, thinking = resolve(policy, job)
+        model, thinking = resolve_pi(policy, job)
         original = path.read_text()
         patched = patch_frontmatter(original, model, thinking)
         if patched is None:

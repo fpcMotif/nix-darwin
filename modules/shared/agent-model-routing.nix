@@ -61,6 +61,9 @@ let
   effort = job: routes.${job}.effort;
 
   pi = {
+    provider = "openai";
+    defaultTools = [ "read" "bash" "edit" "write" "codemode" ];
+    codemode.mode = "on";
     defaultJob = "general";
     profiles = [ "search" "check" "general" "plan" "economy" ];
     agents = {
@@ -174,9 +177,9 @@ let
     codex = {
       profiles = codexProfiles;
       environment = {
-        PI_PLAN_MODEL = selector "plan";
-        PI_SLOW_MODEL = selector "plan";
-        PI_SMOL_MODEL = selector "search";
+        PI_PLAN_MODEL = "${pi.provider}/${modelId "plan"}:${effort "plan"}";
+        PI_SLOW_MODEL = "${pi.provider}/${modelId "plan"}:${effort "plan"}";
+        PI_SMOL_MODEL = "${pi.provider}/${modelId "search"}:${effort "search"}";
       };
     };
     crush = {
