@@ -59,9 +59,9 @@ let
       (hasPackage "go" homeConfig.home.packages)
       "common Home Manager packages should include the Go toolchain")
 
-    (helpers.assertTest "common-home-packages-include-cargo"
-      (hasPackage "cargo" homeConfig.home.packages)
-      "common Home Manager packages should include the Rust Cargo toolchain")
+    (helpers.assertTest "common-home-packages-include-rust-toolchain"
+      (hasPackage "rust-minimal" homeConfig.home.packages)
+      "common Home Manager packages should include martin.rust-toolchain (cargo, rustc, clippy, rustfmt, rust-analyzer)")
 
 
     (helpers.assertTest "agent-skills-enabled"

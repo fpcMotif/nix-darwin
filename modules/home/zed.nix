@@ -92,7 +92,7 @@ in
       bash-language-server
       lua-language-server
       gopls
-      rust-analyzer
+      martin.rust-toolchain
     ];
 
     extensions = [

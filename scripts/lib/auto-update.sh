@@ -113,13 +113,17 @@ au_bump_mode() {
 # artefact. The guard inspects a dry-run build plan and fails if it plans any
 # from-source build outside the glue/vendored exemptions.
 #
-# Classification is by derivation NAME against two exemption classes:
+# Classification is by derivation NAME against three exemption classes:
 #
 #   Glue derivation — profile/activation/generated-config derivations that
 #     appear in every build plan and rebuild in milliseconds. Never offenders.
 #   Vendored derivation — packages defined in this repo (pkgs/*.nix pnames).
 #     No binary cache will ever hold them; they always build locally by design.
 #     The list is derived from the tree, so it cannot rot into fiction.
+#   Rust toolchain derivation — rust-overlay components, which unpack
+#     rust-lang's prebuilt archives, and the profile that joins them. The
+#     match requires the version and target triple, so a from-source nixpkgs
+#     rustc-1.98.1 or cargo-1.98.0 still fails.
 #
 # Everything else IS a source build and fails. Erring toward failure means new
 # noise surfaces immediately instead of silently green-lighting a compile.
@@ -188,6 +192,11 @@ au_vendored_drv_names() {
   } | sort -u
 }
 
+au_is_rust_toolchain_drv_name() {
+  [[ "$1" =~ ^rust-minimal-[0-9.]+$ ]] \
+    || [[ "$1" =~ ^(rustc|cargo|rust-std|rust-src|clippy-preview|rustfmt-preview|rust-analyzer-preview)-[0-9.]+-(aarch64|x86_64)-(apple-darwin|unknown-linux-gnu)$ ]]
+}
+
 au_plan_offenders() {
   local building='' line name drv
   while IFS= read -r line; do
@@ -203,6 +212,7 @@ au_plan_offenders() {
           continue
         fi
         au_is_glue_drv_name "$name" && continue
+        au_is_rust_toolchain_drv_name "$name" && continue
         au_is_vendored_drv_name "$name" "$@" && continue
         printf '%s\n' "$name"
         ;;

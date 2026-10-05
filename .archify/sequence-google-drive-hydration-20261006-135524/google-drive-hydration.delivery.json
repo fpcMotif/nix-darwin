@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "cde717b1-0d74-4e89-9dce-205bc660e058",
+  "status": "current",
+  "command": "deliver",
+  "type": "sequence",
+  "input": "/Users/martinfan/nix-config/.archify/sequence-google-drive-hydration-20261006-135524/candidate.json",
+  "output": "/Users/martinfan/nix-config/.archify/sequence-google-drive-hydration-20261006-135524/google-drive-hydration.html",
+  "specification": {
+    "sha256": "863ecc7a5a4c0713b6869d38d1b664d6c607ac3f5690bcea17478602e75c1c53",
+    "bytes": 4174
+  },
+  "artifact": {
+    "sha256": "089f6aedfe44912351c2300418e74f913ab36d626495c8cb4e1c04d681a4b6a4",
+    "bytes": 758201
+  }
+}

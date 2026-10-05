@@ -174,6 +174,10 @@ _Avoid_: treating an unfamiliar plan entry as glue without naming it; unknown en
 A package defined in this repo under `pkgs/` and built from vendored sources or lockfiles (drafts-mcp-server, sourcegraph-amp, the agent CLI repacks). No binary cache will ever hold them; they always build locally by design and are exempt from the source-build guard. The exemption list is derived from `pkgs/*.nix` pnames at run time, so it cannot name packages that no longer exist.
 _Avoid_: maintaining a hand-written exemption list, or confusing "vendored" (always local builds, seconds to minutes) with "glue" (trivial derivations every rebuild has).
 
+**Rust toolchain derivation**:
+A rust-overlay component (rustc, cargo, rust-std, rust-src, and the clippy, rustfmt, and rust-analyzer previews) that unpacks rust-lang's prebuilt archive, or the `rust-minimal` profile that joins them into `martin.rust-toolchain`. No binary cache holds them; they build locally in seconds and are exempt from the source-build guard. The exemption matches the version and target triple in the name.
+_Avoid_: exempting bare `rustc` or `cargo` prefixes, which would hide a from-source nixpkgs compiler build.
+
 **Release pin**:
 A package under `pkgs/` fixed to one upstream version plus the hash of each file it downloads. A bump detects change by comparing versions and moves the version and every hash together, or not at all.
 _Avoid_: calling a flake-input bump or an npm lockfile regeneration a release pin; those move through `flake.lock` or a lockfile, not per-file hashes.

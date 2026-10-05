@@ -271,7 +271,6 @@ let
     "Bash(ln:*)"
     "Read(~/.claude/**)"
     "Edit(~/.claude/**)"
-    "Write(~/.claude/**)"
     "Read(~/.agents/**)"
     "mcp__fff__find_files"
     "mcp__fff__grep"
@@ -309,20 +308,14 @@ let
     "Read(~/.viminfo)"
     "Read(~/.zsh_sessions/**)"
     "Edit(~/.zshrc)"
-    "Write(~/.zshrc)"
     "Edit(~/.zshenv)"
-    "Write(~/.zshenv)"
     "Edit(~/.zprofile)"
-    "Write(~/.zprofile)"
     "Edit(~/.bashrc)"
-    "Write(~/.bashrc)"
     "Edit(~/.bash_profile)"
-    "Write(~/.bash_profile)"
     "Bash(zed:*)"
     "Bash(zed-nightly:*)"
     "Read(~/.config/zed/**)"
     "Edit(~/.config/zed/**)"
-    "Write(~/.config/zed/**)"
   ] ++ lib.optionals isDarwin [
     # macOS-only commands and home paths stay out of Linux settings and
     # activation scripts.
@@ -353,7 +346,6 @@ let
   ] ++ lib.optionals isDarwin [
     "Read(~/Library/Keychains/**)"
     "Edit(~/Library/**)"
-    "Write(~/Library/**)"
   ];
 
   # Prompt-before-touching, for the home dirs outside a normal working tree.
@@ -368,26 +360,19 @@ let
   claudeAskRules = [
     "Read(~/Documents/**)"
     "Edit(~/Documents/**)"
-    "Write(~/Documents/**)"
     "Read(~/Downloads/**)"
     "Edit(~/Downloads/**)"
-    "Write(~/Downloads/**)"
     "Read(~/Movies/**)"
     "Edit(~/Movies/**)"
-    "Write(~/Movies/**)"
     "Read(~/Music/**)"
     "Edit(~/Music/**)"
-    "Write(~/Music/**)"
     "Read(~/Pictures/**)"
     "Edit(~/Pictures/**)"
-    "Write(~/Pictures/**)"
     "Read(~/Public/**)"
     "Edit(~/Public/**)"
-    "Write(~/Public/**)"
   ] ++ lib.optionals isDarwin [
     "Read(~/Applications/**)"
     "Edit(~/Applications/**)"
-    "Write(~/Applications/**)"
   ];
 
   # The declaration below owns this exact object, including the plugin-skill
@@ -395,7 +380,7 @@ let
   claudePermissions = {
     defaultMode = "bypassPermissions";
     allow = claudeAllowRules;
-    deny = lib.unique (claudeDenyRules ++ deniedPluginSkills);
+    deny = lib.unique (claudeDenyRules ++ deniedPluginSkills ++ deniedPluginMcpServers);
     ask = claudeAskRules;
   };
 
@@ -439,13 +424,34 @@ let
   # pin running AHEAD of the plugin — an id would then be hidden with no
   # replacement — which is why scripts/verify-agent-skills.sh asserts every
   # hidden id is actually declared by the enabled plugin.
-  pluginProvidedSkillIds = enabledMattpocockSkills;
+  # Skills present in the pinned flake bundle that the official Claude Code plugin (v1.2.3)
+  # has not yet published (e.g. retro, implement-spec, pr in v1.3.1).
+  # These must NOT be hidden from Claude, keeping them accessible via ~/.claude/skills.
+  unreleasedPluginSkills = [ "implement-spec" "pr" "retro" ];
+  pluginProvidedSkillIds = lib.subtractLists unreleasedPluginSkills enabledMattpocockSkills;
   # Non-mattpocock ids Claude Code already gets from the account/harness side.
   # `anthropic-skills:notebooklm` ships with the harness, has no local file and
   # cannot be removed, so the hand-installed ~/.claude/skills/notebooklm copy is
   # the one that yields. It stays on disk and stays visible to the other agents.
   harnessProvidedSkillIds = [ "notebooklm" ];
-  claudeHiddenSkillIds = pluginProvidedSkillIds ++ harnessProvidedSkillIds;
+  idleClaudeSkillIds = [
+    "animation-vocabulary"
+    "autoresearch"
+    "chronicle"
+    "claude-handoff"
+    "edit-article"
+    "eli5"
+    "ground-truth-audit"
+    "loop-me"
+    "pick-ui-library"
+    "pixel-clone-landing-page"
+    "review-animations"
+    "ubiquitous-language"
+    "writing-beats"
+    "writing-fragments"
+    "writing-shape"
+  ];
+  claudeHiddenSkillIds = pluginProvidedSkillIds ++ harnessProvidedSkillIds ++ idleClaudeSkillIds;
 
   # Plugin skills with NO bundle counterpart that must not be reachable at all.
   # skillOverrides cannot touch these: Claude Code hard-codes its resolver to
@@ -460,7 +466,31 @@ let
   # rule refuses execution. The manifest prune is re-applied every switch
   # because a version bump writes a fresh cache dir; the deny rule is
   # version-independent and covers the window in between.
-  deniedPluginSkills = map (id: "Skill(mattpocock-skills:${id})") disabledMattpocockSkills;
+  idleClaudePluginSkills = {
+    "claude-plugins-official/convex" = [
+      "add"
+      "agent"
+      "billing"
+      "convex-authz"
+      "crons"
+      "domains"
+      "env"
+      "improve-convex-plugin"
+      "labs-quickstart"
+      "migrate"
+      "quickstart"
+      "seed"
+      "suggest"
+      "test"
+      "workflow"
+    ];
+    "claude-community/html-plan" = [ "html-plan" ];
+  };
+  deniedPluginSkills = map (id: "Skill(mattpocock-skills:${id})") disabledMattpocockSkills
+    ++ lib.concatLists (lib.mapAttrsToList
+    (dir: ids: map (id: "Skill(${baseNameOf dir}:${id})") ids)
+    idleClaudePluginSkills);
+  deniedPluginMcpServers = [ "mcp__plugin_marketing_figma" ];
 
   # Effect-TS/skills. Upstream publishes flat under `skills/<name>/SKILL.md`
   # (currently just `effect-ts`). This source stays DEFINED but is no longer
@@ -502,7 +532,7 @@ let
     # Default model for subagents that don't set their own `model:`
     # frontmatter (Task-spawned agents). The main session model above stays
     # opus/fable; most subagents don't need that reasoning tier.
-    CLAUDE_CODE_SUBAGENT_MODEL = "sonnet";
+    CLAUDE_CODE_SUBAGENT_MODEL = "opus";
     # Code search routing: rg defaults for agent shells only (6 threads,
     # 240-column cap, node_modules excluded) and the read-guard threshold.
     # A 200-line file costs about what one denied round trip costs, so the
@@ -816,6 +846,22 @@ in
         rm -f -- "$tmp"
       fi
     done
+    ${lib.concatStrings (lib.mapAttrsToList (dir: ids: ''
+      for version in "${homeDir}/.claude/plugins/cache/${dir}"/*; do
+        for id in ${lib.escapeShellArgs ids}; do
+          src="$version/skills/$id"
+          [ -f "$src/SKILL.md" ] || continue
+          if [ -n "''${DRY_RUN:-}" ]; then
+            echo "claude-prune-plugin-skills: would move $src to skills-disabled" >&2
+          else
+            mkdir -p "$version/skills-disabled"
+            rm -rf -- "$version/skills-disabled/$id"
+            mv -- "$src" "$version/skills-disabled/$id"
+            echo "claude-prune-plugin-skills: moved $src to skills-disabled" >&2
+          fi
+        done
+      done
+    '') idleClaudePluginSkills)}
   '';
 
   # One reconciler seeds missing files, applies the declared key policies in a

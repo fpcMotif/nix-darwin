@@ -24,6 +24,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     agent-skills = {
       url = "github:Kyure-A/agent-skills-nix/master";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -103,6 +108,7 @@
 
       overlays = [
         inputs.nur.overlays.default
+        inputs.rust-overlay.overlays.default
         (import ./pkgs)
         inputs.claude-code.overlays.default
       ];

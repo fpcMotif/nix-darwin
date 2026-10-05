@@ -193,6 +193,22 @@ glue_plan='these 9 derivations will be built:
 out=$(printf '%s\n' "$glue_plan" | au_plan_offenders)
 [ -z "$out" ] || fail "generated-config glue flagged: $out"
 
+# rust-overlay's unpacked components and profile pass (names captured from a
+# real Darwin plan); nixpkgs' from-source rustc and cargo still fail.
+rust_plan='these 10 derivations will be built:
+  /nix/store/1111aaaa2222bbbb3333cccc4444dddd-rustc-1.99.0-aarch64-apple-darwin.drv
+  /nix/store/2222bbbb3333cccc4444dddd5555eeee-cargo-1.99.0-aarch64-apple-darwin.drv
+  /nix/store/3333cccc4444dddd5555eeee6666ffff-rust-std-1.99.0-aarch64-apple-darwin.drv
+  /nix/store/4444dddd5555eeee6666ffff7777aaaa-rust-src-1.99.0-aarch64-apple-darwin.drv
+  /nix/store/5555eeee6666ffff7777aaaa8888bbbb-clippy-preview-1.99.0-aarch64-apple-darwin.drv
+  /nix/store/6666ffff7777aaaa8888bbbb9999cccc-rustfmt-preview-1.99.0-aarch64-apple-darwin.drv
+  /nix/store/7777aaaa8888bbbb9999cccc0000dddd-rust-analyzer-preview-1.99.0-aarch64-apple-darwin.drv
+  /nix/store/8888bbbb9999cccc0000dddd1111eeee-rust-minimal-1.99.0.drv
+  /nix/store/9999cccc0000dddd1111eeee2222ffff-rustc-1.98.1.drv
+  /nix/store/0000dddd1111eeee2222ffff3333aaaa-cargo-1.98.0.drv'
+out=$(printf '%s\n' "$rust_plan" | au_plan_offenders)
+[ "$out" = $'rustc-1.98.1\ncargo-1.98.0' ] || fail "rust toolchain verdict wrong: '$out'"
+
 # ---------------------------------------------------------------------------
 # Vendored-exemption list: derived from the repo, so it cannot rot.
 # ---------------------------------------------------------------------------

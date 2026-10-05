@@ -85,7 +85,11 @@ in
         fpath=($HOME/.zsh/completions $fpath)
         autoload -Uz compinit && compinit -C
       '';
-      autosuggestion.enable = true;
+      autosuggestion = {
+        enable = true;
+        strategy = [ "history" "completion" ];
+        highlight = "fg=#908caa";
+      };
       syntaxHighlighting.enable = true;
       historySubstringSearch.enable = true;
 

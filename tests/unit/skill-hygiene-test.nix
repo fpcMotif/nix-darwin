@@ -133,7 +133,7 @@ helpers.testSuite "skill-hygiene" (
     #    Crush, which have no plugin system to fall back on.
     (helpers.assertTest "skill-hygiene-dedup-is-claude-only"
       (lib.hasInfix "skillOverrides" claudeNix
-      && lib.hasInfix "pluginProvidedSkillIds = enabledMattpocockSkills" claudeNix)
+      && lib.hasInfix "pluginProvidedSkillIds = lib.subtractLists unreleasedPluginSkills enabledMattpocockSkills" claudeNix)
       "the Claude de-duplication must hide bundle copies via settings.json skillOverrides, derived from enabledMattpocockSkills — never by removing ids from the shared bundle")
   ]
 )

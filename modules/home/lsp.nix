@@ -55,7 +55,9 @@ let
     gopls
 
     # === Rust ===
-    rust-analyzer
+    # rust-analyzer ships in martin.rust-toolchain (modules/home/packages.nix)
+    # so it matches the compiler; a second copy here would collide in
+    # home.packages.
 
     # === Swift / iOS ===
     sourcekit-lsp

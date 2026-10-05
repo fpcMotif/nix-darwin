@@ -61,6 +61,13 @@ final: _prev:
     sf-symbols = final.callPackage ./sf-symbols.nix { };
     squirrel = final.callPackage ./squirrel.nix { };
 
+    # rust-lang's prebuilt stable via rust-overlay, which carries a release
+    # within a day while nixpkgs trails by weeks. One bundle keeps cargo,
+    # rustc, clippy, rustfmt, and rust-analyzer on the same version.
+    rust-toolchain = final.rust-bin.stable.latest.minimal.override {
+      extensions = [ "clippy" "rustfmt" "rust-src" "rust-analyzer" ];
+    };
+
     bun-canary-bin = final.callPackage ./bun-canary-bin.nix { };
     calldiff = final.callPackage ./calldiff.nix { };
     doc-lock = final.callPackage ./doc-lock.nix { };

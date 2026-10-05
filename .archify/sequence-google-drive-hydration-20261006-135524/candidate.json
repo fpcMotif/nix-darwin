@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Google Drive Cache Hydration Incident",
+    "subtitle": "How Floodlight file crawling triggered automatic macOS FileProvider downloads",
+    "output": ".archify/sequence-google-drive-hydration-20261006-135524/google-drive-hydration.html",
+    "viewBox": [1080, 580],
+    "column_fit": "spread",
+    "animation": "none",
+    "quality_profile": "showcase"
+  },
+  "participants": [
+    { "id": "floodlight", "type": "frontend", "label": "Floodlight", "sublabel": "Search Crawler (PID 2088)" },
+    { "id": "vfs", "type": "backend", "label": "macOS Kernel", "sublabel": "APFS / VFS Layer" },
+    { "id": "fpd", "type": "security", "label": "fileproviderd", "sublabel": "Apple Daemon" },
+    { "id": "gdrive", "type": "backend", "label": "Google Drive", "sublabel": "FileProvider Extension" },
+    { "id": "cloud", "type": "cloud", "label": "Google Cloud", "sublabel": "drive.google.com" },
+    { "id": "ssd", "type": "database", "label": "Local SSD", "sublabel": "Physical APFS Blocks" }
+  ],
+  "segments": [
+    { "from": 150, "to": 240, "label": "1. Index Crawl & Trap Trigger" },
+    { "from": 250, "to": 360, "label": "2. Kernel Trap & Cloud Hydration" },
+    { "from": 370, "to": 480, "label": "3. SSD Allocation & Unblock" }
+  ],
+  "messages": [
+    { "id": "msg-open", "from": "floodlight", "to": "vfs", "y": 160, "label": "open('CloudStorage/video.mp4')", "variant": "emphasis" },
+    { "id": "msg-xpc-trap", "from": "vfs", "to": "fpd", "y": 200, "label": "XPC trap: UF_DATALESS requires hydration", "variant": "security" },
+    { "id": "msg-request-bytes", "from": "fpd", "to": "gdrive", "y": 245, "label": "fetch item binary stream", "variant": "emphasis" },
+    { "id": "msg-http-get", "from": "gdrive", "to": "cloud", "y": 285, "label": "HTTPS GET file binary chunks", "variant": "default" },
+    { "id": "msg-cloud-stream", "from": "cloud", "to": "gdrive", "y": 325, "label": "stream 10 MB/s data chunks", "variant": "return" },
+    { "id": "msg-deliver-payload", "from": "gdrive", "to": "fpd", "y": 365, "label": "deliver downloaded payload", "variant": "return" },
+    { "id": "msg-write-blocks", "from": "fpd", "to": "ssd", "y": 395, "label": "write physical blocks (22 GB cache)", "variant": "emphasis" },
+    { "id": "msg-clear-dataless", "from": "fpd", "to": "vfs", "y": 425, "label": "clear UF_DATALESS flag", "variant": "return" },
+    { "id": "msg-unblock-read", "from": "vfs", "to": "floodlight", "y": 455, "label": "unblock read() & deliver bytes", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "floodlight", "from": 160, "to": 460, "type": "frontend" },
+    { "participant": "vfs", "from": 160, "to": 455, "type": "backend" },
+    { "participant": "fpd", "from": 200, "to": 430, "type": "security" },
+    { "participant": "gdrive", "from": 245, "to": 370, "type": "backend" },
+    { "participant": "cloud", "from": 285, "to": 330, "type": "cloud" },
+    { "participant": "ssd", "from": 390, "to": 415, "type": "database" }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "The Root Cause Trap",
+      "items": [
+        "Floodlight index-root was set to /Users/martinfan with no CloudStorage exclusion",
+        "It walked inside ~/Library/CloudStorage/GoogleDrive and called open() on files",
+        "APFS treats any read() on a UF_DATALESS file as an intentional user download request"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "The Hidden 10 MB/s Download",
+      "items": [
+        "Google Drive was configured for cloud-only (0 bytes offline files)",
+        "fileproviderd pulled bytes from Google servers at 10 MB/s to satisfy the read() call",
+        "Downloaded files accumulated on SSD blocks under 'recently opened files' cache"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Solution & Best Practice",
+      "items": [
+        "Killing Floodlight immediately halted the 10 MB/s download stream",
+        "Evicted physical blocks via evictUbiquitousItem (reclaimed 22 GB back to 0 bytes)",
+        "Search tools must inspect NSURLIsUbiquitousItemKey and skip unhydrated files"
+      ]
+    }
+  ]
+}

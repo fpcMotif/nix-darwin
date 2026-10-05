@@ -61,10 +61,7 @@ let
     shellcheck
     stylua
     # Rust.
-    rustc
-    cargo
-    rustfmt
-    clippy
+    martin.rust-toolchain
     cargo-nextest
     # bacon replaces cargo-watch: upstream archived it (points to bacon/watchexec),
     # and at the 2026-07 pin it is uncached AND its link step deterministically

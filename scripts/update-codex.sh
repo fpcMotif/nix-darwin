@@ -17,7 +17,9 @@
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
-latest=$(au_latest_github_release openai/codex '^rust-v' prerelease)
+latest=$(au_github_api "https://api.github.com/repos/openai/codex/releases?per_page=30" \
+  | jq -r '.[].tag_name | select(test("^rust-v")) | sub("^rust-v"; "")' \
+  | sort -V | tail -1)
 
 assets=()
 for triple in \
