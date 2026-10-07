@@ -61,7 +61,7 @@ segments() {
 if [ -z "${EDIT_GUARD_OFF:-}" ]; then
   # 1. Inline code (stdin heredoc or -c) that writes a file: an unanchored str.replace edits nothing and reports success.
   if printf '%s' "$CMD" | grep -Eq '<<|[[:space:]]-c[[:space:]]|[[:space:]]-e[[:space:]]' \
-     && printf '%s' "$CMD" | grep -Eq "open\([^)]*['\"][wax]|write_text\(|writelines\(|\.write\(|writeFile"; then
+     && printf '%s' "$CMD" | grep -Eq "open\([^)]*,[[:space:]]*(mode[[:space:]]*=[[:space:]]*)?['\"][wax]|write_text\(|writelines\(|\.write\(|writeFile"; then
     deny "shell-guard: change a file with the Edit tool (exact old_string -> new_string; it fails loudly on a missed anchor, replace_all for every occurrence). Create a file with the Write tool. Inline scripts that call open(...,'w') or .write() are denied."
   fi
 
@@ -72,8 +72,9 @@ if [ -z "${EDIT_GUARD_OFF:-}" ]; then
 
   # 3. A heredoc redirected into a file (cat > f <<EOF, cat <<EOF > f, tee f <<EOF): the content is authored in the command.
   if printf '%s' "$CMD" | grep -Eq '<<' \
-     && printf '%s' "$BODY" | grep -E '<<' | grep -Eq '(>>?[[:space:]]*[^&[:space:]>]|(^|[;&|(`[:space:]])tee[[:space:]]+(-a[[:space:]]+)?[^-[:space:]])' \
-     && ! printf '%s' "$BODY" | grep -E '<<' | grep -Eq '>>?[[:space:]]*/dev/null'; then
+     && segments blank-quoted | grep -E '^(cat|tee)([[:space:]]|$)' | grep -E '<<' \
+        | sed -E 's#[0-9]*>>?[[:space:]]*/dev/null##g' \
+        | grep -Eq '(>>?[[:space:]]*[^&[:space:]>]|^tee[[:space:]]+(-a[[:space:]]+)?[^-[:space:]<])'; then
     deny "shell-guard: create the file with the Write tool (content lands verbatim, no heredoc quoting). Change lines with the Edit tool. A heredoc redirected into a file is denied."
   fi
 
@@ -85,13 +86,15 @@ fi
 
 # 5. Per command position: bare python/pip (uv group) and cat/sed/find (tool group).
 while IFS= read -r seg; do
+  case "${seg%%[[:space:]]*}" in
+    python|python[23]|python[23].[0-9]*|*/python|*/python[23]|*/python[23].[0-9]*|pip|pip3|pip3.[0-9]*|virtualenv|pipenv|poetry)
+      [ -z "${UV_GUARD_OFF:-}" ] && deny "shell-guard: Python runs through uv. Script: 'uv run script.py' (deps in '# /// script' metadata). Stdin: uv run - <<'PY'. One-liner: uv run python -c '...'. Extra dep: 'uv run --with PKG ...'. Install: 'uv add PKG' (project) or 'uv pip install PKG'. A .venv project: 'uv run python ...' uses that .venv. A poetry project: convert it with 'uvx migrate-to-uv', then use 'uv run'. Tools: 'uvx ty check', 'ruff check --fix . && ruff format .'." ;;
+  esac
   case "$seg" in
-    python|python[[:space:]]*|python[23]|python[23][[:space:].]*|*/python|*/python[[:space:]]*|*/python[23]*|pip|pip[[:space:]]*|pip3*|virtualenv*|pipenv*|poetry*)
-      [ -z "${UV_GUARD_OFF:-}" ] && deny "shell-guard: Python runs through uv. Script: 'uv run script.py' (deps in '# /// script' metadata). Stdin: uv run - <<'PY'. One-liner: uv run python -c '...'. Extra dep: 'uv run --with PKG ...'. Install: 'uv add PKG' (project) or 'uv pip install PKG'. Tools: 'uvx ty check', 'ruff check --fix . && ruff format .'." ;;
     sed|sed[[:space:]]*)
-      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: sed is denied. A span: 'bat -pp --line-range A:B FILE'. A stream rewrite: 'rg -o PAT -r REPL' or awk. A file change: the Edit tool." ;;
+      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: sed is denied. A span: 'bat -pp --line-range A:B FILE'. A span of command output: 'CMD | bat -pp --line-range A:B'. A stream rewrite: 'rg -o PAT -r REPL' or awk. A file change: the Edit tool." ;;
     find|find[[:space:]]*)
-      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: find is denied. Use 'fd PATTERN [DIR]' (-e EXT, -t f|d, -H for hidden)." ;;
+      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: find is denied. Use 'fd PATTERN [DIR]' (-e EXT, -t f|d, -H for hidden, -i for -iname, -d N for -maxdepth, -E GLOB for -not -path)." ;;
     perl|perl[[:space:]]*|awk[[:space:]]-i*)
       [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: perl one-liners are denied. A stream rewrite: 'rg -o PAT -r REPL'; structured data: jq; a file change: the Edit tool; a rule across files: 'sg -p PAT -r REPL --lang X DIR' then -U; anything larger: a script file run with 'uv run'." ;;
   esac

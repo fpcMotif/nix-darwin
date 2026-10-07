@@ -109,5 +109,21 @@ check deny  "echo x >> /tmp/f"
 check deny  'echo "a -> b" > out.txt'
 check deny  'printf "%s\n" x > "$out"'
 
+check allow "rg -o -r '<<HIT>>' 'needle' src/a.ts"
+check allow "rg -n '^(<<<<<<<|>>>>>>>)' src/"
+check allow "bun -e 'const x = b[p] << 24; console.log(x)'"
+check allow $'git commit -F - > /tmp/commit.log <<\'EOF\'\nfix: x\nEOF'
+check deny  $'cat > /dev/null <<\'EOF\'\nEOF\ncat > out.md <<\'EOF\'\nhello\nEOF'
+check deny  "cat <<< 'text' > out.md"
+check allow "bat -pp /x/lib/python3.14/site-packages/pkg/mod.py"
+check allow "rg -n foo .venv/lib/python3.12/site-packages/"
+check deny  "python3.12 -m pytest"
+check deny  "/usr/bin/python3 x.py"
+check deny  "poetry run pytest"
+check allow $'uv run - <<\'PY\'\nimport json\nprint(json.load(open("audit/report.json")))\nPY'
+check allow $'uv run - <<\'PY\'\nfrom PIL import Image\nprint(Image.open("assets/logo.png").size)\nPY'
+check deny  $'uv run - <<\'PY\'\nwith open("out.txt", mode="a") as f:\n    f.write("x")\nPY'
+check deny  "git show HEAD:a.ts | sed -n 150,234p"
+
 printf '%s/%s rows passed\n' "$((n - fail))" "$n"
 [ "$fail" -eq 0 ]

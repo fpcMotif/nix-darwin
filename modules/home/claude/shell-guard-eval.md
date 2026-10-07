@@ -91,8 +91,8 @@ Each turn in a chain is one round trip, about 2k tokens of context at the calibr
 
 ## What is installed
 
-- `~/.claude/hooks/shell-guard.sh` PreToolUse(Bash). Groups and switches: `UV_GUARD_OFF=1` (bare python/pip/venv to uv), `EDIT_GUARD_OFF=1` (inline python file writes, `sed -i`/`perl -i`, heredoc into a file, `echo`/`printf` into a file, to Edit/Write), `TOOL_GUARD_OFF=1` (`sed`, `find`, `perl`, `awk -i` to `bat -pp --line-range`, `rg -r`, `fd`, `jq`, `sg`). Heredoc bodies are stripped before matching, so text inside a document never reads as a command. Works on BSD and GNU userlands (table test runs under `PATH=/usr/bin:/bin` and in the nix sandbox).
-- `hooks/shell-guard-test.sh`: 84-row allow/deny table; `just check` runs it as `unit-shell-guard`.
+- `~/.claude/hooks/shell-guard.sh` PreToolUse(Bash). Groups and switches: `UV_GUARD_OFF=1` (bare python/pip/venv to uv), `EDIT_GUARD_OFF=1` (inline code that opens a file with a write mode or calls `.write()`, `sed -i`/`perl -i`, a `cat` or `tee` heredoc into a file, `echo`/`printf` into a file, to Edit/Write), `TOOL_GUARD_OFF=1` (`sed`, `find`, `perl`, `awk -i` to `bat -pp --line-range`, `rg -r`, `fd`, `jq`, `sg`). Heredoc bodies are stripped before matching, so text inside a document never reads as a command. Works on BSD and GNU userlands (table test runs under `PATH=/usr/bin:/bin` and in the nix sandbox).
+- `hooks/shell-guard-test.sh`: 110-row allow/deny table; `just check` runs it as `unit-shell-guard`. `hooks/search-guard-test.sh` (30 rows) runs as `unit-search-guard`.
 - `claude.nix`: `claudeGuardHooks` lists the owned hooks. `claudeSettingsOwnership` adds each one missing from the live settings, records the exact entries it owns, and removes a recorded entry the list drops or changes. A hand-added variant of the same script blocks the addition and is never removed.
 - CLAUDE.md: "File changes" section and the uv line in "Python" carry the positive form; the hook carries the enforcement.
 

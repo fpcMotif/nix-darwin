@@ -196,6 +196,11 @@ in
       ${../modules/home/claude/hooks/shell-guard.sh}
     touch $out
   '';
+  unit-search-guard = pkgs.runCommand "unit-search-guard" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.coreutils ]; } ''
+    bash ${../modules/home/claude/hooks/search-guard-test.sh} \
+      ${../modules/home/claude/hooks/search-guard.sh}
+    touch $out
+  '';
   unit-doc-lock = pkgs.runCommand "unit-doc-lock" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.git pkgs.coreutils ]; } ''
     bash ${../modules/home/doc-lock/doc-lock-test.sh} ${lib.getExe pkgs.martin.doc-lock}
     touch $out

@@ -32,8 +32,10 @@ fi
 
 # 3. bat (or cat) of a long file with no line range: token bomb. read-guard caps the Read tool at the same height; point at a span.
 if printf '%s' "$CMD" | grep -Eq '(^|[;&|[:space:]])(cat|bat)[[:space:]]' \
-   && ! printf '%s' "$CMD" | grep -Eq -- '--line-range|(^|[[:space:]])-r[[:space:]]'; then
-  for f in $(printf '%s' "$CMD" | grep -Eo '(^|[[:space:]])(cat|bat)[[:space:]]+[^|;&]*' | sed -E 's/^[[:space:]]*(cat|bat)[[:space:]]+//' | tr ' ' '\n' | grep -v '^-'); do
+   && ! printf '%s' "$CMD" | grep -Eq -- '--line-range|(^|[[:space:]])-r([[:space:]]|[0-9:])'; then
+  for f in $(printf '%s' "$CMD" | grep -Eo '(^|[[:space:]])(cat|bat)[[:space:]]+[^|;&]*(\|[[:space:]]*[A-Za-z]+)?' \
+               | grep -Ev '\|[[:space:]]*(head|tail|rg|grep|wc|jq|cut|awk|sort|uniq)$' \
+               | sed -E 's/\|.*$//; s/^[[:space:]]*(cat|bat)[[:space:]]+//' | tr ' ' '\n' | grep -v '^-'); do
     p="$f"; [ "${p#/}" = "$p" ] && p="$CWD/$f"
     if [ -f "$p" ]; then n=$(wc -l < "$p" 2>/dev/null | tr -d " " || echo 0); [ "$n" -gt "${READ_GUARD_MAX_LINES:-300}" ] && deny "search-guard: $f has $n lines. Read a span: 'bat -pp --line-range A:B $f' after 'codedb <repo> outline $f', or the Read tool with offset/limit."; fi
   done
