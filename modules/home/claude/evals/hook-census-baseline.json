@@ -1,0 +1,156 @@
+{
+ "window": {
+  "since": "2026-09-28",
+  "until": "2026-10-06",
+  "files": 410
+ },
+ "populations": {
+  "all": {
+   "bash": 10621,
+   "tool_calls": 27734
+  },
+  "main": {
+   "tool_calls": 6312,
+   "bash": 2378
+  },
+  "subagent": {
+   "tool_calls": 21422,
+   "bash": 8243
+  }
+ },
+ "denials": {
+  "total": 436,
+  "per_1k_bash": 41.1,
+  "by_hook": {
+   "shell-guard": 309,
+   "search-guard": 94,
+   "doc-lock": 33
+  },
+  "by_rule": {
+   "shell-guard": {
+    "shell.sed": 124,
+    "shell.cat": 70,
+    "shell.echo_write": 34,
+    "shell.python": 26,
+    "shell.inline_write": 19,
+    "shell.heredoc_write": 15,
+    "shell.find": 11,
+    "shell.perl": 8,
+    "shell.sed_inplace": 2
+   },
+   "search-guard": {
+    "search.alternation": 50,
+    "search.long_file": 24,
+    "search.grep": 20
+   },
+   "doc-lock": {
+    "doclock.comments": 29,
+    "doclock.markdown": 4
+   }
+  },
+  "by_scope": {
+   "main": 87,
+   "subagent": 349
+  },
+  "reconciled": true
+ },
+ "loops": {
+  "sequential": 12,
+  "parallel_siblings": 47
+ },
+ "avoidable": {
+  "retired_rules": 140,
+  "loops": 12,
+  "per_1k_bash": 14.3
+ },
+ "deny_to_next": {
+  "n": 434,
+  "median_s": 3.5,
+  "total_min": 39.7
+ },
+ "first_choice": {
+  "bash_first_word": {
+   "rg": 1861,
+   "bat": 1260,
+   "bun": 958,
+   "git": 824,
+   "bunx": 745,
+   "true": 583,
+   "ls": 343,
+   "for": 265,
+   "rm": 246,
+   "timeout": 242,
+   "cd": 241,
+   "fd": 186,
+   "echo": 170,
+   "gh": 145,
+   "mkdir": 138,
+   "sleep": 130,
+   "eza": 117,
+   "jq": 116,
+   "uv": 115,
+   "tail": 111,
+   "wc": 105,
+   "mbx": 105,
+   "curl": 104,
+   "bash": 78,
+   "swift": 75,
+   "jj": 72,
+   "ax": 70,
+   "cat": 47,
+   "procs": 47,
+   "hyperfine": 42
+  },
+  "native_tools": {
+   "Edit": 6693,
+   "Read": 5640,
+   "Write": 1889,
+   "mcp__Claude_Browser__javascript_tool": 548,
+   "mcp__Claude_Browser__computer": 367,
+   "mcp__Claude_Browser__browser_batch": 233,
+   "mcp__Claude_Browser__navigate": 166,
+   "SendMessage": 142,
+   "mcp__fff__grep": 137,
+   "mcp__Claude_Browser__resize_window": 120,
+   "mcp__Claude_Browser__tabs_select": 117,
+   "Monitor": 104,
+   "StructuredOutput": 99,
+   "mcp__fff__multi_grep": 97,
+   "Agent": 92
+  }
+ },
+ "models": {
+  "claude-opus-5-5": {
+   "bash": 5152,
+   "denials": 205
+  },
+  "claude-sonnet-5": {
+   "bash": 2876,
+   "denials": 106
+  },
+  "claude-sonnet-5-5": {
+   "bash": 2509,
+   "denials": 122
+  }
+ },
+ "tasks": {
+  "main": {
+   "n": 199,
+   "completed_share": 0.864,
+   "interrupted_share": 0.04,
+   "median_min": 2.04,
+   "median_min_with_denial": 14.31,
+   "median_min_without_denial": 1.56,
+   "share_with_denial": 0.216
+  },
+  "subagent": {
+   "n": 256,
+   "completed_share": 0.609,
+   "interrupted_share": 0.0,
+   "median_min": 2.31,
+   "median_min_with_denial": 6.88,
+   "median_min_without_denial": 1.24,
+   "share_with_denial": 0.598
+  }
+ }
+}
