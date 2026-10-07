@@ -2,8 +2,8 @@
 # Exercise the production settings reconciler with fixture policies and homes.
 set -euo pipefail
 
-if [ "$#" -ne 6 ]; then
-  echo "usage: claude-settings-ownership-test.sh CURRENT OLD NEW RETIRED-SEED-NEW WORKTRUNK DOJJO" >&2
+if [ "$#" -ne 8 ]; then
+  echo "usage: claude-settings-ownership-test.sh CURRENT OLD NEW RETIRED-SEED-NEW WORKTRUNK DOJJO HOOKS-OLD HOOKS-NEW" >&2
   exit 2
 fi
 current=$1
@@ -12,6 +12,8 @@ new=$3
 retired_seed_new=$4
 worktrunk=$5
 dojjo=$6
+hooks_old=$7
+hooks_new=$8
 work=$(mktemp -d "${TMPDIR:-/tmp}/claude-settings-ownership.XXXXXX")
 trap 'rm -rf -- "$work"' EXIT
 
@@ -335,5 +337,55 @@ cmp -s "$work/worktrunk.before-repeat" "$switch_settings" \
   || fail "repeated Worktrunk activation rewrote settings"
 cmp -s "$work/approvals.before-switch" "$approvals" \
   || fail "rollback changed Worktrunk approvals"
+
+owned_home="$work/owned-hooks-home"
+owned_settings="$owned_home/.claude/settings.json"
+owned_state="$owned_home/.local/state/nix-config/claude-settings-ownership.json"
+mkdir -p "$owned_home/.claude"
+cat > "$owned_settings" <<'JSON'
+{
+  "hooks": {
+    "PreToolUse": [
+      {"matcher":null,"hooks":[{"type":"command","command":"$HOME/.third-party/event-hook.sh PreToolUse"}]}
+    ],
+    "PostToolUse": [
+      {"matcher":"Edit","hooks":[{"type":"command","command":"$HOME/.third-party/lint.sh"}]},
+      {"matcher":"Glob","hooks":[{"type":"command","command":"$HOME/.claude/hooks/retired.sh --mine"}]}
+    ]
+  }
+}
+JSON
+"$hooks_old" "$owned_home"
+assert_json '
+  any(.hooks.PreToolUse[]; .matcher == "Read" and any(.hooks[]; .command == "$HOME/.claude/hooks/retired.sh"))
+  and any(.hooks.PostToolUse[]; .matcher == "Edit" and any(.hooks[]; .command == "$HOME/.claude/hooks/moved.sh"))
+' "$owned_settings" "owned hooks were not added"
+assert_json '
+  .version == 2
+  and any(.hooks[]; .event == "PreToolUse" and .matcher == "Read" and .command == "$HOME/.claude/hooks/retired.sh")
+  and any(.hooks[]; .event == "PostToolUse" and .matcher == "Edit" and .command == "$HOME/.claude/hooks/moved.sh")
+  and ([.hooks[] | select(.command | startswith("$HOME/.third-party/"))] | length) == 0
+' "$owned_state" "ownership state did not record the exact hooks Nix added"
+
+"$hooks_new" "$owned_home"
+assert_json '
+  ([.hooks.PreToolUse[] | .hooks[] | select(.command == "$HOME/.claude/hooks/retired.sh")] | length) == 0
+  and any(.hooks.PostToolUse[]; .matcher == "Glob" and any(.hooks[]; .command == "$HOME/.claude/hooks/retired.sh --mine"))
+  and any(.hooks.PreToolUse[]; .matcher == null and any(.hooks[]; .command == "$HOME/.third-party/event-hook.sh PreToolUse"))
+  and ([.hooks.PostToolUse[] | .hooks[] | select(.command == "$HOME/.claude/hooks/moved.sh")] | length) == 1
+  and any(.hooks.PostToolUse[]; .matcher == "Edit|Write" and any(.hooks[]; .command == "$HOME/.claude/hooks/moved.sh"))
+  and any(.hooks.PostToolUse[]; .matcher == "Edit" and any(.hooks[]; .command == "$HOME/.third-party/lint.sh"))
+' "$owned_settings" "a retired or changed owned hook did not reconcile, or a hook Nix never owned changed"
+assert_json '
+  ([.hooks[] | select(.command == "$HOME/.claude/hooks/retired.sh")] | length) == 0
+  and any(.hooks[]; .event == "PostToolUse" and .matcher == "Edit|Write" and .command == "$HOME/.claude/hooks/moved.sh")
+' "$owned_state" "ownership state kept a retired hook or missed a changed one"
+cp "$owned_settings" "$work/owned.before-repeat"
+cp "$owned_state" "$work/owned-state.before-repeat"
+"$hooks_new" "$owned_home"
+cmp -s "$work/owned.before-repeat" "$owned_settings" \
+  || fail "repeated owned-hook activation rewrote settings"
+cmp -s "$work/owned-state.before-repeat" "$owned_state" \
+  || fail "repeated owned-hook activation rewrote state"
 
 printf 'PASS unit-claude-settings-ownership\n'

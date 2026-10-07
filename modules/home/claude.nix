@@ -583,10 +583,6 @@ let
       wt config state marker "''${args[@]}" </dev/null >/dev/null 2>&1 || true
     '';
   };
-  guardEntries = event:
-    map (g: { inherit (g) matcher; hooks = [{ type = "command"; inherit (g) command; }]; })
-      (builtins.filter (g: g.event == event) claudeGuardHooks);
-
   claudeSettingsSeed = pkgs.writeText "claude-settings-seed.json" (builtins.toJSON {
     env = claudeSeedEnv;
     # Seed-only wiring for the read guard and the rest (home.file above ships
@@ -595,10 +591,10 @@ let
     hooks = {
       PreToolUse = [
         { matcher = "Read"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/read-guard.sh"; }]; }
-      ] ++ guardEntries "PreToolUse";
+      ];
       PostToolUse = [
         { matcher = "Bash"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/auto-verify-edit.sh"; }]; }
-      ] ++ guardEntries "PostToolUse";
+      ];
       PostToolUseFailure = [
         { matcher = "Bash"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/auto-log-error.sh"; }]; }
       ];

@@ -74,6 +74,14 @@ let
     def is_owned_command($hook):
       type == "object" and .type == "command" and .command == $hook.command;
 
+    def has_exact_hook($settings; $hook):
+      any(event_groups($settings; $hook.event)[];
+        type == "object" and .matcher == $hook.matcher
+          and (.hooks | type) == "array" and any(.hooks[]; is_owned_command($hook)));
+
+    def same_hook($a; $b):
+      $a.event == $b.event and $a.matcher == $b.matcher and $a.command == $b.command;
+
     def remove_hook($hook):
       event_groups(.; $hook.event) as $groups
       | [ $groups[]
@@ -111,6 +119,14 @@ let
            then $oldState.owned
            else []
            end) as $oldOwned
+        | (if ($oldState | type) == "object" and ($oldState.hooks | type) == "array"
+           then $oldState.hooks
+           else []
+           end) as $oldHooks
+        | [ $oldHooks[] as $hook
+            | select(any($additions[]; same_hook(.; $hook)) | not)
+            | $hook
+          ] as $retiredHooks
         | (if $targetMissing then {} else $input end) as $before
         | (if $targetMissing then $seed else $input end) as $starting
         | ($own | map(.path)) as $currentPaths
@@ -133,13 +149,20 @@ let
             set_owned($entry.path; $entry.value))) as $ownedSettings
         | (reduce $defaults[] as $entry ($ownedSettings;
             if has_path(.; $entry.path) then . else set_default($entry.path; $entry.value) end)) as $defaultSettings
-        | (reduce $removals[] as $hook ($defaultSettings; remove_hook($hook))) as $prunedSettings
+        | (reduce ($removals + $retiredHooks)[] as $hook ($defaultSettings; remove_hook($hook))) as $prunedSettings
         | (reduce $additions[] as $hook ($prunedSettings; add_hook($hook))) as $updated
-        | { version: 1, owned: ($own | map({ path: .path, value: .value })) } as $newState
+        | {
+            version: 2,
+            owned: ($own | map({ path: .path, value: .value })),
+            hooks: [ $additions[] as $hook
+              | select(has_exact_hook($updated; $hook))
+              | { event: $hook.event, matcher: $hook.matcher, command: $hook.command } ]
+          } as $newState
         | ((($own | map(.path))
             + ($defaults | map(.path))
             + ($additions | map(["hooks", .event]))
             + ($removals | map(["hooks", .event]))
+            + ($oldHooks | map(["hooks", .event]))
             + ($oldOwned | map(.path))
             + (if $targetMissing then ($seed | keys_unsorted | map([.])) else [] end))
             | unique) as $candidatePaths

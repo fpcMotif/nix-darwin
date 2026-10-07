@@ -65,6 +65,17 @@ let
   retiredSeedPolicy = basePolicy // {
     own = builtins.filter (entry: entry.path != [ "autoMemoryEnabled" ]) basePolicy.own;
   };
+  hooksOldPolicy = basePolicy // {
+    add = basePolicy.add ++ [
+      { event = "PreToolUse"; matcher = "Read"; command = "$HOME/.claude/hooks/retired.sh"; }
+      { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/moved.sh"; }
+    ];
+  };
+  hooksNewPolicy = basePolicy // {
+    add = basePolicy.add ++ [
+      { event = "PostToolUse"; matcher = "Edit|Write"; command = "$HOME/.claude/hooks/moved.sh"; }
+    ];
+  };
   # The production marker list, selected the way claude.nix selects it.
   backendPolicy = worktrunkEnabled:
     let
@@ -86,6 +97,8 @@ let
   retiredSeed = mkOwnership retiredSeedPolicy;
   worktrunk = mkOwnership (backendPolicy true);
   dojjo = mkOwnership (backendPolicy false);
+  hooksOld = mkOwnership hooksOldPolicy;
+  hooksNew = mkOwnership hooksNewPolicy;
 in
 pkgs.runCommand "unit-claude-settings-ownership"
 { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.coreutils pkgs.diffutils ]; }
@@ -96,6 +109,8 @@ pkgs.runCommand "unit-claude-settings-ownership"
       ${current.command}/bin/claude-settings-ownership \
       ${retiredSeed.command}/bin/claude-settings-ownership \
       ${worktrunk.command}/bin/claude-settings-ownership \
-      ${dojjo.command}/bin/claude-settings-ownership
+      ${dojjo.command}/bin/claude-settings-ownership \
+      ${hooksOld.command}/bin/claude-settings-ownership \
+      ${hooksNew.command}/bin/claude-settings-ownership
     touch $out
   ''
