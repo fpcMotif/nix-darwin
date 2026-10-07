@@ -23,7 +23,7 @@ For completeness checks, account for ignore rules, configuration, result limits,
 - codedb's enclosing-function labels are wrong inside loops and lambdas; read the call-site span to confirm the enclosing function.
 - codedb skips node_modules and files over 2 MiB; rg covers them.
 - `codedb word` is uncapped (27k lines for `Config`); a hook denies it without a pipe to head.
-- The shell `grep` binary as a command is denied by a hook; `| grep` as a filter is fine.
+- Search files with `rg`: it respects ignore files and takes grep's flags. Keep `grep` for `| grep` filters.
 - `rg -r` means `--replace`; never pass it.
 - `~/devv` itself is 65k files of sibling checkouts; a hook denies rg there without a sub-path.
 - A client-side limit is often mirrored by a differently named server constant joined only by a comment: after locating one, `rg -w` the identifier its comment names.

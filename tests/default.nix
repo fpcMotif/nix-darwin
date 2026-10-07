@@ -205,11 +205,6 @@ in
     bun ${../modules/home/doc-lock/agent-extension-test.ts} ${pkgs.martin.doc-lock-extension}
     touch $out
   '';
-  unit-edit-batch-nudge = pkgs.runCommand "unit-edit-batch-nudge" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnused pkgs.coreutils ]; } ''
-    bash ${../modules/home/claude/hooks/edit-batch-nudge-test.sh} \
-      ${../modules/home/claude/hooks/edit-batch-nudge.sh}
-    touch $out
-  '';
   unit-claude-settings-ownership = callTest ./unit/claude-settings-ownership-test.nix { };
 
   # Drives wt and djo through create, switch, list, remove, hooks, and a

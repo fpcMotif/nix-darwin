@@ -38,17 +38,4 @@ if printf '%s' "$CMD" | grep -Eq '(^|[;&|[:space:]])(cat|bat)[[:space:]]' \
     if [ -f "$p" ]; then n=$(wc -l < "$p" 2>/dev/null | tr -d " " || echo 0); [ "$n" -gt "${READ_GUARD_MAX_LINES:-300}" ] && deny "search-guard: $f has $n lines. Read a span: 'bat -pp --line-range A:B $f' after 'codedb <repo> outline $f', or the Read tool with offset/limit."; fi
   done
 fi
-
-# 4. rg/grep listing (-n) over 4+ alternations with no narrowing (-c/-l/-w/-m, -g/-t, or a single file) spilled 30-300 KB in trials.
-if printf '%s' "$CMD" | grep -Eq '(^|;|&&|\|\|)[[:space:]]*(rg|grep)[[:space:]]' \
-   && printf '%s' "$CMD" | grep -Eq "['\"][^'\"]*\|[^'\"]*\|[^'\"]*\|[^'\"]*['\"]" \
-   && ! printf '%s' "$CMD" | grep -Eq '(^|[[:space:]])(-c|-l|-w|-m|-g|-t|--count|--files-with-matches|--max-count|--glob|--type|--iglob)([[:space:]=]|$)' \
-   && ! printf '%s' "$CMD" | grep -Eq '[[:space:]][^[:space:]]+\.[A-Za-z0-9]{1,6}([[:space:]]|$)'; then
-  deny "search-guard: 4+ alternatives with no narrowing (-c/-l/-w, -g/-t, or one file) spilled 30-300 KB in trials. Count first (-c), list files (-l), or search one identifier with -w; then read spans."
-fi
-# 5. The shell grep/egrep/fgrep binary as a LEADING command (a file scan). rg has the same flags and respects ignores.
-#    `| grep` as a pipe filter is untouched (handled by the leading-command anchor).
-if printf '%s' "$CMD" | grep -Eq '(^|;|&&|\|\|)[[:space:]]*(grep|egrep|fgrep)[[:space:]]'; then
-  deny "search-guard: plain grep is slower and weaker than every other tool here. One identifier: mcp__fff__grep. Symbol: mcp__codedb__codedb_explain project=<repo>. Exhaustive: 'rg -n PAT <repo>' (or 'rg -w', '-C2', '-l', '-c')."
-fi
 exit 0

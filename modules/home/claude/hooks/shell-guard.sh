@@ -88,8 +88,6 @@ while IFS= read -r seg; do
   case "$seg" in
     python|python[[:space:]]*|python[23]|python[23][[:space:].]*|*/python|*/python[[:space:]]*|*/python[23]*|pip|pip[[:space:]]*|pip3*|virtualenv*|pipenv*|poetry*)
       [ -z "${UV_GUARD_OFF:-}" ] && deny "shell-guard: Python runs through uv. Script: 'uv run script.py' (deps in '# /// script' metadata). Stdin: uv run - <<'PY'. One-liner: uv run python -c '...'. Extra dep: 'uv run --with PKG ...'. Install: 'uv add PKG' (project) or 'uv pip install PKG'. Tools: 'uvx ty check', 'ruff check --fix . && ruff format .'." ;;
-    cat|cat[[:space:]]*)
-      case "$seg" in *"<<"*) ;; *) [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: read a span with 'bat -pp --line-range A:B FILE' (a short file: 'bat -pp FILE'); a JSON file with 'jq'. cat is denied." ;; esac ;;
     sed|sed[[:space:]]*)
       [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: sed is denied. A span: 'bat -pp --line-range A:B FILE'. A stream rewrite: 'rg -o PAT -r REPL' or awk. A file change: the Edit tool." ;;
     find|find[[:space:]]*)

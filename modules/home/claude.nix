@@ -237,7 +237,6 @@ let
     "Bash(vitest:*)"
     "Bash(uv:*)"
     "Bash(uvx:*)"
-    "Bash(python3:*)"
     "Bash(ruff:*)"
     "Bash(pytest:*)"
     "Bash(mypy:*)"
@@ -551,13 +550,22 @@ let
   claudeGuardHooks = [
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/search-guard.sh"; }
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/shell-guard.sh"; }
-    { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
   ] ++ worktrunkMarkers.add ++ lib.optionals docLock docLockHooks;
 
   inherit (config.martin.development) docLock;
   docLockHooks = [
     { event = "UserPromptSubmit"; matcher = ""; command = "$HOME/.claude/hooks/doc-lock.sh grant"; }
     { event = "PreToolUse"; matcher = "Edit|Write|MultiEdit"; command = "$HOME/.claude/hooks/doc-lock.sh edit"; }
+  ];
+  retiredClaudeHooks = [
+    { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
+    { event = "PreToolUse"; matcher = "Read"; command = "$HOME/.claude/hooks/read-guard.sh"; }
+    { event = "PostToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/auto-verify-edit.sh"; }
+    { event = "PostToolUseFailure"; matcher = "Bash"; command = "$HOME/.claude/hooks/auto-log-error.sh"; }
+    { event = "PreCompact"; matcher = ""; command = "$HOME/.claude/hooks/pre-compact-save.sh"; }
+    { event = "SessionStart"; matcher = ""; command = "$HOME/.claude/hooks/search-warmup.sh"; }
+    { event = "SessionStart"; matcher = ""; command = "$HOME/.claude/hooks/codedb-warmup.sh"; }
+    { event = "SessionStart"; matcher = "compact"; command = "$HOME/.claude/hooks/post-compact-reload.sh"; }
   ];
 
   # Hook list and backend selection: claude/worktrunk-markers.nix.
@@ -585,28 +593,6 @@ let
   };
   claudeSettingsSeed = pkgs.writeText "claude-settings-seed.json" (builtins.toJSON {
     env = claudeSeedEnv;
-    # Seed-only wiring for the read guard and the rest (home.file above ships
-    # the scripts). The live settings.json already carries these; a fresh
-    # machine gets them from here.
-    hooks = {
-      PreToolUse = [
-        { matcher = "Read"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/read-guard.sh"; }]; }
-      ];
-      PostToolUse = [
-        { matcher = "Bash"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/auto-verify-edit.sh"; }]; }
-      ];
-      PostToolUseFailure = [
-        { matcher = "Bash"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/auto-log-error.sh"; }]; }
-      ];
-      PreCompact = [
-        { matcher = ""; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/pre-compact-save.sh"; }]; }
-      ];
-      SessionStart = [
-        { matcher = ""; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/search-warmup.sh"; }]; }
-        { matcher = ""; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/codedb-warmup.sh"; }]; }
-        { matcher = "compact"; hooks = [{ type = "command"; command = "$HOME/.claude/hooks/post-compact-reload.sh"; }]; }
-      ];
-    };
     permissions = claudePermissions;
     model = "opus";
     enabledMcpjsonServers = [ "qmd" ];
@@ -656,7 +642,7 @@ let
     ++ lib.mapAttrsToList (key: value: { path = [ "worktree" key ]; inherit value; }) claudeWorktreeSettings;
     default = lib.mapAttrsToList (key: value: { path = [ "env" key ]; inherit value; }) claudeSeedEnv;
     add = claudeGuardHooks;
-    remove = worktrunkMarkers.remove ++ lib.optionals (!docLock) docLockHooks;
+    remove = worktrunkMarkers.remove ++ retiredClaudeHooks ++ lib.optionals (!docLock) docLockHooks;
   };
   claudeSettingsOwnership = import ./claude/settings-ownership.nix {
     inherit pkgs;
@@ -742,17 +728,7 @@ in
       ".claude/agents/poteto-agent.md".source = pstackAgentFile "poteto-agent.md";
       ".claude/pstack-models.md".source = pstackModelsSheet;
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
-      ".claude/hooks/read-guard.sh" = { source = ./claude/hooks/read-guard.sh; executable = true; };
       ".claude/hooks/shell-guard.sh" = { source = ./claude/hooks/shell-guard.sh; executable = true; };
-      ".claude/hooks/edit-batch-nudge.sh" = { source = ./claude/hooks/edit-batch-nudge.sh; executable = true; };
-      ".claude/hooks/search-warmup.sh" = { source = ./claude/hooks/search-warmup.sh; executable = true; };
-      # Personal hooks, vendored 2026-09-09 (they were plain files only the live
-      # settings knew about): zigmemo/zigdiff helpers and the codedb warm-up.
-      ".claude/hooks/auto-verify-edit.sh" = { source = ./claude/hooks/auto-verify-edit.sh; executable = true; };
-      ".claude/hooks/auto-log-error.sh" = { source = ./claude/hooks/auto-log-error.sh; executable = true; };
-      ".claude/hooks/pre-compact-save.sh" = { source = ./claude/hooks/pre-compact-save.sh; executable = true; };
-      ".claude/hooks/post-compact-reload.sh" = { source = ./claude/hooks/post-compact-reload.sh; executable = true; };
-      ".claude/hooks/codedb-warmup.sh" = { source = ./claude/hooks/codedb-warmup.sh; executable = true; };
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
     } // localSkillFiles // pstackSkillFiles
     // lib.optionalAttrs config.programs.worktrunk.enable {
