@@ -3,6 +3,7 @@ set -euo pipefail
 [ -n "${DOC_LOCK_OFF:-}" ] && exit 0
 
 grants="${XDG_STATE_HOME:-$HOME/.local/state}/doc-lock"
+baselines="$grants/baseline"
 docs_words='adrs?|context\.md|docs?|documentation|document(ed)?|readme|comments?|changelog|agents\.md|claude\.md|skill\.md|setup-matt-pocock-skills|domain-modeling|writing-for-agents'
 unlock_hint='If the user wants it, ask them to request docs work (for example "update the ADR" or "fix the comments"); that opens the lock for the session.'
 
@@ -45,10 +46,29 @@ language() {
 }
 
 jq_lib='
-def code_comments: .[] | select(.range.byteOffset.start > 0 or (.text | startswith("#!") | not));
+def directive:
+  test("^//go:[a-z]+( |$)|^// \\+build |^///\\s*<(reference|amd-module|amd-dependency)\\s")
+  or test("^(//|/\\*\\*?)\\s*@(vitest-environment|jest-environment|jsx|jsxImportSource|jsxFrag|jsxRuntime)\\s+\\S+\\s*(\\*/)?$")
+  or test("^#\\s*-\\*-\\s*coding[:=]\\s*[-\\w.]+\\s*-\\*-$|^#\\s*(en)?coding[:=]\\s*[-\\w.]+$")
+  or test("^# frozen_string_literal: (true|false)$|^// swift-tools-version:\\s*[0-9.]+$");
+def code_comments:
+  [.[] | select(.range.byteOffset.start > 0 or (.text | startswith("#!") | not))]
+  | sort_by(.range.byteOffset.start)
+  | reduce .[] as $c ({block: false, out: []};
+      ($c.text | rtrimstr("\n") | rtrimstr(" ")) as $t
+      | if .block then (if $t == "# ///" then .block = false else . end)
+        elif ($t | test("^# /// [a-z][a-z0-9-]*$")) then .block = true
+        elif ($t | directive) then .
+        else .out += [$c]
+        end)
+  | .out[];
 def norm: gsub("\\s+"; " ") | ltrimstr(" ") | rtrimstr(" ");
+def counts($s): reduce ($s | split("\n")[] | select(. != "")) as $t ({}; .[$t] += 1);
+def restored:
+  counts($base) as $b | counts($disk) as $d
+  | reduce ($b | keys[]) as $t ({}; ($b[$t] - ($d[$t] // 0)) as $n | if $n > 0 then .[$t] = $n else . end);
 def new_comments:
-  (reduce ($kept | split("\n")[] | select(. != "")) as $t ({}; .[$t] += 1)) as $counts
+  (reduce (restored | to_entries[]) as $e (counts($kept); .[$e.key] += $e.value)) as $counts
   | reduce code_comments as $c ({counts: $counts, new: []};
       ($c.text | norm) as $t
       | if (.counts[$t] // 0) > 0 then .counts[$t] -= 1 else .new += [$c] end)
@@ -75,7 +95,29 @@ rule: { any: [$(printf '{kind: %s},' "${kinds[@]}")] }"
 comments() { scan "$1" | jq -r "$jq_lib code_comments | .text | norm"; }
 
 added_comments() {
-  scan "$1" <"$3" | jq -r --rawfile kept <(comments "$1" <"$2") "$jq_lib new_comments | report(${4:-true})"
+  scan "$1" <"$3" | jq -r --rawfile kept <(comments "$1" <"$2") \
+    --rawfile base <(comments "$1" <"${5:-/dev/null}") --rawfile disk <(comments "$1" <"${6:-/dev/null}") \
+    "$jq_lib new_comments | report(${4:-true})"
+}
+
+baseline() {
+  local session=$1 path=$2 dir key
+  if [ -z "$session" ]; then
+    echo /dev/null
+    return
+  fi
+  dir="$baselines/$session"
+  key=$(printf '%s' "$path" | sha256sum | cut -c1-64)
+  if [ ! -f "$dir/$key" ]; then
+    mkdir -p "$dir"
+    if [ -f "$path" ]; then cp -- "$path" "$dir/$key"; else : >"$dir/$key"; fi
+    sha256sum <"$dir/$key" | cut -c1-64 >"$dir/$key.sha256"
+  fi
+  if [ -f "$dir/$key.sha256" ] && [ "$(sha256sum <"$dir/$key" | cut -c1-64)" = "$(<"$dir/$key.sha256")" ]; then
+    echo "$dir/$key"
+  else
+    echo /dev/null
+  fi
 }
 
 in_work_tree() {
@@ -96,6 +138,7 @@ grant() {
   [ -n "$session" ] || return 0
   mkdir -p "$grants"
   find "$grants" -type f -mtime +7 -delete
+  find "$grants" -mindepth 1 -type d -empty -delete
   : >"$grants/$session"
   echo "doc-lock: open for this session, so comment and Markdown changes are allowed."
 }
@@ -123,7 +166,7 @@ block() {
 }
 
 file_edit() {
-  local input=$1 path=$2 old lang added
+  local input=$1 path=$2 session=$3 old lang added base
   [ -n "$path" ] || return 0
   path=$(absolute "$path")
   in_work_tree "$path" || return 0
@@ -133,7 +176,8 @@ file_edit() {
   fi
   lang=$(language "$path") || return 0
   old=$(on_disk "$path")
-  added=$(added_comments "$lang" "$old" <(jq -r --rawfile before "$old" "$proposed" <<<"$input"))
+  base=$(baseline "$session" "$path")
+  added=$(added_comments "$lang" "$old" <(jq -r --rawfile before "$old" "$proposed" <<<"$input") true "$base" "$old")
   [ -z "$added" ] && return 0
   refuse_comments "$path" "$added"
   block
@@ -174,7 +218,7 @@ def header($l):
   end'
 
 envelope_edit() {
-  local entries=$1 entry op base path target lang added found=0
+  local entries=$1 session=$2 entry op base path target lang added snapshot found=0
   while IFS= read -r entry; do
     IFS=$'\t' read -r op base path target < <(jq -r '[.op, .base, .path, .move // .path] | @tsv' <<<"$entry")
     path=$(absolute "$path")
@@ -187,10 +231,11 @@ envelope_edit() {
     fi
     [ "$op" = Delete ] && continue
     lang=$(language "$target") || continue
+    snapshot=$(baseline "$session" "$path")
     if [ "$base" = file ]; then
-      added=$(added_comments "$lang" "$(on_disk "$path")" <(jq -r '.added' <<<"$entry") false)
+      added=$(added_comments "$lang" "$(on_disk "$path")" <(jq -r '.added' <<<"$entry") false "$snapshot" "$(on_disk "$path")")
     else
-      added=$(added_comments "$lang" <(jq -r '.removed' <<<"$entry") <(jq -r '.added' <<<"$entry") false)
+      added=$(added_comments "$lang" <(jq -r '.removed' <<<"$entry") <(jq -r '.added' <<<"$entry") false "$snapshot" "$(on_disk "$path")")
     fi
     if [ -n "$added" ]; then
       refuse_comments "$target" "$added"
@@ -212,9 +257,9 @@ edit() {
   [ -z "$cwd" ] || cd "$cwd"
   entries=$(jq -c "$envelope_files" <<<"$input")
   if [ -n "$entries" ]; then
-    envelope_edit "$entries"
+    envelope_edit "$entries" "$session"
   else
-    file_edit "$input" "$path"
+    file_edit "$input" "$path" "$session"
   fi
 }
 
@@ -275,7 +320,7 @@ strip() {
   for path in "$@"; do
     lang=$(language "$path") || continue
     kept=$(git -C "$(dirname "$path")" show "HEAD:./$(basename "$path")" 2>/dev/null | comments "$lang" || true)
-    ranges=$(scan "$lang" <"$path" | jq -r --rawfile kept <(printf '%s' "$kept") "$jq_lib $strip_ranges")
+    ranges=$(scan "$lang" <"$path" | jq -r --rawfile kept <(printf '%s' "$kept") --arg base "" --arg disk "" "$jq_lib $strip_ranges")
     [ -n "$ranges" ] || continue
     tmp=$(mktemp)
     jq -nj --rawfile src "$path" --arg ranges "$ranges" "$splice" >"$tmp"

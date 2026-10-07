@@ -114,6 +114,30 @@ tool_case deny  "hashline edits Markdown"       '{"input":"[notes.md#00ff]\nPUT 
 tool_case deny  "hashline removes Markdown"     '{"input":"[notes.md#00ff]\nREM","path":"notes.md"}'
 tool_case deny  "hashline moves into Markdown"  '{"input":"[a.ts#1a2b]\nMV a.md","path":"a.ts"}'
 
+edit_case allow "first edit records a baseline" s20 "$repo/a.ts" '{"old_string":"// keep\n","new_string":""}'
+printf 'const a = 1;\n// dup\n' >"$repo/a.ts"
+edit_case allow "restores a comment it removed" s20 "$repo/a.ts" '{"old_string":"const a = 1;","new_string":"// keep\nconst a = 1;"}'
+edit_case deny  "restores it twice"             s20 "$repo/a.ts" '{"old_string":"const a = 1;","new_string":"// keep\n// keep\nconst a = 1;"}'
+edit_case deny  "restore plus a new comment"    s20 "$repo/a.ts" '{"old_string":"const a = 1;","new_string":"// keep\n// new\nconst a = 1;"}'
+edit_case deny  "another session adds it"       s21 "$repo/a.ts" '{"old_string":"const a = 1;","new_string":"// keep\nconst a = 1;"}'
+patch_case allow "restores a removed comment"   s20 $'*** Begin Patch\n*** Update File: a.ts\n@@\n-const a = 1;\n+// keep\n+const a = 1;\n*** End Patch'
+patch_case deny  "repeats a comment on disk"    s20 $'*** Begin Patch\n*** Update File: a.ts\n@@\n-const a = 1;\n+// dup\n+const a = 1;\n*** End Patch'
+snapshot="$XDG_STATE_HOME/doc-lock/baseline/s20/$(printf '%s' "$repo/a.ts" | sha256sum | cut -c1-64)"
+printf '// forged\n' >>"$snapshot"
+edit_case deny  "a changed baseline is ignored" s20 "$repo/a.ts" '{"old_string":"const a = 1;","new_string":"// keep\nconst a = 1;"}'
+git -C "$repo" checkout -q -- a.ts
+
+edit_case allow "test environment pragma"       s0 "$repo/a.test.ts" '{"content":"// @vitest-environment node\nimport { test } from \"vitest\";\n"}'
+edit_case allow "triple-slash reference"        s0 "$repo/env.d.ts" '{"content":"/// <reference types=\"vite/client\" />\nexport {};\n"}'
+edit_case allow "JSX pragma"                    s0 "$repo/p.tsx" '{"content":"/** @jsxImportSource preact */\nexport const x = <div />;\n"}'
+edit_case allow "Go build constraint"           s0 "$repo/x.go" '{"content":"//go:build linux\n\npackage x\n"}'
+edit_case allow "uv script metadata"            s0 "$repo/tool.py" '{"content":"# /// script\n# requires-python = \">=3.12\"\n# dependencies = []\n# ///\nprint(1)\n"}'
+edit_case allow "encoding cookie"               s0 "$repo/enc.py" '{"content":"# -*- coding: utf-8 -*-\nx = 1\n"}'
+edit_case deny  "prose after a pragma"          s0 "$repo/b.test.ts" '{"content":"// @vitest-environment node because jsdom is slow\n"}'
+edit_case deny  "comment after a script block"  s0 "$repo/tool2.py" '{"content":"# /// script\n# dependencies = []\n# ///\n# note\nprint(1)\n"}'
+edit_case deny  "eslint suppression"            s0 "$repo/a.ts" '{"old_string":"const a = 1;","new_string":"// eslint-disable-next-line\nconst a = 1;"}'
+edit_case deny  "noqa suppression"              s0 "$repo/n.py" '{"content":"import os  # noqa: F401\n"}'
+
 grant_case closed "plain task"                s1 "fix the failing test in auth.ts"
 grant_case open   "ADR request"               s2 "please update the ADR for the cache"
 grant_case open   "CONTEXT request"           s3 "Update CONTEXT with the new term"
@@ -179,6 +203,9 @@ strip_case "Rust doc comment" lib.rs \
   $'fn a() {}\n    /// doc\n    fn f() {}\n' \
   $'fn a() {}\n    fn f() {}\n'
 strip_case "language without a parser" a.toml $'# c\nx = 1\n' $'# c\nx = 1\n'
+strip_case "keeps a directive" t.test.ts \
+  $'// @vitest-environment node\n// note\nconst a = 1;\n' \
+  $'// @vitest-environment node\nconst a = 1;\n'
 strip_case "already clean" flake.nix $'{\n  # keep\n  x = 1;\n}\n' $'{\n  # keep\n  x = 1;\n}\n'
 
 printf '// keep\n// abs\nconst a = 1;\n// dup\n' >"$repo/a.ts"
