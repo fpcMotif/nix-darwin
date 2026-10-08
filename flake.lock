@@ -168,6 +168,23 @@
         "type": "github"
       }
     },
+    "interfaces-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791256924,
+        "narHash": "sha256-glMKADIEBSgSLgA4CNLOZUrcowCDuDRaoULS5Jb/B3s=",
+        "owner": "jakubkrehel",
+        "repo": "skills",
+        "rev": "d574cc8a576dc24256ad38268b8d03d86724a1b3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jakubkrehel",
+        "ref": "main",
+        "repo": "skills",
+        "type": "github"
+      }
+    },
     "mattpocock-skills": {
       "flake": false,
       "locked": {
@@ -248,6 +265,7 @@
         "dotfiles": "dotfiles",
         "effect-ts-skills": "effect-ts-skills",
         "home-manager": "home-manager",
+        "interfaces-skills": "interfaces-skills",
         "mattpocock-skills": "mattpocock-skills",
         "nixpkgs": "nixpkgs",
         "nur": "nur",

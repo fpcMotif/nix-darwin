@@ -59,6 +59,11 @@
       flake = false;
     };
 
+    interfaces-skills = {
+      url = "github:jakubkrehel/skills/main";
+      flake = false;
+    };
+
     pstack-claude = {
       url = "github:michael-denyer/pstack-claude";
       flake = false;

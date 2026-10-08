@@ -19,6 +19,20 @@
     ".gemini/skills/aily-runon-splitting",
     ".omp/agent/managed-skills/aily-runon-splitting"
   ],
+  "animate": [
+    ".agents/skills/animate",
+    ".claude/skills/animate",
+    ".codex/skills/animate",
+    ".gemini/skills/animate",
+    ".skillshub/animate"
+  ],
+  "animate-expo": [
+    ".agents/skills/animate-expo",
+    ".claude/skills/animate-expo",
+    ".codex/skills/animate-expo",
+    ".gemini/skills/animate-expo",
+    ".skillshub/animate-expo"
+  ],
   "animation-vocabulary": [
     ".agents/skills/animation-vocabulary",
     ".claude/skills/animation-vocabulary",
@@ -100,6 +114,13 @@
     ".gemini/skills/archify-workflow-recipes",
     ".omp/agent/managed-skills/archify-workflow-recipes"
   ],
+  "ask-sonner": [
+    ".agents/skills/ask-sonner",
+    ".claude/skills/ask-sonner",
+    ".codex/skills/ask-sonner",
+    ".gemini/skills/ask-sonner",
+    ".skillshub/ask-sonner"
+  ],
   "ast-grep-boundary-checker": [
     ".agents/skills/ast-grep-boundary-checker",
     ".gemini/skills/ast-grep-boundary-checker",
@@ -116,55 +137,6 @@
     ".agents/skills/axe-core-cdp-audit",
     ".gemini/skills/axe-core-cdp-audit",
     ".omp/agent/managed-skills/axe-core-cdp-audit"
-  ],
-  "better-accessibility": [
-    ".agents/skills/better-accessibility",
-    ".claude/skills/better-accessibility",
-    ".codex/skills/better-accessibility",
-    ".gemini/skills/better-accessibility",
-    ".skillshub/better-accessibility"
-  ],
-  "better-colors": [
-    ".agents/skills/better-colors",
-    ".claude/skills/better-colors",
-    ".codex/skills/better-colors",
-    ".gemini/skills/better-colors",
-    ".skillshub/better-colors"
-  ],
-  "better-interface": [
-    ".agents/skills/better-interface",
-    ".claude/skills/better-interface",
-    ".codex/skills/better-interface",
-    ".gemini/skills/better-interface",
-    ".skillshub/better-interface"
-  ],
-  "better-layout": [
-    ".agents/skills/better-layout",
-    ".claude/skills/better-layout",
-    ".codex/skills/better-layout",
-    ".gemini/skills/better-layout",
-    ".skillshub/better-layout"
-  ],
-  "better-typography": [
-    ".agents/skills/better-typography",
-    ".claude/skills/better-typography",
-    ".codex/skills/better-typography",
-    ".gemini/skills/better-typography",
-    ".skillshub/better-typography"
-  ],
-  "better-ui": [
-    ".agents/skills/better-ui",
-    ".claude/skills/better-ui",
-    ".codex/skills/better-ui",
-    ".gemini/skills/better-ui",
-    ".skillshub/better-ui"
-  ],
-  "better-writing": [
-    ".agents/skills/better-writing",
-    ".claude/skills/better-writing",
-    ".codex/skills/better-writing",
-    ".gemini/skills/better-writing",
-    ".skillshub/better-writing"
   ],
   "browser-frame-parity-clone": [
     ".agents/skills/browser-frame-parity-clone",
@@ -473,13 +445,6 @@
     ".gemini/skills/improve-animations",
     ".skillshub/improve-animations"
   ],
-  "interface-review": [
-    ".agents/skills/interface-review",
-    ".claude/skills/interface-review",
-    ".codex/skills/interface-review",
-    ".gemini/skills/interface-review",
-    ".skillshub/interface-review"
-  ],
   "jj-colocated-git-workflow": [
     ".agents/skills/jj-colocated-git-workflow",
     ".gemini/skills/jj-colocated-git-workflow",
@@ -617,6 +582,13 @@
     ".agents/skills/meridian-dev-run-verify",
     ".gemini/skills/meridian-dev-run-verify",
     ".omp/agent/managed-skills/meridian-dev-run-verify"
+  ],
+  "mobile-native": [
+    ".agents/skills/mobile-native",
+    ".claude/skills/mobile-native",
+    ".codex/skills/mobile-native",
+    ".gemini/skills/mobile-native",
+    ".skillshub/mobile-native"
   ],
   "nix-agent-skills": [
     ".agents/skills/nix-agent-skills",
@@ -962,6 +934,13 @@
     ".agents/skills/wecom-sheet-jxa-audit",
     ".gemini/skills/wecom-sheet-jxa-audit",
     ".omp/agent/managed-skills/wecom-sheet-jxa-audit"
+  ],
+  "write-swift": [
+    ".agents/skills/write-swift",
+    ".claude/skills/write-swift",
+    ".codex/skills/write-swift",
+    ".gemini/skills/write-swift",
+    ".skillshub/write-swift"
   ],
   "writing-beats": [
     ".agents/skills/writing-beats",

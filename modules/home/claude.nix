@@ -450,7 +450,22 @@ let
     "writing-fragments"
     "writing-shape"
   ];
-  claudeHiddenSkillIds = pluginProvidedSkillIds ++ harnessProvidedSkillIds ++ idleClaudeSkillIds;
+  interfacesSkillNames = [
+    "better-accessibility"
+    "better-colors"
+    "better-interface"
+    "better-layout"
+    "better-typography"
+    "better-ui"
+    "better-writing"
+    "break"
+    "build-design"
+    "explain-interface"
+    "interface-review"
+    "state-machine"
+    "variant"
+  ];
+  claudeHiddenSkillIds = pluginProvidedSkillIds ++ harnessProvidedSkillIds ++ idleClaudeSkillIds ++ interfacesSkillNames;
 
   # Plugin skills with NO bundle counterpart that must not be reachable at all.
   # skillOverrides cannot touch these: Claude Code hard-codes its resolver to
@@ -611,12 +626,20 @@ let
       "context7@claude-plugins-official" = true;
       "skill-creator@claude-plugins-official" = true;
       "claude-md-management@claude-plugins-official" = true;
+      "interfaces@interfaces" = true;
     };
     extraKnownMarketplaces = {
       "frad-dotclaude" = {
         source = {
           source = "github";
           repo = "FradSer/dotclaude";
+        };
+        autoUpdate = true;
+      };
+      "interfaces" = {
+        source = {
+          source = "github";
+          repo = "jakubkrehel/skills";
         };
         autoUpdate = true;
       };
@@ -941,10 +964,11 @@ in
         "^web-browser$";
       archify = mkSource "archify" "." null;
       better-github-skill = mkSource "better-github-skill" "." null;
+      interfaces = mkSource "interfaces-skills" "skills" null;
     } // mpSources // effectSources;
 
     skills = {
-      enable = enabledMattpocockSkills ++ [ "archify" "better-github-skill" ];
+      enable = enabledMattpocockSkills ++ [ "archify" "better-github-skill" ] ++ interfacesSkillNames;
       # effect-ts is no longer globally bundled. It was the one bundled skill
       # that is genuinely dependency-conditional: pure router noise in every
       # non-Effect repo, and version-blind vs the repo's installed `effect` in

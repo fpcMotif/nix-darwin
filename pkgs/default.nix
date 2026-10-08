@@ -51,6 +51,8 @@ final: _prev:
       _prev.tmux;
 
   codex = final.callPackage ./codex.nix { };
+  typescript = final.callPackage ./typescript.nix { };
+
 
   martin = {
     mkAppFromZip = final.callPackage ./lib/mk-app-from-zip.nix { };
