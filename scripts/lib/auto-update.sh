@@ -184,7 +184,7 @@ au_is_vendored_drv_name() {
 au_vendored_drv_names() {
   local dir=${1:-pkgs}
   {
-    grep -hoE 'pname = "[^"]+"' "$dir"/*.nix 2>/dev/null \
+    grep -hoE '(pname|name) = "[^"]+"' "$dir"/*.nix 2>/dev/null \
       | cut -d'"' -f2
     printf '%s\n' agent-skills claude-code crush oh-my-pi opencode pi
     printf '%s\n' codex droid sourcegraph-amp zed-nightly-bin

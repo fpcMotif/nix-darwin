@@ -220,7 +220,7 @@ if [ -n "$pkgs_dir" ]; then
     [ -n "$v" ] || fail "empty pname parsed from pkgs/"
     case "$v" in *[!A-Za-z0-9._-]*) fail "implausible pname parsed from pkgs/: '$v'" ;; esac
   done <<<"$vendored"
-  for expected in drafts-mcp-server sourcegraph-amp; do
+  for expected in drafts-mcp-server sourcegraph-amp calldiff; do
     has_word "$expected" "$vendored" \
       || fail "vendored list missing $expected; pkgs/ pnames no longer match reality"
   done
