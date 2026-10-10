@@ -205,6 +205,10 @@ in
     bash ${../modules/home/doc-lock/doc-lock-test.sh} ${lib.getExe pkgs.martin.doc-lock}
     touch $out
   '';
+  unit-jj-pr = pkgs.runCommand "unit-jj-pr" { nativeBuildInputs = [ pkgs.bash pkgs.git pkgs.gnugrep pkgs.jujutsu pkgs.coreutils ]; } ''
+    bash ${../modules/home/jj-pr/jj-pr-test.sh} ${lib.getExe pkgs.martin.jj-pr}
+    touch $out
+  '';
   unit-doc-lock-extension = pkgs.runCommand "unit-doc-lock-extension" { nativeBuildInputs = [ pkgs.bun pkgs.git ]; } ''
     export HOME=$TMPDIR
     bun ${../modules/home/doc-lock/agent-extension-test.ts} ${pkgs.martin.doc-lock-extension}

@@ -1,4 +1,7 @@
+{ pkgs, ... }:
 {
+  home.packages = [ pkgs.martin.jj-pr ];
+
   programs.jujutsu = {
     enable = true;
     settings = {
@@ -6,6 +9,8 @@
         name = "fpcmotif";
         email = "fpcmotif@gmail.com";
       };
+
+      aliases.pr = [ "util" "exec" "--" "jj-pr" ];
 
       ui = {
         "default-command" = "log";

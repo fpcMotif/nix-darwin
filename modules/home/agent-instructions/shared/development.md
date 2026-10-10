@@ -91,6 +91,7 @@ Ranked results alone cannot prove absence.
 - Use `jj` in a Jujutsu workspace and Git in a Git-only checkout.
 - Read the diff before every commit. Use `type(scope): message`.
 - Use `gh` for GitHub when no host-specific GitHub tool applies.
+- Open or update a pull request from JJ with `jj pr`, as the `jj` skill describes. The `pr` skill writes the body.
 - Inspect diff shape first, then read path-scoped changes.
 
 ## Human review evidence
