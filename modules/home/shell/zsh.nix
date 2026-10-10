@@ -471,7 +471,7 @@ in
           if ! curl -s "http://localhost:9222/json/version" > /dev/null 2>&1; then
             ~/.local/bin/canary-debug > /dev/null 2>&1
           fi
-          agent-browser "$@"
+          bunx agent-browser "$@"
         }
 
         [[ -f "$HOME/.config/zsh/.secret" ]] && source "$HOME/.config/zsh/.secret"

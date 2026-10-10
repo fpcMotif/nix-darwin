@@ -27,7 +27,7 @@ let
   # RESTATED, not imported — must match modules/home/claude.nix by hand.
   disabled = [ "grill-me" ];
   leanExcluded = [ ];
-  vendored = [ "jj" "setup-ts-deep-modules" ];
+  vendored = [ "browser-checks" "jj" "setup-ts-deep-modules" ];
 
   claudeNix = builtins.readFile (self + "/modules/home/claude.nix");
   cleanupNix = builtins.readFile (self + "/modules/home/cleanup.nix");
