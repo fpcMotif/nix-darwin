@@ -5,7 +5,7 @@
 - **Develop**: Before choosing a shell command, running Python or Rust, adding an environment variable, using version control, or setting up Git hooks, read `~/.claude/guidance/development.md`.
 - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or CONTEXT.md, read `~/.claude/guidance/human-documents.md`.
 - **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/.claude/guidance/development.md`.
-- **Shell guard**: Read with the Read tool or `bat -pp`. Find files with `fd`. Run Python with `uv run`. Change files with Edit or Write. Hooks deny `sed`, `find`, `perl`, and bare `python`, even in bypass mode. They also deny file writes through `echo >`, heredocs, and inline scripts.
+- **Shell guard**: Read with the Read tool or `bat -pp`. Find files with `fd`. Run Python with `uv run`. Change files with Edit or Write. Hooks deny `sed`, `find`, and bare `python`, even in bypass mode. They also deny file writes through `echo >`, heredocs, and inline scripts.
 
 ## Search
 
@@ -23,3 +23,9 @@ Search with fff and codedb first: one call returns a ranked, bounded answer.
 - **Coverage**: Scoped `rg` confirms a full listing, count, or absence; state the scope.
 - **Fallback**: After an MCP call fails, use scoped `rg`, `fd`, or Read, and name the failure.
 - **Detail**: `~/.claude/search-routing.md` for unclear routing.
+
+## Agents
+
+- **Read-only**: Send searches and lookups to the Explore agent, which cannot edit. Mark review briefs read-only.
+- **Fork**: A fork sees this whole conversation, so its brief names the one task it owns.
+- **Workflow**: In a workflow run, give each verifier a whole review dimension or file with all its findings. This keeps a run near its size guideline.

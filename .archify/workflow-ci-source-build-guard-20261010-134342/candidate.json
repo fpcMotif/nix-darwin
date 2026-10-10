@@ -1,0 +1,257 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "CI Source-Build Guard Workflow",
+    "quality_profile": "showcase",
+    "output": ".archify/workflow-ci-source-build-guard-20261010-134342/ci-source-build-guard.html"
+  },
+  "lanes": [
+    { "id": "ci", "label": "GitHub Actions CI Runner" },
+    { "id": "dryrun", "label": "Nix Dry-Run Evaluation" },
+    { "id": "guard", "label": "Source-Build Guard Policy" },
+    { "id": "resolution", "label": "Vendored Resolution & Verdict", "variant": "exception" }
+  ],
+  "phases": [
+    { "id": "plan", "label": "1. Trigger & Dry-Run Plan", "fromCol": 0, "toCol": 1 },
+    { "id": "classification", "label": "2. Exemption Classification", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "verdict", "label": "3. Resolution & Verdict", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "dryrun_pipeline", "label": "Plan discovery", "lane": "dryrun", "fromCol": 0, "toCol": 2, "variant": "default" },
+    { "id": "guard_pipeline", "label": "Exemption filters", "lane": "guard", "fromCol": 1, "toCol": 3, "variant": "emphasis" },
+    { "id": "resolution_pipeline", "label": "Vendored scanner", "lane": "resolution", "fromCol": 3, "toCol": 4, "variant": "security" },
+    { "id": "outcome_pipeline", "label": "Build gates", "lane": "ci", "fromCol": 4, "toCol": 5, "variant": "default" }
+  ],
+  "mainPath": [
+    "pr_event",
+    "dry_run",
+    "plan_list",
+    "plan_offenders",
+    "fixed_output",
+    "glue_check",
+    "rust_check",
+    "vendored_scanner",
+    "regex_eval",
+    "ci_pass"
+  ],
+  "nodes": [
+    {
+      "id": "pr_event",
+      "lane": "ci",
+      "col": 0,
+      "type": "frontend",
+      "label": "Nightly PR #392",
+      "sublabel": "auto-update trigger",
+      "width": 132
+    },
+    {
+      "id": "dry_run",
+      "lane": "dryrun",
+      "col": 0,
+      "type": "backend",
+      "label": "nix build --dry-run",
+      "sublabel": "inspect planned .drv",
+      "width": 132
+    },
+    {
+      "id": "plan_list",
+      "lane": "dryrun",
+      "col": 1,
+      "type": "messagebus",
+      "label": "Planned .drv List",
+      "sublabel": "calldiff.drv present",
+      "tag": "closure drift",
+      "width": 132
+    },
+    {
+      "id": "plan_offenders",
+      "lane": "guard",
+      "col": 1,
+      "type": "backend",
+      "label": "au_plan_offenders",
+      "sublabel": "filter build plan",
+      "width": 132
+    },
+    {
+      "id": "fixed_output",
+      "lane": "guard",
+      "col": 2,
+      "type": "security",
+      "label": "Fixed-Output Check",
+      "sublabel": "SRI download hash",
+      "width": 132
+    },
+    {
+      "id": "glue_check",
+      "lane": "dryrun",
+      "col": 2,
+      "type": "security",
+      "label": "Glue Derivations",
+      "sublabel": "activation / symlinks",
+      "width": 132
+    },
+    {
+      "id": "rust_check",
+      "lane": "guard",
+      "col": 3,
+      "type": "security",
+      "label": "Rust Overlay Gate",
+      "sublabel": "prebuilt toolchains",
+      "width": 132
+    },
+    {
+      "id": "vendored_scanner",
+      "lane": "resolution",
+      "col": 3,
+      "type": "backend",
+      "label": "Vendored Scan",
+      "sublabel": "au_vendored_drv_names",
+      "tag": "root cause",
+      "width": 132
+    },
+    {
+      "id": "regex_eval",
+      "lane": "resolution",
+      "col": 4,
+      "type": "backend",
+      "label": "Attribute Regex",
+      "sublabel": "(pname|name) = \"...\"",
+      "width": 132
+    },
+    {
+      "id": "guard_fail",
+      "lane": "guard",
+      "col": 4,
+      "type": "security",
+      "label": "Offender Flagged",
+      "sublabel": "calldiff un-cached",
+      "tag": "BUILD FROM SOURCE",
+      "width": 132
+    },
+    {
+      "id": "ci_pass",
+      "lane": "ci",
+      "col": 5,
+      "type": "backend",
+      "label": "Build Allowed",
+      "sublabel": "all builds exempt",
+      "tag": "green CI",
+      "width": 132
+    },
+    {
+      "id": "ci_fail",
+      "lane": "resolution",
+      "col": 5,
+      "type": "external",
+      "label": "CI Exit Code 1",
+      "sublabel": "blocks auto-merge",
+      "width": 132
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "pr_event",
+      "to": "dry_run",
+      "label": "triggers",
+      "variant": "default"
+    },
+    {
+      "id": "e2",
+      "from": "dry_run",
+      "to": "plan_list",
+      "label": "parses plan",
+      "variant": "default"
+    },
+    {
+      "id": "e3",
+      "from": "plan_list",
+      "to": "plan_offenders",
+      "label": "evaluates",
+      "variant": "emphasis",
+      "fromSide": "bottom"
+    },
+    {
+      "id": "e4",
+      "from": "plan_offenders",
+      "to": "fixed_output",
+      "label": "check FOD",
+      "variant": "default",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "e5",
+      "from": "fixed_output",
+      "to": "glue_check",
+      "label": "not FOD",
+      "variant": "default"
+    },
+    {
+      "id": "e6",
+      "from": "glue_check",
+      "to": "rust_check",
+      "label": "not glue",
+      "variant": "default"
+    },
+    {
+      "id": "e7",
+      "from": "rust_check",
+      "to": "vendored_scanner",
+      "label": "not rust",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e8",
+      "from": "vendored_scanner",
+      "to": "regex_eval",
+      "label": "parse pkgs",
+      "variant": "default"
+    },
+    {
+      "id": "e9",
+      "from": "regex_eval",
+      "to": "ci_pass",
+      "label": "name matched",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "e10",
+      "from": "regex_eval",
+      "to": "guard_fail",
+      "label": "pname missed",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "e11",
+      "from": "guard_fail",
+      "to": "ci_fail",
+      "label": "halts run",
+      "variant": "security",
+      "role": "error"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Root Cause Breakdown",
+      "items": [
+        "pkgs/calldiff.nix uses writeShellApplication with name = 'calldiff'",
+        "Previous regex grep -hoE 'pname = ...' silently skipped name attributes",
+        "Unrecognized calldiff derivation was classified as un-cached upstream source compile"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Applied Remediation",
+      "items": [
+        "Updated regex in au_vendored_drv_names to (pname|name) = '[^\"]+'",
+        "Added regression assertion in tests/unit/auto-update-test.sh",
+        "PR #392 merged to main with all Darwin and Linux CI checks green"
+      ]
+    }
+  ]
+}

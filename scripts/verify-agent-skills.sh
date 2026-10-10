@@ -60,7 +60,6 @@ CLAUDE_SKILLS="${HOME}/.claude/skills"
 AGENTS_SKILLS="${HOME}/.agents/skills"
 SETTINGS="${HOME}/.claude/settings.json"
 LOCAL_SETTINGS="${HOME}/.claude/settings.local.json"
-PLUGIN_CACHE="${HOME}/.claude/plugins/cache/claude-plugins-official/mattpocock-skills"
 
 if [ ! -f "$MANIFEST" ]; then
   printf 'verify-agent-skills: missing %s -- run `just switch` first\n' "$MANIFEST" >&2
@@ -68,6 +67,10 @@ if [ ! -f "$MANIFEST" ]; then
 fi
 
 jqm() { jq -r "$1" "$MANIFEST"; }
+
+# <plugin>@<marketplace>; the cache keys each install as <marketplace>/<plugin>.
+PLUGIN_ID=$(jqm '.pluginId')
+PLUGIN_CACHE="${HOME}/.claude/plugins/cache/${PLUGIN_ID#*@}/${PLUGIN_ID%@*}"
 
 # Read a manifest array into a named global. Deliberately not `mapfile`: that is
 # a bash-4 builtin and /bin/bash on macOS is still 3.2, so a script invoked with
@@ -116,6 +119,11 @@ done
 section "2. Hidden ids are actually replaced by the plugin"
 # The failure mode of deriving the hidden set from the flake pin: if the pin
 # runs AHEAD of the plugin, an id gets hidden with nothing to replace it.
+if jq -e --arg id "$PLUGIN_ID" '.enabledPlugins[$id] == true' "$SETTINGS" >/dev/null 2>&1; then
+  ok "$PLUGIN_ID enabled in $SETTINGS"
+else
+  bad "$PLUGIN_ID is not enabled in $SETTINGS -- every hidden id is now invisible to Claude"
+fi
 if [ -d "$PLUGIN_CACHE" ]; then
   declared=$(find "$PLUGIN_CACHE" -maxdepth 3 -name plugin.json -path '*/.claude-plugin/*' \
     -exec jq -r '.skills[]? | split("/") | last' {} + 2>/dev/null | sort -u)

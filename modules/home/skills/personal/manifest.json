@@ -138,6 +138,14 @@
     ".gemini/skills/axe-core-cdp-audit",
     ".omp/agent/managed-skills/axe-core-cdp-audit"
   ],
+  "break-ui": [
+    ".agents/skills/break-ui",
+    ".claude/skills/break-ui",
+    ".codex/skills/break-ui",
+    ".gemini/skills/break-ui",
+    ".omp/agent/managed-skills/break-ui",
+    ".skillshub/break-ui"
+  ],
   "browser-frame-parity-clone": [
     ".agents/skills/browser-frame-parity-clone",
     ".gemini/skills/browser-frame-parity-clone",
@@ -342,6 +350,14 @@
     ".gemini/skills/emil-design-eng",
     ".skillshub/emil-design-eng"
   ],
+  "emil-prototype": [
+    ".agents/skills/emil-prototype",
+    ".claude/skills/emil-prototype",
+    ".codex/skills/emil-prototype",
+    ".gemini/skills/emil-prototype",
+    ".omp/agent/managed-skills/emil-prototype",
+    ".skillshub/emil-prototype"
+  ],
   "feishu-aily-batch-conversion": [
     ".agents/skills/feishu-aily-batch-conversion",
     ".gemini/skills/feishu-aily-batch-conversion",
@@ -444,6 +460,14 @@
     ".codex/skills/improve-animations",
     ".gemini/skills/improve-animations",
     ".skillshub/improve-animations"
+  ],
+  "installer": [
+    ".agents/skills/installer",
+    ".claude/skills/installer",
+    ".codex/skills/installer",
+    ".gemini/skills/installer",
+    ".omp/agent/managed-skills/installer",
+    ".skillshub/installer"
   ],
   "jj-colocated-git-workflow": [
     ".agents/skills/jj-colocated-git-workflow",

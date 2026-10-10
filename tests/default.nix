@@ -191,7 +191,7 @@ in
     pkgs.runCommand "unit-agent-guides" { } ''
       touch $out
     '';
-  unit-shell-guard = pkgs.runCommand "unit-shell-guard" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.gawk ]; } ''
+  unit-shell-guard = pkgs.runCommand "unit-shell-guard" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.gawk pkgs.zoxide ]; } ''
     bash ${../modules/home/claude/hooks/shell-guard-test.sh} \
       ${../modules/home/claude/hooks/shell-guard.sh}
     touch $out

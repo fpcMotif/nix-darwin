@@ -10,11 +10,31 @@ let
   toml = pkgs.formats.toml { };
   yaml = pkgs.formats.yaml { };
   personalSkills = builtins.fromJSON (builtins.readFile ./skills/personal/manifest.json);
+  hasDisableModel = name:
+    let skillMd = ./skills/personal + "/${name}/SKILL.md";
+    in builtins.pathExists skillMd
+       && lib.hasInfix "disable-model-invocation:" (builtins.readFile skillMd);
+
+  cleanSkills = lib.genAttrs (lib.filter hasDisableModel (builtins.attrNames personalSkills)) (name:
+    pkgs.runCommandLocal "agent-skill-${name}-standard" { } ''
+      mkdir -p "$out"
+      cp -R "${./skills/personal}/${name}/." "$out/"
+      chmod -R u+w "$out"
+      if [ -f "$out/SKILL.md" ]; then
+        sed -i '/^[[:space:]]*disable-model-invocation:[[:space:]]*true[[:space:]]*$/d' "$out/SKILL.md"
+      fi
+    ''
+  );
+
   personalFiles = builtins.listToAttrs (lib.concatLists (lib.mapAttrsToList
     (name: targets: map
       (target: {
         name = target;
-        value = ./skills/personal + "/${name}";
+        value =
+          if (!lib.hasPrefix ".claude/" target) && (cleanSkills ? ${name}) then
+            cleanSkills.${name}
+          else
+            ./skills/personal + "/${name}";
       })
       targets)
     personalSkills));

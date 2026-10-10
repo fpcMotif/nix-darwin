@@ -1,11 +1,13 @@
 #!/bin/bash
-# shell-guard — PreToolUse(Bash): routes Python to uv, file changes to the Edit/Write tools, and file
-# reads to the tooling table in CLAUDE.md (bat -pp --line-range, rg, fd).
+# shell-guard — PreToolUse(Bash): routes Python to uv, file changes to the Edit/Write tools, file
+# reads to the tooling table in CLAUDE.md (bat -pp --line-range, rg, fd), and git writes in a jj
+# workspace to jj.
 # The desktop bypass-mode system prompt steers the model toward heredocs, sed -i, and inline python for
 # file changes; measured in transcripts those paths errored 4-38% of the time against 0-1.5% for Edit,
 # and 33 of 44 inline python edits had no guard against a silently missed anchor (str.replace no-op).
 # Each deny names the replacement. Fail-open on any error.
-# Disable a group: UV_GUARD_OFF=1 (python), EDIT_GUARD_OFF=1 (file changes), TOOL_GUARD_OFF=1 (cat/sed/find).
+# Disable a group: UV_GUARD_OFF=1 (python), EDIT_GUARD_OFF=1 (file changes), TOOL_GUARD_OFF=1 (cat/sed/find, PIPESTATUS in zsh),
+# JJ_GUARD_OFF=1 (git writes in a jj workspace).
 command -v jq >/dev/null 2>&1 || exit 0
 INPUT=$(cat 2>/dev/null) || exit 0
 CMD=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
@@ -65,9 +67,9 @@ if [ -z "${EDIT_GUARD_OFF:-}" ]; then
     deny "shell-guard: change a file with the Edit tool (exact old_string -> new_string; it fails loudly on a missed anchor, replace_all for every occurrence). Create a file with the Write tool. Inline scripts that call open(...,'w') or .write() are denied."
   fi
 
-  # 2. sed -i / perl -i: BSD sed flags differ, and the edit is unreviewable before it lands.
-  if printf '%s' "$BODY" | grep -Eq '(^|[;&|(`[:space:]])(sed[[:space:]]+(-[a-zA-Z]*i|--in-place)|perl[[:space:]]+-[a-zA-Z]*i)'; then
-    deny "shell-guard: in-place sed/perl is denied (16-38% error rate in your transcripts). Use the Edit tool: old_string -> new_string, replace_all: true for every occurrence."
+  # 2. sed -i: BSD sed flags differ, and the edit is unreviewable before it lands.
+  if printf '%s' "$BODY" | grep -Eq '(^|[;&|(`[:space:]])sed[[:space:]]+(-[a-zA-Z]*i|--in-place)'; then
+    deny "shell-guard: in-place sed is denied (16-38% error rate in your transcripts). Use the Edit tool: old_string -> new_string, replace_all: true for every occurrence."
   fi
 
   # 3. A heredoc redirected into a file (cat > f <<EOF, cat <<EOF > f, tee f <<EOF): the content is authored in the command.
@@ -84,7 +86,30 @@ if [ -z "${EDIT_GUARD_OFF:-}" ]; then
   fi
 fi
 
-# 5. Per command position: bare python/pip (uv group) and cat/sed/find (tool group).
+# The jj group follows the working directory: the hook's cwd, then each `cd DIR`, `z NAME`, and
+# `git -C DIR`. `z` mirrors the function in shell/zoxide.nix: no argument is ~, `-` is unknown, and
+# anything else is `zoxide query -- ARGS`. A path it cannot resolve (a variable, `cd -`, no zoxide
+# match) clears it, so the check fails open.
+DIR=$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null); [ -z "$DIR" ] && DIR=$(pwd -P)
+resolve() {
+  p=$2; p=${p#[\"\']}; p=${p%[\"\']}
+  case $p in
+    '~'|'~/'*) p=$HOME${p#\~} ;;
+    '$HOME'|'$HOME/'*) p=$HOME${p#\$HOME} ;;
+    *'$'*|*'`'*|-) return ;;
+    /*) ;;
+    *) [ -n "$1" ] || return; p=$1/$p ;;
+  esac
+  (cd "$p" 2>/dev/null && pwd -P)
+}
+in_jj() {
+  d=$1
+  while [ -n "$d" ] && [ "$d" != / ]; do [ -d "$d/.jj" ] && return 0; d=${d%/*}; done
+  return 1
+}
+
+# 5. Per command position: bare python/pip (uv group), cat/sed/find (tool group), and git writes in a
+# jj workspace (jj group). jj's colocated contract: read-only git is safe; a git write desyncs @.
 while IFS= read -r seg; do
   case "${seg%%[[:space:]]*}" in
     python|python[23]|python[23].[0-9]*|*/python|*/python[23]|*/python[23].[0-9]*|pip|pip3|pip3.[0-9]*|virtualenv|pipenv|poetry)
@@ -95,10 +120,42 @@ while IFS= read -r seg; do
       [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: sed is denied. A span: 'bat -pp --line-range A:B FILE'. A span of command output: 'CMD | bat -pp --line-range A:B'. A stream rewrite: 'rg -o PAT -r REPL' or awk. A file change: the Edit tool." ;;
     find|find[[:space:]]*)
       [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: find is denied. Use 'fd PATTERN [DIR]' (-e EXT, -t f|d, -H for hidden, -i for -iname, -d N for -maxdepth, -E GLOB for -not -path)." ;;
-    perl|perl[[:space:]]*|awk[[:space:]]-i*)
-      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: perl one-liners are denied. A stream rewrite: 'rg -o PAT -r REPL'; structured data: jq; a file change: the Edit tool; a rule across files: 'sg -p PAT -r REPL --lang X DIR' then -U; anything larger: a script file run with 'uv run'." ;;
+    awk[[:space:]]-i*)
+      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: in-place awk is denied. A file change: the Edit tool; a rule across files: 'sg -p PAT -r REPL --lang X DIR' then -U." ;;
+  esac
+  [ -n "${JJ_GUARD_OFF:-}" ] && continue
+  read -r -a w <<<"$seg"
+  case "${w[0]}" in
+    cd) DIR=$(resolve "$DIR" "${w[1]:-$HOME}") ;;
+    z)
+      case "${#w[@]}:${w[1]:-}" in
+        1:) DIR=$HOME ;;
+        2:-) DIR= ;;
+        *) DIR=$(zoxide query -- "${w[@]:1}" 2>/dev/null) ;;
+      esac ;;
+    git)
+      gdir=$DIR; i=1
+      while [ "$i" -lt "${#w[@]}" ]; do
+        case "${w[$i]}" in
+          -C) gdir=$(resolve "$gdir" "${w[$((i + 1))]}"); i=$((i + 2)) ;;
+          -c|--git-dir|--work-tree|--namespace) i=$((i + 2)) ;;
+          -*) i=$((i + 1)) ;;
+          *) break ;;
+        esac
+      done
+      case "${w[$i]:-}" in
+        add|commit|checkout|switch|stash|reset|restore|rebase|merge|cherry-pick|revert|pull|am|rm|mv)
+          in_jj "$gdir" && deny "shell-guard: '$gdir' is a jj workspace, and 'git ${w[$i]}' desyncs jj's working copy. Use jj: add -> nothing (jj tracks every file); commit -> 'jj commit -m MSG'; checkout/switch -> 'jj new REV' or 'jj edit REV'; stash -> 'jj new @-'; reset/restore -> 'jj restore'; rebase -> 'jj rebase'; merge -> 'jj new A B'; pull -> 'jj git fetch'. Read-only git (log, show, diff, blame) stays allowed. The jj skill has the rest." ;;
+      esac ;;
   esac
 done <<EOF
 $(segments)
 EOF
+
+# 6. PIPESTATUS under zsh (the Bash tool runs $SHELL): zsh spells it pipestatus and counts from 1, so
+# ${PIPESTATUS[0]} expands to nothing and a failed build reads as an empty status.
+if [ -z "${TOOL_GUARD_OFF:-}" ] && [ "${SHELL##*/}" = zsh ] \
+   && printf '%s' "$BODY" | sed -E "s/'[^']*'//g" | grep -q 'PIPESTATUS'; then
+  deny "shell-guard: the Bash tool runs zsh, where PIPESTATUS is unset. Use \${pipestatus[1]} for the first command's status (zsh counts from 1), or drop the pipe and read \$?."
+fi
 exit 0

@@ -62,10 +62,8 @@ in
 
     CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
     CLAUDE_CODE_NO_FLICKER = "1";
-    # Baseline effort floor for any `claude` launched OUTSIDE the ai-cli.nix
-    # wrappers (IDE, raw ~/.local/bin/claude, inherited shells): xhigh, never
-    # max. The `claude`/`cc` wrappers `unset` this so they run full ultracode
-    # (xhigh + dynamic-workflow orchestration) instead. See modules/home/ai-cli.nix.
+    # Baseline effort floor for every `claude` launched from a shell, the
+    # ai-cli.nix `claude`/`cc` wrappers included: xhigh, never max.
     CLAUDE_CODE_EFFORT_LEVEL = "xhigh";
 
     OBSIDIAN_VAULT = "$HOME/Documents/obsidian";

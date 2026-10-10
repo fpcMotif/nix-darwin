@@ -111,7 +111,7 @@ let
   # misc retired 2026-09-09: every skill it held was lean-excluded.
   mattpocockBuckets = [ "engineering" "productivity" ];
   # Skills genuinely turned off. Kept out of every picker dir AND out of the
-  # Claude Code plugin surface — since mattpocock-skills@claude-plugins-official
+  # Claude Code plugin surface — since mattpocock-skills@mattpocock
   # was installed, the plugin is the one route that can still reach us with an
   # id this list refuses (see claudePrunePluginSkills / deniedPluginSkills).
   disabledMattpocockSkills = [
@@ -151,6 +151,30 @@ let
   # listed here has since been uninstalled outright instead of parked; add an
   # id back to park (disable-but-keep-installed) rather than uninstall it.
   disabledClaudePlugins = [ ];
+  # Plugins this module reaches into — claudePrunePluginSkills edits their
+  # cached manifests, and skillOverrides hides the bundle copies mattpocock's
+  # plugin replaces — so their enable flag and marketplace are owned here too,
+  # re-asserted every switch by claudeSettingsOwnership. Both install from their
+  # authors' own marketplaces: claude-plugins-official pins copies that lag
+  # upstream (it held mattpocock-skills at 1.2.3 after 1.3.1 shipped). Move one
+  # to another marketplace HERE, not through /plugin, or the next switch
+  # re-enables the old id and Claude lists every skill twice. autoUpdate is
+  # explicit because third-party marketplaces default to off, and the
+  # de-duplication below assumes the plugin tracks upstream.
+  mattpocockPluginId = "mattpocock-skills@mattpocock";
+  convexPluginId = "convex@convex";
+  claudeManagedPlugins = {
+    ${mattpocockPluginId} = true;
+    ${convexPluginId} = true;
+  };
+  claudeManagedMarketplaces = {
+    mattpocock = { source = { source = "github"; repo = "mattpocock/skills"; }; autoUpdate = true; };
+    convex = { source = { source = "github"; repo = "get-convex/convex-backend-skill"; }; autoUpdate = true; };
+  };
+  # ~/.claude/plugins/cache keys each install as <marketplace>/<plugin>/<version>.
+  pluginCacheDir = id:
+    let parts = lib.splitString "@" id;
+    in "${lib.last parts}/${lib.head parts}";
 
   # === auto-memory: nix-owned off switch ===
   # Claude Code writes and consolidates its own memory files under
@@ -187,6 +211,30 @@ let
   # monorepo optimization and belongs in that repo's own .claude/settings.json.
   claudeWorktreeSettings = {
     symlinkDirectories = [ "node_modules" ".cache" ];
+  };
+
+  # === auto-compact: nix-owned windows ===
+  # Auto-compact swaps the conversation for a summary once it reaches the
+  # window. Every turn before that re-sends the whole history, so the built-in
+  # window (~967K on 1M models) makes late turns expensive. 400K caps that.
+  # Haiku stays at 100K, the ceiling of its cheaper API price tier.
+  #
+  # Within one settings file a modelSettings entry beats the top-level key.
+  # CLAUDE_CODE_AUTO_COMPACT_WINDOW beats both, Haiku included, so it stays
+  # unset. /autocompact writes modelSettings.<model>; the next switch reverts
+  # these two paths and keeps entries for other models.
+  claudeAutoCompactSettings = [
+    { path = [ "autoCompactWindow" ]; value = 400000; }
+    { path = [ "modelSettings" "claude-haiku-5-5" "autoCompactWindow" ]; value = 100000; }
+  ];
+
+  # === workflow size: nix-owned guideline ===
+  # The Workflow tool tells the model to keep a run under this many agents:
+  # small 5, medium 10, large 50. It is advisory, so a prompt that asks for
+  # more still gets more. settings.json beats the value /config writes to
+  # ~/.claude.json, so this key decides.
+  claudeWorkflowSettings = {
+    workflowSizeGuideline = "medium";
   };
 
   # === permissions: nix-owned, authoritative ===
@@ -407,7 +455,7 @@ let
     lib.unique (lib.concatMap bucketSkillNames mattpocockBuckets);
 
   # Claude Code sees each of these ids TWICE: once from ~/.claude/skills (this
-  # flake's bundle) and once from mattpocock-skills@claude-plugins-official.
+  # flake's bundle) and once from mattpocock-skills@mattpocock.
   # The PLUGIN copy wins on the Claude surface — it tracks upstream faster than
   # the flake pin — so the bundle copy is switched off there with
   # `skillOverrides: "off"`, the one first-class per-skill listing lever Claude
@@ -423,11 +471,7 @@ let
   # pin running AHEAD of the plugin — an id would then be hidden with no
   # replacement — which is why scripts/verify-agent-skills.sh asserts every
   # hidden id is actually declared by the enabled plugin.
-  # Skills present in the pinned flake bundle that the official Claude Code plugin (v1.2.3)
-  # has not yet published (e.g. retro, implement-spec, pr in v1.3.1).
-  # These must NOT be hidden from Claude, keeping them accessible via ~/.claude/skills.
-  unreleasedPluginSkills = [ "implement-spec" "pr" "retro" ];
-  pluginProvidedSkillIds = lib.subtractLists unreleasedPluginSkills enabledMattpocockSkills;
+  pluginProvidedSkillIds = enabledMattpocockSkills;
   # Non-mattpocock ids Claude Code already gets from the account/harness side.
   # `anthropic-skills:notebooklm` ships with the harness, has no local file and
   # cannot be removed, so the hand-installed ~/.claude/skills/notebooklm copy is
@@ -481,7 +525,7 @@ let
   # because a version bump writes a fresh cache dir; the deny rule is
   # version-independent and covers the window in between.
   idleClaudePluginSkills = {
-    "claude-plugins-official/convex" = [
+    ${pluginCacheDir convexPluginId} = [
       "add"
       "agent"
       "billing"
@@ -627,7 +671,7 @@ let
       "skill-creator@claude-plugins-official" = true;
       "claude-md-management@claude-plugins-official" = true;
       "interfaces@interfaces" = true;
-    };
+    } // claudeManagedPlugins;
     extraKnownMarketplaces = {
       "frad-dotclaude" = {
         source = {
@@ -643,7 +687,7 @@ let
         };
         autoUpdate = true;
       };
-    };
+    } // claudeManagedMarketplaces;
     autoMemoryEnabled = false;
     autoDreamEnabled = false;
     worktree = claudeWorktreeSettings;
@@ -662,8 +706,12 @@ let
     ]
     ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeHiddenSkillIds
     ++ map (id: { path = [ "enabledPlugins" id ]; value = false; }) disabledClaudePlugins
+    ++ lib.mapAttrsToList (id: value: { path = [ "enabledPlugins" id ]; inherit value; }) claudeManagedPlugins
+    ++ lib.mapAttrsToList (name: value: { path = [ "extraKnownMarketplaces" name ]; inherit value; }) claudeManagedMarketplaces
     ++ lib.mapAttrsToList (key: value: { path = [ key ]; inherit value; }) claudeMemorySettings
-    ++ lib.mapAttrsToList (key: value: { path = [ "worktree" key ]; inherit value; }) claudeWorktreeSettings;
+    ++ lib.mapAttrsToList (key: value: { path = [ key ]; inherit value; }) claudeWorkflowSettings
+    ++ lib.mapAttrsToList (key: value: { path = [ "worktree" key ]; inherit value; }) claudeWorktreeSettings
+    ++ claudeAutoCompactSettings;
     default = lib.mapAttrsToList (key: value: { path = [ "env" key ]; inherit value; }) claudeSeedEnv;
     add = claudeGuardHooks;
     remove = worktrunkMarkers.remove ++ retiredClaudeHooks ++ lib.optionals (!docLock) docLockHooks;
@@ -690,7 +738,7 @@ in
       # ("platform mismatch"). A plain path symlink is platform-agnostic. The same
       # store dir is linked into every picker target; Pi's realpath de-dup
       # collapses them, exactly like agent-skills' `link` targets.
-      #   - jj — locally authored.
+      #   - jj, browser-checks — locally authored.
       #   - setup-ts-deep-modules — vendored fork of the mattpocock-skills
       #     in-progress skill, carrying the tsPreCompilationDeps fix its
       #     dependency-cruiser.config.cjs template lacks. Upstream never
@@ -731,7 +779,7 @@ in
           pluginProvided = pluginProvidedSkillIds;
           excluded = lib.unique (excludedSkillIds ++ removedSkillIds);
           deniedPluginSkills = disabledMattpocockSkills;
-          pluginId = "mattpocock-skills@claude-plugins-official";
+          pluginId = mattpocockPluginId;
         });
 
       ".local/bin/claude".source = pkgs.claude-code + "/bin/claude";
@@ -823,7 +871,7 @@ in
   # refusing execution. The glob covers every cached version, so an
   # already-downloaded new version is pruned too.
   home.activation.claudePrunePluginSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    cache="${homeDir}/.claude/plugins/cache/claude-plugins-official/mattpocock-skills"
+    cache="${homeDir}/.claude/plugins/cache/${pluginCacheDir mattpocockPluginId}"
     for manifest in "$cache"/*/.claude-plugin/plugin.json; do
       [ -f "$manifest" ] || continue
       tmp=$(mktemp)

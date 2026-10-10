@@ -47,6 +47,8 @@ Ranked results alone cannot prove absence.
 
 - Run scripts with `bun` and executables with `bunx`.
 - Use `pnpm` when the repository requires it.
+- Type-check TypeScript with `bun check`, Bun's native checker. It replaces `tsc --noEmit` and reads the nearest `tsconfig.json`.
+- Scope a check with `bun check -p apps/web` for one package, or `bun check FILE` for a file and its imports.
 - Confirm a dependency and lockfile before adding a library.
 
 ## Python
@@ -90,9 +92,11 @@ Ranked results alone cannot prove absence.
 - Detect a `.jj` workspace before the first version-control operation.
 - Use `jj` in a Jujutsu workspace and Git in a Git-only checkout.
 - Read the diff before every commit. Use `type(scope): message`.
+- When merge conflicts resolve to one side, list each merged pull request the other side loses, and ask first.
 - Use `gh` for GitHub when no host-specific GitHub tool applies.
 - Open or update a pull request from JJ with `jj pr`, as the `jj` skill describes. The `pr` skill writes the body.
 - Inspect diff shape first, then read path-scoped changes.
+- Search history with merge diffs included: `jj log -r '::@ & files(PATH)'` or `git log -m -S TEXT`. Plain `git log -S` and `git log -- PATH` can miss a merge that dropped text.
 
 ## Human review evidence
 

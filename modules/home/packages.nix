@@ -9,6 +9,7 @@ let
     fd
     ripgrep
     eza
+    fcp
     dust
     tree
 

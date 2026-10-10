@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "78045d37-d155-4389-a1f5-864eead4e12d",
+  "status": "current",
+  "command": "deliver",
+  "type": "workflow",
+  "input": "/Users/martinfan/nix-config/.archify/workflow-ci-source-build-guard-20261010-134342/candidate.json",
+  "output": "/Users/martinfan/nix-config/.archify/workflow-ci-source-build-guard-20261010-134342/ci-source-build-guard.html",
+  "specification": {
+    "sha256": "bd498e9d3865c726a55e068c200976e280a02f91d2ba1803e78c785ee8ec5a5b",
+    "bytes": 6553
+  },
+  "artifact": {
+    "sha256": "4496e315f47cd5e3848c93f42d515bcf2417e819823c73bb743c7e9ca5715b25",
+    "bytes": 769924
+  }
+}

@@ -159,6 +159,24 @@ check:
     echo "check: darwinConfigurations.f.system $checks"
     nix build --no-link '.#darwinConfigurations.f.system' $(printf '.#checks.aarch64-darwin.%s ' $checks)
 
+# Build one flake check by name, e.g. `just check-one unit-shell-guard`.
+check-one name:
+    nix build --no-link --print-build-logs '.#checks.aarch64-darwin.{{name}}'
+
+# Build and list every agent guide this config deploys, to read a change before a switch.
+guides:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out=$(nix build --no-link --print-out-paths --impure --expr '
+      let
+        flake = builtins.getFlake (toString ./.);
+        pkgs = flake.inputs.nixpkgs.legacyPackages.aarch64-darwin;
+        hm = builtins.head (builtins.attrValues flake.darwinConfigurations.f.config.home-manager.users);
+        targets = (import ./modules/home/agent-instructions/guides.nix { inherit pkgs; inherit (pkgs) lib; }).targets;
+        guides = builtins.filter (f: f.enable && builtins.elem f.target targets) (builtins.attrValues hm.home.file);
+      in pkgs.linkFarm "agent-guides" (map (f: { name = f.target; path = f.source; }) guides)')
+    fd -L -t f -H . "$out"
+
 # Run the skill-router bun suite (spawn-seam gate) offline via the Nix sandbox.
 test-router:
     nix build --no-link --print-build-logs \

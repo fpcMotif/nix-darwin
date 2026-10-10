@@ -2,10 +2,12 @@
 # Table test for shell-guard.sh: one row per command, expected verdict first.
 # Run: bash shell-guard-test.sh [path/to/shell-guard.sh]  (the nix check passes the store path)
 HOOK=${1:-$(dirname "$0")/shell-guard.sh}
+TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+PLAIN=$TMP/plain; JJ=$TMP/jj; mkdir -p "$PLAIN" "$JJ/.jj" "$JJ/sub"
 fail=0; n=0
 check() {
-  want=$1; cmd=$2; n=$((n + 1))
-  out=$(jq -cn --arg c "$cmd" '{tool_name:"Bash",tool_input:{command:$c}}' | bash "$HOOK" 2>&1 >/dev/null); rc=$?
+  want=$1; cmd=$2; cwd=${3:-$PLAIN}; n=$((n + 1))
+  out=$(jq -cn --arg c "$cmd" --arg d "$cwd" '{tool_name:"Bash",tool_input:{command:$c},cwd:$d}' | bash "$HOOK" 2>&1 >/dev/null); rc=$?
   got=allow; [ "$rc" -eq 2 ] && got=deny
   if [ "$got" != "$want" ]; then fail=$((fail + 1)); printf 'FAIL want=%s got=%s rc=%s: %s\n  %s\n' "$want" "$got" "$rc" "$cmd" "$out"; fi
 }
@@ -41,8 +43,6 @@ check deny  "node -e \"require('fs').writeFileSync('a','x')\""
 check deny  "sed -i '' 's/a/b/' file.ts"
 check deny  "sed -i.bak -e 's/a/b/' file.ts"
 check deny  "cat file | sed -i 's/a/b/' other"
-check deny  "perl -pi -e 's/a/b/' file.ts"
-check deny  "perl -i -pe 's/a/b/' file.ts"
 check deny  $'cat > out.md <<\'EOF\'\nhello\nEOF'
 check deny  $'cat <<\'EOF\' > out.md\nhello\nEOF'
 check deny  $'cat <<EOF >> notes.md\nline\nEOF'
@@ -58,8 +58,6 @@ check allow "cat file.ts"
 check allow "cat -n file.ts | head -n 40"
 check allow "x=\$(cat VERSION)"
 check deny  "find . -name '*.ts' -not -path '*/node_modules/*'"
-check deny  "perl -pe 's/a/b/' file.ts"
-check deny  "rg -l PAT src | xargs perl -ne 'print if /x/'"
 check deny  "awk -i inplace '{sub(/a/,\"b\")}1' file.ts"
 check allow "awk -F: '{print \$1}' /etc/passwd | head -n 3"
 check allow "uv run gen.py > out.json"
@@ -124,6 +122,47 @@ check allow $'uv run - <<\'PY\'\nimport json\nprint(json.load(open("audit/report
 check allow $'uv run - <<\'PY\'\nfrom PIL import Image\nprint(Image.open("assets/logo.png").size)\nPY'
 check deny  $'uv run - <<\'PY\'\nwith open("out.txt", mode="a") as f:\n    f.write("x")\nPY'
 check deny  "git show HEAD:a.ts | sed -n 150,234p"
+
+# Git writes in a jj workspace go to jj; read-only git and plain Git checkouts pass.
+check deny  "git add -N a.md" "$JJ"
+check deny  "git commit -m 'x'" "$JJ"
+check deny  "git checkout main" "$JJ/sub"
+check deny  "git stash" "$JJ"
+check deny  "git -c core.pager=cat reset --hard" "$JJ"
+check deny  "cd $JJ && git rebase main" "$PLAIN"
+check deny  "cd sub && git restore a.md" "$JJ"
+check deny  "git -C $JJ commit -m x" "$PLAIN"
+check deny  $'git commit -F - <<\'EOF\'\nfeat: x\nEOF' "$JJ"
+check allow "git log -m -S'text' --oneline HEAD" "$JJ"
+check allow "git show HEAD:a.md | head" "$JJ"
+check allow "git diff HEAD" "$JJ"
+check allow "git branch -a --contains abc123" "$JJ"
+check allow "git commit -m x" "$PLAIN"
+check allow "cd $PLAIN && git commit -m x" "$JJ"
+check allow "git -C $PLAIN commit -m x" "$JJ"
+check allow "cd \"\$OTHER\" && git commit -m x" "$JJ"
+check allow "jj commit -m 'git commit'" "$JJ"
+check allow "rg -n 'git commit' docs/" "$JJ"
+
+# `z NAME` moves the directory through zoxide, like the z function in shell/zoxide.nix.
+if command -v zoxide >/dev/null 2>&1; then
+  export _ZO_DATA_DIR=$TMP/zoxide; mkdir -p "$_ZO_DATA_DIR"; zoxide add "$JJ" "$PLAIN"
+  check deny  "z jj && git commit -m x" "$PLAIN"
+  check allow "z plain && git commit -m x" "$JJ"
+  check allow "z - && git commit -m x" "$JJ"
+  check allow "z no-such-dir && git commit -m x" "$JJ"
+  HOME=$JJ check deny "z && git stash" "$PLAIN"
+else
+  echo "skip: zoxide not on PATH, z rows not run"
+fi
+
+# PIPESTATUS is bash-only; under zsh it expands to nothing. Single quotes and heredocs run elsewhere.
+SHELL=/bin/zsh check deny  'nix build x 2>&1 | tail -5; echo "exit=${PIPESTATUS[0]}"'
+SHELL=/bin/zsh check deny  'bun test | tee log; exit ${PIPESTATUS[0]}'
+SHELL=/bin/zsh check allow 'nix build x 2>&1 | tail -5; echo "exit=${pipestatus[1]}"'
+SHELL=/bin/zsh check allow "bash -c 'false | true; echo \${PIPESTATUS[0]}'"
+SHELL=/bin/zsh check allow $'bash <<\'EOF\'\nfalse | true; echo ${PIPESTATUS[0]}\nEOF'
+SHELL=/bin/bash check allow 'bun test | tee log; exit ${PIPESTATUS[0]}'
 
 printf '%s/%s rows passed\n' "$((n - fail))" "$n"
 [ "$fail" -eq 0 ]

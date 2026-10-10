@@ -224,7 +224,7 @@ modules/home/
 ├── obsidian.nix         # Obsidian vault wiring
 ├── lsp.nix              # language-server packages and Claude/Neovim configuration
 ├── claude.nix           # Claude Code config + the agent-skills bundle
-├── ai-cli.nix           # claude/cc/codex/amp shell wrappers (ultracode defaults)
+├── ai-cli.nix           # claude/cc/codex/amp shell wrappers (proxy and env handling)
 ├── agent-instructions.nix # Codex profiles and personal harness instructions
 ├── ai-model-routing.nix # mutable Pi adapter for the shared routing policy
 ├── opencode.nix         # opencode CLI config

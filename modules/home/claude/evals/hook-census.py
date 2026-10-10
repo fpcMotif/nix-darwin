@@ -31,7 +31,7 @@ DENIAL = re.compile(
 )
 RULES = [
     ("shell.inline_write", r"Inline scripts that call open"),
-    ("shell.sed_inplace", r"in-place sed/perl"),
+    ("shell.sed_inplace", r"in-place sed"),
     ("shell.echo_write", r"echo/printf into a file"),
     ("shell.heredoc_write", r"heredoc redirected into a file"),
     ("shell.python", r"Python runs through uv"),
@@ -48,7 +48,7 @@ RULES = [
     ("doclock.markdown", r"is Markdown"),
     ("doclock.comments", r"comments"),
 ]
-RETIRED = {"shell.cat", "search.alternation", "search.grep", "read.long_file"}
+RETIRED = {"shell.cat", "shell.perl", "search.alternation", "search.grep", "read.long_file"}
 WRAPPERS = ("sudo", "time", "nohup", "exec", "command", "env", "xargs")
 HEADLINE = [
     ("bash calls", ("populations", "all", "bash")),

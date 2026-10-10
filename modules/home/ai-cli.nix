@@ -14,27 +14,22 @@
             AMP_API_KEY AMP_URL AMP_API_BASE_URL
     }
 
-    # `claude`/`cc` default to ultracode (xhigh effort + standing dynamic-workflow
-    # orchestration). ultracode is NOT a valid `--effort` value — that flag only
-    # accepts low|medium|high|xhigh|max — so it's enabled via its `--settings`
-    # boolean key. The `unset` is load-bearing: the session-wide
-    # CLAUDE_CODE_EFFORT_LEVEL=xhigh default (modules/home/zsh.nix) would
-    # otherwise shadow ultracode for the whole session — so wrappers drop it to
-    # get full ultracode, while bypass launches stay floored at xhigh (never
-    # max). Switch effort per-session from inside Claude Code with `/effort <level>`.
+    # `claude`/`cc` start without standing ultracode, which tells the model to
+    # run a dynamic workflow on every substantive task. A prompt that contains
+    # the keyword "ultracode" opts that one turn into a workflow instead.
+    # Effort comes from the session-wide CLAUDE_CODE_EFFORT_LEVEL=xhigh floor
+    # (modules/home/session.nix). Switch it per session with `/effort <level>`.
     cofficial() {
       (
         _unset_ai_env
-        unset CLAUDE_CODE_EFFORT_LEVEL CLAUDE_EFFORT
-        "$HOME/.local/bin/claude" --dangerously-skip-permissions --settings '{"ultracode":true}' "$@"
+        "$HOME/.local/bin/claude" --dangerously-skip-permissions "$@"
       )
     }
 
     claude() {
       (
         _unset_ai_env
-        unset CLAUDE_CODE_EFFORT_LEVEL CLAUDE_EFFORT
-        command "$HOME/.local/bin/claude" --settings '{"ultracode":true}' "$@"
+        command "$HOME/.local/bin/claude" "$@"
       )
     }
 
