@@ -4,7 +4,7 @@ set -euo pipefail
 
 grants="${XDG_STATE_HOME:-$HOME/.local/state}/doc-lock"
 baselines="$grants/baseline"
-docs_words='adrs?|context\.md|docs?|documentation|document(ed)?|readme|comments?|changelog|agents\.md|claude\.md|skill\.md|setup-matt-pocock-skills|domain-modeling|writing-for-agents'
+docs_words='adrs?|glossary(\.md)?|context\.md|docs?|documentation|document(ed)?|readme|comments?|changelog|agents\.md|claude\.md|skill\.md|setup-matt-pocock-skills|domain-modeling|writing-for-agents'
 unlock_hint='If the user wants it, ask them to request docs work (for example "update the ADR" or "fix the comments"); that opens the lock for the session.'
 
 is_open() { [ -n "$1" ] && [ -f "$grants/$1" ]; }

@@ -142,7 +142,7 @@ au_is_glue_drv_name() {
       return 0 ;;
     # Generated system files and activation helpers
     npm-config-hook|hm-session-vars.sh|set-environment|ca-certificates.crt|\
-    martin-auto-switch|*-auto-switch|*.plist|*.json|*.md|*.sh|*.yaml|*.yml|*.zsh|*.toml|\
+    martin-auto-switch|*-auto-switch|*.plist|*.json|*.md|*.sh|*.yaml|*.yml|*.zsh|*.toml|*.ts|*.jq|\
     pstack-skill-*|worktrunk-marker|claude-settings-ownership|\
     *-config|*-settings|*-keymaps|*-models|*-report|*-report.domain|\
     *-extension-update.domain|python3-*-env|nix.conf|hm-modules-messages|\
@@ -186,7 +186,7 @@ au_vendored_drv_names() {
   {
     grep -hoE '(pname|name) = "[^"]+"' "$dir"/*.nix 2>/dev/null \
       | cut -d'"' -f2
-    printf '%s\n' agent-skills claude-code crush oh-my-pi opencode pi
+    printf '%s\n' agent-skill agent-skills claude-code crush oh-my-pi opencode pi
     printf '%s\n' codex droid sourcegraph-amp zed-nightly-bin
     printf '%s\n' direnv skill-router tmux
   } | sort -u
@@ -460,7 +460,7 @@ au_build_darwin() {
 # Release pin bump
 # ---------------------------------------------------------------------------
 
-# Bump a release pin (CONTEXT.md): one upstream version plus the hash of each
+# Bump a release pin (GLOSSARY.md): one upstream version plus the hash of each
 # file the package downloads. The caller resolves the upstream version; this
 # owns compare, download, hash, rewrite, build, and report.
 #
@@ -575,7 +575,7 @@ au_bump_release() {
 # pkgs/ and flake.lock aside; when it fails, put them back, so a half-finished
 # bump never reaches the nightly PR or a local switch. Plain file copies, not
 # git: the local checkout is jj-colocated, and git writes desync jj
-# (CONTEXT.md, Colocated contract). Run from the repo root.
+# (GLOSSARY.md, Colocated contract). Run from the repo root.
 #   au_run_updaters [script...]    (default: every scripts/update-*.sh)
 au_run_updaters() {
   local scripts=("$@") snap s failed=0

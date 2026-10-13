@@ -49,6 +49,8 @@ Ranked results alone cannot prove absence.
 - Use `pnpm` when the repository requires it.
 - Type-check TypeScript with `bun check`, Bun's native checker. It replaces `tsc --noEmit` and reads the nearest `tsconfig.json`.
 - Scope a check with `bun check -p apps/web` for one package, or `bun check FILE` for a file and its imports.
+- Format code with `bun fmt`, or check formatting with `bun fmt --check`. It replaces `oxfmt` and `prettier`, and reads `.oxfmtrc.json` natively.
+- Use `oxlint --type-aware` for type-aware linting.
 - Confirm a dependency and lockfile before adding a library.
 
 ## Python

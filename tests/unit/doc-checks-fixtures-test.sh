@@ -23,8 +23,8 @@ make_tree() {
     '[fenced](fenced-missing.md)' \
     '```' \
     '[ref]: ../../AGENTS.md' >"$1/docs/agents/domain.md"
-  printf '[domain](docs/agents/domain.md) [adr dir](docs/adr/) [root](/CONTEXT.md)\n' >"$1/AGENTS.md"
-  touch "$1/ARCHITECTURE.md" "$1/CONTEXT.md"
+  printf '[domain](docs/agents/domain.md) [adr dir](docs/adr/) [root](/GLOSSARY.md)\n' >"$1/AGENTS.md"
+  touch "$1/ARCHITECTURE.md" "$1/GLOSSARY.md"
 }
 
 expect_pass() {
@@ -90,9 +90,9 @@ printf '[moved](docs/moved.md)\n' >>"$tree/AGENTS.md"
 expect_fail doc-links 'AGENTS.md:2: broken link to docs/moved.md' bash "$doc_links" "$tree"
 
 tree=$(fresh)
-printf '[old]: docs/old.md\n' >>"$tree/CONTEXT.md"
-expect_fail doc-links 'CONTEXT.md:1: broken link to docs/old.md' bash "$doc_links" "$tree"
+printf '[old]: docs/old.md\n' >>"$tree/GLOSSARY.md"
+expect_fail doc-links 'GLOSSARY.md:1: broken link to docs/old.md' bash "$doc_links" "$tree"
 
 tree=$(fresh)
-rm "$tree/CONTEXT.md"
-expect_fail doc-links 'CONTEXT.md is missing' bash "$doc_links" "$tree"
+rm "$tree/GLOSSARY.md"
+expect_fail doc-links 'GLOSSARY.md is missing' bash "$doc_links" "$tree"

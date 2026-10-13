@@ -1,6 +1,6 @@
 ---
 name: spec-gap-analysis
-description: "Analyze a specification document against an existing codebase, producing a CONTEXT.md (domain model, architecture, gap table, naming divergences, open decisions) and ADR files for unresolved decisions. Use when the user provides a spec/PRD and asks to map it against code, do a gap analysis, figure out what's missing, or prepare for implementation planning."
+description: "Analyze a specification document against an existing codebase, producing a GLOSSARY.md (domain model, architecture, gap table, naming divergences, open decisions) and ADR files for unresolved decisions. Use when the user provides a spec/PRD and asks to map it against code, do a gap analysis, figure out what's missing, or prepare for implementation planning."
 ---
 
 # Spec-vs-Codebase Gap Analysis
@@ -45,7 +45,7 @@ For each spec section, determine:
 
 Dispatch parallel subagents for:
 
-1. **`CONTEXT.md`** (project root) — sections:
+1. **`GLOSSARY.md`** (project root) — sections:
    - Project Identity (name, purpose, actual stack)
    - Domain Model / Ubiquitous Language (every entity: term, meaning, code location, spec/code divergence)
    - Architecture Overview (current data flow, topology)

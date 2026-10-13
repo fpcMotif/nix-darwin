@@ -12,6 +12,8 @@
 
 # Local agent/app state.
 /.claude/worktrees/
+/.claude/settings.local.json
+/.metadata_never_index
 /.crush/
 /.factory/
 /.pi/todos/

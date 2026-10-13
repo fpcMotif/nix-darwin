@@ -13,7 +13,7 @@ let
   hasDisableModel = name:
     let skillMd = ./skills/personal + "/${name}/SKILL.md";
     in builtins.pathExists skillMd
-       && lib.hasInfix "disable-model-invocation:" (builtins.readFile skillMd);
+      && lib.hasInfix "disable-model-invocation:" (builtins.readFile skillMd);
 
   cleanSkills = lib.genAttrs (lib.filter hasDisableModel (builtins.attrNames personalSkills)) (name:
     pkgs.runCommandLocal "agent-skill-${name}-standard" { } ''

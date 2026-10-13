@@ -2,7 +2,7 @@
 // call in skill-router flows through (the dormant-by-default intentRunner and
 // `git rev-parse`). The seam expresses only HOW a process launches, never WHEN
 // — the includePackage gate and the @0.0.41 pin stay above it in the callers.
-// See docs/adr/0006 and CONTEXT.md "Command seam".
+// See docs/adr/0006 and GLOSSARY.md "Command seam".
 export type CommandRunner = (
   argv: string[],
   opts?: { cwd?: string },

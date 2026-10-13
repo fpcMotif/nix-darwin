@@ -38,6 +38,14 @@
     # This still allows build parallelism, but caps memory pressure.
     max-substitution-jobs = 16;
 
+    # Nix's libcurl defaults to HTTP/2 multiplexing, packing all 16 concurrent
+    # .nar.zst streams onto one TLS connection through the Surge Fake-IP TUN.
+    # When that single multiplexed stream stalls or resets on HTTP/2
+    # WINDOW_UPDATE frames, every in-flight download dies at once with
+    # `CURLE_SEND_ERROR (55) / OpenSSL SSL_read: SSL_ERROR_SYSCALL, errno 0`.
+    # HTTP/1.1 keep-alive gives each substitution job its own socket.
+    http2 = false;
+
     # nix-direnv pins `nix develop` shells with GC roots; keeping outputs and
     # derivations alive is its documented requirement so dev shells survive
     # garbage collection and stay usable offline

@@ -1,6 +1,6 @@
 ## Docs lock
 
-Comments and Markdown change only in docs work. Docs work is a request that names it: an ADR, CONTEXT.md, a README, docs, comments, or `setup-matt-pocock-skills`.
+Comments and Markdown change only in docs work. Docs work is a request that names it: an ADR, GLOSSARY.md, a README, docs, comments, or `setup-matt-pocock-skills`.
 
 - **Comments**: Keep existing comments as written. Carry intent in names, types, and tests. A comment leaves only with the code it describes.
 - **Suppressions**: Fix the lint or type error. A suppression such as `@ts-expect-error`, `eslint-disable`, or `noqa` is a comment.

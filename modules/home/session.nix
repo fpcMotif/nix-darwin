@@ -3,7 +3,7 @@
 let
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
 
-  # PATH tiers (CONTEXT.md), in order: an earlier tier wins every command name
+  # PATH tiers (GLOSSARY.md), in order: an earlier tier wins every command name
   # it shares with a later one. The Nix-profile entries repeat nix-darwin's
   # base PATH on purpose: their earlier position keeps the Nix copies of
   # cargo, rustc, bun, and others ahead of user-installed ones. Check with

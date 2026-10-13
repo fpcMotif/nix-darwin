@@ -71,7 +71,7 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `unit-agent-guides`                 | Checks every catalog host's rendered guides for required sections and tools, banned terms, model ids, and complete cross-guide pointers. |
 | `unit-adr-files`                    | `docs/adr/` holds only `.md` files, so no rendered page or export sits beside an ADR as a second copy. |
 | `unit-adr-numbers`                  | Every ADR name starts with a four-digit number, and no two ADRs share one. |
-| `unit-doc-links`                    | Relative links and images in `docs/**/*.md`, `AGENTS.md`, `ARCHITECTURE.md`, and `CONTEXT.md` resolve to existing paths. Skips URLs, anchors, fenced blocks, and inline code. |
+| `unit-doc-links`                    | Relative links and images in `docs/**/*.md`, `AGENTS.md`, `ARCHITECTURE.md`, and `GLOSSARY.md` resolve to existing paths. Skips URLs, anchors, fenced blocks, and inline code. |
 | `unit-doc-checks-fixtures`          | The three docs checks pass a clean fixture tree and fail broken ones, naming the offending file. |
 | `unit-build-workflow`               | Both `build.yml` check jobs read the `checks.<system>` names with `builtins.attrNames` and build them all. The workflow names no check by hand. |
 | `unit-claude-settings-ownership`          | Runs the production jq reconciler in temporary homes; checks own/default/add semantics, safe stale-key cleanup, dry-run immutability, and byte-identical no-ops. |

@@ -14,4 +14,4 @@ The `gemini-cli-preview` derivation (a fresh `buildNpmPackage` tracking the `@go
 
 - The global `~/.claude/CLAUDE.md` workflow (`gemini -y -p`) and the `/deep-research` skill that depend on a `gemini` binary no longer have one on this machine; those live outside this repo and must be adjusted there.
 - `⌃⌥⇧g` is now an unbound hotkey, free for reuse.
-- Gemini models are no longer reachable from Zed/agents (the API surface was removed too). Re-adding any Gemini surface is a deliberate new decision, not a regression fix — see CONTEXT.md "Flagged ambiguities".
+- Gemini models are no longer reachable from Zed/agents (the API surface was removed too). Re-adding any Gemini surface is a deliberate new decision, not a regression fix — see GLOSSARY.md "Flagged ambiguities".

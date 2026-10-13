@@ -142,6 +142,7 @@ grant_case closed "plain task"                s1 "fix the failing test in auth.t
 grant_case open   "ADR request"               s2 "please update the ADR for the cache"
 grant_case open   "CONTEXT request"           s3 "Update CONTEXT with the new term"
 grant_case closed "lowercase context"         s4 "shrink the context window"
+grant_case open   "GLOSSARY request"          s12 "Add the new term to GLOSSARY.md"
 grant_case open   "domain-modeling skill"     s5 "/mattpocock-skills:domain-modeling sharpen terms"
 grant_case open   "comment request"           s6 "fix the stale comments in parser.rs"
 grant_case open   "matt skills setup"         s7 "run setup-matt-pocock-skills here"

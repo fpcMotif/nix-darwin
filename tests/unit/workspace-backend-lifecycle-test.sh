@@ -255,13 +255,13 @@ pass "djo Zsh wrapper changes directory and registers completion"
 colocated=$work/colorepo
 new_jj_repo "$colocated" --colocate
 (cd "$colocated" && djo switch --create c --base main >/dev/null 2>&1) || fail "djo could not create a colocated workspace"
-[ -d "$work/colorepo.c/.jj" ] && [ ! -e "$work/colorepo.c/.git" ] \
-  || fail "the colocated JJ workspace is not a plain JJ workspace"
-[ "$(git -C "$colocated" worktree list --porcelain | grep -c '^worktree ')" -eq 1 ] \
-  || fail "a JJ workspace was registered as a Git worktree"
+[ -d "$work/colorepo.c/.jj" ] && [ -f "$work/colorepo.c/.git" ] \
+  || fail "the colocated JJ workspace is not a colocated workspace"
+[ "$(git -C "$colocated" worktree list --porcelain | grep -c '^worktree ')" -eq 2 ] \
+  || fail "the colocated JJ workspace was not registered as a Git worktree"
 jj_workspaces "$colocated" | grep -xF c >/dev/null \
   || fail "jj does not register the colocated workspace"
-pass "a colocated repository gets a JJ workspace, not a Git worktree"
+pass "a colocated repository gets a colocated JJ workspace and Git worktree"
 
 mkdir "$work/jjrepo.taken"
 echo keep > "$work/jjrepo.taken/keep.txt"

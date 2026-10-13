@@ -7,7 +7,7 @@ root=$1
 files=$(
   cd "$root"
   find docs -type f -name '*.md' | sort
-  printf '%s\n' AGENTS.md ARCHITECTURE.md CONTEXT.md
+  printf '%s\n' AGENTS.md ARCHITECTURE.md GLOSSARY.md
 )
 
 # Print "LINE<TAB>TARGET" for each inline link, image, and reference

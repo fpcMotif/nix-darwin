@@ -25,13 +25,15 @@ let
   #   tdd, teach          mattpocock tdd, teach
   #   deslop              simplify (built-in)
   #   no-comments         the CLAUDE.md Code Quality comment rule
-  #   technical-writing   CLAUDE.md Writing Style + mattpocock writing-for-agents
-  #   bro                 mattpocock wait-what
+  #   unslop              CLAUDE.md Writing + mattpocock writing-for-agents
+  #   technical-writing   human-documents.md + CLAUDE.md Writing + writing-for-agents
+  #   bro, ketchup        mattpocock wait-what + eli5 / handoff
+  #   thermo-nuclear-*    code-review (ADR-0015), interrogate, and nuclear-cqr
   #   setup-pstack        hand-written ~/.claude/pstack-models.md
   #   Prototype playbook  mattpocock prototype
   #   verify (no skill)   dotfiles web-browser, or the harness's browser tools
   # Also out: blast-radius, bot tooling (make-bot-ui, automate-me), transcript mining
-  # (recall), reflect, typescript-best-practices, and the port's PR extras
+  # (recall), reflect, correct, typescript-best-practices, and the port's PR extras
   # (babysit would collide with the brooklyn id; fix-ci and friends duplicate
   # better-github-skill). The source regex keeps unselected ids out of
   # discoverCatalog, which throws on a duplicate id.
@@ -47,7 +49,7 @@ let
     "swarm"
     "interrogate"
     "figure-it-out"
-    "unslop"
+    "benchmark-checklist"
     "show-me-your-work"
     "create-verification-skill"
     "maintain-verification-skill"
@@ -61,10 +63,12 @@ let
     { name = "`verify`"; use = "the **web-browser** skill, or the harness's browser and simulator tools"; }
     { name = "`/deslop`"; use = "the **simplify** skill (`/simplify`)"; }
     { name = "`/no-comments`"; use = "the Code Quality comment rule in CLAUDE.md: a comment only for what the code cannot say"; }
-    { name = "`/technical-writing`"; use = "the Writing Style section of CLAUDE.md; agent-facing docs follow the **writing-for-agents** skill"; }
+    { name = "`unslop`, `/unslop`"; use = "the Writing section of CLAUDE.md"; }
+    { name = "`/technical-writing`"; use = "`~/.claude/guidance/human-documents.md` and the Writing section of CLAUDE.md; agent-facing docs follow the **writing-for-agents** skill"; }
     { name = "the bundled `babysit` skill"; use = "the Babysit playbook; no babysit skill is installed"; }
     { name = "`/tdd`"; use = "the mattpocock **tdd** skill: red-green slices, tests at seams"; }
     { name = "`plugin-dev:skill-development`, `skill-creator`"; use = "the **writing-for-agents** skill"; }
+    { name = "`thermo-nuclear-code-quality-review`"; use = "the **nuclear-cqr** skill (`/nuclear-cqr`)"; }
     { name = "`~/.claude/pstack-models.md`"; use = "installed by nix; the role sheet every Models section defers to, and the one place to change a model"; }
     { name = "a leaf `principle-*` skill"; use = "the matching section of the **pstack-principles** skill"; }
   ];
@@ -95,14 +99,17 @@ let
           "pstack:effort-"
           "Plugin agents register under the plugin namespace. The bare name `poteto-agent` errors."
           "Plugin agents register under the plugin namespace; the bare name `poteto-agent` errors."
+          "- Any prose surface, your reply to the user included → the **unslop** skill. Write the reply per **Writing the reply**. Agent-facing prose also follows the **plugin-dev:skill-development** skill (Claude Code's authoring guidance for SKILL.md files).\n"
           "plugin-dev:skill-development"
           "- Before commit → the **deslop** skill (`/deslop`).\n"
           "- Before review → the **no-comments** skill (`/no-comments`).\n"
-          "- Docs, RFCs, readmes, PR descriptions, commit messages → the **technical-writing** skill (`/technical-writing`) for structure and sentence discipline, on top of **unslop**.\n"
-          "- Shipping UI / IDE / CLI → the driver skill (`run` for CLIs/TUIs, `verify` for UIs). Both ship as Claude Code built-ins."
+          "- Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/technical-writing`), on top of **unslop**.\n"
+          "- **A colon as a mid-sentence connector is also out** (unslop rule 14). A colon before a list is fine."
+          "(the **unslop** skill applies to log text too)"
+          "- Shipping UI / IDE / CLI → the driver skill. `run` ships with Claude Code and the model can invoke it for CLIs, TUIs, servers, and browser or Electron apps. The bundled `verify` runs only when the user types `/verify`, so for UIs use the project `verify` skill at `.claude/skills/verify/` (generate it with `/create-verification-skill`) and fall back to `run` when the repo has none. For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception."
           "Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide."
-          "(\"prototype\", \"mock it up\", \"try this layout\", \"sketch it to decide\"). `playbooks/prototype.md`."
-          "- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`."
+          "(\"prototype\", \"mock it up\", \"try this layout\", \"sketch it to decide\")."
+          "- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence."
           "Read the leaf skill in full for any principle you apply. Each entry names when it applies."
           "Cite only principles whose leaf SKILL.md you read this session."
           "Keep a comment only for a non-obvious *why* the code can't show."
@@ -125,11 +132,14 @@ let
           "effort-"
           "The agent lives in `~/.claude/agents`, so the bare name resolves."
           "The agent lives in `~/.claude/agents`, so the bare name resolves."
+          "- Any prose surface, your reply to the user included → the Writing section of CLAUDE.md, and **Writing the reply** below. Agent-facing prose also follows the **writing-for-agents** skill.\n"
           "writing-for-agents"
           (pstackTddTrigger + "- Before commit → the **simplify** skill (`/simplify`).\n")
           "- Before review → sweep comments to the Code Quality rule in CLAUDE.md: a comment only for what the code cannot say.\n"
-          "- Docs, RFCs, readmes, PR descriptions, commit messages → the Writing Style section of CLAUDE.md, on top of **unslop**. Agent-facing docs → the **writing-for-agents** skill.\n"
-          "- Shipping UI / IDE / CLI → the driver skill: `run` (a Claude Code built-in) for CLIs and TUIs; for UIs the **web-browser** skill or the harness's browser and simulator tools, which the playbooks call `verify`."
+          "- Docs, RFCs, readmes, PR descriptions, commit messages → `~/.claude/guidance/human-documents.md` and the Writing section of CLAUDE.md. Agent-facing docs → the **writing-for-agents** skill.\n"
+          "- **A colon as a mid-sentence connector is also out.** A colon before a list is fine."
+          "(the Writing section of CLAUDE.md applies to log text too)"
+          "- Shipping UI / IDE / CLI → the driver skill: `run` (a Claude Code built-in) for CLIs and TUIs; for UIs the **web-browser** skill or the harness's browser and simulator tools, which the playbooks call `verify`. For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception."
           "Sketch it via the **prototype** skill (`/prototype`) and let the result decide."
           "(\"prototype\", \"mock it up\", \"try this layout\", \"sketch it to decide\"). Route: the **prototype** skill (`/prototype`), which keeps the sketch as a primary source on a `prototype/<name>` branch."
           "- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`. A bug that resists a first look builds its red loop with the **diagnosing-bugs** skill first, then the regression test with **tdd**."
@@ -249,7 +259,7 @@ let
   # "read SKILL.md first" instruction to the body, which already carries it.
   pstackAgentText = name: lib.replaceStrings
     [
-      "description: Routing target for `/poteto-mode` and any request for poteto's style. Spawn a fresh `poteto-agent` for each new task, and resume one only in the strict cases that poteto-mode's Subagents section names. Reads the `poteto-mode` skill's `SKILL.md` in full before any work, including its inline Principles index. Substituting `general-purpose` skips that read and drifts."
+      "description: Delegate subagent for code-writing and helper tasks spawned during a `/poteto-mode` run. Use for delegates, not as the runner for `/poteto-mode` itself. Spawn a fresh `poteto-agent` for each new task, and resume one only in the strict cases that poteto-mode's Subagents section names. Reads the `poteto-mode` skill's `SKILL.md` in full before any work, including its inline Principles index. Substituting `general-purpose` skips that read and drifts."
       "Navigate to a leaf `principle-*` skill whenever you apply that principle."
     ]
     [

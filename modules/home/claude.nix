@@ -105,8 +105,8 @@ let
     fi
   '';
 
-  # mattpocock/skills promoted buckets. `personal/` and `deprecated/` are
-  # excluded per upstream CONTEXT.md. New upstream skills under any bucket
+  # mattpocock/skills promoted buckets, per upstream CLAUDE.md. Its other
+  # buckets are not promoted. New upstream skills under any bucket
   # auto-load on the next `nix flake update mattpocock-skills`.
   # misc retired 2026-09-09: every skill it held was lean-excluded.
   mattpocockBuckets = [ "engineering" "productivity" ];
@@ -143,7 +143,7 @@ let
   excludedSkillIds = disabledMattpocockSkills ++ leanExcludedMattpocockSkills;
   # Skills removed from the curated sources entirely. These should not be
   # merely disabled/catalogued; prune stale target copies after rebuilds.
-  removedSkillIds = [ "git-workflow" "lazygit" "ralph-loop" ];
+  removedSkillIds = [ "git-workflow" "lazygit" "ralph-loop" "unslop" ];
   # Claude Code plugins disabled on the GLOBAL surface (CLI + Desktop) by
   # flipping their enabledPlugins flag off each rebuild — see
   # claudeSettingsOwnership below. claude.ai connectors are

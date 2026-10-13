@@ -8,9 +8,9 @@ An architecture pass over the git, GitHub, jj, and review skills (2026-09-09) fo
 
 ## Decision
 
-1. mattpocock `code-review` is the **review host** (CONTEXT.md), installed verbatim through the Claude plugin. It is not forked, transformed, or changed upstream: it arrives as a plugin, so a change there is a plugin bump, not a repo edit.
+1. mattpocock `code-review` is the **review host** (GLOSSARY.md), installed verbatim through the Claude plugin. It is not forked, transformed, or changed upstream: it arrives as a plugin, so a change there is a plugin bump, not a repo edit.
 2. The dotfiles-pi `review` is retired from `skills.explicit`. The plugin `/code-review` command stays as the only posting path, user-invoked only.
-3. Routing lives in the Git section of CLAUDE.md, one line per branch: jj first, the review host and its fixed point, better-github-skill for reads, diff shape before lines, hunk for human review. The jj skill carries the command tables and the **colocated contract** (CONTEXT.md). No router skill.
+3. Routing lives in the Git section of CLAUDE.md, one line per branch: jj first, the review host and its fixed point, better-github-skill for reads, diff shape before lines, hunk for human review. The jj skill carries the command tables and the **colocated contract** (GLOSSARY.md). No router skill.
 4. The host reads committed history (`git diff <point>...HEAD`), so the rule is commit first (`jj new` in jj). The default fixed point is trunk (`main`).
 5. The settings seed drops the seven plugins no machine has installed (`ralph-loop` and the six `frad-dotclaude` entries), so a fresh machine matches this one.
 

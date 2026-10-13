@@ -8,7 +8,7 @@ This repo's agents work overwhelmingly in **code-dev** repos. Skills whose subje
 
 ## Decision
 
-1. **The global proactive catalog is code-dev-first.** Membership is curated by *task-fit*, not by "broken vs working". See CONTEXT.md "Code-dev default catalog".
+1. **The global proactive catalog is code-dev-first.** Membership is curated by *task-fit*, not by "broken vs working". See GLOSSARY.md "Code-dev default catalog".
 2. **The boundary is drawn at *authoring* and *project-management*.** Off the global surface: authoring skills (`write-a-skill`, the `skill-creator@claude-plugins-official` and `claude-md-management@claude-plugins-official` plugins) and PM skills (`to-prd`, `to-issues`, `triage`). Design skills (`grill-*`) **stay** — grilling is an active planning workflow that applies in any repo. The issue-tracker workflow the PM skills serve (`CLAUDE.md`, `docs/agents/issue-tracker.md`) lives *in this repo*, so PM skills are not deleted — they are repo-scoped to where the tracker is (mechanism 3) and opt-in for any other repo that gains one.
 3. **Two mechanisms, by source:**
    - **Bundle skills worth keeping are repo-scoped as a vendored copy** — dropped from the global bundle (`leanExcludedMattpocockSkills`) and relocated into `nix-config`'s repo scope as a committed `SKILL.md` under `modules/home/skills/` (the `jj` pattern), **never a symlink to the store or to `node_modules`** (see *Why vendored, not symlinked* below), so they surface only here. Applies to `write-a-skill` (authoring) and `to-prd`/`to-issues`/`triage` (PM — `nix-config` owns the issue tracker). Other repos opt in by wiring the same skills into their own repo scope.
@@ -33,7 +33,7 @@ If upstream-tracking ever outweighs that, the escape hatch is **not** a working-
 ## Scope and non-goals
 
 - **Session-injected skills are outside this lever.** `anthropic-skills:*` and `engineering:*` appear in the model's catalog but are not in the local plugin cache (Cowork/cloud session), so `claude.nix` cannot curate them. Document-generation skills (`docx`/`pdf`/`pptx`/`xlsx`) ride that surface and are not addressed here.
-- This is about the proactive catalog's *task-fit*, distinct from the per-skill *enabled* vs *discovered* placement (CONTEXT.md) and from the package-scope command-time trust boundary (`docs/adr/0006`).
+- This is about the proactive catalog's *task-fit*, distinct from the per-skill *enabled* vs *discovered* placement (GLOSSARY.md) and from the package-scope command-time trust boundary (`docs/adr/0006`).
 
 ## Consequences
 

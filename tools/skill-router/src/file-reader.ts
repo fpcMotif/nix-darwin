@@ -1,6 +1,6 @@
 // The Skill-read seam: how skill-router loads a resolved skill's body (the
 // loadSkill / loadIntentSkill path). Scoped to skill-body reads — directory
-// discovery still walks the real filesystem. See CONTEXT.md "Skill-read seam".
+// discovery still walks the real filesystem. See GLOSSARY.md "Skill-read seam".
 export type ReadText = (path: string) => Promise<string | null>;
 
 // Production adapter. Returns null for a missing/unreadable path so callers'
