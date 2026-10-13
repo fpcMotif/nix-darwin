@@ -658,6 +658,7 @@ let
       { path = [ "permissions" "deny" ]; value = claudePermissions.deny; }
       { path = [ "permissions" "ask" ]; value = claudePermissions.ask; }
       { path = [ "permissions" "defaultMode" ]; value = claudePermissions.defaultMode; }
+      { path = [ "env" "CLAUDE_CODE_PLUGIN_DIRS" ]; value = "${homeDir}/.claude/mods/jev-traits"; }
     ]
     ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeHiddenSkillIds
     ++ map (id: { path = [ "enabledPlugins" id ]; value = false; }) disabledClaudePlugins
@@ -752,6 +753,7 @@ in
       ".claude/pstack-models.md".source = pstackModelsSheet;
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
       ".claude/hooks/shell-guard.sh" = { source = ./claude/hooks/shell-guard.sh; executable = true; };
+      ".claude/mods/jev-traits".source = ./claude/mods/jev-traits;
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
     } // localSkillFiles // pstackSkillFiles
     // lib.optionalAttrs config.programs.worktrunk.enable {

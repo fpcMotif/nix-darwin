@@ -119,6 +119,7 @@ let
     # Registered with Claude Code via claudeMcpDrafts in claude.nix; Codex
     # points at the stable /etc/profiles/per-user path in Codex configuration.
     martin.drafts-mcp-server
+    martin.jev-traits
     # zed-editor itself is installed by programs.zed-editor.enable in zed.nix.
   ];
 in

@@ -1,0 +1,50 @@
+{
+  "name": "jev-traits",
+  "version": "0.1.0",
+  "description": "Checks each edit against the repository's traits (.agents/traits) with TypeSafe Jev and tells Claude what to fix",
+  "author": { "name": "f" },
+  "userConfig": {
+    "typesafe_api_key": {
+      "type": "string",
+      "title": "TypeSafe API key",
+      "description": "Kept in secure storage. Leave empty to use TYPESAFE_API_KEY or the macOS Keychain item typesafe-api-key.",
+      "sensitive": true
+    },
+    "model": {
+      "type": "string",
+      "title": "Jev model",
+      "description": "The System One model that judges each trait.",
+      "default": "jev-latest"
+    },
+    "check_edits": {
+      "type": "boolean",
+      "title": "Check every edit",
+      "description": "Check each Edit, Write and NotebookEdit as it happens.",
+      "default": true
+    },
+    "fix_threshold": {
+      "type": "number",
+      "title": "Fix threshold",
+      "description": "Violation probability at which Claude is told to fix the code.",
+      "default": 0.8,
+      "min": 0,
+      "max": 1
+    },
+    "check_threshold": {
+      "type": "number",
+      "title": "Double-check threshold",
+      "description": "Violation probability at which Claude is told to double-check the code.",
+      "default": 0.5,
+      "min": 0,
+      "max": 1
+    },
+    "pass_threshold": {
+      "type": "number",
+      "title": "Pass threshold",
+      "description": "check_traits reports a judgment as unsure when compliant plus not-applicable falls below this.",
+      "default": 0.9,
+      "min": 0,
+      "max": 1
+    }
+  }
+}

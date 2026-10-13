@@ -81,6 +81,7 @@ final: _prev:
     fff-mcp = final.callPackage ./fff-mcp.nix { };
     hk-bin = final.callPackage ./hk-bin.nix { };
     hunk-bin = final.callPackage ./hunk-bin.nix { };
+    jev-traits = final.callPackage ./jev-traits.nix { };
     jj-pr = final.callPackage ./jj-pr.nix { };
     nub = final.callPackage ./nub.nix { };
     oh-my-pi = final.callPackage ./oh-my-pi.nix { };
