@@ -619,6 +619,7 @@ let
   retiredClaudeHooks = [
     { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
     { event = "PreToolUse"; matcher = "Read"; command = "$HOME/.claude/hooks/read-guard.sh"; }
+    { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/codedb-block-legacy.sh"; }
     { event = "PostToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/auto-verify-edit.sh"; }
     { event = "PostToolUseFailure"; matcher = "Bash"; command = "$HOME/.claude/hooks/auto-log-error.sh"; }
     { event = "PreCompact"; matcher = ""; command = "$HOME/.claude/hooks/pre-compact-save.sh"; }
