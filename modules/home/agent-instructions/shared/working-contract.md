@@ -24,7 +24,7 @@
 ## Completion
 
 - **Finish**: Define completion from the requested outcome. Include startup, visual inspection, or provider verification when the request requires it.
-- **Verify**: Run required checks and checks addressing changed behavior. Repeat or broaden them only for changes, failures, or unresolved risk.
+- **Verify**: Run required checks and checks addressing changed behavior. Repeat or broaden them only for changes, failures, or unresolved risk. VCS operations (`commit`, `push`, `land`) are not test requests; run at most `hk check`.
 - **Evidence**: Inspect the actual deliverable at the requested boundary. Empty required output fails verification; summaries alone cannot establish completion.
 - **Stop**: Finish when requested outcomes are verified. If blocked, complete independent work and name the missing prerequisite.
 - **Report**: State what changed, what checks establish, and which checks could not run.

@@ -91,6 +91,7 @@ Ranked results alone cannot prove absence.
 
 ## Version control
 
+- **Commit intent**: Commands like `jj commit`, `git commit`, `push`, and `land` are VCS operations, not test requests. Execute them directly. Do not run full test suites or build targets (`just check`, `bun build`, `test`) unless explicitly requested. Run at most `hk check`.
 - Detect a `.jj` workspace before the first version-control operation.
 - Use `jj` in a Jujutsu workspace and Git in a Git-only checkout.
 - Read the diff before every commit. Use `type(scope): message`.
