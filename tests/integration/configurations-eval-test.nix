@@ -675,6 +675,8 @@ let
         in
         builtins.hasAttr "codex/config.toml" darwinConfig.environment.etc
           && lib.hasInfix "[lsp.servers.tsc]" codexDefaults
+          && !(lib.hasInfix "[lsp.servers.vue]" codexDefaults)
+          && !(lib.hasInfix "[lsp.servers.haskell]" codexDefaults)
           && lib.hasInfix "[mcp_servers.fff]" codexDefaults
           && !(lib.hasInfix "@PI_" codexDefaults)
           && !(lib.hasInfix "gpt-5." codexDefaults)
@@ -921,7 +923,7 @@ let
       (hasPackage "uv" darwinHome.home.packages)
       "Darwin Home Manager packages should include uv for Python package management")
     (helpers.assertTest "darwin-registers-drafts-mcp"
-      (darwinHome.home.activation ? claudeMcpDrafts)
+      (lib.hasInfix "drafts-mcp-server" darwinHome.home.activation.claudeMcp.data)
       "Darwin Home Manager should register the Drafts MCP server")
 
     (helpers.assertTest "darwin-zed-uses-zed-nightly-bin"
@@ -962,7 +964,7 @@ let
       "Linux Home Manager packages should not include Darwin-only agent packages")
 
     (helpers.assertTest "linux-excludes-drafts-mcp-activation"
-      (!(x230Home.home.activation ? claudeMcpDrafts))
+      (!(lib.hasInfix "drafts-mcp-server" x230Home.home.activation.claudeMcp.data))
       "Linux Home Manager should not force the Darwin-only Drafts MCP server")
 
     (helpers.assertTest "linux-zed-editor-disabled"

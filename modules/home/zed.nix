@@ -6,6 +6,7 @@
 
 let
   routing = import ../shared/agent-model-routing.nix { inherit lib; };
+  codexLsp = import ../shared/codex-lsp.nix { inherit lib pkgs; };
   openAiFavorite = job: {
     provider = "openai-subscribed";
     model = routing.modelId job;
@@ -37,25 +38,7 @@ in
     enable = true;
     package = pkgs.martin.zed-nightly-bin;
 
-    extraPackages = with pkgs; [
-      # Nix
-      nixd
-
-      # TypeScript / JavaScript
-      typescript # TS 7 native `tsc`, also the LSP via `tsc --lsp`
-      oxlint # fast linter (oxc)
-      oxfmt # fast formatter (oxc)
-
-      # Python (Astral stack)
-      ruff # `ruff server` = LSP, also formatter & linter
-      basedpyright # type checker
-
-      # Other
-      bash-language-server
-      lua-language-server
-      gopls
-      martin.rust-toolchain
-    ];
+    extraPackages = codexLsp.zedPackages;
 
     extensions = [
       "nix"
@@ -234,33 +217,9 @@ in
       };
 
       # ---- LSP servers ------------------------------------------------------
-      lsp = {
-        # Nix
-        nixd.binary.path = "${pkgs.nixd}/bin/nixd";
-
-        # A pinned `binary.path` makes Zed launch that binary directly and
-        # skip the extension's npm install, which fails on the bun shim.
-        typescript-ls.binary = {
-          path = "${pkgs.typescript}/bin/tsc";
-          arguments = [ "--lsp" "--stdio" ];
-        };
-        oxlint.binary = {
-          path = "${pkgs.oxlint}/bin/oxlint";
-          arguments = [ "--lsp" ];
-        };
-        oxfmt.binary = {
-          path = "${pkgs.oxfmt}/bin/oxfmt";
-          arguments = [ "--lsp" ];
-        };
-
-        # Python — ruff serves as LSP via its built-in `ruff server`.
-        ruff.binary = {
-          path = "${pkgs.ruff}/bin/ruff";
-          arguments = [ "server" ];
-        };
-        # basedpyright for types.
-        basedpyright.binary.path = "${pkgs.basedpyright}/bin/basedpyright-langserver";
-      };
+      # A pinned `binary.path` makes Zed launch that binary directly and
+      # skip the extension's npm install, which fails on the bun shim.
+      lsp = codexLsp.adapters.zed;
 
       # ---- Per-language overrides ------------------------------------------
       languages = {

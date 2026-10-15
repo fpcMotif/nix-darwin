@@ -7,115 +7,16 @@ let
   inherit (lib) hm;
 
   homeDir = config.home.homeDirectory;
-  codexLsp = import ../shared/codex-lsp.nix { inherit lib; };
-  inherit (codexLsp) jsExtensions oxlintExtraExtensions tailwindExtensions;
-
-  lspServers = with pkgs; [
-    # === TypeScript / JavaScript — modern Rust/Go stack ===
-    typescript # `tsc --lsp` — TS 7 native LSP
-    oxlint # `oxlint --lsp` — oxc lint LSP
-    typescript-language-server
-    astro-language-server # Astro components (Vite-based)
-    svelte-language-server # Svelte (Vite-based)
-    tailwindcss-language-server # Utility-class intellisense
-    emmet-language-server # HTML/CSS emmet completion
-
-    # === Go ===
-    gopls
-
-    # === Rust ===
-    # rust-analyzer ships in martin.rust-toolchain (packages.nix) to match
-    # the compiler; a second copy would collide.
-
-    # === Swift / iOS ===
-    sourcekit-lsp
-
-    # === Python ===
-    basedpyright # types + hover + definitions
-    ruff # `ruff server` — lint + format
-
-    # === Lua ===
-    lua-language-server
-
-    # === MCP bridge for desktop apps ===
-    mcp-language-server # wraps any LSP as an MCP server
-  ];
+  codexLsp = import ../shared/codex-lsp.nix { inherit lib pkgs; };
 
   # ~/.claude/lsp.json for Claude Code's LSP tool. The `typescript-lsp` plugin
   # adds a second TS server; disable it to keep tsc alone. Unsupported keys:
   # fileTypes, rootMarkers, restartOnCrash, maxRestarts.
-  claudeLspJson = pkgs.writeText "claude-lsp.json" (builtins.toJSON {
-    lspServers = {
-      # Primary TS intelligence — TS 7 native LSP.
-      tsc = {
-        command = "tsc";
-        args = [ "--lsp" "--stdio" ];
-        extensionToLanguage = jsExtensions;
-      };
-
-      # Linter — runs in parallel with tsc on the same files plus
-      # Vite-ecosystem SFCs.
-      oxlint = {
-        command = "oxlint";
-        args = [ "--lsp" ];
-        extensionToLanguage = jsExtensions // oxlintExtraExtensions;
-        isLinter = true;
-      };
-
-      # Astro components.
-      astro = {
-        command = "astro-language-server";
-        args = [ "--stdio" ];
-        extensionToLanguage = { ".astro" = "astro"; };
-      };
-
-      # Svelte components.
-      svelte = {
-        command = "svelteserver";
-        args = [ "--stdio" ];
-        extensionToLanguage = { ".svelte" = "svelte"; };
-      };
-
-      # Tailwind utility-class intellisense across all frontend files.
-      tailwindcss = {
-        command = "tailwindcss-language-server";
-        args = [ "--stdio" ];
-        extensionToLanguage = tailwindExtensions;
-      };
-
-      # Swift / iOS projects. Xcode remains the SDK owner; sourcekit-lsp is
-      # the editor bridge.
-      sourcekit = {
-        command = "sourcekit-lsp";
-        args = [ ];
-        extensionToLanguage = { ".swift" = "swift"; };
-      };
-
-      # Python — basedpyright shadows pyright (drop-in CLI-compatible).
-      pyright = {
-        command = "basedpyright-langserver";
-        args = [ "--stdio" ];
-        extensionToLanguage = {
-          ".py" = "python";
-          ".pyi" = "python";
-        };
-      };
-
-      ruff = {
-        command = "ruff";
-        args = [ "server" ];
-        extensionToLanguage = {
-          ".py" = "python";
-          ".pyi" = "python";
-        };
-        isLinter = true;
-      };
-    };
-  });
+  claudeLspJson = pkgs.writeText "claude-lsp.json" (builtins.toJSON codexLsp.adapters.claude);
 
 in
 {
-  home.packages = lspServers;
+  home.packages = codexLsp.packages;
 
   # === Claude Code: declarative LSP config ===
   # Read-only Nix-managed file. Project-level `.lsp.json` at any repo

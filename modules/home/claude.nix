@@ -76,7 +76,7 @@ let
   excludedSkillIds = disabledMattpocockSkills ++ leanExcludedMattpocockSkills;
   removedSkillIds = [ "git-workflow" "lazygit" "ralph-loop" "unslop" ];
   # Park here (off but installed) to keep a plugin's cache and config.
-  disabledClaudePlugins = [ ];
+  disabledClaudePlugins = [ "typescript-lsp@claude-plugins-official" ];
   # This module edits these plugins' caches, so it also owns their flag and
   # marketplace. Authors' marketplaces track upstream; claude-plugins-official
   # lags. Change one here, not via /plugin, or every skill lists twice.
@@ -433,7 +433,7 @@ let
       "code-simplifier@claude-plugins-official" = true;
       "code-review@claude-plugins-official" = true;
       "expert-lsp@elixir-expert" = true;
-      "typescript-lsp@claude-plugins-official" = true;
+      "typescript-lsp@claude-plugins-official" = false;
       "context7@claude-plugins-official" = true;
       "skill-creator@claude-plugins-official" = true;
       "claude-md-management@claude-plugins-official" = true;
@@ -631,19 +631,36 @@ in
 
   # alwaysLoad skips tool-search deferral, so Claude uses them over Bash rg.
   # Registered via `claude mcp` (~/.claude.json holds other CLI state).
-  home.activation.claudeMcpAlwaysLoaded = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  # No env here: the patched defaults live in pkgs/drafts-mcp-server.nix.
+  home.activation.claudeMcp = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     claudeBin="${pkgs.claude-code}/bin/claude"
     jqBin="${pkgs.jq}/bin/jq"
     target="${homeDir}/.claude.json"
 
-    registerAlwaysLoaded() {
+    registerMcp() {
       name="$1"
       spec="$2"
       current=""
       if [ -f "$target" ]; then
-        current=$("$jqBin" -c --arg n "$name" '.mcpServers[$n] // {} | {command, args, alwaysLoad}' "$target" 2>/dev/null || true)
+        current=$("$jqBin" -c --arg n "$name" '
+          if (.mcpServers[$n] != null) then
+            .mcpServers[$n] | {
+              command: (.command // ""),
+              args: (.args // []),
+              env: (.env // {}),
+              alwaysLoad: (.alwaysLoad // false)
+            }
+          else
+            empty
+          end
+        ' "$target" 2>/dev/null || true)
       fi
-      wanted=$(printf '%s' "$spec" | "$jqBin" -c '{command, args, alwaysLoad}')
+      wanted=$(printf '%s' "$spec" | "$jqBin" -c '{
+        command: (.command // ""),
+        args: (.args // []),
+        env: (.env // {}),
+        alwaysLoad: (.alwaysLoad // false)
+      }')
 
       if [ "$current" = "$wanted" ]; then
         :
@@ -652,7 +669,7 @@ in
       else
         "$claudeBin" mcp remove -s user "$name" >/dev/null 2>&1 || true
         if "$claudeBin" mcp add-json -s user "$name" "$spec" >&2; then
-          echo "claude-mcp: registered $name with alwaysLoad" >&2
+          echo "claude-mcp: registered $name" >&2
         else
           echo "claude-mcp: failed to register $name (see above)" >&2
         fi
@@ -662,40 +679,16 @@ in
     if [ ! -x "$claudeBin" ]; then
       echo "claude-mcp: claude CLI not found, skipping" >&2
     else
-      registerAlwaysLoaded fff '{"type":"stdio","command":"${pkgs.martin.fff-mcp}/bin/fff-mcp","args":[],"alwaysLoad":true}'
+      registerMcp fff '{"type":"stdio","command":"${pkgs.martin.fff-mcp}/bin/fff-mcp","args":[],"alwaysLoad":true}'
       # codedb is a hand-installed binary outside Nix; register it only when present.
       if [ -x "${homeDir}/bin/codedb" ]; then
-        registerAlwaysLoaded codedb '{"type":"stdio","command":"${homeDir}/bin/codedb","args":["mcp"],"alwaysLoad":true}'
+        registerMcp codedb '{"type":"stdio","command":"${homeDir}/bin/codedb","args":["mcp"],"alwaysLoad":true}'
       fi
+      ${lib.optionalString isDarwin ''
+        registerMcp drafts '{"type":"stdio","command":"${pkgs.martin.drafts-mcp-server}/bin/drafts-mcp-server","args":[]}'
+      ''}
     fi
   '';
-
-  # No env here: the patched defaults live in pkgs/drafts-mcp-server.nix.
-  home.activation.claudeMcpDrafts = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    claudeBin="${pkgs.claude-code}/bin/claude"
-    draftsBin="${pkgs.martin.drafts-mcp-server}/bin/drafts-mcp-server"
-    target="${homeDir}/.claude.json"
-
-    currentCmd=""
-    if [ -f "$target" ]; then
-      currentCmd=$(${pkgs.jq}/bin/jq -r '.mcpServers.drafts.command // empty' "$target" 2>/dev/null || true)
-    fi
-
-    if [ ! -x "$claudeBin" ]; then
-      echo "claude-mcp-drafts: claude CLI not found, skipping" >&2
-    elif [ "$currentCmd" = "$draftsBin" ]; then
-      :
-    elif [ -n "''${DRY_RUN:-}" ]; then
-      echo "claude-mcp-drafts: would (re)register drafts -> $draftsBin (was: ''${currentCmd:-none})" >&2
-    else
-      "$claudeBin" mcp remove -s user drafts >/dev/null 2>&1 || true
-      if "$claudeBin" mcp add -s user drafts -- "$draftsBin" >&2; then
-        echo "claude-mcp-drafts: registered drafts -> $draftsBin" >&2
-      else
-        echo "claude-mcp-drafts: failed to register drafts (see above)" >&2
-      fi
-    fi
-  '');
 
   # Antigravity Desktop's `/` menu lists workflows, not skills.
   home.activation.antigravityWorkflows = lib.hm.dag.entryAfter [ "writeBoundary" ] ''

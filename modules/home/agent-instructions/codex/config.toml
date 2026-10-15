@@ -492,16 +492,6 @@ enabled = false
 path = "/Users/martinfan/.codex/skills/review/SKILL.md"
 enabled = false
 
-[lsp.servers.vue]
-command = "vue-language-server"
-args = ["--stdio"]
-extensions = [".vue"]
-
-[lsp.servers.haskell]
-command = "haskell-language-server-wrapper"
-args = ["--lsp"]
-extensions = [".hs", ".lhs", ".cabal"]
-
 [marketplaces.openai-bundled]
 source_type = "local"
 source = "/Users/martinfan/.codex/.tmp/bundled-marketplaces/openai-bundled"
