@@ -21,3 +21,15 @@ Single-context — one `GLOSSARY.md` + `docs/adr/` at the repo root. See [docs/a
 ## HTTP
 
 `ax URL` is the required first choice for every HTTP request, including fetch, discovery, extraction, and API calls. Use `curl` only when `ax` cannot support the required operation or has a concrete failure; state that reason.
+
+## Code Mode & programmatic execution
+
+Use Code Mode (`eval` with Bun/JS or Python in OMP, or compound programmatic scripts) for multi-step inspection and operations:
+- **Bulk inspection**: Gather all relevant repository status, diffs, bookmarks, and open PRs in one pass (`Promise.all` or compound commands) instead of ping-ponging individual tools across turns.
+- **Single-flight actions**: Execute multi-step operations in 1–2 dense invocations. Parse and filter data in-memory; do not spend agent turns on intermediate terminal output.
+- **Deterministic VCS**: For committing, opening PRs, and landing on main, run in a single flight:
+  ```bash
+  jj pr <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
+  # or programmatic Code Mode runner:
+  bun run scripts/jj-ship.ts -n <name> -m "type(scope): msg" --land
+  ```

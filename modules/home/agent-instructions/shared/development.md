@@ -63,6 +63,12 @@ Ranked results alone cannot prove absence.
 - Keep `.env` loading off in mise (`_.dotenv = false` in `mise.toml`) and Bun (`env = false` in `bunfig.toml`), so Varlock checks every value.
 - To add Varlock to a project, follow `~/.agents/skills/varlock-setup/SKILL.md`.
 
+## Execution style & Code Mode
+
+- **Code Mode**: Use programmatic execution (`eval` with Bun/JS or Python in OMP, or compound scripts) to run bulk inspections, filter in memory, and take deterministic multi-step actions in one or two calls.
+- **Bulk gathering**: Retrieve status, diffs, logs, and branch state in a single pass instead of calling inspection tools one by one across multiple turns.
+- **Single-flight VCS**: Run deterministic commit, push, PR, merge, and sync sequences in one command (`jj pr ... --land` or `bun run scripts/jj-ship.ts`) rather than stepping turn-by-turn.
+
 ## Version control
 
 - **Commit intent**: Commands like `jj commit`, `git commit`, `push`, and `land` are VCS operations, not test requests. Execute them directly. Do not run full test suites or build targets (`just check`, `bun build`, `test`) unless explicitly requested. Run at most `hk check`. Chain deterministic VCS operations in one command (`jj pr ... --land` or compound `&&` pipelines) instead of calling one command per turn.
