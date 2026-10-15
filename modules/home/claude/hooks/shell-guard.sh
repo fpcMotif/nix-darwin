@@ -104,7 +104,7 @@ resolve() {
 }
 in_jj() {
   d=$1
-  while [ -n "$d" ] && [ "$d" != / ]; do [ -d "$d/.jj" ] && return 0; d=${d%/*}; done
+  while [ -n "$d" ] && [ "$d" != / ]; do [ -d "$d/.jj" ] && return 0; [ -e "$d/.git" ] && return 1; d=${d%/*}; done
   return 1
 }
 

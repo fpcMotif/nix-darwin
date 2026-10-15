@@ -4,6 +4,8 @@
 HOOK=${1:-$(dirname "$0")/shell-guard.sh}
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 PLAIN=$TMP/plain; JJ=$TMP/jj; mkdir -p "$PLAIN" "$JJ/.jj" "$JJ/sub"
+COLO=$TMP/colo; WT=$COLO/.claude/worktrees/wt; JJWS=$TMP/jj-ws
+mkdir -p "$COLO/.jj" "$COLO/.git" "$COLO/sub" "$WT/sub" "$JJWS/.jj"; touch "$WT/.git" "$JJWS/.git"
 fail=0; n=0
 check() {
   want=$1; cmd=$2; cwd=${3:-$PLAIN}; n=$((n + 1))
@@ -143,6 +145,15 @@ check allow "git -C $PLAIN commit -m x" "$JJ"
 check allow "cd \"\$OTHER\" && git commit -m x" "$JJ"
 check allow "jj commit -m 'git commit'" "$JJ"
 check allow "rg -n 'git commit' docs/" "$JJ"
+check deny  "git add a.md" "$COLO"
+check deny  "git commit -m x" "$COLO/sub"
+check deny  "git add a.md" "$COLO/.claude/worktrees"
+check deny  "cd $COLO && git add a.md" "$WT"
+check deny  "git add a.md" "$JJWS"
+check allow "git add a.md" "$WT"
+check allow "git commit -m x" "$WT/sub"
+check allow "cd $WT && git commit -m x" "$COLO"
+check allow "git -C $WT/sub add a.md" "$COLO"
 
 # `z NAME` moves the directory through zoxide, like the z function in shell/zoxide.nix.
 if command -v zoxide >/dev/null 2>&1; then
