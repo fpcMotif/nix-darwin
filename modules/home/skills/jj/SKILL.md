@@ -123,19 +123,21 @@ When co-located with git (`.git` present), jj and git share the same commits:
   pass `--allow-backwards` to `jj bookmark move`.
 - Run `jj git import` if you used a `git` command directly so jj sees external changes.
 
-## Pull requests
+## Pull requests & landing
 
-`jj pr` pushes a change and opens or updates its GitHub PR. It supplies the
-`--head`, `-R`, and stacked `--base` that raw `gh` lacks under jj. Its flags are
+`jj pr` pushes a change and opens, updates, or lands its GitHub PR. It supplies
+the `--head`, `-R`, and stacked `--base` that raw `gh` lacks under jj. Flags are
 in `jj pr --help`.
 
-1. Commit the PR's work out of `@`: `jj commit -m "type(scope): message" [PATHS]`.
-2. Run `jj pr NAME -n`. It prints the base, the commits, and the `jj diff` to read.
-3. Write the body from that diff with the `pr` skill, then run `jj pr NAME -F FILE`.
-   Done when it prints the PR URL.
-4. After a rewrite, rerun `jj pr NAME` for each PR bookmark. It pushes and
-   retargets moved bases. Pass `-r @-` to move a bookmark onto new commits.
-
+- **Review diff & draft body**: `jj pr NAME -n` prints the base, commits, and diff;
+  write the body with the `pr` skill.
+- **Open or update**: `jj pr NAME -F FILE` (pass `-r @-` to advance an existing bookmark).
+  Done when it prints the PR URL.
+- **Land to trunk**: pass `--land` to merge the PR into trunk, fetch, and advance `@`
+  onto trunk in one flight.
+- **Single-flight**: when changes are ready, run the whole cycle in one command:
+  `jj pr NAME -m "type(scope): msg" -F FILE --land`.
+- **Rewrite**: rerun `jj pr NAME` for each PR bookmark to retarget moved bases.
 ## Revsets (the query language)
 
 `@` working copy · `@-` parent · `@--` grandparent · `root()` · `trunk()`

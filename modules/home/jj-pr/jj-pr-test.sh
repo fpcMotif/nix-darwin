@@ -17,14 +17,16 @@ export GIT_CONFIG_GLOBAL=$work/gitconfig
 export JJ_EDITOR=false
 export GH_LOG=$work/gh.log
 export GH_STATE=$work/gh-state
+export GH_REMOTE=$work/remote.git
 mkdir -p "$HOME" "$GH_STATE" "$work/bin"
 printf '[user]\nname = "Fixture"\nemail = "fixture@example.invalid"\n' >"$JJ_CONFIG"
 git config --global init.defaultBranch main
 git init -q --bare "$work/remote.git"
 git config --global url."file://$work/remote.git".insteadOf https://github.com/acme/widget.git
 
-cat >"$work/bin/gh" <<'EOF'
-#!/usr/bin/env bash
+{
+printf '#!%s\n' "$BASH"
+cat <<'EOF'
 printf '%s\n' "$*" >>"$GH_LOG"
 flag() {
   local want=$1
@@ -54,9 +56,19 @@ case "$1 $2" in
     [ -z "$base" ] || printf '%s' "$base" >"$(key "$3")"
     echo "https://github.com/acme/widget/pull/$3"
     ;;
+  "pr merge")
+    name=$3
+    base=$(cat "$(key "$name")" 2>/dev/null || echo "main")
+    head_rev=$(git --git-dir="$GH_REMOTE" rev-parse -q --verify "refs/heads/$name" || true)
+    if [ -n "$head_rev" ]; then
+      git --git-dir="$GH_REMOTE" update-ref "refs/heads/$base" "$head_rev"
+    fi
+    echo "https://github.com/acme/widget/pull/$name"
+    ;;
   *) echo "gh stub: unexpected $*" >&2; exit 1 ;;
 esac
 EOF
+} >"$work/bin/gh"
 chmod +x "$work/bin/gh"
 export PATH=$work/bin:$PATH
 
@@ -181,3 +193,22 @@ pass "after the parent merges, the stacked PR is retargeted to trunk"
 expect_failure "$work/out" "$jj_pr" -r feat/b -t
 expect_output "$work/out" "-t needs a value" "a missing flag value is not reported"
 pass "a flag without its value is refused"
+
+expect_failure "$work/out" "$jj_pr" -r feat/b --draft --land -F "$body"
+expect_output "$work/out" "cannot land a draft PR" "draft PR with --land is not refused"
+pass "--draft with --land is refused"
+
+"$jj_pr" -r feat/b -n --land >"$work/out" 2>&1
+expect_output "$work/out" "land     merge into main, fetch, and advance @" "dry run does not report land step"
+pass "dry run reports land plan"
+
+: >"$GH_LOG"
+j new 'trunk()' >/dev/null 2>&1
+write f.txt f
+"$jj_pr" feat/f -m "feat(f): add f" -F "$body" --land >"$work/out" 2>&1
+expect_output "$GH_LOG" "pr create -R acme/widget --head feat/f --base main --title feat(f): add f" "pr create with -m"
+expect_output "$GH_LOG" "pr merge feat/f -R acme/widget --merge" "pr merge called"
+expect_output "$work/out" "https://github.com/acme/widget/pull/feat/f" "PR URL printed"
+[ "$(commit_id 'trunk()')" = "$(commit_id @-)" ] || fail "trunk not advanced to landed commit"
+[ "$(remote_at main)" = "$(commit_id @-)" ] || fail "remote main not updated"
+pass "-m commits working copy and --land merges to trunk, fetches, and advances @"
