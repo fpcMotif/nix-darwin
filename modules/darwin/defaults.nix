@@ -1,16 +1,7 @@
 { lib, ... }:
 
-# macOS preferences declared via nix-darwin's `system.defaults`. Native options
-# are used wherever they exist; everything else falls through to
-# `CustomUserPreferences` so a single `darwin-rebuild switch` is enough — no
-# follow-up `defaults write` shell scripts.
-#
-# Notes:
-#   - No Colemak / keyboard-layout swaps. Layouts are user-installed via
-#     System Settings → Keyboard → Input Sources.
-#   - No Homebrew. All apps come from Nix.
-#   - Fonts live in ./fonts.nix. Squirrel/Rime lives in ./rime.nix.
-#   - Source: https://sxyz.blog/macos-setup/
+# CustomUserPreferences covers what native options lack, so no `defaults
+# write` scripts. Source: https://sxyz.blog/macos-setup/
 {
   system.defaults = {
     NSGlobalDomain = {
@@ -38,11 +29,8 @@
         AppleAccentColor = 6;
         AppleScrollerPagingBehavior = true;
         AppleWindowTabbingMode = "always";
-        # Double-click window, in seconds. macOS ships 0.5; the System Settings
-        # slider bottoms out at 0.15, where a double-click has to land inside
-        # 150ms or the OS delivers two separate single clicks instead. Pinned
-        # here because nothing else in this repo owned it and it had drifted to
-        # the fast extreme by hand.
+        # Double-click window in seconds (macOS default 0.5); the 0.15 slider
+        # minimum splits slow double-clicks into two single clicks.
         "com.apple.mouse.doubleClickThreshold" = 0.5;
       };
 
@@ -69,19 +57,15 @@
         skip-verify-remote = false;
       };
 
-      # Safari prefs live inside a sandboxed container; `defaults write
-      # com.apple.Safari …` fails from any terminal that lacks Full Disk Access,
-      # which halts the whole activation. Configure these manually in
-      # Safari → Settings → Advanced/Privacy if needed.
+      # Safari prefs are sandboxed; writing them without Full Disk Access halts
+      # activation. Set them by hand in Safari → Settings.
 
       "com.apple.screencapture" = {
         name = "screenshot";
       };
 
-      # com.apple.universalaccess (cursor size) and com.apple.AdLib (ad tracking)
-      # are TCC-protected on modern macOS — `defaults write` fails from terminals
-      # without Full Disk Access and halts activation. Adjust those in
-      # System Settings → Accessibility / Privacy & Security if needed.
+      # universalaccess and AdLib are TCC-protected; writing them halts
+      # activation. Set them by hand in System Settings.
     };
 
     finder = {
@@ -142,11 +126,8 @@
     };
   };
 
-  # nix-darwin only runs a fixed set of activation script names (preActivation,
-  # extraActivation, postActivation, defaults, userDefaults, …). Any other key
-  # under `system.activationScripts.<name>.text` evaluates fine but is *never*
-  # executed. Everything custom goes into `postActivation` with `mkAfter` so
-  # other modules can append their own block without clobbering ours.
+  # nix-darwin runs only fixed activation script names; others silently never
+  # run. Custom steps go in `postActivation` with `mkAfter` so modules can append.
   system.activationScripts.postActivation.text = lib.mkAfter ''
     # pmset accepts multiple key/value pairs per invocation, so one fork
     # covers all -a settings; -b (battery) and -c (charger) keep their own.

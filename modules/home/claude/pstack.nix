@@ -1,42 +1,10 @@
-# pstack (Lauren Tan's Cursor plugin) as a nix skill source, reuse first.
-# Imported by modules/home/claude.nix for the live config and by
-# tests/unit/pstack-hygiene-test.nix, which asserts on the same rewrite
-# results, so a port sync that moves a transform anchor fails the build.
-# Pure string work on the pinned input; nothing here is realized at eval.
+# pstack as a nix skill source, shared by claude.nix and pstack-hygiene-test,
+# so a port sync that moves a transform anchor fails the build.
 { lib, pkgs, inputs, mkSource, mkSkill, docLock ? true }:
 
 let
-  # pstack (Lauren Tan's Cursor plugin, cursor/plugins/pstack) through
-  # michael-denyer/pstack-claude, the Claude Code port that keeps all 23
-  # principles and re-applies its documented substitutions on every upstream
-  # sync. Installed as plain skills, not as a plugin, so the plugin-only
-  # spellings are rewritten at build time (pstackTransform): the
-  # plugin-namespaced agent id becomes the bare id ~/.claude/agents registers,
-  # Claude model slugs become the Agent tool's aliases, and
-  # `plugin-dev:skill-development` becomes writing-for-agents, the authoring
-  # reference in this bundle (ADR-0017 keeps skill-creator off the global
-  # catalog).
-  #
-  # Scope: only what nothing installed here already does. poteto-mode (the
-  # router), the orchestration skills it routes to, and its principles as ONE
-  # module (pstack-principles, built below from the 23 upstream leaves: 23
-  # shallow catalog entries become one deep one). Everything with an installed
-  # equivalent is left out and poteto-mode is pointed at the equivalent:
-  #   tdd, teach          mattpocock tdd, teach
-  #   deslop              simplify (built-in)
-  #   no-comments         the CLAUDE.md Code Quality comment rule
-  #   unslop              CLAUDE.md Writing + mattpocock writing-for-agents
-  #   technical-writing   human-documents.md + CLAUDE.md Writing + writing-for-agents
-  #   bro, ketchup        mattpocock wait-what + eli5 / handoff
-  #   thermo-nuclear-*    code-review (ADR-0015), interrogate, and nuclear-cqr
-  #   setup-pstack        hand-written ~/.claude/pstack-models.md
-  #   Prototype playbook  mattpocock prototype
-  #   verify (no skill)   dotfiles web-browser, or the harness's browser tools
-  # Also out: blast-radius, bot tooling (make-bot-ui, automate-me), transcript mining
-  # (recall), reflect, correct, typescript-best-practices, and the port's PR extras
-  # (babysit would collide with the brooklyn id; fix-ci and friends duplicate
-  # better-github-skill). The source regex keeps unselected ids out of
-  # discoverCatalog, which throws on a duplicate id.
+  # Installed as plain skills, not a plugin, so pstackTransform rewrites
+  # plugin-only names. Skills with an installed equivalent are left out.
   pstackSkillsRoot = inputs.pstack-claude + "/plugins/pstack/skills";
   pstackPrinciples = builtins.filter (lib.hasPrefix "principle-")
     (builtins.attrNames (builtins.readDir pstackSkillsRoot));
@@ -55,10 +23,7 @@ let
     "maintain-verification-skill"
   ];
 
-  # Names the playbooks and references still use for skills that are not
-  # installed. The module only rewrites SKILL.md, so poteto-mode carries this
-  # table and every playbook resolves through it. Keep the trigger-line
-  # rewrites in pstackTransform in step with it.
+  # Keep the trigger-line rewrites in pstackTransform in step with this.
   pstackAliases = [
     { name = "`verify`"; use = "the **web-browser** skill, or the harness's browser and simulator tools"; }
     { name = "`/deslop`"; use = "the **simplify** skill (`/simplify`)"; }
@@ -164,10 +129,8 @@ let
     in
     body + lib.optionalString (id == "poteto-mode") pstackPotetoAppendix;
 
-  # The 23 principle leaves as one module. Each leaf's body (frontmatter
-  # dropped, sibling links turned into section anchors) becomes a section
-  # headed by its upstream id, so poteto-mode's index bullets still name the
-  # exact id. Built from the input at eval time, so upstream edits flow through.
+  # The 23 principle leaves as one module, one section per upstream id, so
+  # poteto-mode's index still names each id. Upstream edits flow through.
   pstackPrincipleSections = lib.concatMapStringsSep "\n"
     (id:
       let
@@ -189,12 +152,8 @@ let
 
   '' + pstackPrincipleSections;
 
-  # One role sheet, nix-owned. pstack's own contract: a matching role line in
-  # ~/.claude/pstack-models.md overrides the default each skill's Models
-  # section states. Shipping every role here makes the sheet the single place
-  # model routing lives at runtime; the sections stay as upstream documents
-  # them. Tiering is deliberate: a role's default model does the work, the
-  # hardest changes in any role go to strongest judgment.
+  # ~/.claude/pstack-models.md: a role line here overrides each skill's
+  # default model, so this sheet is the one place model routing lives.
   pstackModelRoles = [
     { role = "feature, refactoring"; models = "opus"; }
     { role = "bug-fix"; models = "fable"; }

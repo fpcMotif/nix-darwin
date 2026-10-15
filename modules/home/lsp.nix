@@ -1,38 +1,7 @@
 { pkgs, lib, config, ... }:
 
-# Single source of truth for language servers and LSP-related glue
-# across every consumer:
-#
-#   - Claude Code CLI    → reads ~/.claude/lsp.json + enabled plugins
-#                          from claude-plugins-official
-#   - Codex CLI          → reads /etc/codex/config.toml `[lsp]` defaults
-#   - Claude Desktop     → reads claude_desktop_config.json `mcpServers`
-#                          (LSP wrapped via mcp-language-server)
-#   - Codex App          → reads layered Codex `[mcp_servers]` configuration
-#                          (same MCP bridge as Claude Desktop)
-#   - Neovim             → built-in lsp client picks binaries from $PATH
-#
-# Modern Rust/Go-first TS stack:
-#
-#   tsc --lsp      →  TypeScript 7 native LSP (10-30x faster than
-#                     tsserver). Provides hover/definitions/references/
-#                     diagnostics for .ts/.tsx/.js/.jsx/.mts/.cts/.mjs/
-#                     .cjs. TS 7 loads no tsserver plugins; Effect
-#                     projects use @effect/tsgo, a TS 7 build with the
-#                     Effect diagnostics compiled in.
-#   oxlint --lsp   →  oxc-based linter LSP (Rust). Runs alongside tsc
-#                     as a second LSP server for the same files. Vite
-#                     ecosystem native (rolldown is also oxc-powered).
-#
-# Vite framework support: astro/svelte LSPs cover SFCs; emmet covers
-# HTML completion; tailwind handles utility-class intellisense. Vue SFCs
-# get oxlint diagnostics only — vue-language-server is deliberately not
-# installed (nixpkgs builds it via pnpm, and neither has an aarch64-darwin
-# binary in cache.nixos.org, so it compiled locally on every bump).
-#
-# Versions are pinned by the flake; clients just call the binary name.
-# Project-level `.lsp.json` and devShell flakes shadow at the project
-# root (highest priority in Claude Code's config cascade).
+# vue-language-server is skipped: with no aarch64-darwin cache hit, it
+# compiled on every bump.
 
 let
   inherit (lib) hm;
@@ -55,9 +24,8 @@ let
     gopls
 
     # === Rust ===
-    # rust-analyzer ships in martin.rust-toolchain (modules/home/packages.nix)
-    # so it matches the compiler; a second copy here would collide in
-    # home.packages.
+    # rust-analyzer ships in martin.rust-toolchain (packages.nix) to match
+    # the compiler; a second copy would collide.
 
     # === Swift / iOS ===
     sourcekit-lsp
@@ -73,23 +41,9 @@ let
     mcp-language-server # wraps any LSP as an MCP server
   ];
 
-  # ~/.claude/lsp.json — user-global LSP config for Claude Code's
-  # built-in LSP tool. Project-root `.lsp.json` overrides this.
-  #
-  # Plugin interaction:
-  #   - claude-plugins-official's `typescript-lsp` plugin registers a
-  #     `typescript` server-id using typescript-language-server. Our
-  #     `tsc` server-id is different — both would run for .ts files.
-  #     Disable the plugin in ~/.claude/settings.json if you want
-  #     tsc to be the sole TS server (recommended).
-  #   - `gopls-lsp`, `rust-analyzer-lsp`, `lua-lsp` plugins are
-  #     congruent with our gopls/rust-analyzer/lua entries; leaving
-  #     them enabled is harmless (same binary on PATH).
-  #
-  # Schema (verified from anthropics/claude-plugins-official marketplace.json):
-  #   command, args, extensionToLanguage, optional: initializationOptions,
-  #   settings, isLinter, startupTimeout. NOT supported: fileTypes,
-  #   rootMarkers, restartOnCrash, maxRestarts.
+  # ~/.claude/lsp.json for Claude Code's LSP tool. The `typescript-lsp` plugin
+  # adds a second TS server; disable it to keep tsc alone. Unsupported keys:
+  # fileTypes, rootMarkers, restartOnCrash, maxRestarts.
   claudeLspJson = pkgs.writeText "claude-lsp.json" (builtins.toJSON {
     lspServers = {
       # Primary TS intelligence — TS 7 native LSP.
@@ -169,11 +123,8 @@ in
   home.file.".claude/lsp.json".source = claudeLspJson;
 
   # === Claude Desktop / Codex App: ensure mcpServers key exists ===
-  # We don't pre-bake per-workspace LSP→MCP bridges — that's per-project
-  # and lives in templates/lsp-overrides/mcp-bridge.json. This activation
-  # only guarantees the mcpServers object is present so the user can add
-  # `lsp-<lang>` entries without losing surrounding preferences.
-  # Darwin only; Linux configs should not create a no-op macOS path.
+  # Only the key, not the bridges: those are per-project
+  # (templates/lsp-overrides/mcp-bridge.json).
   home.activation.claudeDesktopMcpScaffold =
     lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (
       hm.dag.entryAfter [ "writeBoundary" ] ''

@@ -40,13 +40,7 @@ let
     just
     # bun comes from `martin.bun-canary-bin` (canary channel) in darwinPackages
     # below — nixpkgs `bun` would collide on $out/bin/bun, so it's not listed.
-    # node runtime only (no bundled npm — we use bun). Pinned to the newest
-    # LTS-line runtime; _26 is the deliberate floor and does NOT get downgraded
-    # to dodge a cold cache. When a bump lands a node the darwin jobset hasn't
-    # built yet (26.3.1, then 26.7.0 as of 2026-08), `just switch` compiles Node
-    # from source — the fix is to hold nixpkgs on a rev whose node is already
-    # substitutable, not to drop a major. See the cadence guard in
-    # scripts/update-flake-inputs.sh.
+    # node only (bun replaces npm); _26 is the floor, see scripts/update-flake-inputs.sh.
     nodejs-slim_26
     # Frontend and SSO/OIDC helpers. OXC is the formatter/linter stack;
     # oxlint lives in ./lsp.nix because it also runs as an LSP server.
@@ -64,10 +58,7 @@ let
     # Rust.
     martin.rust-toolchain
     cargo-nextest
-    # bacon replaces cargo-watch: upstream archived it (points to bacon/watchexec),
-    # and at the 2026-07 pin it is uncached AND its link step deterministically
-    # crashes cctools ld (SIGTRAP) — it would re-break `just switch` after every
-    # nightly flake bump. bacon is darwin-cached.
+    # bacon replaces cargo-watch, which is archived, uncached, and crashes ld.
     bacon
     cargo-edit
 
@@ -79,11 +70,7 @@ let
     # Python.
     uv
 
-    # All language servers live in ./lsp.nix — including typescript
-    # (it's both compiler and `tsc --lsp` server), oxlint,
-    # vue/astro/svelte/tailwind/emmet servers, gopls, rust-analyzer,
-    # sourcekit-lsp, basedpyright, ruff,
-    # lua-language-server, mcp-language-server.
+    # All language servers, typescript included, live in ./lsp.nix.
     cmake
     tree-sitter
     wget
@@ -115,10 +102,6 @@ let
     martin.pi-coding-agent
     martin.oh-my-pi
     martin.nub # Bun-rival toolkit on stock node (nubjs/nub).
-    # Drafts.app MCP server with local watchdog/lock/bulk-gate patches baked
-    # in (replaces the bun global install those patches kept dying in).
-    # Registered with Claude Code via claudeMcpDrafts in claude.nix; Codex
-    # points at the stable /etc/profiles/per-user path in Codex configuration.
     martin.drafts-mcp-server
     martin.jev-traits
     # zed-editor itself is installed by programs.zed-editor.enable in zed.nix.
