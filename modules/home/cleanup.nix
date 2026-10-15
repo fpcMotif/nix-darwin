@@ -92,6 +92,7 @@
     for f in "$HOME"/result "$HOME"/result-*; do
       [ -L "$f" ] && rm -f -- "$f"
     done
+    [ -L "$HOME/.gemini/config/skills" ] && rm -f -- "$HOME/.gemini/config/skills"
 
     # === Nix-owned agent-skill picker dirs ===
     # `programs.agent-skills` (modules/home/claude.nix) exposes every skill
