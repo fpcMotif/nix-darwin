@@ -1,5 +1,8 @@
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
+let
+  skillTargetDirs = lib.escapeShellArgs (lib.attrValues config.martin.agentSurface.skillTargetDirs);
+in
 {
   home.activation.cleanupLegacyDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     remove_legacy_path() {
@@ -29,18 +32,12 @@
     remove_legacy_path "$HOME/.local/bin/claude"
     remove_legacy_path "$HOME/.local/bin/droid"
 
-    # Pre-Nix imperative drift in ~/.claude/ (unmanaged or hand-placed).
-    # Nix now owns these as read-only symlinks; remove the stale flat files
-    # so home.file activation can claim the paths without conflict.
-    # NOTE: settings.json is intentionally NOT cleared — Claude mutates it
-    # at runtime; the seed activation in claude.nix only writes if absent.
+    # Remove hand-placed files that Nix now links, so activation can claim
+    # them. settings.json stays: Claude mutates it at runtime.
     remove_legacy_path "$HOME/.claude/CLAUDE.md"
 
-    # Agent-layer review 2026-09-09 (ADR-0015 area). The codedb-pro blockers
-    # deny every tool CLAUDE.md names and re-arm on a licence probe; they were
-    # never nix-owned. The five personal hooks after them are nix files now
-    # (modules/home/claude/hooks), so a plain copy must go before linking; a
-    # symlink there is already ours.
+    # Drop the codedb-pro blocker hooks, and plain copies of hooks Nix now
+    # links; a symlink there is already ours.
     for h in block-legacy-tools block-native-tools codedb-block-legacy codedbpro-gate \
              auto-verify-edit auto-log-error pre-compact-save post-compact-reload codedb-warmup; do
       f="$HOME/.claude/hooks/$h.sh"
@@ -52,11 +49,11 @@
       ${pkgs.jq}/bin/jq "del(.mcpServers.codedbpro)" "$HOME/.mcp.json" > "$tmp" && mv -- "$tmp" "$HOME/.mcp.json"
     fi
     # aily-md is a per-project skill (Feishu aily docs); it leaves the global pickers.
-    for d in .claude/skills .agents/skills .config/crush/skills .config/opencode/skills .pi/agent/skills .codex/skills .cursor/skills .factory/skills; do
+    for d in ${skillTargetDirs}; do
       if [ -L "$HOME/$d/aily-md" ]; then remove_legacy_path "$HOME/$d/aily-md"; fi
     done
     # hyperframes and related video skills are per-project; prune them from global pickers.
-    for d in .claude/skills .agents/skills .config/crush/skills .config/opencode/skills .pi/agent/skills .codex/skills .cursor/skills .factory/skills .config/agents/skills .gemini/skills .gemini/config/skills; do
+    for d in ${skillTargetDirs} .gemini/skills; do
       for skill in hyperframes hyperframes-cli faceless-explainer hyperframes-animation hyperframes-registry hyperframes-creative general-video hyperframes-core hyperframes-audio hyperframes-studio media-use hyperframes-keyframes; do
         if [ -L "$HOME/$d/$skill" ] || [ -d "$HOME/$d/$skill" ]; then remove_legacy_path "$HOME/$d/$skill"; fi
       done
@@ -92,53 +89,18 @@
     for f in "$HOME"/result "$HOME"/result-*; do
       [ -L "$f" ] && rm -f -- "$f"
     done
+    [ -L "$HOME/.gemini/config/skills" ] && rm -f -- "$HOME/.gemini/config/skills"
 
     # === Nix-owned agent-skill picker dirs ===
-    # `programs.agent-skills` (modules/home/claude.nix) exposes every skill
-    # under these picker dirs as ONE `home.file` symlink — even skills built
-    # as a real directory in the store (packages-injected skills like
-    # `review`) get a single symlink at the
-    # picker path pointing at that store directory. Something outside Nix
-    # (a `skill-router load`/`sync` run, a manual skill install, ...) has
-    # left real, writable copies behind at some of those same paths instead
-    # of a symlink — e.g. $HOME/.agents/skills/research as a plain directory
-    # with its own stray agents/openai.yaml sidecar. Home Manager's own
-    # checkLinkTargets/linkGeneration refuse to clobber a real directory, so
-    # activation dies outright the next time Nix tries to place its symlink
-    # there:
-    #   cmp: .../home-manager-files/.agents/skills/research: Is a directory
-    #   ln: /Users/.../.agents/skills/research: cannot overwrite directory
-    # This is exactly the ralph-loop failure mode from before (removed from
-    # the curated sources, but its stale materialized copy still blocked
-    # activation until it was deleted by hand) — fix it generally instead of
-    # one skill id at a time.
-    #
-    # Purge only entries the *new* generation is actually about to place: for
-    # every id present at this same relative path in $newGenPath/home-files,
-    # if the live path exists and is NOT a symlink, remove it so Nix can
-    # claim it. $newGenPath is set by the outer activation script before any
-    # home.activation fragment runs. Anything NOT part of the current bundle
-    # (leftover ids no longer selected, or skills some other tool manages
-    # directly under these dirs) has no counterpart in home-files and is left
-    # untouched.
+    # Home Manager won't replace a real dir with its symlink. Remove a live
+    # non-symlink only where the new generation places a skill; leave the rest.
     purge_stale_skill_dirs() {
       local newGenFiles
       newGenFiles="$(readlink -e "$newGenPath/home-files" 2>/dev/null || true)"
       [ -n "$newGenFiles" ] || return 0
 
       local skills_rel
-      # Keep in sync with `skillTargetDirs` in modules/home/claude.nix.
-      for skills_rel in \
-        .agents/skills \
-        .claude/skills \
-        .cursor/skills \
-        .codex/skills \
-        .config/agents/skills \
-        .config/crush/skills \
-        .factory/skills \
-        .config/opencode/skills \
-        .pi/agent/skills
-      do
+      for skills_rel in ${skillTargetDirs}; do
         local src="$newGenFiles/$skills_rel" dst="$HOME/$skills_rel"
         [ -d "$src" ] && [ -d "$dst" ] || continue
 

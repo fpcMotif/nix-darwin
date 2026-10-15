@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
-# Bump rime/squirrel (Rime input method frontend) in pkgs/squirrel.nix.
-#
-# rime/squirrel uses a rolling `latest` git tag, so `tag_name` from the GH
-# API is literally "latest" and unusable. The real version lives in the
-# release asset filename: `Squirrel-<x.y.z>.pkg`.
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
+# rime/squirrel's rolling `latest` tag makes `tag_name` the literal "latest",
+# so the version comes from the asset file name.
 latest=$(
   au_github_api "https://api.github.com/repos/rime/squirrel/releases/latest" \
     | jq -r '.assets[].name' \

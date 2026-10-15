@@ -2,13 +2,8 @@
 
 let
 
-  # Cursor (like all VS Code forks) writes back to its own settings.json:
-  # UI toggles, and atomic saves that rename a temp file over the target.
-  # A home.file entry would symlink this into the read-only nix store
-  # (mode 0444), so Cursor's writes fail with EACCES / EntryWriteLocked.
-  # Instead we render the defaults in the store and copy them into place as
-  # a real, writable file during activation. Nix stays the source of truth
-  # (defaults are reapplied on every switch) while Cursor can still save.
+  # Cursor writes to settings.json by renaming a temp file over the target,
+  # which fails on a read-only store symlink. Copy this template on activation.
   cursorSettingsFile = pkgs.writeText "cursor-settings.json" (builtins.toJSON {
     "extensions.autoCheckUpdates" = false;
     "extensions.autoUpdate" = false;
@@ -44,10 +39,7 @@ in
     };
   };
 
-  # Cursor's settings live under macOS's ~/Library and its CLI ships inside
-  # the .app bundle, so this whole sync is Darwin-only. A Linux host must not
-  # grow a ~/Library tree; revisit with XDG paths if Cursor joins the Linux
-  # profile.
+  # Gate on Darwin so Linux hosts do not grow a ~/Library tree.
   home.activation.cursorSettings = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     cursorUserDir="$HOME/Library/Application Support/Cursor/User"
     mkdir -p "$cursorUserDir"

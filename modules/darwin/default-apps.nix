@@ -1,14 +1,5 @@
 { inputs, lib, pkgs, currentSystemUser, ... }:
 
-# IINA is the preferred video player, but macOS/App updates keep re-claiming
-# video UTIs for QuickTime Player (or whichever app installs most recently).
-# Re-assert IINA as the LaunchServices default opener for every common video
-# container format on every activation, via `duti` (already carried in
-# environment.systemPackages, hosts/darwin/default.nix).
-#
-# `.ts` is deliberately excluded: it collides with TypeScript source files,
-# which must keep opening in the editor, not IINA.
-
 let
   duti = lib.getExe pkgs.duti;
   iina = "com.colliderli.iina";
@@ -23,6 +14,7 @@ let
     "shtml"
     "xhtml"
   ];
+  # Omit .ts so TypeScript source files keep opening in the editor.
   videoExtensions = [
     "mp4"
     "m4v"
@@ -52,6 +44,7 @@ let
   ];
 in
 {
+  # macOS and app updates reset video UTIs to QuickTime Player.
   home-manager.users.${currentSystemUser}.home.activation.defaultApps = inputs.home-manager.lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     echo "[default-apps] setting IINA as default video player"
     # `duti -s` talks to LaunchServices/cfprefsd; firing calls back-to-back with

@@ -9,7 +9,8 @@
 - **Diagnose**: Use `oracle` for ambiguous architecture, uncertain diagnosis, or two failed fixes.
 - **Escalate**: Move a task to a stronger configured role when its current model cannot complete it.
 - **Complete**: For bulk work or blocking advisor notes, load `/Users/martinfan/.omp/agent/managed-skills/omp-completion-and-advisor/SKILL.md`.
-- **Develop**: Before choosing a shell command, running Python or Rust, adding an environment variable, using version control, or setting up Git hooks, read `~/.omp/agent/guidance/development.md`.
+- **Develop**: Before choosing a shell command, adding an environment variable, using version control, or setting up Git hooks, read `~/.omp/agent/guidance/development.md`.
+- **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `~/.omp/agent/guidance/languages/typescript.md`, `python.md`, `go.md`, or `rust.md`.
 - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/.omp/agent/guidance/human-documents.md`.
 - **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/.omp/agent/guidance/development.md`.
 

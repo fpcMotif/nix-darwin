@@ -43,32 +43,6 @@ The Search section of the host guide names the first tool for each case. These r
 
 Ranked results alone cannot prove absence.
 
-## JavaScript and TypeScript
-
-- Run scripts with `bun` and executables with `bunx`.
-- Use `pnpm` when the repository requires it.
-- Type-check TypeScript with `bun check`, Bun's native checker. It replaces `tsc --noEmit` and reads the nearest `tsconfig.json`.
-- Scope a check with `bun check -p apps/web` for one package, or `bun check FILE` for a file and its imports.
-- Format code with `bun fmt`, or check formatting with `bun fmt --check`. It replaces `oxfmt` and `prettier`, and reads `.oxfmtrc.json` natively.
-- Use `oxlint --type-aware` for type-aware linting.
-- Confirm a dependency and lockfile before adding a library.
-
-## Python
-
-- Run every Python command through `uv`.
-- Script: `uv run script.py`. Declare standalone dependencies in PEP 723 metadata.
-- One-liner: `uv run --with PACKAGE python -c '...'`.
-- Project: `uv sync`, `uv add PACKAGE`, `uv run pytest`.
-- Save substantial Python as a `.py` file before execution.
-- Check changed files with `ruff check --fix`, `ruff format`, and `uvx ty check`.
-- Verify a small sample before the full workload.
-
-## Rust
-
-- Run Cargo through mbx (the mise tool `mr-boxington`): `mbx build`, `mbx test --workspace`, `mbx clippy --all-targets -- -D warnings`. mbx forwards each command to Cargo and shares compiled work across every checkout.
-- Plain `cargo` also runs through mbx in zsh, whose PATH puts mbx's cargo shim first. `mbx COMMAND` works in any shell.
-- For a slow build or a cache miss, run `mbx explain`. Check the setup with `mbx doctor`. Run `mbx gc --dry-run` before `mbx gc`.
-
 ## Project environments
 
 - Agent shells never run direnv's prompt hook. In a project with `.envrc`, run commands through `direnv exec . COMMAND`.
@@ -95,6 +69,7 @@ Ranked results alone cannot prove absence.
 - Detect a `.jj` workspace before the first version-control operation.
 - Use `jj` in a Jujutsu workspace and Git in a Git-only checkout.
 - Read the diff before every commit. Use `type(scope): message`.
+- Run `jj diff --stat` before `jj squash`. Pass explicit paths (`jj squash PATH...`) when another session or editor can write to the working copy.
 - When merge conflicts resolve to one side, list each merged pull request the other side loses, and ask first.
 - Use `gh` for GitHub when no host-specific GitHub tool applies.
 - Open or update a pull request from JJ with `jj pr`, as the `jj` skill describes. The `pr` skill writes the body.

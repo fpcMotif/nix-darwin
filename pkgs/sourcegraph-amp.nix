@@ -1,16 +1,3 @@
-# Sourcegraph Amp CLI (binary `amp`).
-#
-# This intentionally does not use nixpkgs#amp: that package is the unrelated
-# amp.rs text editor. Sourcegraph publishes Amp as the npm package
-# @sourcegraph/amp, which currently wraps a native @ampcode/cli binary.
-#
-# Bumping (no hash dance — `importNpmLock` derives deps from the lockfile):
-#   1. find current version: npm view @sourcegraph/amp version
-#   2. update ./sourcegraph-amp/package.json and `version` below.
-#   3. regenerate the lock:
-#        (cd ~/.config/nix-darwin/pkgs/sourcegraph-amp && npm install --package-lock-only)
-#   4. nix build .#martin.sourcegraph-amp
-
 { lib
 , stdenv
 , buildNpmPackage

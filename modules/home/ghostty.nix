@@ -153,10 +153,8 @@ let
     let
       search = config.martin.shell.search;
       enabled = cfg.search.enable && search.enable;
-      # Ghostty config has no trailing comments -- each comment is its own
-      # line above its keybind. Bytes are per-line: the repo chords follow
-      # martin.shell.search.prefix; the git-branches chord types upstream's
-      # own permanently-^G sequence and must NOT follow that option.
+      # Ghostty rejects trailing comments, so emit each comment on its own line.
+      # Repo chords follow search.prefix, while git-branches keeps upstream's ^G.
       line = bytes: chord: suffix: comment:
         [
           "# ${comment}"

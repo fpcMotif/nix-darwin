@@ -1,49 +1,8 @@
 { lib, pkgs, ... }:
 
-# Zed editor — fully Nix-managed via Home Manager's `programs.zed-editor`
-# module. The editor binary comes from `pkgs.martin.zed-nightly-bin`, which
-# fetches the prebuilt nightly `.dmg` from
-# `zed-nightly-host.nyc3.digitaloceanspaces.com` — Nix never compiles Zed.
-# `scripts/update-zed-nightly.sh` (run hourly by .github/workflows/auto-update.yml)
-# follows the `nightly/latest` redirect chain to keep the pin fresh.
-# Never put `inputs.zed-upstream` (raw source flake) on the rebuild path: that
-# triggers a 3000+ cargo-crate compile with zero cache hits.
-# Extensions install in-app on first launch from the strings declared below;
-# LSPs are wired to nixpkgs derivations so nothing reaches outside the Nix store.
-#
-# Platform: `zed-nightly-bin` only ships aarch64-darwin .dmg artifacts (Zed's
-# nightly host has no Linux build, and the flake's supportedSystems list
-# intentionally drops x86_64-darwin), so this module is gated to Darwin via
-# `lib.mkIf`. On Linux (x230 / vm-aarch64-utm) the config collapses to
-# `{}` and Home Manager never reaches for a derivation that would throw on
-# `home.packages` materialization. Re-enable per-host with a Linux-capable
-# package (e.g. `pkgs.zed-editor` from nixpkgs) if a Linux Zed becomes useful.
-#
-# Toolchain choices:
-#   TypeScript / JS  — Zed's official `tsgo` extension (server `typescript-ls`)
-#                      running the Nix TS 7 `tsc --lsp`; the `oxc` extension's
-#                      `oxlint` (lint + fix-all) and `oxfmt` (format) servers.
-#   Formatting       — oxfmt for JS/TS/JSON/CSS/HTML/Markdown/YAML/TOML;
-#                      Prettier is off.
-#   Effect projects  — TS 7 loads no tsserver plugins. After
-#                      `bunx @effect/tsgo setup`, point the project's
-#                      .zed/settings.json at the Effect build of tsc
-#                      (a relative path resolves from the project root):
-#                        "lsp": { "typescript-ls": { "binary": {
-#                          "path": "node_modules/@effect/tsgo-darwin-arm64/lib/tsc",
-#                          "arguments": ["--lsp", "--stdio"] } } }
-#   Python           — ruff (Astral, same team as uv) as both linter AND
-#                      formatter via `ruff server`; basedpyright for type
-#                      checking. No black, no flake8, no isort needed.
-#   Nix              — nixd
-#   Bash / Lua / Go / Rust — upstream LSPs from nixpkgs.
-#
-# `mutable*` flags keep the relevant config files mergeable so Zed's in-app
-# preferences UI continues to work — flip a flag to false to make Nix the
-# single source of truth for that file.
-
 let
   routing = import ../shared/agent-model-routing.nix { inherit lib; };
+  codexLsp = import ../shared/codex-lsp.nix { inherit lib pkgs; };
   openAiFavorite = job: {
     provider = "openai-subscribed";
     model = routing.modelId job;
@@ -75,25 +34,7 @@ in
     enable = true;
     package = pkgs.martin.zed-nightly-bin;
 
-    extraPackages = with pkgs; [
-      # Nix
-      nixd
-
-      # TypeScript / JavaScript
-      typescript # TS 7 native `tsc`, also the LSP via `tsc --lsp`
-      oxlint # fast linter (oxc)
-      oxfmt # fast formatter (oxc)
-
-      # Python (Astral stack)
-      ruff # `ruff server` = LSP, also formatter & linter
-      basedpyright # type checker
-
-      # Other
-      bash-language-server
-      lua-language-server
-      gopls
-      martin.rust-toolchain
-    ];
+    extraPackages = codexLsp.zedPackages;
 
     extensions = [
       "nix"
@@ -104,8 +45,6 @@ in
       "make"
       "dockerfile"
       "html"
-      # Toolchain extensions — these glue the binaries above into Zed's
-      # language workflow (code actions, diagnostics surfacing, etc.).
       "ruff"
       "basedpyright"
       "tsgo"
@@ -271,36 +210,10 @@ in
         shell.program = "${pkgs.zsh}/bin/zsh";
       };
 
-      # ---- LSP servers ------------------------------------------------------
-      lsp = {
-        # Nix
-        nixd.binary.path = "${pkgs.nixd}/bin/nixd";
+      # Pin binary.path so Zed launches the Nix binary directly and skips the
+      # extension's npm install, which fails on the bun shim.
+      lsp = codexLsp.adapters.zed;
 
-        # A pinned `binary.path` makes Zed launch that binary directly and
-        # skip the extension's npm install, which fails on the bun shim.
-        typescript-ls.binary = {
-          path = "${pkgs.typescript}/bin/tsc";
-          arguments = [ "--lsp" "--stdio" ];
-        };
-        oxlint.binary = {
-          path = "${pkgs.oxlint}/bin/oxlint";
-          arguments = [ "--lsp" ];
-        };
-        oxfmt.binary = {
-          path = "${pkgs.oxfmt}/bin/oxfmt";
-          arguments = [ "--lsp" ];
-        };
-
-        # Python — ruff serves as LSP via its built-in `ruff server`.
-        ruff.binary = {
-          path = "${pkgs.ruff}/bin/ruff";
-          arguments = [ "server" ];
-        };
-        # basedpyright for types.
-        basedpyright.binary.path = "${pkgs.basedpyright}/bin/basedpyright-langserver";
-      };
-
-      # ---- Per-language overrides ------------------------------------------
       languages = {
         # JavaScript also covers .jsx; Zed has no separate JSX language.
         TypeScript = jsLanguage;
@@ -324,10 +237,8 @@ in
           format_on_save = "on";
         };
 
-        # No VS Code-derived language servers (vscode-langservers-extracted).
-        # Zed installs them through `npm`, which is the bun shim here, so the
-        # install fails. Syntax highlighting still comes from the grammars;
-        # "..." keeps the other servers (oxfmt, tailwind, package-version).
+        # No vscode-langservers-extracted: Zed installs them via `npm`, the bun
+        # shim here, which fails. "..." keeps the other servers.
         HTML = oxfmtFormatted // {
           language_servers = [ "!vscode-html-language-server" "..." ];
         };
@@ -359,14 +270,9 @@ in
         anthropic_retention = true;
       };
 
-      # Nix pins the Zed version (pkgs.martin.zed-nightly-bin) and the darwin
-      # module owns the /Applications bundle, so Zed must never self-update:
-      # its updater downloads a newer nightly and tries to rsync over the
-      # read-only store / root-owned bundle, which fails with "Permission
-      # denied" and churns/relaunches the app — leaving orphaned instances
-      # from old (GC-able) store paths that wedge the single-instance lock
-      # and make Zed "fail to open". Version bumps come from
-      # scripts/update-zed-nightly.sh + darwin-rebuild instead.
+      # Nix pins Zed, so self-update must stay off: it fails on the read-only
+      # bundle and leaves orphan instances that block launch. Bump the version
+      # with scripts/update-zed-nightly.sh.
       auto_update = false;
     };
 

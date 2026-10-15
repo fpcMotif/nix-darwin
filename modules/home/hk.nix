@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ lib, pkgs, ... }:
 
 let
   hk = pkgs.martin.hk-bin;
@@ -13,20 +13,4 @@ in
   programs.git.settings.hook = lib.listToAttrs (map
     (event: lib.nameValuePair "hk-${event}" { inherit event; command = hookCommand event; })
     hookEvents);
-
-  xdg.configFile."hk/config.pkl" = lib.mkIf config.martin.development.docLock {
-    text = ''
-      amends "package://github.com/jdx/hk/releases/download/v${hk.version}/hk@${hk.version}#/Config.pkl"
-
-      hooks {
-        ["pre-commit"] {
-          steps {
-            ["doc-lock"] {
-              check = "${lib.getExe pkgs.martin.doc-lock} staged"
-            }
-          }
-        }
-      }
-    '';
-  };
 }

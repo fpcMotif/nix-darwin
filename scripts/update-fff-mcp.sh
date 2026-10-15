@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Bump fff-mcp's versioned platform assets.
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 

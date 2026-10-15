@@ -76,17 +76,20 @@ let
       { event = "PostToolUse"; matcher = "Edit|Write"; command = "$HOME/.claude/hooks/moved.sh"; }
     ];
   };
-  # The production marker list, selected the way claude.nix selects it.
-  backendPolicy = worktrunkEnabled:
+  # The production marker hooks, as the workspace-backend module contributes them.
+  backendPolicy = backend:
     let
-      markers = import ../../modules/home/claude/worktrunk-markers.nix {
-        inherit lib;
-        enable = worktrunkEnabled;
+      surface = import ../lib/agent-surface-eval.nix { inherit lib; } {
+        inherit pkgs;
+        modules = [
+          ../../modules/home/workspace-backend
+          { martin.development.workspaceBackend = backend; }
+        ];
       };
     in
     basePolicy // {
-      add = basePolicy.add ++ markers.add;
-      inherit (markers) remove;
+      add = basePolicy.add ++ surface.martin.agentSurface.claudeHooks.add;
+      inherit (surface.martin.agentSurface.claudeHooks) remove;
     };
   mkOwnership = policy:
     import ../../modules/home/claude/settings-ownership.nix {
@@ -95,8 +98,8 @@ let
   current = mkOwnership basePolicy;
   old = mkOwnership oldPolicy;
   retiredSeed = mkOwnership retiredSeedPolicy;
-  worktrunk = mkOwnership (backendPolicy true);
-  dojjo = mkOwnership (backendPolicy false);
+  worktrunk = mkOwnership (backendPolicy "worktrunk");
+  dojjo = mkOwnership (backendPolicy "dojjo");
   hooksOld = mkOwnership hooksOldPolicy;
   hooksNew = mkOwnership hooksNewPolicy;
 in

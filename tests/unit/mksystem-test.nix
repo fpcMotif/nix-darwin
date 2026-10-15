@@ -1,11 +1,3 @@
-# Unit tests for lib/mkSystem.nix and the current host contract.
-#
-# mkSystem is a curried factory:
-#   ({ inputs, overlays }) -> ({ system, user, hostname, hostModule }) -> systemConfig
-#
-# These tests evaluate the first-party configurations far enough to prove the
-# current user, Home Manager profile, and host modules are wired through the
-# factory. They do not build whole systems.
 { inputs, system, pkgs, lib, self, ... }:
 
 let

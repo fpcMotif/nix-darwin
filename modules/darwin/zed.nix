@@ -1,27 +1,13 @@
 { lib, pkgs, ... }:
 
-# Conductor — and Spotlight, `open`, and any LaunchServices-driven "open in
-# editor" feature — discovers editors as registered .app bundles in
-# /Applications. Zed is Home-Manager-managed (programs.zed-editor ->
-# pkgs.martin.zed-nightly-bin), so its only bundle lives in the nix store,
-# surfaced merely as a *symlink* under ~/Applications/Home Manager Apps whose
-# target store path changes on every nightly bump. LaunchServices then caches a
-# stale, garbage-collected store path and apps like Conductor can no longer
-# launch Zed.
-#
-# Modeled on modules/darwin/rime.nix's Squirrel install: place the current
-# bundle in /Applications on every activation and re-register it. We *copy*
-# rather than symlink so `open`/Gatekeeper treat it as an ordinary installed app
-# (symlinked bundles hit app-translocation edge cases). The hidden
-# `/Applications/.zed-nightly.src` marker points at the active store path, which
-# keeps the copy idempotent — it only re-copies when that path actually changes.
-
 let
   zedPkg = pkgs.martin.zed-nightly-bin;
   appName = "Zed Nightly.app";
   lsregister = "/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/Support/lsregister";
 in
 {
+  # Copy Zed Nightly into /Applications so LaunchServices does not cache a
+  # garbage-collected store path from Home Manager's symlinked app bundle.
   system.activationScripts.postActivation.text = lib.mkAfter ''
     zed_src="${zedPkg}/Applications/${appName}"
     zed_dst="/Applications/${appName}"

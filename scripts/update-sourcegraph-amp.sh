@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
-# Bump @sourcegraph/amp in pkgs/sourcegraph-amp.nix and pkgs/sourcegraph-amp/.
-#
-# Strategy: bump package.json, regenerate package-lock.json, bump the `version`
-# line in the .nix file. No npmDepsHash to manage — `importNpmLock` derives the
-# fixed-output deps from the lockfile at eval time.
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
 FILE="pkgs/sourcegraph-amp.nix"
 PKG_DIR="pkgs/sourcegraph-amp"
 
-# Track the stable `latest` channel used by Amp's self-updater.
-# Its `next` tag is a separate `-singleexe` channel that can trail `latest`.
+# Amp's self-updater follows `latest`. The `next` tag is a separate
+# `-singleexe` channel that can trail it.
 latest=$(au_http_get "https://registry.npmjs.org/@sourcegraph%2famp" \
            | jq -r '."dist-tags".latest // ""')
 [ -n "$latest" ] && [ "$latest" != null ] || {
@@ -22,11 +17,8 @@ if [ "$current" = "$latest" ]; then
   echo "sourcegraph-amp already at $latest"; exit 0
 fi
 
-# Update the package.json pin and regenerate the lockfile. Use npm from Nix
-# rather than the PATH shim: Bun's `npm` writes bun.lock instead of the lock
-# file Nix consumes. Nixpkgs splits npm from the Node runtime, so resolve both
-# outputs explicitly and keep a fallback for older channel revisions that
-# embedded the CLI under lib/node_modules.
+# Bun's `npm` shim writes bun.lock, not the package-lock.json Nix reads. Some
+# nixpkgs revisions ship npm only under nodejs's lib/node_modules.
 npm_out=$(nix build --no-link --print-out-paths 'nixpkgs#nodejs-slim_26^npm')
 npm_cmd=("$npm_out/bin/npm")
 if [ ! -x "${npm_cmd[0]}" ]; then
@@ -41,11 +33,12 @@ fi
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
+# `importNpmLock` reads the lockfile at eval time, in place of an npmDepsHash.
 jq --arg v "$latest" '.dependencies."@sourcegraph/amp" = $v' \
   "$PKG_DIR/package.json" > "$work/package.json"
 
 # Node does not read the macOS Keychain by default. The system PEM includes
-# locally trusted proxy roots; Linux runners use the same conventional path.
+# locally trusted proxy roots.
 ca_file=/etc/ssl/cert.pem
 if [ ! -f "$ca_file" ]; then
   ca_out=$(nix eval --raw nixpkgs#cacert.outPath)

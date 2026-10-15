@@ -4,10 +4,7 @@
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
 
-    # Flake builds here run from the live working tree, which is almost always
-    # dirty (nightly auto-update commits, in-progress edits). The resulting
-    # "Git tree '…' is dirty" line on every `just switch` is pure noise — the
-    # build still uses the working tree as-is — so silence it.
+    # The working tree is almost always dirty; the warning is noise.
     warn-dirty = false;
 
     trusted-users = [
@@ -23,14 +20,9 @@
       "claude-code.cachix.org-1:YeXf2aNu7UTX8Vwrze0za1WEDS+4DuI2kVeWEE4fsRk="
     ];
 
-    # macOS boots through Apple's own firmware path; nix-darwin does not manage
-    # Linux-style EFI/systemd-boot settings. Efficiency gains on Darwin come
-    # from faster and leaner Nix store behavior instead.
-    #
-    # Inline store optimisation (auto-optimise-store) is NOT used here: it has
-    # a long-standing store-corruption bug on macOS
-    # (https://github.com/NixOS/nix/issues/7273). The scheduled `nix.optimise`
-    # job below provides the same deduplication safely.
+    # No auto-optimise-store: it can corrupt the store on macOS
+    # (https://github.com/NixOS/nix/issues/7273). The scheduled
+    # `nix.optimise` job below dedupes safely.
     max-jobs = "auto";
     cores = 0;
 
@@ -38,19 +30,12 @@
     # This still allows build parallelism, but caps memory pressure.
     max-substitution-jobs = 16;
 
-    # Nix's libcurl defaults to HTTP/2 multiplexing, packing all 16 concurrent
-    # .nar.zst streams onto one TLS connection through the Surge Fake-IP TUN.
-    # When that single multiplexed stream stalls or resets on HTTP/2
-    # WINDOW_UPDATE frames, every in-flight download dies at once with
-    # `CURLE_SEND_ERROR (55) / OpenSSL SSL_read: SSL_ERROR_SYSCALL, errno 0`.
-    # HTTP/1.1 keep-alive gives each substitution job its own socket.
+    # HTTP/2 puts every download on one TLS stream through the Surge TUN; one
+    # stall kills them all (CURLE_SEND_ERROR 55). HTTP/1.1 gives each its own socket.
     http2 = false;
 
-    # nix-direnv pins `nix develop` shells with GC roots; keeping outputs and
-    # derivations alive is its documented requirement so dev shells survive
-    # garbage collection and stay usable offline
+    # nix-direnv needs outputs and derivations kept so dev shells survive GC
     # (https://github.com/nix-community/nix-direnv#installation).
-    # The weekly GC below still bounds store growth.
     keep-outputs = true;
     keep-derivations = true;
   };

@@ -2,7 +2,8 @@
 
 ## Claude
 
-- **Develop**: Before choosing a shell command, running Python or Rust, adding an environment variable, using version control, or setting up Git hooks, read `~/.claude/guidance/development.md`.
+- **Develop**: Before choosing a shell command, adding an environment variable, using version control, or setting up Git hooks, read `~/.claude/guidance/development.md`.
+- **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `~/.claude/guidance/languages/typescript.md`, `python.md`, `go.md`, or `rust.md`.
 - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/.claude/guidance/human-documents.md`.
 - **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/.claude/guidance/development.md`.
 - **Shell guard**: Read with the Read tool or `bat -pp`. Find files with `fd`. Run Python with `uv run`. Change files with Edit or Write. Hooks deny `sed`, `find`, and bare `python`, even in bypass mode. They also deny file writes through `echo >`, heredocs, and inline scripts.
@@ -27,5 +28,6 @@ Search with fff and codedb first: one call returns a ranked, bounded answer.
 ## Agents
 
 - **Read-only**: Send searches and lookups to the Explore agent, which cannot edit. Mark review briefs read-only.
+- **Haiku**: Pass the exact spans or candidates in the brief. Ask Haiku to classify or rewrite that input in place, with no file searching or reading.
 - **Fork**: A fork sees this whole conversation, so its brief names the one task it owns.
 - **Workflow**: In a workflow run, give each verifier a whole review dimension or file with all its findings. This keeps a run near its size guideline.

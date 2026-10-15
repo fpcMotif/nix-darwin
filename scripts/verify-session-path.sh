@@ -1,33 +1,11 @@
 #!/usr/bin/env bash
-# Tier 2 (opt-in, real machine): prove zsh builds a duplicate-free PATH in all
-# four modes (-c, -lc, -ic, -lic), both fresh and forked from a login session,
-# and that the intended executables win: mbx's cargo shim for cargo, and the
-# Nix copy of every command that also sits in a user directory.
-#
-# Usage:
-#   bash scripts/verify-session-path.sh                   # live dotfiles
-#   bash scripts/verify-session-path.sh "$HOME_FILES_DIR" # a built config, before switching
-#
-#     HOME_FILES_DIR=$(nix build --no-link --print-out-paths \
-#       .#darwinConfigurations.f.config.home-manager.users.martinfan.home-files)
-#
-# Not part of `nix flake check`: it spawns real shells and reads real $HOME
-# state. The project dev-shell case has its own section and exit bit, because a
-# project tool winning there is the dev shell doing its job
-# (docs/adr/0008-reproducible-dev-envs-and-cross-platform-purity.md).
-#
-# Interactive modes run without a pty so their stderr stays separate; `script`
-# would merge it into stdout and hide startup errors.
-#
-# Exit status: bit 0 = a base-session or mbx check failed; bit 1 = the project
-# dev-shell check failed. SKIP and WARN never fail the run.
+# Tier 2 check. It spawns real shells and reads real $HOME state, so it stays out of `nix flake check`.
 set -euo pipefail
 
 # The zshrc exports CDPATH with "." first, which makes `cd` print the
 # directory and corrupt `$(cd ... && pwd)`.
 unset CDPATH
 
-# Associative arrays need bash >= 4; macOS /bin/bash is 3.2.
 if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
   printf 'verify-session-path: needs bash >= 4 (associative arrays); found %s.\n' "${BASH_VERSION}" >&2
   printf 'verify-session-path: stock macOS /bin/bash is 3.2 -- invoke with the Nix-profile bash on PATH.\n' >&2
@@ -62,23 +40,24 @@ na() {
 info() {
   printf '  %s %s\n' "$(blue INFO)" "$1"
 }
-# WARN: a real contradiction that must stay visible without failing the run,
-# e.g. a command shadowed by an intentional shell function (the opencode and
-# droid wrappers in modules/home/ai-cli.nix).
 warn() {
   printf '  %s %s\n' "$(cyan WARN)" "$1"
   warned=$((warned + 1))
 }
 section() { printf '\n\033[1m%s\033[0m\n' "$1"; }
+print_indented() {
+  local line
+  while IFS= read -r line; do printf '        %s\n' "$line"; done
+}
 
-need() {
+require_tool_or_exit() {
   command -v "$1" >/dev/null 2>&1 || {
     printf 'verify-session-path: missing required tool: %s\n' "$1" >&2
     exit 2
   }
 }
-need zsh
-need awk
+require_tool_or_exit zsh
+require_tool_or_exit awk
 
 HOME_FILES_DIR="${1:-}"
 if [ -n "$HOME_FILES_DIR" ] && [ ! -d "$HOME_FILES_DIR" ]; then
@@ -103,19 +82,20 @@ trap 'rm -rf "$WORKDIR"' EXIT
 
 printf 'verify-session-path: testing %s\n' "$target_label"
 
-# Nix-owned: under /etc/profiles/, /run/current-system/ or /nix/, or exactly
-# ~/.nix-profile/bin. The probe below repeats this rule in zsh.
-is_nix_owned_dir() { # $1 = dir
-  case "$1" in
+# The probe below repeats this rule in zsh. Keep the two in sync.
+is_nix_owned_dir() {
+  local dir="$1"
+  case "$dir" in
     /etc/profiles/*|/run/current-system/*|/nix/*) return 0 ;;
   esac
-  [ "$1" = "${HOME}/.nix-profile/bin" ]
+  [ "$dir" = "${HOME}/.nix-profile/bin" ]
 }
 
-# ---------------------------------------------------------------------------
-# The probe is sourced inside the shell under test, so it reports that
-# shell's own PATH and lookups. It writes tab-separated records to stdout.
-# ---------------------------------------------------------------------------
+is_nix_owned_path() {
+  local path="$1"
+  [ "$path" != "<not-found>" ] && is_nix_owned_dir "$(dirname -- "$path")"
+}
+
 PROBE="$WORKDIR/probe.zsh"
 cat >"$PROBE" <<'ZSH_PROBE'
 print -r -- "GUARD"$'\t'"__NIX_DARWIN_SET_ENVIRONMENT_DONE=${__NIX_DARWIN_SET_ENVIRONMENT_DONE-<unset>}"
@@ -126,9 +106,6 @@ for _pe in "${(s/:/)PATH}"; do
   print -r -- "PATHENTRY"$'\t'"${_pe}"
 done
 
-# Record which names are executable in NIX and OTHER dirs. The glob's "-"
-# follows symlinks: every Nix-profile binary is a link into /nix/store, and
-# without it each Nix dir enumerates as empty.
 typeset -A _has_nix _has_other
 for _d in "${path[@]}"; do
   case "$_d" in
@@ -138,13 +115,14 @@ for _d in "${path[@]}"; do
       ;;
   esac
   [ -d "$_d" ] || continue
+  # The glob's "-" follows symlinks: every Nix-profile binary is a link into
+  # /nix/store, and without it each Nix dir enumerates as empty.
   typeset -a _exe; _exe=("$_d"/*(N-.x:t))
   for _name in "${_exe[@]}"; do
     if [ "$_kind" = NIX ]; then _has_nix[$_name]=1; else _has_other[$_name]=1; fi
   done
 done
 
-# Discovered overlaps: names executable in both a NIX dir and an OTHER dir.
 typeset -a _overlap_names
 for _name in "${(k)_has_nix[@]}"; do
   [ -n "${_has_other[$_name]-}" ] && _overlap_names+=("$_name")
@@ -154,8 +132,6 @@ for _name in "${_overlap_names[@]}"; do
   print -r -- "OVERLAPNAME"$'\t'"${_name}"
 done
 
-# whence -p resolves on PATH only; whence -w detects an alias, function or
-# builtin shadowing the name. VSP_REQUIRED comes from the wrapper.
 typeset -a _required_names
 _required_names=(${=VSP_REQUIRED})
 print -r -- "REQCOUNT"$'\t'"${#_required_names[@]}"
@@ -163,69 +139,63 @@ typeset -A _to_check
 for _n in "${_overlap_names[@]}" "${_required_names[@]}"; do _to_check[$_n]=1; done
 
 for _name in "${(k)_to_check[@]}"; do
+  # whence -p ignores aliases, functions and builtins, so whence -w is the
+  # only lookup that sees one shadowing the name.
   _p_out=$(whence -p -- "$_name" 2>/dev/null)
   _w_out=$(whence -w -- "$_name" 2>/dev/null)
   print -r -- "WHENCE"$'\t'"${_name}"$'\t'"${_p_out:-<not-found>}"$'\t'"${_w_out:-<not-found>}"
 done
 ZSH_PROBE
 
-# Keep only tagged probe records, minus any trailing CR.
-clean_probe_output() {
+probe_records() {
+  local probe_out="$1"
   awk '
     BEGIN { n = split("GUARD PATHENTRY REQCOUNT OVERLAP_COUNT OVERLAPNAME WHENCE", tags, " ") }
     {
       line = $0
       sub(/\r$/, "", line)
       for (i = 1; i <= n; i++) {
-        pat = tags[i] "\t"
-        idx = index(line, pat)
-        if (idx == 1) { print line; next }
+        if (index(line, tags[i] "\t") == 1) { print line; next }
       }
     }
-  ' "$1"
+  ' "$probe_out"
 }
 
 # Without a TTY, interactive zsh prints this line twice because zle cannot
 # start. It is harmless, and the only stderr line ever filtered.
 BENIGN_ZLE_LINE="(eval):1: can't change option: zle"
-filter_benign_stderr() { # $1 = err file; prints only the UNEXPECTED lines
+unexpected_stderr_lines() {
+  local err_file="$1"
   awk -v benign="$BENIGN_ZLE_LINE" '
     { line = $0; sub(/\r$/, "", line) }
     line == benign { next }
     { print line }
-  ' "$1"
+  ' "$err_file"
 }
 
-# The first Nix-owned cargo on a probed shell's own PATH.
-find_nix_cargo_from_probe() { # $1 = probe .out file; prints the path or nothing
-  local d
-  while IFS= read -r d; do
-    if is_nix_owned_dir "$d" && [ -x "$d/cargo" ]; then
-      printf '%s\n' "$d/cargo"
+first_nix_cargo_on_probed_path() {
+  local probe_out="$1" dir
+  while IFS= read -r dir; do
+    if is_nix_owned_dir "$dir" && [ -x "$dir/cargo" ]; then
+      printf '%s\n' "$dir/cargo"
       return 0
     fi
-  done < <(clean_probe_output "$1" | awk -F'\t' '$1 == "PATHENTRY" { print $2 }')
+  done < <(probe_records "$probe_out" | awk -F'\t' '$1 == "PATHENTRY" { print $2 }')
   return 1
 }
 
-# Run every assertion for one already-captured (out, err) pair and fold any
-# failure into BASE_FAIL. $mode is one of -c/-lc/-ic/-lic; $session is
-# "clean" or "inherited" and also gates the guard-inheritance assertion
-# below (only meaningful for "inherited").
-process_shell_output() {
+check_shell_output() {
   local mode="$1" session="$2" out="$3" err="$4"
-  local had_fail=0 n_err _line name p w
+  local had_fail=0 n_err name resolved_path whence_kind
   local guard_nix_darwin="" guard_hm_sess="" guard_hm_zsh=""
   section "zsh ${mode}  (${session}, ${target_label})"
 
   local unexpected_err
-  unexpected_err=$(filter_benign_stderr "$err")
+  unexpected_err=$(unexpected_stderr_lines "$err")
   if [ -n "$unexpected_err" ]; then
     n_err=$(printf '%s\n' "$unexpected_err" | wc -l | tr -d ' ')
     bad "stderr not clean (${n_err} line(s)) -- printed verbatim:"
-    while IFS= read -r _line; do
-      printf '        %s\n' "$_line"
-    done <<<"$unexpected_err"
+    print_indented <<<"$unexpected_err"
     had_fail=1
   elif [ -s "$err" ]; then
     ok "stderr clean (only the documented no-TTY zle message, filtered)"
@@ -264,9 +234,9 @@ process_shell_output() {
         whence_w[$a]="$c"
         ;;
     esac
-  done < <(clean_probe_output "$out")
+  done < <(probe_records "$out")
 
-  # Inherited children must carry the parent's exported guards; without them
+  # Inherited children must carry the parent's exported guards. Without them
   # section B would quietly retest the clean case.
   info "guard vars: __NIX_DARWIN_SET_ENVIRONMENT_DONE=${guard_nix_darwin:-<unset>} __HM_SESS_VARS_SOURCED=${guard_hm_sess:-<unset>} __HM_ZSH_SESS_VARS_SOURCED=${guard_hm_zsh:-<unset>}"
   if [ "$session" = "inherited" ]; then
@@ -278,7 +248,6 @@ process_shell_output() {
     fi
   fi
 
-  # 1. No PATH entry appears twice.
   if [ "$path_count" -gt 0 ] && [ "${#repeats[@]}" -eq 0 ]; then
     ok "PATH: ${path_count} entries, no duplicates"
   else
@@ -293,36 +262,33 @@ process_shell_output() {
     had_fail=1
   fi
 
-  # 2. Required names resolve on PATH.
   for name in "${REQUIRED_NAMES[@]}"; do
-    p="${whence_p[$name]:-<not-found>}"
+    resolved_path="${whence_p[$name]:-<not-found>}"
     if [ "$name" = cargo ]; then
-      if [ "$p" = "$MBX_SHIM" ]; then
-        ok "required: cargo -> mbx shim ($p)"
+      if [ "$resolved_path" = "$MBX_SHIM" ]; then
+        ok "required: cargo -> mbx shim ($resolved_path)"
       else
-        bad "required: cargo -> '$p', expected mbx shim '$MBX_SHIM'"
+        bad "required: cargo -> '$resolved_path', expected mbx shim '$MBX_SHIM'"
         had_fail=1
       fi
-    elif [ "$p" != "<not-found>" ] && is_nix_owned_dir "$(dirname -- "$p")"; then
-      ok "required: $name -> $p (Nix-owned)"
+    elif is_nix_owned_path "$resolved_path"; then
+      ok "required: $name -> $resolved_path (Nix-owned)"
     else
-      bad "required: $name -> '$p', expected a Nix-owned directory"
+      bad "required: $name -> '$resolved_path', expected a Nix-owned directory"
       had_fail=1
     fi
   done
 
-  # 3. Every name found in both a Nix-owned and another dir resolves to the
-  # Nix copy (cargo: the mbx shim).
   if [ "$overlap_count" -eq 0 ]; then
     na "overlap: no overlaps tested"
   else
     local -a violations=()
     for name in ${overlap_names[@]+"${overlap_names[@]}"}; do
-      p="${whence_p[$name]:-<not-found>}"
+      resolved_path="${whence_p[$name]:-<not-found>}"
       if [ "$name" = cargo ]; then
-        [ "$p" = "$MBX_SHIM" ] || violations+=("$name -> $p")
-      elif [ "$p" = "<not-found>" ] || ! is_nix_owned_dir "$(dirname -- "$p")"; then
-        violations+=("$name -> $p")
+        [ "$resolved_path" = "$MBX_SHIM" ] || violations+=("$name -> $resolved_path")
+      elif ! is_nix_owned_path "$resolved_path"; then
+        violations+=("$name -> $resolved_path")
       fi
     done
     if [ "${#violations[@]}" -eq 0 ]; then
@@ -333,14 +299,13 @@ process_shell_output() {
     fi
   fi
 
-  # 4. Warn once per shadowed name. Intentional wrappers do not fail the run.
+  # Intentional wrappers shadow some names, so shadowing warns, never fails.
   if [ "${#whence_w[@]}" -gt 0 ]; then
     for name in "${!whence_w[@]}"; do
-      w="${whence_w[$name]}"
-      case "$w" in
-        *": command") ;;
-        "<not-found>"|*": none") ;;
-        *) warn "$name resolves via whence -p to '${whence_p[$name]:-<not-found>}', but the bare command is shadowed by ${w#*: }" ;;
+      whence_kind="${whence_w[$name]}"
+      case "$whence_kind" in
+        *": command"|"<not-found>"|*": none") ;;
+        *) warn "$name resolves via whence -p to '${whence_p[$name]:-<not-found>}', but the bare command is shadowed by ${whence_kind#*: }" ;;
       esac
     done
   fi
@@ -349,22 +314,25 @@ process_shell_output() {
   return 0
 }
 
-# ---------------------------------------------------------------------------
+# Interactive modes run without a pty so their stderr stays separate.
+# `script` would merge it into stdout and hide startup errors.
+run_in_clean_zsh() {
+  local mode="$1" script="$2" out="$3" err="$4"
+  env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" TERM=xterm-256color \
+    VSP_REQUIRED="${REQUIRED_NAMES[*]}" \
+    ${zdotdir_args[@]+"${zdotdir_args[@]}"} /bin/zsh "$mode" ". '$script'" \
+    >"$out" 2>"$err" </dev/null || true
+}
+
 section "=== A. Clean: fresh env -i process, all four zsh modes ==="
-# ---------------------------------------------------------------------------
 for mode in "${MODES[@]}"; do
   out="$WORKDIR/clean${mode}.out"
   err="$WORKDIR/clean${mode}.err"
-  env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" TERM=xterm-256color \
-    VSP_REQUIRED="${REQUIRED_NAMES[*]}" \
-    ${zdotdir_args[@]+"${zdotdir_args[@]}"} /bin/zsh "$mode" ". '$PROBE'" \
-    >"$out" 2>"$err" </dev/null || true
-  process_shell_output "$mode" "clean" "$out" "$err"
+  run_in_clean_zsh "$mode" "$PROBE" "$out" "$err"
+  check_shell_output "$mode" "clean" "$out" "$err"
 done
 
-# ---------------------------------------------------------------------------
 section "=== B. Inherited: children forked from one clean login session ==="
-# ---------------------------------------------------------------------------
 # Children run without env -i, so they inherit the login parent's exports,
 # including the Home Manager and nix-darwin guards.
 INH_PARENT="$WORKDIR/inh-parent.zsh"
@@ -375,26 +343,21 @@ zsh -ic  ". '$PROBE'" >"$WORKDIR/inh-ic.out"  2>"$WORKDIR/inh-ic.err"  </dev/nul
 zsh -lic ". '$PROBE'" >"$WORKDIR/inh-lic.out" 2>"$WORKDIR/inh-lic.err" </dev/null
 EOF
 
-env -i HOME="$HOME" USER="$USER" LOGNAME="$USER" TERM=xterm-256color \
-  VSP_REQUIRED="${REQUIRED_NAMES[*]}" \
-  ${zdotdir_args[@]+"${zdotdir_args[@]}"} /bin/zsh -lc ". '$INH_PARENT'" \
-  >"$WORKDIR/inh-parent.out" 2>"$WORKDIR/inh-parent.err" </dev/null || true
+run_in_clean_zsh -lc "$INH_PARENT" "$WORKDIR/inh-parent.out" "$WORKDIR/inh-parent.err"
 
 if [ -s "$WORKDIR/inh-parent.err" ]; then
   section "zsh -lc  (inherited parent, ${target_label})"
   bad "stderr not clean -- printed verbatim:"
-  while IFS= read -r _line; do printf '        %s\n' "$_line"; done <"$WORKDIR/inh-parent.err"
+  print_indented <"$WORKDIR/inh-parent.err"
   BASE_FAIL=1
 fi
 
 for mode in "${MODES[@]}"; do
   suffix="${mode#-}"
-  process_shell_output "$mode" "inherited" "$WORKDIR/inh-${suffix}.out" "$WORKDIR/inh-${suffix}.err"
+  check_shell_output "$mode" "inherited" "$WORKDIR/inh-${suffix}.out" "$WORKDIR/inh-${suffix}.err"
 done
 
-# ---------------------------------------------------------------------------
 section "=== mbx cargo-shim smoke test (clean login shell) ==="
-# ---------------------------------------------------------------------------
 # Never runs ~/.cargo/bin/cargo: rustup's proxy can reach the network and
 # install toolchains.
 MBX_VER_OUT="$WORKDIR/mbx-shim-version.out"
@@ -404,11 +367,7 @@ if [ -x "$MBX_SHIM" ]; then
     shim_ver=$(tr -d '\n' <"$MBX_VER_OUT")
     ok "mbx shim: '$MBX_SHIM --version' exits 0 ($shim_ver)"
 
-    NIX_CARGO=""
-    if [ -f "$WORKDIR/clean-lc.out" ]; then
-      NIX_CARGO=$(find_nix_cargo_from_probe "$WORKDIR/clean-lc.out" || true)
-    fi
-
+    NIX_CARGO=$(first_nix_cargo_on_probed_path "$WORKDIR/clean-lc.out" || true)
     if [ -z "$NIX_CARGO" ]; then
       na "mbx delegate: unverified -- no Nix-owned cargo found on the clean -lc shell's own PATH"
     else
@@ -433,22 +392,18 @@ else
   BASE_FAIL=1
 fi
 
-# ---------------------------------------------------------------------------
 section "=== Project dev-shell case (own section, own exit-code bit) ==="
-# ---------------------------------------------------------------------------
-# nix-config's devShell is expected to put its own tools ahead of the base
-# profile -- that is the devShell doing its job, not a base-PATH failure, so
-# it never sets BASE_FAIL, only PROJECT_FAIL.
+# The devShell putting its own tools ahead of the base profile is intended
+# (docs/adr/0008-reproducible-dev-envs-and-cross-platform-purity.md), so it is not a base-PATH failure.
 REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 if command -v nix >/dev/null 2>&1; then
   DS_OUT="$WORKDIR/devshell.out"
   DS_ERR="$WORKDIR/devshell.err"
   DS_TIMEOUT="${VERIFY_SESSION_PATH_DEVSHELL_TIMEOUT:-90}"
 
-  # Plain sh reads no startup files. A zsh probe reads /etc/zshenv, which
-  # resets PATH unless the caller exported nix-darwin's guard. Bounded: a
-  # first run may fetch, and a stalled fetch must fail this section rather
-  # than hang the script.
+  # Plain sh reads no startup files. A zsh probe reads /etc/zshenv, which resets PATH unless
+  # the caller exported nix-darwin's guard. An uncached run fetches from the network, and the
+  # timeout keeps a stalled fetch from hanging the script.
   nix develop "$REPO_ROOT" -c sh -c 'command -v just' >"$DS_OUT" 2>"$DS_ERR" </dev/null &
   ds_pid=$!
   ds_waited=0
@@ -477,14 +432,13 @@ if command -v nix >/dev/null 2>&1; then
     esac
   else
     bad "devShell: 'nix develop $REPO_ROOT -c sh -c command -v just' failed -- stderr printed verbatim:"
-    while IFS= read -r _dsline; do printf '        %s\n' "$_dsline"; done <"$DS_ERR"
+    print_indented <"$DS_ERR"
     PROJECT_FAIL=1
   fi
 else
   na "devShell: nix not on PATH, cannot exercise the project dev shell"
 fi
 
-# ---------------------------------------------------------------------------
 printf '\n%s: %d passed, %d failed, %d skipped, %d warned\n' "$(basename "$0")" "$pass" "$fail" "$skip" "$warned"
 
 exit_code=0

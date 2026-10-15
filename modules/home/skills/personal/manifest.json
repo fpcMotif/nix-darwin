@@ -812,6 +812,11 @@
     ".gemini/config/skills/specfit-pdf-extractor",
     ".omp/agent/managed-skills/specfit-pdf-extractor"
   ],
+  "ste80": [
+    ".agents/skills/ste80",
+    ".gemini/config/skills/ste80",
+    ".omp/agent/managed-skills/ste80"
+  ],
   "study-first-site-parity": [
     ".agents/skills/study-first-site-parity",
     ".gemini/config/skills/study-first-site-parity",

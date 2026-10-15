@@ -1,9 +1,3 @@
-# Unit tests for the custom package overlay in pkgs/default.nix.
-#
-# Verifies the overlay applies cleanly and exposes the expected `martin.*`
-# package attributes. We only check that the attributes exist and evaluate
-# (drvPath); we do not build them, so the test stays fast and runs on any
-# platform.
 { inputs, system, pkgs, lib, ... }:
 
 let

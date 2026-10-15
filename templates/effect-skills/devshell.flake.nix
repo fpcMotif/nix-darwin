@@ -1,17 +1,8 @@
 {
   description = "Per-project devShell that loads the Effect-TS agent skill into this repo's picker dirs";
 
-  # Copy this file to an Effect repo as `flake.nix` and add `use flake` to
-  # `.envrc` (direnv). On `nix develop` / direnv entry the Effect-TS SKILL.md is
-  # copy-tree'd into THIS repo's ./.claude/skills + ./.agents/skills, so Claude
-  # Code / Codex / Cursor launched from the project see effect-ts — and only
-  # there. It is intentionally NOT in the global Nix bundle (see
-  # modules/home/claude.nix `enableAll = [ ]`): effect-ts is dependency-scoped.
-  #
-  # Mirrors agent-skills-nix's own examples/devshell. The copy-tree install
-  # refuses to clobber a non-store dir unless AGENT_SKILLS_FORCE=1, so it won't
-  # stomp hand-authored repo skills.
-
+  # Scope Effect-TS skills to Effect repos via direnv (`use flake`) instead of
+  # bundling them globally, and skip non-store dirs unless AGENT_SKILLS_FORCE=1.
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";

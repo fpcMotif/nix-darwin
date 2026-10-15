@@ -1,25 +1,3 @@
-# fff-mcp — prebuilt binary release of the fff MCP server (frecency-ranked,
-# git-aware file search / grep for AI agents: https://github.com/dmtrKovalenko/fff).
-#
-# Why prebuilt, not built from source: fff-mcp is one crate inside a large
-# multi-crate Rust monorepo (Neovim plugin + Lua/mlua FFI + N language
-# bindings). Vendoring the whole workspace for one ~7MB binary is the same
-# "recompile the world for one tool" problem codex.nix / droid.nix /
-# zed-nightly-bin.nix already solve by fetching the maintainer's own
-# release asset instead.
-#
-# Registered with Claude Code via the
-# `claudeMcpAlwaysLoaded` activation script in
-# modules/home/claude.nix (shells out to `claude mcp add` — the only way to
-# write ~/.claude.json's mcpServers without risking its CLI-managed schema,
-# same reasoning as claudeDesktopMcpScaffold in lsp.nix).
-#
-# Note: upstream renamed the repo from dmtrKovalenko/fff.nvim to
-# dmtrKovalenko/fff (old URLs still 301-redirect, but we point at the
-# canonical name now).
-#
-# Update: run `scripts/update-fff-mcp.sh`.
-
 { lib
 , stdenvNoCC
 , fetchurl
@@ -61,7 +39,6 @@ stdenvNoCC.mkDerivation {
     inherit (source) hash;
   };
 
-  # Releases publish the bare executable, not an archive — nothing to unpack.
   dontUnpack = true;
   dontStrip = true;
 

@@ -1,14 +1,3 @@
-# opencode CLI / TUI (binary `opencode`).
-#
-# sst/opencode ships per-platform Bun-compiled standalone binaries as
-# release assets on https://github.com/sst/opencode/releases. We deliberately
-# do NOT use buildNpmPackage on `opencode-ai`: that npm bootstrapper just
-# downloads the same Bun binary at install time, which doesn't compose with
-# Nix's sandboxed builds.
-#
-# Bumping: scripts/update-opencode.sh polls the GitHub releases API for the
-# latest tag and refreshes per-platform hashes via the fake-hash dance.
-
 { lib
 , stdenvNoCC
 , fetchzip

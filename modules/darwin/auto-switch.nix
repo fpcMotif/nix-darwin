@@ -1,19 +1,5 @@
 { config, lib, pkgs, currentSystemUser, currentSystemUserHome, ... }:
 
-# Unattended `darwin-rebuild switch` to the latest origin/main. The daily
-# auto-update workflow keeps origin/main current; this daemon is what actually
-# lands those bumps on THIS machine without a manual `just switch`.
-#
-# Safety model:
-#   * Builds straight from `refs/remotes/origin/main` (a pinned rev), so the
-#     local working tree is never touched — no merge, no clobber of uncommitted
-#     work or local-only commits, no fight with the autoresearch loop.
-#   * `git fetch` and `git archive` run as the repo owner. Root evaluates an
-#     exact archived snapshot, never the user-owned Git directory. This avoids
-#     Nix/libgit2's cross-owner rejection.
-#   * A last-applied-rev marker makes a run a no-op when origin hasn't moved.
-#   * RunAtLoad = false: a switch reloads launchd daemons, so running at load
-#     would recurse. The calendar interval is the only trigger.
 let
   cfg = config.martin.autoSwitch;
   logOut = "/var/log/nix-auto-switch.out.log";
@@ -102,6 +88,7 @@ in
   config = lib.mkIf cfg.enable {
     launchd.daemons.nix-auto-switch.serviceConfig = {
       ProgramArguments = [ (lib.getExe switchScript) ];
+      # A switch reloads launchd daemons, so RunAtLoad = true would recurse.
       RunAtLoad = false;
       StartCalendarInterval = [{
         Hour = cfg.hour;

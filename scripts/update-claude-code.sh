@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# Bump the sadjow/claude-code-nix flake input.
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
-before=$(jq -r '.nodes."claude-code".locked.rev // ""' flake.lock)
+locked_rev() {
+  jq -r '.nodes."claude-code".locked.rev // ""' flake.lock
+}
+
+before=$(locked_rev)
 nix flake update claude-code 2>&1 | tail -50
-after=$(jq -r '.nodes."claude-code".locked.rev // ""' flake.lock)
+after=$(locked_rev)
 
 if [ "$before" = "$after" ]; then
   echo "claude-code already at $after"

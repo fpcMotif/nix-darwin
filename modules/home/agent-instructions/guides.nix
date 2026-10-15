@@ -1,4 +1,4 @@
-{ lib, pkgs, workspaceBackend ? "worktrunk", docLock ? true }:
+{ lib, pkgs, startupSections ? [ ], developmentSections ? [ ] }:
 
 let
   renderAgentGuide = import ./render-agent-guide.nix { inherit lib; };
@@ -7,12 +7,18 @@ let
     development = ./shared/development.md;
     qualityAndStyle = ./shared/quality-and-style.md;
     humanDocuments = ./shared/human-documents.md;
-    docLock = ./shared/doc-lock.md;
-    workspaces = {
-      worktrunk = ./shared/workspaces-worktrunk.md;
-      dojjo = ./shared/workspaces-dojjo.md;
-    }.${workspaceBackend};
+    plainEnglish = ./shared/plain-english.md;
   };
+  languageNames = [ "typescript" "python" "go" "rust" ];
+  languageGuide = guidanceDir: language:
+    let
+      source = ./shared/languages + "/${language}.md";
+    in
+    {
+      inherit source;
+      target = "${guidanceDir}/languages/${language}.md";
+      content = builtins.readFile source;
+    };
   mkGuide = name: target: adapter: sections:
     let
       content = renderAgentGuide ((lib.optional (adapter != null) adapter) ++ sections);
@@ -28,6 +34,7 @@ let
     , developmentTarget
     , developmentAdapter ? null
     , humanDocumentsTarget ? null
+    , plainEnglish ? true
     }:
     let
       host =
@@ -35,11 +42,10 @@ let
           startup = mkGuide "${name}-agents.md" startupTarget startupAdapter ([
             shared.workingContract
             shared.qualityAndStyle
-          ] ++ lib.optional docLock shared.docLock);
-          development = mkGuide "${name}-development.md" developmentTarget developmentAdapter [
-            shared.development
-            shared.workspaces
-          ];
+          ] ++ lib.optional plainEnglish shared.plainEnglish ++ startupSections);
+          development = mkGuide "${name}-development.md" developmentTarget developmentAdapter
+            ([ shared.development ] ++ developmentSections);
+          languages = lib.genAttrs languageNames (languageGuide (builtins.dirOf developmentTarget));
         }
         // lib.optionalAttrs (humanDocumentsTarget != null) {
           humanDocuments = {
@@ -51,6 +57,7 @@ let
     in
     host // {
       guides = [ host.startup host.development ]
+      ++ lib.attrValues host.languages
       ++ lib.optionals (host ? humanDocuments) [ host.humanDocuments ];
     };
   hosts = {
@@ -84,7 +91,18 @@ let
       developmentTarget = ".claude/guidance/development.md";
       developmentAdapter = ../claude/development.md;
       humanDocumentsTarget = ".claude/guidance/human-documents.md";
+      plainEnglish = false;
     };
+    # Antigravity Desktop and agy share this global rules file. It points at
+    # the general host's guidance, so only the startup file is new.
+    antigravity =
+      let
+        startup = hosts.general.startup // { target = ".gemini/config/AGENTS.md"; };
+      in
+      hosts.general // {
+        inherit startup;
+        guides = [ startup ];
+      };
   };
   targets = lib.concatLists (lib.mapAttrsToList
     (_: host: map (guide: guide.target) host.guides)

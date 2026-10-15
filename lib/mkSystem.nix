@@ -19,12 +19,8 @@ let
     inputs.home-manager.${if isDarwin then "darwinModules" else "nixosModules"}.home-manager;
   currentSystemUserHome =
     if isDarwin then "/Users/${user}" else "/home/${user}";
-  # `hostname` is the single source of truth for the OS host name (and, on
-  # darwin, localHostName — what `darwin-rebuild --flake` keys off of when no
-  # explicit #name is passed). The flake attribute name is a separate literal
-  # in flake.nix that must be kept equal to `hostname` by convention; nothing
-  # structural prevents divergence, so the mksystem-test
-  # `*-host-name-matches-flake-attr` assertions check that equality per host.
+  # darwin-rebuild keys off localHostName when no #name is passed.
+  # Keep the flake attribute name in flake.nix equal to hostname.
   hostNameModule =
     if isDarwin then {
       networking = {

@@ -3,11 +3,8 @@
 let
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
 
-  # PATH tiers (GLOSSARY.md), in order: an earlier tier wins every command name
-  # it shares with a later one. The Nix-profile entries repeat nix-darwin's
-  # base PATH on purpose: their earlier position keeps the Nix copies of
-  # cargo, rustc, bun, and others ahead of user-installed ones. Check with
-  # `just verify-path`.
+  # Repeat nix-darwin's base PATH entries ahead of userInstallers so Nix-built
+  # toolchains win over user-installed copies. Verify with just verify-path.
   pathTiers = {
     # mbx's cargo shim, so plain `cargo` runs through mbx's build cache
     # (docs/adr/0016).

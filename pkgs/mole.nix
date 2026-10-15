@@ -1,15 +1,3 @@
-# tw93/Mole — deep-clean / disk-analyzer / live-status TUI for macOS.
-#
-# Mole is a bash-driven CLI that sources `lib/core/*.sh` from $SCRIPT_DIR and
-# `exec`s sibling subcommand scripts under `bin/`. Two of those subcommands
-# (`analyze`, `status`) shell out to bundled Go binaries at `bin/analyze-go`
-# and `bin/status-go`.
-#
-# To stay 100% offline-evaluatable and avoid Mole's runtime self-update
-# (which writes into $SCRIPT_DIR), we ship the upstream tag tarball plus the
-# matching prebuilt arm64 Go binaries from the same release. The whole tree
-# lands in $out/share/mole; tiny wrappers in $out/bin re-exec into it so
-# $BASH_SOURCE / $SCRIPT_DIR resolve back to the right place.
 { lib
 , stdenvNoCC
 , fetchzip

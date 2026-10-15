@@ -1,22 +1,3 @@
-# Hunk (binary `hunk`) — review-first terminal diff viewer for agent-authored
-# changesets (modem-dev/hunk). Agents steer an open window with
-# `hunk session ...` and load its bundled skill from `hunk skill path`;
-# CLAUDE.md's Git section routes human review of agent changes here.
-#
-# Why a prebuilt release and not nixpkgs `hunk`: nixpkgs compiles it with
-# `bun build --compile`, and the cached aarch64-darwin output (0.20.1) dies
-# with SIGKILL on launch here (`codesign --verify`: "code or signature have
-# been modified"). The upstream release asset is the same kind of Bun binary
-# but launches, and it is what `hunk.dev/install.sh` and Homebrew ship.
-#
-# Layout: the tarball is kept whole under libexec because the binary resolves
-# its real path and looks for `skills/<name>/SKILL.md` beside itself; bin/hunk
-# is a symlink into it. Stripping would rewrite the Mach-O and break the
-# signature, so the bytes stay as downloaded.
-#
-# Bumping: scripts/update-hunk.sh polls the GitHub releases API (stable
-# channel, so betas are skipped) and refreshes the hash.
-
 { lib
 , stdenvNoCC
 , fetchurl

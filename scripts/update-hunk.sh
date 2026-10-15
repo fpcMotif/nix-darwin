@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Bump the prebuilt Hunk release (pkgs/hunk-bin.nix) to the latest stable
-# modem-dev/hunk tag. Stable channel only: betas stay behind.
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 

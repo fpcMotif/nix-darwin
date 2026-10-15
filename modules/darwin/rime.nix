@@ -28,18 +28,12 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Squirrel.app belongs in /Library/Input Methods. nix-darwin's
-    # `system.activationScripts.applications` only links *.app from
-    # environment.systemPackages into /Applications, so we install
-    # Squirrel.app into /Library/Input Methods explicitly.
-    # Gated by manageApp too: with a manually-built fork installed, we don't
-    # want a second, vanilla Squirrel.app built and symlinked into /Applications.
+    # Gate on manageApp so a manually built Squirrel fork is not shadowed by a
+    # second copy in /Applications.
     environment.systemPackages = lib.optionals cfg.manageApp [ pkgs.martin.squirrel ];
 
-    # nix-darwin only runs a fixed list of activation script names; arbitrary
-    # keys are silently dropped. We piggy-back on `postActivation` so Squirrel
-    # is on disk before the per-user `home.activation.rimeUserConfig` step
-    # tries to talk to it.
+    # nix-darwin ignores custom activation script names, and Squirrel must exist
+    # in /Library/Input Methods before home.activation.rimeUserConfig reloads it.
     system.activationScripts.postActivation.text = lib.mkAfter (lib.optionalString cfg.manageApp ''
       input_methods_dir="/Library/Input Methods"
       target="$input_methods_dir/Squirrel.app"

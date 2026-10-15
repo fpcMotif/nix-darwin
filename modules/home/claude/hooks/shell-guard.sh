@@ -1,58 +1,45 @@
 #!/bin/bash
-# shell-guard — PreToolUse(Bash): routes Python to uv, file changes to the Edit/Write tools, file
-# reads to the tooling table in CLAUDE.md (bat -pp --line-range, rg, fd), and git writes in a jj
-# workspace to jj.
-# The desktop bypass-mode system prompt steers the model toward heredocs, sed -i, and inline python for
-# file changes; measured in transcripts those paths errored 4-38% of the time against 0-1.5% for Edit,
-# and 33 of 44 inline python edits had no guard against a silently missed anchor (str.replace no-op).
-# Each deny names the replacement. Fail-open on any error.
-# Disable a group: UV_GUARD_OFF=1 (python), EDIT_GUARD_OFF=1 (file changes), TOOL_GUARD_OFF=1 (cat/sed/find, PIPESTATUS in zsh),
-# JJ_GUARD_OFF=1 (git writes in a jj workspace).
 command -v jq >/dev/null 2>&1 || exit 0
 INPUT=$(cat 2>/dev/null) || exit 0
 CMD=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null) || exit 0
 [ -z "$CMD" ] && exit 0
 deny() { printf '%s\n' "$1" >&2; exit 2; }
 
-# BODY = the command with heredoc bodies removed, so text inside a document never reads as a command.
-BODY=$(printf '%s\n' "$CMD" | awk '
-  inhd { line=$0; sub(/^\t+/, "", line); if (line == term) inhd=0; next }
+CMD_WITHOUT_HEREDOCS=$(printf '%s\n' "$CMD" | awk '
+  in_heredoc { line=$0; sub(/^\t+/, "", line); if (line == term) in_heredoc=0; next }
   match($0, /<<-?[[:space:]]*["'"'"']?[A-Za-z_][A-Za-z0-9_]*/) {
-    term=substr($0, RSTART, RLENGTH); sub(/<<-?[[:space:]]*["'"'"']?/, "", term); inhd=1; print; next }
+    term=substr($0, RSTART, RLENGTH); sub(/<<-?[[:space:]]*["'"'"']?/, "", term); in_heredoc=1; print; next }
   { print }')
 
-# A command position: line start, or after ; && || | ( $( `, with wrappers and VAR=x prefixes stripped.
-# Separators count only outside quotes, so `rg "ls|find"` stays one segment; $( and ` still open a
-# command inside double quotes. Newlines inside quotes become spaces; a # comment runs to end of line.
-segments() {
-  printf '%s\n' "$BODY" | awk -v q="'" -v blank="${1:-}" '
+command_segments() {
+  printf '%s\n' "$CMD_WITHOUT_HEREDOCS" | awk -v q="'" -v blank="${1:-}" '
     { s = s $0 "\n" }
     END {
-      n = length(s); d = 0; st[0] = "N"; prev = "\n"
+      n = length(s); depth = 0; nest[0] = "N"; prev = "\n"
       for (i = 1; i <= n; i++) {
-        c = substr(s, i, 1); c2 = substr(s, i, 2)
-        if (st[d] == "D") {
-          if (c == "\\") { printf "%s", (blank ? "__" : c2); i++ }
-          else if (c == "\"") { d--; printf "%s", c }
-          else if (c2 == "$(") { st[++d] = "P"; printf "\n"; i++ }
-          else if (c == "`") { st[++d] = "B"; printf "\n" }
+        c = substr(s, i, 1); pair = substr(s, i, 2)
+        if (nest[depth] == "D") {
+          if (c == "\\") { printf "%s", (blank ? "__" : pair); i++ }
+          else if (c == "\"") { depth--; printf "%s", c }
+          else if (pair == "$(") { nest[++depth] = "P"; printf "\n"; i++ }
+          else if (c == "`") { nest[++depth] = "B"; printf "\n" }
           else printf "%s", (blank ? "_" : c == "\n" ? " " : c)
           continue
         }
-        if (c == "\\") { printf "%s", (blank ? "\\_" : c2); i++ }
-        else if (c == q || c2 == "$" q) {
+        if (c == "\\") { printf "%s", (blank ? "\\_" : pair); i++ }
+        else if (c == q || pair == "$" q) {
           j = i + (c == q ? 1 : 2)
           while (j <= n && substr(s, j, 1) != q) j += (c != q && substr(s, j, 1) == "\\") ? 2 : 1
           t = substr(s, i, j - i + 1); gsub(/\n/, " ", t); if (blank) gsub(/./, "_", t); printf "%s", t; i = j
         }
-        else if (c == "\"") { st[++d] = "D"; printf "%s", c }
+        else if (c == "\"") { nest[++depth] = "D"; printf "%s", c }
         else if (c == "#" && prev ~ /[[:space:];&|(`]/) { while (i < n && substr(s, i + 1, 1) != "\n") i++ }
-        else if (c2 == "&&" || c2 == "||" || c2 == "$(") { if (c2 == "$(") st[++d] = "P"; printf "\n"; i++ }
+        else if (pair == "&&" || pair == "||" || pair == "$(") { if (pair == "$(") nest[++depth] = "P"; printf "\n"; i++ }
         else if (c == "|" || c == ";") printf "\n"
-        else if (c == "(") { st[++d] = "P"; printf "\n" }
-        else if (c == ")" && st[d] == "P") { d--; printf "%s", c }
-        else if (c == "`" && st[d] == "B") { d--; printf "%s", c }
-        else if (c == "`") { st[++d] = "B"; printf "\n" }
+        else if (c == "(") { nest[++depth] = "P"; printf "\n" }
+        else if (c == ")" && nest[depth] == "P") { depth--; printf "%s", c }
+        else if (c == "`" && nest[depth] == "B") { depth--; printf "%s", c }
+        else if (c == "`") { nest[++depth] = "B"; printf "\n" }
         else printf "%s", c
         prev = c
       }
@@ -60,56 +47,65 @@ segments() {
     | sed -E 's/^[[:space:]]+//; s/^((sudo|time|nohup|exec|command|env|xargs)[[:space:]]+|[A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*//'
 }
 
+# A str.replace whose anchor is missing edits nothing and still reports success.
+# In transcripts, 33 of 44 inline python edits had no check for that.
+inline_code_writes_file() {
+  printf '%s' "$CMD" | grep -Eq '<<|[[:space:]]-c[[:space:]]|[[:space:]]-e[[:space:]]' \
+    && printf '%s' "$CMD" | grep -Eq "open\([^)]*,[[:space:]]*(mode[[:space:]]*=[[:space:]]*)?['\"][wax]|write_text\(|writelines\(|\.write\(|writeFile"
+}
+
+# BSD sed flags differ, and the edit is unreviewable before it lands.
+uses_in_place_sed() {
+  printf '%s' "$CMD_WITHOUT_HEREDOCS" | grep -Eq '(^|[;&|(`[:space:]])sed[[:space:]]+(-[a-zA-Z]*i|--in-place)'
+}
+
+heredoc_writes_file() {
+  printf '%s' "$CMD" | grep -Eq '<<' \
+    && command_segments blank-quoted | grep -E '^(cat|tee)([[:space:]]|$)' | grep -E '<<' \
+       | sed -E 's#[0-9]*>>?[[:space:]]*/dev/null##g' \
+       | grep -Eq '(>>?[[:space:]]*[^&[:space:]>]|^tee[[:space:]]+(-a[[:space:]]+)?[^-[:space:]<])'
+}
+
+echo_writes_file() {
+  command_segments blank-quoted | grep -Eq '(^|[&[:space:]])(echo|printf)[[:space:]][^&]*>>?[[:space:]]*([^&[:space:]>/]|/(Users|home|private|tmp|var|opt|etc)/)'
+}
+
+# The bypass-mode system prompt steers toward heredocs, sed -i, and inline python for file changes.
+# In transcripts those errored 4-38% of the time against 0-1.5% for Edit.
 if [ -z "${EDIT_GUARD_OFF:-}" ]; then
-  # 1. Inline code (stdin heredoc or -c) that writes a file: an unanchored str.replace edits nothing and reports success.
-  if printf '%s' "$CMD" | grep -Eq '<<|[[:space:]]-c[[:space:]]|[[:space:]]-e[[:space:]]' \
-     && printf '%s' "$CMD" | grep -Eq "open\([^)]*,[[:space:]]*(mode[[:space:]]*=[[:space:]]*)?['\"][wax]|write_text\(|writelines\(|\.write\(|writeFile"; then
+  if inline_code_writes_file; then
     deny "shell-guard: change a file with the Edit tool (exact old_string -> new_string; it fails loudly on a missed anchor, replace_all for every occurrence). Create a file with the Write tool. Inline scripts that call open(...,'w') or .write() are denied."
   fi
-
-  # 2. sed -i: BSD sed flags differ, and the edit is unreviewable before it lands.
-  if printf '%s' "$BODY" | grep -Eq '(^|[;&|(`[:space:]])sed[[:space:]]+(-[a-zA-Z]*i|--in-place)'; then
+  if uses_in_place_sed; then
     deny "shell-guard: in-place sed is denied (16-38% error rate in your transcripts). Use the Edit tool: old_string -> new_string, replace_all: true for every occurrence."
   fi
-
-  # 3. A heredoc redirected into a file (cat > f <<EOF, cat <<EOF > f, tee f <<EOF): the content is authored in the command.
-  if printf '%s' "$CMD" | grep -Eq '<<' \
-     && segments blank-quoted | grep -E '^(cat|tee)([[:space:]]|$)' | grep -E '<<' \
-        | sed -E 's#[0-9]*>>?[[:space:]]*/dev/null##g' \
-        | grep -Eq '(>>?[[:space:]]*[^&[:space:]>]|^tee[[:space:]]+(-a[[:space:]]+)?[^-[:space:]<])'; then
+  if heredoc_writes_file; then
     deny "shell-guard: create the file with the Write tool (content lands verbatim, no heredoc quoting). Change lines with the Edit tool. A heredoc redirected into a file is denied."
   fi
-
-  # 4. echo/printf of literal text into a file (> or >>): the model authored the text, so Write or Edit carries it.
-  if segments blank-quoted | grep -Eq '(^|[&[:space:]])(echo|printf)[[:space:]][^&]*>>?[[:space:]]*([^&[:space:]>/]|/(Users|home|private|tmp|var|opt|etc)/)'; then
+  if echo_writes_file; then
     deny "shell-guard: append with the Edit tool (old_string = the current last line, new_string = that line plus the addition) or create the file with the Write tool. echo/printf into a file is denied."
   fi
 fi
 
-# The jj group follows the working directory: the hook's cwd, then each `cd DIR`, `z NAME`, and
-# `git -C DIR`. `z` mirrors the function in shell/zoxide.nix: no argument is ~, `-` is unknown, and
-# anything else is `zoxide query -- ARGS`. A path it cannot resolve (a variable, `cd -`, no zoxide
-# match) clears it, so the check fails open.
-DIR=$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null); [ -z "$DIR" ] && DIR=$(pwd -P)
-resolve() {
-  p=$2; p=${p#[\"\']}; p=${p%[\"\']}
-  case $p in
-    '~'|'~/'*) p=$HOME${p#\~} ;;
-    '$HOME'|'$HOME/'*) p=$HOME${p#\$HOME} ;;
+WORK_DIR=$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null); [ -z "$WORK_DIR" ] && WORK_DIR=$(pwd -P)
+resolve_dir() {
+  local base=$1 path=$2
+  path=${path#[\"\']}; path=${path%[\"\']}
+  case $path in
+    '~'|'~/'*) path=$HOME${path#\~} ;;
+    '$HOME'|'$HOME/'*) path=$HOME${path#\$HOME} ;;
     *'$'*|*'`'*|-) return ;;
     /*) ;;
-    *) [ -n "$1" ] || return; p=$1/$p ;;
+    *) [ -n "$base" ] || return; path=$base/$path ;;
   esac
-  (cd "$p" 2>/dev/null && pwd -P)
+  (cd "$path" 2>/dev/null && pwd -P)
 }
-in_jj() {
-  d=$1
-  while [ -n "$d" ] && [ "$d" != / ]; do [ -d "$d/.jj" ] && return 0; [ -e "$d/.git" ] && return 1; d=${d%/*}; done
+in_jj_workspace() {
+  local dir=$1
+  while [ -n "$dir" ] && [ "$dir" != / ]; do [ -d "$dir/.jj" ] && return 0; [ -e "$dir/.git" ] && return 1; dir=${dir%/*}; done
   return 1
 }
 
-# 5. Per command position: bare python/pip (uv group), cat/sed/find (tool group), and git writes in a
-# jj workspace (jj group). jj's colocated contract: read-only git is safe; a git write desyncs @.
 while IFS= read -r seg; do
   case "${seg%%[[:space:]]*}" in
     python|python[23]|python[23].[0-9]*|*/python|*/python[23]|*/python[23].[0-9]*|pip|pip3|pip3.[0-9]*|virtualenv|pipenv|poetry)
@@ -124,38 +120,39 @@ while IFS= read -r seg; do
       [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: in-place awk is denied. A file change: the Edit tool; a rule across files: 'sg -p PAT -r REPL --lang X DIR' then -U." ;;
   esac
   [ -n "${JJ_GUARD_OFF:-}" ] && continue
-  read -r -a w <<<"$seg"
-  case "${w[0]}" in
-    cd) DIR=$(resolve "$DIR" "${w[1]:-$HOME}") ;;
+  read -r -a words <<<"$seg"
+  case "${words[0]}" in
+    cd) WORK_DIR=$(resolve_dir "$WORK_DIR" "${words[1]:-$HOME}") ;;
     z)
-      case "${#w[@]}:${w[1]:-}" in
-        1:) DIR=$HOME ;;
-        2:-) DIR= ;;
-        *) DIR=$(zoxide query -- "${w[@]:1}" 2>/dev/null) ;;
+      # Mirrors the z function in shell/zoxide.nix.
+      case "${#words[@]}:${words[1]:-}" in
+        1:) WORK_DIR=$HOME ;;
+        2:-) WORK_DIR= ;;
+        *) WORK_DIR=$(zoxide query -- "${words[@]:1}" 2>/dev/null) ;;
       esac ;;
     git)
-      gdir=$DIR; i=1
-      while [ "$i" -lt "${#w[@]}" ]; do
-        case "${w[$i]}" in
-          -C) gdir=$(resolve "$gdir" "${w[$((i + 1))]}"); i=$((i + 2)) ;;
+      git_dir=$WORK_DIR; i=1
+      while [ "$i" -lt "${#words[@]}" ]; do
+        case "${words[$i]}" in
+          -C) git_dir=$(resolve_dir "$git_dir" "${words[$((i + 1))]}"); i=$((i + 2)) ;;
           -c|--git-dir|--work-tree|--namespace) i=$((i + 2)) ;;
           -*) i=$((i + 1)) ;;
           *) break ;;
         esac
       done
-      case "${w[$i]:-}" in
+      case "${words[$i]:-}" in
         add|commit|checkout|switch|stash|reset|restore|rebase|merge|cherry-pick|revert|pull|am|rm|mv)
-          in_jj "$gdir" && deny "shell-guard: '$gdir' is a jj workspace, and 'git ${w[$i]}' desyncs jj's working copy. Use jj: add -> nothing (jj tracks every file); commit -> 'jj commit -m MSG'; checkout/switch -> 'jj new REV' or 'jj edit REV'; stash -> 'jj new @-'; reset/restore -> 'jj restore'; rebase -> 'jj rebase'; merge -> 'jj new A B'; pull -> 'jj git fetch'. Read-only git (log, show, diff, blame) stays allowed. The jj skill has the rest." ;;
+          in_jj_workspace "$git_dir" && deny "shell-guard: '$git_dir' is a jj workspace, and 'git ${words[$i]}' desyncs jj's working copy. Use jj: add -> nothing (jj tracks every file); commit -> 'jj commit -m MSG'; checkout/switch -> 'jj new REV' or 'jj edit REV'; stash -> 'jj new @-'; reset/restore -> 'jj restore'; rebase -> 'jj rebase'; merge -> 'jj new A B'; pull -> 'jj git fetch'. Read-only git (log, show, diff, blame) stays allowed. The jj skill has the rest." ;;
       esac ;;
   esac
 done <<EOF
-$(segments)
+$(command_segments)
 EOF
 
-# 6. PIPESTATUS under zsh (the Bash tool runs $SHELL): zsh spells it pipestatus and counts from 1, so
-# ${PIPESTATUS[0]} expands to nothing and a failed build reads as an empty status.
+# The Bash tool runs $SHELL. zsh spells it pipestatus and counts from 1, so ${PIPESTATUS[0]} expands
+# to nothing and a failed build reads as an empty status.
 if [ -z "${TOOL_GUARD_OFF:-}" ] && [ "${SHELL##*/}" = zsh ] \
-   && printf '%s' "$BODY" | sed -E "s/'[^']*'//g" | grep -q 'PIPESTATUS'; then
+   && printf '%s' "$CMD_WITHOUT_HEREDOCS" | sed -E "s/'[^']*'//g" | grep -q 'PIPESTATUS'; then
   deny "shell-guard: the Bash tool runs zsh, where PIPESTATUS is unset. Use \${pipestatus[1]} for the first command's status (zsh counts from 1), or drop the pipe and read \$?."
 fi
 exit 0

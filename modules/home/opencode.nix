@@ -1,11 +1,5 @@
 { pkgs, lib, config, ... }:
 
-# opencode CLI / TUI. Nix-installed; we expose a stable user-PATH symlink so
-# macOS TCC and editor integrations stay anchored across store-path churn.
-# Config lives at `~/.config/opencode/opencode.json` — managed declaratively
-# here, but kept mutable so opencode itself can write transient runtime state
-# (auth tokens, cached models) without fighting Nix.
-
 let
   cfg = {
     "$schema" = "https://opencode.ai/config.json";
@@ -15,6 +9,7 @@ let
   };
 in
 {
+  # Keep a stable user-PATH symlink so macOS TCC grants survive store-path updates.
   home.file.".local/bin/opencode".source =
     pkgs.martin.opencode + "/bin/opencode";
 

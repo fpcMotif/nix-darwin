@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-[ -n "${DOC_LOCK_OFF:-}" ] && exit 0
+[ -n "${DOC_LOCK_OFF:-}" ] && [ "${1:-}" != parse ] && exit 0
 
 grants="${XDG_STATE_HOME:-$HOME/.local/state}/doc-lock"
 baselines="$grants/baseline"
@@ -79,26 +79,31 @@ def report($lines):
 '
 
 scan() {
+  local lang=$1
+  shift
   local -a kinds
-  case $1 in
+  case $lang in
     rust | java) kinds=(line_comment block_comment) ;;
     kotlin) kinds=(line_comment multiline_comment) ;;
     swift) kinds=(comment multiline_comment) ;;
     scala) kinds=(comment block_comment) ;;
     *) kinds=(comment) ;;
   esac
-  ast-grep scan --stdin --json=compact --inline-rules "id: comment
-language: $1
+  ast-grep scan "${@:---stdin}" --json=compact --inline-rules "id: comment
+language: $lang
 rule: { any: [$(printf '{kind: %s},' "${kinds[@]}")] }"
 }
 
 comments() { scan "$1" | jq -r "$jq_lib code_comments | .text | norm"; }
 
 added_comments() {
-  scan "$1" <"$3" | jq -r --rawfile kept <(comments "$1" <"$2") \
-    --rawfile base <(comments "$1" <"${5:-/dev/null}") --rawfile disk <(comments "$1" <"${6:-/dev/null}") \
-    "$jq_lib new_comments | report(${4:-true})"
+  local lang=$1 kept=$2 proposed_file=$3 show_lines=${4:-true} base=${5:-/dev/null} disk=${6:-/dev/null}
+  scan "$lang" <"$proposed_file" | jq -r --rawfile kept <(comments "$lang" <"$kept") \
+    --rawfile base <(comments "$lang" <"$base") --rawfile disk <(comments "$lang" <"$disk") \
+    "$jq_lib new_comments | report($show_lines)"
 }
+
+checksum() { sha256sum | cut -c1-64; }
 
 baseline() {
   local session=$1 path=$2 dir key
@@ -107,13 +112,13 @@ baseline() {
     return
   fi
   dir="$baselines/$session"
-  key=$(printf '%s' "$path" | sha256sum | cut -c1-64)
+  key=$(printf '%s' "$path" | checksum)
   if [ ! -f "$dir/$key" ]; then
     mkdir -p "$dir"
     if [ -f "$path" ]; then cp -- "$path" "$dir/$key"; else : >"$dir/$key"; fi
-    sha256sum <"$dir/$key" | cut -c1-64 >"$dir/$key.sha256"
+    checksum <"$dir/$key" >"$dir/$key.sha256"
   fi
-  if [ -f "$dir/$key.sha256" ] && [ "$(sha256sum <"$dir/$key" | cut -c1-64)" = "$(<"$dir/$key.sha256")" ]; then
+  if [ -f "$dir/$key.sha256" ] && [ "$(checksum <"$dir/$key")" = "$(<"$dir/$key.sha256")" ]; then
     echo "$dir/$key"
   else
     echo /dev/null
@@ -121,11 +126,11 @@ baseline() {
 }
 
 in_work_tree() {
-  local dir rc=0
-  dir=$(dirname "$1")
+  local path=$1 dir status=0 not_ignored=1
+  dir=$(dirname "$path")
   while [ ! -d "$dir" ]; do dir=$(dirname "$dir"); done
-  git -C "$dir" check-ignore -q -- "$1" 2>/dev/null || rc=$?
-  [ "$rc" = 1 ]
+  git -C "$dir" check-ignore -q -- "$path" 2>/dev/null || status=$?
+  [ "$status" = "$not_ignored" ]
 }
 
 grant() {
@@ -160,7 +165,7 @@ refuse_markdown() { echo "doc-lock: $1 is Markdown, which stays unchanged outsid
 
 refuse_comments() { printf 'doc-lock: %s gains new or reworded comments:\n%s\n' "$1" "$2" >&2; }
 
-block() {
+exit_blocked() {
   echo "$keep_hint" >&2
   exit 2
 }
@@ -172,7 +177,7 @@ file_edit() {
   in_work_tree "$path" || return 0
   if is_markdown "$path"; then
     refuse_markdown "$path"
-    block
+    exit_blocked
   fi
   lang=$(language "$path") || return 0
   old=$(on_disk "$path")
@@ -180,7 +185,7 @@ file_edit() {
   added=$(added_comments "$lang" "$old" <(jq -r --rawfile before "$old" "$proposed" <<<"$input") true "$base" "$old")
   [ -z "$added" ] && return 0
   refuse_comments "$path" "$added"
-  block
+  exit_blocked
 }
 
 envelope_files='
@@ -242,7 +247,7 @@ envelope_edit() {
       found=1
     fi
   done <<<"$entries"
-  [ "$found" = 0 ] || block
+  [ "$found" = 0 ] || exit_blocked
 }
 
 edit() {
@@ -330,16 +335,43 @@ strip() {
   done
 }
 
+parse_batch() {
+  local lang=$1
+  shift
+  [ "$#" -gt 0 ] || return 0
+  scan "$lang" "$@" | jq -c "$jq_lib (group_by(.file) | INDEX(.[0].file)) as \$m | \$ARGS.positional[] | {path: ., comments: [(\$m[.] // []) | code_comments]}" --args "$@"
+}
+
+parse() {
+  local path lang prev=""
+  local -a batch=()
+  for path in "$@"; do
+    [ -f "$path" ] || continue
+    lang=$(language "$path") || continue
+    if [ -n "$prev" ] && [ "$lang" != "$prev" ]; then
+      parse_batch "$prev" "${batch[@]}"
+      batch=()
+    fi
+    prev=$lang
+    batch+=("$path")
+  done
+  parse_batch "$prev" "${batch[@]}"
+}
+
 case "${1:-}" in
   grant) grant ;;
   edit) edit ;;
   staged) staged ;;
+  parse)
+    shift
+    parse "$@"
+    ;;
   strip)
     shift
     strip "$@"
     ;;
   *)
-    echo "usage: doc-lock grant|edit|staged|strip FILE..." >&2
+    echo "usage: doc-lock grant|edit|staged|strip|parse FILE..." >&2
     exit 64
     ;;
 esac

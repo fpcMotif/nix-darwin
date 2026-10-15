@@ -46,11 +46,8 @@ stdenvNoCC.mkDerivation {
   nativeBuildInputs = lib.optionals stdenvNoCC.hostPlatform.isLinux [
     autoPatchelfHook
   ] ++ lib.optionals stdenvNoCC.hostPlatform.isDarwin [
-    # Factory ships the binary with a `linker-signed` ad-hoc signature that
-    # macOS only fixes up on a writable volume. From the read-only Nix store the
-    # signature stays invalid and arm64 AMFI SIGKILLs droid the instant it
-    # launches. This hook replaces it with a complete (sealed) ad-hoc signature
-    # during fixup so it runs from the store.
+    # Factory ships a linker-signed binary that arm64 AMFI SIGKILLs when launched
+    # from the read-only Nix store. Re-sign it with a sealed ad-hoc signature.
     darwin.autoSignDarwinBinariesHook
   ];
 

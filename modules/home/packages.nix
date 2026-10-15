@@ -4,7 +4,6 @@ let
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
 
   commonPackages = with pkgs; [
-    # File ops and viewing.
     bat
     fd
     ripgrep
@@ -12,78 +11,45 @@ let
     fcp
     dust
     tree
-
-    # System/process inspection.
     procs
     bottom
-
-    # Navigation/search.
     zoxide
     fzf
     ast-grep
     martin.fff-mcp
-
-    # Git and version control.
     git
     delta
     jujutsu
     martin.calldiff
-
-    # Shell UX and terminal tools.
     starship
     tmux
     zsh
-
-    # Utilities.
     jq
     gh
     just
-    # bun comes from `martin.bun-canary-bin` (canary channel) in darwinPackages
-    # below — nixpkgs `bun` would collide on $out/bin/bun, so it's not listed.
-    # node runtime only (no bundled npm — we use bun). Pinned to the newest
-    # LTS-line runtime; _26 is the deliberate floor and does NOT get downgraded
-    # to dodge a cold cache. When a bump lands a node the darwin jobset hasn't
-    # built yet (26.3.1, then 26.7.0 as of 2026-08), `just switch` compiles Node
-    # from source — the fix is to hold nixpkgs on a rev whose node is already
-    # substitutable, not to drop a major. See the cadence guard in
-    # scripts/update-flake-inputs.sh.
+    # Omit nixpkgs bun here because martin.bun-canary-bin provides bin/bun on
+    # Darwin. _26 is the floor; see scripts/update-flake-inputs.sh.
     nodejs-slim_26
-    # Frontend and SSO/OIDC helpers. OXC is the formatter/linter stack;
-    # oxlint lives in ./lsp.nix because it also runs as an LSP server.
+    # oxlint and language servers live in ./lsp.nix.
     oxfmt
     mkcert
     jwt-cli
     step-cli
     hyperfine
-
     neovim
     gnupg
     gnused
     shellcheck
     stylua
-    # Rust.
     martin.rust-toolchain
     cargo-nextest
-    # bacon replaces cargo-watch: upstream archived it (points to bacon/watchexec),
-    # and at the 2026-07 pin it is uncached AND its link step deterministically
-    # crashes cctools ld (SIGTRAP) — it would re-break `just switch` after every
-    # nightly flake bump. bacon is darwin-cached.
+    # cargo-watch is archived, uncached, and crashes ld.
     bacon
     cargo-edit
-
-    # Go.
     go
     gofumpt
     golangci-lint
-
-    # Python.
     uv
-
-    # All language servers live in ./lsp.nix — including typescript
-    # (it's both compiler and `tsc --lsp` server), oxlint,
-    # vue/astro/svelte/tailwind/emmet servers, gopls, rust-analyzer,
-    # sourcekit-lsp, basedpyright, ruff,
-    # lua-language-server, mcp-language-server.
     cmake
     tree-sitter
     wget
@@ -91,8 +57,7 @@ let
   ];
 
   darwinPackages = with pkgs; [
-    # iOS / Apple platform CLIs. Xcode itself stays Apple-managed; these are
-    # the shell tools around project generation, signing flows, and CI logs.
+    # Xcode stays Apple-managed; these CLIs cover project generation, signing, and CI logs.
     cocoapods
     fastlane
     xcodes
@@ -100,28 +65,21 @@ let
     swiftformat
     swiftlint
 
-    # bun, canary channel. Replaces nixpkgs `bun` (removed from commonPackages)
-    # because `bun upgrade` can't write into the read-only /nix/store.
+    # Canary prebuilt replaces nixpkgs bun because bun upgrade cannot write into /nix/store.
     martin.bun-canary-bin
     martin.sourcegraph-amp
     martin.droid
     martin.opencode
-    # Hunk, prebuilt release: review-first TUI diff viewer the Git section of
-    # CLAUDE.md routes human review to (nixpkgs `hunk` SIGKILLs here, see pkgs/hunk-bin.nix).
+    # Prebuilt release because nixpkgs hunk crashes with SIGKILL on Darwin.
     martin.hunk-bin
     martin.mole
     codex
     nur.repos.charmbracelet.crush
     martin.pi-coding-agent
     martin.oh-my-pi
-    martin.nub # Bun-rival toolkit on stock node (nubjs/nub).
-    # Drafts.app MCP server with local watchdog/lock/bulk-gate patches baked
-    # in (replaces the bun global install those patches kept dying in).
-    # Registered with Claude Code via claudeMcpDrafts in claude.nix; Codex
-    # points at the stable /etc/profiles/per-user path in Codex configuration.
+    martin.nub
     martin.drafts-mcp-server
     martin.jev-traits
-    # zed-editor itself is installed by programs.zed-editor.enable in zed.nix.
   ];
 in
 {

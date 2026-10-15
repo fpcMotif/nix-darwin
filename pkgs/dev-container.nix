@@ -1,15 +1,3 @@
-# Reproducible OCI dev container, built entirely from the pinned nixpkgs —
-# no Dockerfile, no `apt-get`/`curl | sh` drift. Exposed per Linux system as
-# `packages.<system>.dev-container` (it is not part of the pkgs.martin
-# overlay because images only exist for Linux platforms).
-#
-# Build (Linux machine or CI):    nix build .#packages.x86_64-linux.dev-container
-# Build on the Mac (M-series):    enable martin.linuxBuilder, then
-#                                 nix build .#packages.aarch64-linux.dev-container
-# Run:                            docker load < result && docker run -it martin-dev:<tag>
-#
-# buildLayeredImage puts each store path in its own layer, so toolchain bumps
-# only invalidate the layers that actually changed.
 { dockerTools
 , bashInteractive
 , cacert
@@ -31,9 +19,8 @@
 }:
 
 dockerTools.buildLayeredImage {
+  # Omit tag so dockerTools derives an immutable tag from the store hash.
   name = "martin-dev";
-  # No explicit tag: dockerTools derives one from the image's store hash, so
-  # the tag identifies exact contents instead of a mutable "latest".
 
   contents = [
     bashInteractive
