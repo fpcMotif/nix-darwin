@@ -45,10 +45,9 @@ let
     factory = ".factory/skills";
     opencode = ".config/opencode/skills";
     pi = ".pi/agent/skills";
-    # Custom target — Antigravity CLI (`agy`). Its own `/skills` panel
-    # documents this as the "Shared" discovery path; it does not read
-    # `.agents/skills`, unlike every other target above.
-    gemini = ".gemini/skills";
+    # Custom target — Antigravity CLI (`agy`) and Antigravity Desktop.
+    # Antigravity scans `~/.gemini/config/skills/` globally.
+    gemini = ".gemini/config/skills";
   };
   # The same dirs as a quoted, absolute, space-separated shell list, for the
   # `for dir in …` loops in the activation sweeps below.
@@ -654,7 +653,6 @@ let
   claudeSettingsSeed = pkgs.writeText "claude-settings-seed.json" (builtins.toJSON {
     env = claudeSeedEnv;
     permissions = claudePermissions;
-    model = "opus";
     enabledMcpjsonServers = [ "qmd" ];
     statusLine = {
       type = "command";
@@ -693,7 +691,7 @@ let
     autoDreamEnabled = false;
     worktree = claudeWorktreeSettings;
     skipDangerousModePermissionPrompt = true;
-    effortLevel = "xhigh";
+    effortLevel = "medium";
     inputNeededNotifEnabled = true;
     agentPushNotifEnabled = true;
   });
@@ -703,6 +701,7 @@ let
       { path = [ "permissions" "deny" ]; value = claudePermissions.deny; }
       { path = [ "permissions" "ask" ]; value = claudePermissions.ask; }
       { path = [ "permissions" "defaultMode" ]; value = claudePermissions.defaultMode; }
+      { path = [ "effortLevel" ]; value = "medium"; }
       { path = [ "env" "CLAUDE_CODE_PLUGIN_DIRS" ]; value = "${homeDir}/.claude/mods/jev-traits"; }
     ]
     ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeHiddenSkillIds
@@ -1005,6 +1004,26 @@ in
       fi
     fi
   '');
+
+  # Expose skills to Antigravity Desktop as Workflows (`~/.gemini/config/workflows/*.md`)
+  # so that Antigravity Desktop's chat input slash command (`/`) popover lists and expands
+  # every skill identically to the `agy` CLI's dynamic skill commands.
+  home.activation.antigravityWorkflows = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    wfDir="${homeDir}/.gemini/config/workflows"
+    skillDir="${homeDir}/.gemini/config/skills"
+    if [ -n "''${DRY_RUN:-}" ]; then
+      echo "antigravity-workflows: would mirror skills from $skillDir to $wfDir" >&2
+    elif [ -d "$skillDir" ]; then
+      mkdir -p "$wfDir"
+      find "$wfDir" -type l ! -exec test -e {} \; -delete 2>/dev/null || true
+      for s in "$skillDir"/*; do
+        if [ -f "$s/SKILL.md" ]; then
+          name=$(basename "$s")
+          ln -sf "$s/SKILL.md" "$wfDir/$name.md"
+        fi
+      done
+    fi
+  '';
 
   # === Skills (was modules/home/skills.nix) ===
   programs.agent-skills = {

@@ -8,7 +8,8 @@ Nix also renders repeatable session presets from the same policy.
 
 | Work | Normal model | Effort |
 |---|---|---|
-| Main, vision, task, design | GPT-6 Astra | high |
+| Default | Gemini 3.8 Flash | high |
+| Vision, task, design, advisor | GPT-6 Astra | high |
 | Search, scout, explore, librarian, commit | GPT-6 Sol | medium |
 | Check, review, security review, sonic, worker | GPT-6 Sol | high |
 | Planning, Oracle | GPT-6 Astra | xhigh |
@@ -52,7 +53,7 @@ Astra can fall back to Luna. Luna has no automatic fallback.
 Sol has no model fallback: exhausted Sol allowance must stop or wait for reset.
 Retries are bounded; sessions do not sleep until a distant quota reset.
 
-Every role and fallback chain uses the subscription-backed `openai-codex` provider.
+The `default` role uses Google Antigravity's `gemini-3.8-flash:high`; every other role and fallback chain uses the subscription-backed `openai-codex` provider.
 The `/model` picker and `--model` expose GPT-6 Astra, Sol, and Luna, plus the
 current Google Antigravity catalog—including Gemini Flash, Claude Opus, and Claude Sonnet.
 No other provider is enabled.

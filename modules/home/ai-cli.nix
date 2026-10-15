@@ -17,7 +17,7 @@
     # `claude`/`cc` start without standing ultracode, which tells the model to
     # run a dynamic workflow on every substantive task. A prompt that contains
     # the keyword "ultracode" opts that one turn into a workflow instead.
-    # Effort comes from the session-wide CLAUDE_CODE_EFFORT_LEVEL=xhigh floor
+    # Effort comes from the session-wide CLAUDE_CODE_EFFORT_LEVEL=medium floor
     # (modules/home/session.nix). Switch it per session with `/effort <level>`.
     cofficial() {
       (

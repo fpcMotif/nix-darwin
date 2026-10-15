@@ -281,7 +281,8 @@ in
     assert fallbackChains.${routing.bareSelector "general"} == [ (routing.bareSelector "economy") ];
     assert fallbackChains.${routing.bareSelector "search"} == [ ];
     assert fallbackChains.${routing.bareSelector "economy"} == [ ];
-    assert lib.all (lib.hasPrefix "openai-codex/") (lib.attrValues omp.normal.modelRoles);
+    assert omp.normal.modelRoles.default == "google-antigravity/gemini-3.8-flash:high";
+    assert lib.all (lib.hasPrefix "openai-codex/") (lib.attrValues (builtins.removeAttrs omp.normal.modelRoles [ "default" ]));
     assert lib.all
       (model:
         lib.hasPrefix "openai-codex/gpt-6-" model

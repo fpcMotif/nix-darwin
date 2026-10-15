@@ -56,7 +56,7 @@
       if [ -L "$HOME/$d/aily-md" ]; then remove_legacy_path "$HOME/$d/aily-md"; fi
     done
     # hyperframes and related video skills are per-project; prune them from global pickers.
-    for d in .claude/skills .agents/skills .config/crush/skills .config/opencode/skills .pi/agent/skills .codex/skills .cursor/skills .factory/skills .config/agents/skills .gemini/skills; do
+    for d in .claude/skills .agents/skills .config/crush/skills .config/opencode/skills .pi/agent/skills .codex/skills .cursor/skills .factory/skills .config/agents/skills .gemini/skills .gemini/config/skills; do
       for skill in hyperframes hyperframes-cli faceless-explainer hyperframes-animation hyperframes-registry hyperframes-creative general-video hyperframes-core hyperframes-audio hyperframes-studio media-use hyperframes-keyframes; do
         if [ -L "$HOME/$d/$skill" ] || [ -d "$HOME/$d/$skill" ]; then remove_legacy_path "$HOME/$d/$skill"; fi
       done

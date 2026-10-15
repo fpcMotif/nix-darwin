@@ -107,9 +107,12 @@ let
   };
   # GPT-6 routes are selectable by hand in omp's /model picker and --model.
   # Keep the Antigravity provider available for its current Flash, Opus, and
-  # Sonnet offerings without routing agents or fallbacks to it.
+  # Sonnet offerings, with Gemini 3.8 Flash (high) as the default session role.
+  ompDefaultModel = "google-antigravity/gemini-3.8-flash:high";
   ompManualModels = [ "google-antigravity/*" ];
-  ompModelRoles = lib.mapAttrs (_: job: selector job) ompRoleJobs;
+  ompModelRoles = (lib.mapAttrs (_: job: selector job) ompRoleJobs) // {
+    default = ompDefaultModel;
+  };
   ompAgentOverrides = lib.mapAttrs (_: role: "@${role}") ompAgentRoles;
   ompNormal = {
     modelRoles = ompModelRoles;

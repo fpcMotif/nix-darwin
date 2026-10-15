@@ -63,8 +63,8 @@ in
     CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
     CLAUDE_CODE_NO_FLICKER = "1";
     # Baseline effort floor for every `claude` launched from a shell, the
-    # ai-cli.nix `claude`/`cc` wrappers included: xhigh, never max.
-    CLAUDE_CODE_EFFORT_LEVEL = "xhigh";
+    # ai-cli.nix `claude`/`cc` wrappers included: medium (Claude's recommended default).
+    CLAUDE_CODE_EFFORT_LEVEL = "medium";
 
     OBSIDIAN_VAULT = "$HOME/Documents/obsidian";
     TERMINFO = "$HOME/.terminfo";
