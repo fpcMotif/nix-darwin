@@ -2,7 +2,8 @@
 
 ## Codex
 
-- **Develop**: Read `~/.codex/guidance/development.md` for tool selection, code navigation, Python or Rust environments, environment variables, version-control conventions, or Git hooks.
+- **Develop**: Read `~/.codex/guidance/development.md` for tool selection, code navigation, environment variables, version-control conventions, or Git hooks.
+- **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `~/.codex/guidance/languages/typescript.md`, `python.md`, `go.md`, or `rust.md`.
 - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/.codex/guidance/human-documents.md`.
 - **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/.codex/guidance/development.md`.
 - **Configure**: Before changing Codex instructions, skills, profiles, MCP, or settings, read `~/.codex/guidance/setup.md`.

@@ -1,7 +1,3 @@
-# Evaluates feature modules against the Agent surface catalog alone, without
-# a full Home Manager configuration. Definitions for options outside the
-# catalog (programs.*, home.file, ...) are dropped, so a test reads only
-# what the module contributes to the catalog and its assertions.
 { lib }:
 
 { pkgs, modules }:
@@ -14,6 +10,7 @@
         default = [ ];
       };
       config = {
+        # Drop definitions outside the catalog (programs.*, home.file, ...).
         _module.check = false;
         _module.args.pkgs = pkgs;
       };

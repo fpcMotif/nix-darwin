@@ -1,14 +1,8 @@
 #!/usr/bin/env bash
-# Bump badlogic/pi-mono prebuilt binary in pkgs/pi-coding-agent.nix.
-#
-# HOLD_VERSIONS: versions known to be broken on our packaging style. The
-# auto-updater skips them so a daily CI run can't reintroduce a fixed
-# regression. Remove an entry once upstream's release tarball ships the
-# missing piece.
-#   (none currently held)
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
+# Without a hold, the nightly re-pins a release known to break this packaging.
 HOLD_VERSIONS=()
 
 latest=$(au_latest_github_release badlogic/pi-mono)

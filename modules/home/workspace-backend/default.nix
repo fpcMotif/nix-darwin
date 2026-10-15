@@ -20,12 +20,8 @@ let
     ${lib.getExe dojjo} shell completion zsh >> $out
   '';
 
-  # Worktrunk activity markers, shown per branch in `wt list`: 🤖 while Claude
-  # works, 💬 while it waits, cleared at session end. Same events as upstream's
-  # plugin (worktrunk.dev/claude-code/#activity-tracking). The hook path is
-  # stable so a wt bump never strands a store path in the additive hook policy.
-  # Worktree creation stays native: a WorktreeCreate hook would drop
-  # symlinkDirectories, .worktreeinclude, and the stale sweep.
+  # Use a stable hook path so a wt bump does not strand a store path in settings.json.
+  # Keep worktree creation native so symlinkDirectories and .worktreeinclude still run.
   marker = state: "$HOME/.claude/hooks/worktrunk-marker.sh ${state}";
   markerHooks = [
     { event = "UserPromptSubmit"; matcher = ""; command = marker "working"; }
@@ -88,8 +84,8 @@ in
         { worktrunk = ./guide-worktrunk.md; dojjo = ./guide-dojjo.md; }.${backend}
       ];
 
-      # Under any other backend the reconciler removes these exact entries from
-      # the live settings.json, because the marker script is no longer installed.
+      # Under any other backend the reconciler removes these entries from
+      # settings.json because only worktrunk installs the marker script.
       martin.agentSurface.claudeHooks.${if backend == "worktrunk" then "add" else "remove"} = markerHooks;
     }
 

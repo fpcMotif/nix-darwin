@@ -65,14 +65,8 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    # Expose the `hs` CLI wrapper in system packages while keeping
-    # /Applications out of this derivation. If a package in environment.systemPackages
-    # outputs /Applications, nix-darwin's applications.nix rsyncs it into
-    # /Applications/Nix Apps with `--chmod=-w`, which triggers nix-darwin's
-    # `ensureAppManagement` check and fatally wedges the unattended nightly
-    # auto-switch daemon (`error: permission denied when trying to update apps over SSH`).
-    # Instead, we copy Hammerspoon.app into /Applications directly in postActivation,
-    # identical to how Zed Nightly and Squirrel are deployed.
+    # Keep /Applications out of this derivation so nix-darwin does not rsync it
+    # into /Applications/Nix Apps with --chmod=-w and block unattended switches.
     environment.systemPackages = [
       (pkgs.runCommand "hammerspoon"
         {

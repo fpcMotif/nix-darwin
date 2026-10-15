@@ -3,12 +3,10 @@ set -euo pipefail
 
 workflow=$1
 
-# Workflow steps only — a comment may name a check to explain it.
+# A workflow comment can name a check to explain it without running it.
 code=$(grep -vE '^\s*#' "$workflow")
 
-# Each CI job builds every checks.<system> attribute the flake exposes, the way
-# `just check` does. A hand-kept list drifted: fifteen unit checks ran in
-# neither job, and the darwin job also skipped unit-auto-update.
+# A hand-kept list of checks lets a new check go unrun in both CI jobs.
 if printf '%s\n' "$code" | grep -nE 'checks\.[a-z0-9_]+-(darwin|linux)\.[A-Za-z]'; then
   echo "build.yml: must not name individual checks; new ones would go unrun" >&2
   exit 1

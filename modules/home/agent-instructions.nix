@@ -34,7 +34,7 @@ let
       })
       targets)
     personalSkills));
-  files = guideCatalog.filesFor [ "general" "codex" "omp" ] // {
+  files = guideCatalog.filesFor [ "general" "codex" "omp" "antigravity" ] // {
     ".codex/guidance/setup.md" = ./agent-instructions/codex/guidance/setup.md;
     ".codex/fast.config.toml" = toml.generate "codex-fast.config.toml"
       modelRouting.adapters.codex.profiles.fast;

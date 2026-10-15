@@ -3,7 +3,7 @@
 - **Direct**: Use the simplest direct implementation. A second real use earns an abstraction.
 - **Local**: Edit the lines that change. Rewrite a file only when most of it changes.
 - **Match**: Follow existing patterns and confirm libraries before using them.
-- **Name**: Names carry what the code does. Comments explain only reasons the code cannot show.
+- **Name**: Names carry what the code does. Comments explain only why, in at most three lines attached to the code.
 - **Edge**: Validate at the input edge and trust internal callers.
 - **Oracle**: Derive each test expectation from the requirement or a reference outside the implementation. Watch each new test go red with its behavior missing or broken. A test that cannot go red is tautological.
 - **Secret**: Read secrets from the environment. In a project with `.env.schema`, declare each variable there for Varlock. Code and logs contain secret names only.
@@ -20,8 +20,12 @@ Leave the affected system coherent and minimal. This holds when a third-party sk
 
 ## Writing
 
-- **Plain**: Use familiar, concrete words and active voice.
-- **Short**: Keep one idea per sentence and each sentence under 20 words.
-- **Structure**: Use a numbered list for a procedure. Use prose for connected reasoning.
+- **Plain**: Use familiar, concrete words, simple tenses, and active voice.
+- **Short**: Keep one idea per sentence and each sentence under 20 words. Avoid semicolons and em-dashes.
+- **Whole**: Keep articles and "that". Short sentences are still complete sentences.
+- **Certain**: Use must, can, or will. Name the condition that limits a claim instead of softening it.
+- **Factual**: State what a thing does and its measured effect, not how important it is.
+- **Consistent**: Use one word for one meaning across a document. Define a term in a few words at first use.
+- **Structure**: Use a numbered list for a procedure, with each step's condition before its command. Use prose for connected reasoning.
 - **Exact**: Preserve facts, quotes, citations, commands, and code exactly.
 - **Lead**: State the outcome first, then the evidence needed to assess it.

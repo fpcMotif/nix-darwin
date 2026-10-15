@@ -1,13 +1,3 @@
-# Cross-source regression test for the pstack skill source: the pinned pstack-claude
-# input text vs. the rewrite rules in modules/home/claude/pstack.nix.
-#
-# The rules anchor on exact upstream sentences. A port sync that rewords one
-# would otherwise leave a plugin-only spelling (a `pstack:` agent id, a Claude
-# model slug, `/setup-pstack`) in the installed skill and nothing would notice
-# until a subagent call failed. Expectations below are RESTATED by hand
-# (docs/adr/0004): none is read from the module's own lists.
-#
-# Pure readFile/readDir on the flake input; no derivation is forced.
 { inputs, pkgs, lib, self, ... }:
 
 let

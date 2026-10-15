@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Bump can1357/oh-my-pi prebuilt binary in pkgs/oh-my-pi.nix.
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 

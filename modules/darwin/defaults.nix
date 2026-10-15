@@ -1,7 +1,5 @@
 { lib, ... }:
 
-# CustomUserPreferences covers what native options lack, so no `defaults
-# write` scripts. Source: https://sxyz.blog/macos-setup/
 {
   system.defaults = {
     NSGlobalDomain = {
@@ -24,6 +22,8 @@
       AppleShowScrollBars = "WhenScrolling";
     };
 
+    # CustomUserPreferences covers domains that lack native nix-darwin options.
+    # Leave Safari, universalaccess, and AdLib out because TCC blocks writing them.
     CustomUserPreferences = {
       NSGlobalDomain = {
         AppleAccentColor = 6;
@@ -57,15 +57,9 @@
         skip-verify-remote = false;
       };
 
-      # Safari prefs are sandboxed; writing them without Full Disk Access halts
-      # activation. Set them by hand in Safari → Settings.
-
       "com.apple.screencapture" = {
         name = "screenshot";
       };
-
-      # universalaccess and AdLib are TCC-protected; writing them halts
-      # activation. Set them by hand in System Settings.
     };
 
     finder = {

@@ -1,20 +1,3 @@
-# Integration test: locks in the exact macOS settings host "f" commits to.
-#
-# Tier 1 (pure-eval, hermetic) of the macOS-settings test strategy documented in
-# docs/adr/0004-macos-settings-testing-strategy.md. Every declarative
-# `system.defaults` key is asserted against its exact expected value, so an
-# accidental edit -- or an automated commit -- that flips a setting fails
-# `nix flake check` loudly. The `expected*` attrsets below ARE the spec: they
-# read as the table of macOS state this configuration promises.
-#
-# The imperative activation layer (pmset power management, the Squirrel input
-# method symlink) cannot be checked for *effect* without a real darwin-rebuild,
-# so it is asserted here by string-matching the rendered postActivation text --
-# the most eval can see. Live read-back of the activated machine is the opt-in
-# Tier 2 script scripts/verify-macos-settings.sh.
-#
-# Darwin-only: macOS settings do not exist on the NixOS hosts, so on non-darwin
-# builders tests/default.nix wires this in as a no-op skip.
 { pkgs, lib, darwinConfigurationInput, ... }:
 
 let
@@ -29,9 +12,6 @@ let
 
   hasPackage = name: packages: lib.any (pkg: lib.getName pkg == name) packages;
 
-  # One assertTest per (key -> expected value). `actualSet.${key}` resolves the
-  # live option value, so a drifted key fails with a precise before/after message.
-  # The `expected*` attrset passed in is the human-readable spec for that domain.
   expectEach = domainLabel: actualSet: expected:
     lib.mapAttrsToList
       (key: want:
@@ -40,21 +20,17 @@ let
           "system.defaults.${domainLabel}.${key} should be ${builtins.toJSON want} but is ${builtins.toJSON (actualSet.${key} or null)}")
       expected;
 
-  # Single exact-value assertion against an arbitrary live value.
   expectValue = label: actual: want:
     helpers.assertTest "darwin-settings-${label}"
       (actual == want)
       "${label} should be ${builtins.toJSON want} but is ${builtins.toJSON actual}";
 
-  # String-match assertion over the rendered activation script. The imperative
-  # pmset/Squirrel logic only runs on a real switch; this is the eval-visible
-  # proxy that the intended command was emitted.
+  # Imperative pmset and Squirrel steps run only on switch, so match their
+  # emitted commands in postActivation text at eval time.
   expectActivation = label: needle:
     helpers.assertTest "darwin-settings-activation-${label}"
       (lib.hasInfix needle postActivation)
       "postActivation text should contain ${builtins.toJSON needle} (${label})";
-
-  # ---- system.defaults: native option domains -----------------------------
 
   expectedNSGlobalDomain = {
     _HIHideMenuBar = true;
@@ -82,8 +58,8 @@ let
     FXDefaultSearchScope = "SCcf";
     FXEnableExtensionChangeWarning = false;
     FXPreferredViewStyle = "clmv";
-    # nix-darwin's NewWindowTarget option `apply`s the friendly "Home" (set in
-    # modules/darwin/defaults.nix) to the plist code macOS actually stores.
+    # nix-darwin's NewWindowTarget option converts "Home" into the plist code
+    # "PfHm" that macOS stores.
     NewWindowTarget = "PfHm";
     QuitMenuItem = true;
     ShowExternalHardDrivesOnDesktop = false;
@@ -132,15 +108,12 @@ let
     ShowDate = 1;
   };
 
-  # ---- system.defaults.CustomUserPreferences: freeform domains ------------
-
   expectedCustomNSGlobalDomain = {
     AppleAccentColor = 6;
     AppleScrollerPagingBehavior = true;
     AppleWindowTabbingMode = "always";
-    # macOS ships 0.5s. The System Settings slider bottoms out at 0.15s, where a
-    # double-click must land inside 150ms or the OS delivers two single clicks.
-    # Pinned after the machine was found sitting at the fast extreme by hand.
+    # Pin macOS's 0.5s default because the 0.15s slider minimum splits normal
+    # double-clicks into two single clicks.
     "com.apple.mouse.doubleClickThreshold" = 0.5;
   };
 
@@ -154,8 +127,6 @@ let
     skip-verify-locked = false;
     skip-verify-remote = false;
   };
-
-  # ---- pmset power-management (imperative, eval-visible via activation text)
 
   expectedPmsetParams = [
     "displaysleep 15"
@@ -175,8 +146,6 @@ let
     "pmset -c gpuswitch 1"
   ];
 
-  # ---- fonts (membership of the curated bundle) ---------------------------
-
   expectedFonts = [
     "sf-mono"
     "sf-symbols"
@@ -191,8 +160,6 @@ let
     "noto-fonts-color-emoji"
     "source-han-mono"
   ];
-
-  # =========================================================================
 
   systemDefaultsChecks =
     expectEach "NSGlobalDomain" defaults.NSGlobalDomain expectedNSGlobalDomain
@@ -240,22 +207,16 @@ let
       cfg.networking.applicationFirewall.allowSignedApp
       true)
 
-    # Gatekeeper is re-enabled CONDITIONALLY -- only when spctl reports it is
-    # currently disabled. Lock in the guard so a refactor cannot turn this into
-    # an unconditional toggle (the eval-test covers --master-enable presence).
+    # Lock in the spctl status guard so a refactor cannot turn Gatekeeper into
+    # an unconditional toggle.
     (helpers.assertTest "darwin-settings-gatekeeper-conditional-reenable"
       (lib.hasInfix "spctl --status" postActivation
         && lib.hasInfix "grep -q 'disabled'" postActivation)
       "Gatekeeper re-enable should stay guarded behind an spctl --status | grep -q 'disabled' check")
   ];
 
-  # skhd global hotkeys, retired 2026-07-19. skhd's CGEventTap conflicts with
-  # BetterMouse's, so the daemon is off and nix-darwin renders no launchd agent,
-  # no package, and no config text -- the launcher-prefix, display-sleep, reload,
-  # Raycast, and Ghostty-split assertions that lived here had nothing left to
-  # match. What is worth locking in now is the OFF state itself: this host runs
-  # BetterMouse, and a silent re-enable would bring the tap conflict back.
-  # HOTKEYS.md carries the user-facing consequences.
+  # skhd's CGEventTap conflicts with BetterMouse on this host, so lock in the
+  # disabled state.
   hotkeyChecks = [
     (helpers.assertTest "darwin-settings-skhd-disabled"
       (cfg.martin.skhd.enable == false
@@ -272,6 +233,7 @@ let
       (helpers.assertTest "darwin-settings-fonts-count"
         (builtins.length cfg.fonts.packages == builtins.length expectedFonts)
         "fonts.packages should contain exactly ${toString (builtins.length expectedFonts)} fonts but has ${toString (builtins.length cfg.fonts.packages)}")
+      (expectActivation "fonts-registry-refresh" "atsutil databases -remove")
     ]
     ++ map
       (name:
@@ -283,11 +245,8 @@ let
   rimeChecks = [
     (expectValue "rime-enabled" cfg.martin.rime.enable true)
     (expectValue "rime-manage-app-disabled" cfg.martin.rime.manageApp false)
-    # Host "f" runs a manually-built, patched Squirrel fork (~/devv/squirrel),
-    # so martin.rime.manageApp = false keeps nix-darwin from installing the
-    # vanilla pkgs.martin.squirrel build over it. That drops squirrel from
-    # systemPackages and skips the whole copy-into-/Library/Input-Methods
-    # block in postActivation -- both asserted absent below, not present.
+    # Host "f" runs a patched Squirrel build from ~/devv/squirrel, so manageApp
+    # stays false to prevent nix-darwin from overwriting it.
     (helpers.assertTest "darwin-settings-rime-squirrel-package"
       (!(hasPackage "squirrel" cfg.environment.systemPackages))
       "rime should not force-install the Squirrel input method package while manageApp is disabled")
@@ -305,11 +264,8 @@ let
       "rime should rsync the MyRime-main tree into ~/Library/Rime on activation")
   ];
 
-  # Neither BetterMouse nor BetterDisplay is Nix-managed any more: both ship
-  # Sparkle, which self-updates the writable /Applications copy out from under
-  # the pin. These guards keep the scaffolding from being re-added by reflex.
-  # See docs/adr/0011-bettermouse-is-gui-managed-not-nix-managed.md and
-  # docs/adr/0012-betterdisplay-is-gui-managed-not-nix-managed.md.
+  # BetterMouse and BetterDisplay self-update via Sparkle in /Applications, so
+  # both stay GUI-managed outside Nix (ADR-0011, ADR-0012).
   displayChecks =
     let
       agents = home.launchd.agents;

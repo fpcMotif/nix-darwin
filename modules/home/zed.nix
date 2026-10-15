@@ -1,9 +1,5 @@
 { lib, pkgs, ... }:
 
-# Prebuilt nightly .dmg only: building inputs.zed-upstream compiles 3000+
-# uncached crates. Darwin only: the nightly host ships no Linux build.
-# `mutable*` keeps Zed's in-app settings UI working.
-
 let
   routing = import ../shared/agent-model-routing.nix { inherit lib; };
   codexLsp = import ../shared/codex-lsp.nix { inherit lib pkgs; };
@@ -49,8 +45,6 @@ in
       "make"
       "dockerfile"
       "html"
-      # Toolchain extensions — these glue the binaries above into Zed's
-      # language workflow (code actions, diagnostics surfacing, etc.).
       "ruff"
       "basedpyright"
       "tsgo"
@@ -216,12 +210,10 @@ in
         shell.program = "${pkgs.zsh}/bin/zsh";
       };
 
-      # ---- LSP servers ------------------------------------------------------
-      # A pinned `binary.path` makes Zed launch that binary directly and
-      # skip the extension's npm install, which fails on the bun shim.
+      # Pin binary.path so Zed launches the Nix binary directly and skips the
+      # extension's npm install, which fails on the bun shim.
       lsp = codexLsp.adapters.zed;
 
-      # ---- Per-language overrides ------------------------------------------
       languages = {
         # JavaScript also covers .jsx; Zed has no separate JSX language.
         TypeScript = jsLanguage;

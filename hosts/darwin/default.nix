@@ -22,24 +22,20 @@
     hammerspoon.enable = true;
     healthCheck.enable = true;
 
-    # BetterMouse, BetterDisplay, Google Drive, Raycast, and Dropbox are
-    # intentionally absent: all are GUI-managed / natively-installed, not
-    # Nix-managed. See docs/adr/0005, 0011, 0012, 0013.
-
+    # BetterMouse, BetterDisplay, Google Drive, Raycast, and Dropbox stay
+    # GUI-managed outside Nix (ADR-0005, ADR-0011, ADR-0012, ADR-0013).
     rime = {
       enable = true;
       config = "${currentSystemUserHome}/MyRime-main";
-      # Squirrel.app is a patched fork (~/devv/squirrel, Liquid Glass panel),
-      # built + installed manually and rarely (yearly-ish, on upstream
-      # releases). Keep nix-darwin from overwriting it with the vanilla
-      # pkgs.martin.squirrel build on every switch.
+      # Keep nix-darwin from overwriting the local Liquid Glass Squirrel.app
+      # fork (~/devv/squirrel) with the vanilla pkgs.martin.squirrel build.
       manageApp = false;
     };
 
     spotlight.enable = true;
 
     skhd = {
-      # Disabled 2026-07-19: interferes with BetterMouse (event-tap conflict).
+      # Keep skhd off because its event tap conflicts with BetterMouse.
       enable = false;
       # Add personal bindings here. skhd syntax: `mod - key : command`.
       # Global prefix `ctrl + alt + shift` is reserved by the defaults.

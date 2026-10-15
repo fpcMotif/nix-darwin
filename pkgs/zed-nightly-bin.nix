@@ -1,30 +1,3 @@
-# Zed editor — nightly channel, prebuilt binary.
-#
-# Why this exists: `inputs.zed-upstream` (github:zed-industries/zed) is the
-# raw source tree. Building `packages.${system}.default` recompiles ~3000
-# cargo crates with no cache.nixos.org hits — a multi-hour catastrophe.
-# Zed publishes prebuilt `.dmg` artifacts for every nightly commit on
-# `zed-nightly-host.nyc3.digitaloceanspaces.com`; this derivation just
-# fetches and unpacks one. Updates land via `scripts/update-zed-nightly.sh`.
-#
-# Why _7zz, not undmg: Zed ships APFS-format DMGs and `undmg` 1.1.0 only
-# handles legacy HFS+. `_7zz` (p7zip-26 from nixpkgs) extracts both.
-#
-# Output shape mirrors nixpkgs `zed-editor`:
-#   $out/Applications/Zed Nightly.app
-#   $out/bin/zeditor -> ../Applications/<app>/Contents/MacOS/cli
-#
-# That layout is what `programs.zed-editor` in home-manager expects, so it
-# drops in as `programs.zed-editor.package = pkgs.martin.zed-nightly-bin`.
-#
-# Platforms: aarch64-darwin only. flake.nix's `supportedSystems` skips
-# x86_64-darwin, so a Darwin/x86_64 pin would never reach CI or any host
-# config — having one would just create a silent rot risk (Zed's nightly
-# host can stop publishing the asset, the prefetched hash can go stale
-# and nothing would notice). Add x86_64-darwin back here AND in the flake's
-# supportedSystems list AND in build.yml's runner matrix if Intel-Mac
-# support becomes a goal.
-
 { lib
 , stdenvNoCC
 , fetchurl
@@ -50,6 +23,7 @@ stdenvNoCC.mkDerivation {
 
   src = fetchurl { inherit (source) url hash; };
 
+  # undmg 1.1.0 only supports HFS+, whereas Zed ships APFS DMGs.
   nativeBuildInputs = [ _7zz ];
   dontUnpack = true;
 

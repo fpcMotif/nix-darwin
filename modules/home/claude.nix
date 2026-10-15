@@ -1,8 +1,5 @@
 { inputs, pkgs, lib, config, ... }:
 
-# Single source of truth for Claude Code under ~/.claude.
-# Nix owns reproducible state; runtime state (settings.local.json, sessions/,
-# history.jsonl, projects/, ...) is left alone on purpose.
 let
   inherit (lib) optionalAttrs listToAttrs;
   isDarwin = pkgs.stdenv.hostPlatform.isDarwin;

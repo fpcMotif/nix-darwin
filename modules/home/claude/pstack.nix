@@ -1,5 +1,3 @@
-# pstack as a nix skill source, shared by claude.nix and pstack-hygiene-test,
-# so a port sync that moves a transform anchor fails the build.
 { lib, pkgs, inputs, mkSource, mkSkill, docLock ? true }:
 
 let

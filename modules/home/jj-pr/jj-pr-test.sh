@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Drive jj-pr against a disposable jj repository. Its GitHub remote is rewritten
-# to a local bare repository, and a stub gh records calls and keeps PR state.
 set -euo pipefail
 
 if [ "$#" -ne 1 ]; then

@@ -36,9 +36,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUNTIME_JS="${SCRIPT_DIR}/antithesis-debug.js"
 PROCESS_LOGS="${SCRIPT_DIR}/process-logs.py"
 
-usage() {
-  sed -n '3,/^$/p' "${BASH_SOURCE[0]}" | sed 's/^#\s\?//' >&2
+# The header comment is the usage text, up to its first blank line.
+exit_with_usage() {
+  sed -n '3,/^$/p' "${BASH_SOURCE[0]}" | sed -E 's/^# ?//' >&2
   exit 4
+}
+
+die() {
+  local code=$1 message=$2
+  echo "Error: $message" >&2
+  exit "$code"
 }
 
 URL=""
@@ -52,21 +59,21 @@ while [[ $# -gt 0 ]]; do
     -o|--output)   OUTPUT="$2"; shift 2 ;;
     --format)      FORMAT="$2"; shift 2 ;;
     --raw)         RAW=1; shift ;;
-    -h|--help)     usage ;;
-    *)             echo "Error: unknown option: $1" >&2; usage ;;
+    -h|--help)     exit_with_usage ;;
+    *)             echo "Error: unknown option: $1" >&2; exit_with_usage ;;
   esac
 done
 
-[[ -z "$URL" ]] && { echo "Error: --url is required" >&2; usage; }
-[[ -z "$OUTPUT" ]] && { echo "Error: -o/--output is required" >&2; usage; }
+[[ -z "$URL" ]] && { echo "Error: --url is required" >&2; exit_with_usage; }
+[[ -z "$OUTPUT" ]] && { echo "Error: -o/--output is required" >&2; exit_with_usage; }
 
 case "$FORMAT" in
   json|txt|csv) ;;
-  *) echo "Error: --format must be json, txt, or csv" >&2; usage ;;
+  *) echo "Error: --format must be json, txt, or csv" >&2; exit_with_usage ;;
 esac
 
 for tool in agent-browser jq python3; do
-  command -v "$tool" >/dev/null 2>&1 || { echo "Error: $tool not found in PATH" >&2; exit 4; }
+  command -v "$tool" >/dev/null 2>&1 || die 4 "$tool not found in PATH"
 done
 
 mkdir -p "$(dirname "$OUTPUT")"
@@ -74,83 +81,59 @@ mkdir -p "$(dirname "$OUTPUT")"
 SESSION="antithesis-debug-dl-$(date +%s)-$$"
 TMPFILE=$(mktemp)
 
+browser() { agent-browser --session "$SESSION" "$@"; }
+
 cleanup() {
-  agent-browser --session "$SESSION" close >/dev/null 2>&1 || true
+  browser close >/dev/null 2>&1 || true
   rm -f "$TMPFILE"
 }
 trap cleanup EXIT
 
-# Step 1: open URL with shared auth
-echo "Opening MVD URL..." >&2
-if ! agent-browser --session "$SESSION" --session-name antithesis open "$URL" >/dev/null 2>&1; then
-  echo "Error: failed to open URL" >&2
-  exit 3
-fi
+wait_for_events_log_panel() {
+  local deadline=$(( $(date +%s) + 30 )) ready
+  while :; do
+    ready=$(browser eval "window.__antithesisDebug.simplified.eventsLogReady('${FORMAT}')" 2>/dev/null | tail -1)
+    [[ "$ready" == "true" ]] && return
+    [[ $(date +%s) -ge $deadline ]] && die 3 "events log panel did not render within 30s"
+    sleep 1
+  done
+}
 
-# Step 2: wait for load, verify we landed on the debug page
-agent-browser --session "$SESSION" wait --load networkidle >/dev/null 2>&1 || true
-CURRENT_URL=$(agent-browser --session "$SESSION" get url 2>/dev/null || echo "unknown")
+echo "Opening MVD URL..." >&2
+browser --session-name antithesis open "$URL" >/dev/null 2>&1 || die 3 "failed to open URL"
+
+browser wait --load networkidle >/dev/null 2>&1 || true
+CURRENT_URL=$(browser get url 2>/dev/null || echo "unknown")
 if [[ "$CURRENT_URL" != *"/debugging-session/"* ]]; then
   echo "Error: did not land on a debugging-session page (at: $CURRENT_URL)" >&2
   echo "If redirected to a login page, authenticate first using the antithesis-agent-browser skill's setup-auth flow." >&2
   exit 2
 fi
 
-# Step 3: inject runtime, wait for ready, prepare the download
 echo "Injecting runtime..." >&2
-if ! cat "$RUNTIME_JS" | agent-browser --session "$SESSION" eval --stdin >/dev/null 2>&1; then
-  echo "Error: failed to inject debug runtime" >&2
-  exit 3
-fi
+browser eval --stdin <"$RUNTIME_JS" >/dev/null 2>&1 || die 3 "failed to inject debug runtime"
 
 echo "Waiting for simplified view to be ready..." >&2
-if ! agent-browser --session "$SESSION" eval \
-  'window.__antithesisDebug.simplified.waitForReady()' >/dev/null 2>&1; then
-  echo "Error: simplified view did not become ready" >&2
-  exit 3
-fi
+browser eval 'window.__antithesisDebug.simplified.waitForReady()' >/dev/null 2>&1 \
+  || die 3 "simplified view did not become ready"
 
 echo "Waiting for events log panel to render..." >&2
-DEADLINE=$(( $(date +%s) + 30 ))
-while :; do
-  READY=$(agent-browser --session "$SESSION" eval \
-    "window.__antithesisDebug.simplified.eventsLogReady('${FORMAT}')" 2>/dev/null | tail -1)
-  [[ "$READY" == "true" ]] && break
-  if [[ $(date +%s) -ge $DEADLINE ]]; then
-    echo "Error: events log panel did not render within 30s" >&2
-    exit 3
-  fi
-  sleep 1
-done
+wait_for_events_log_panel
 
 echo "Preparing download (format: $FORMAT)..." >&2
-PREPARE_RESULT=$(agent-browser --session "$SESSION" eval \
-  "window.__antithesisDebug.simplified.prepareLogDownload('${FORMAT}')" 2>&1)
+PREPARE_RESULT=$(browser eval "window.__antithesisDebug.simplified.prepareLogDownload('${FORMAT}')" 2>&1)
 if echo "$PREPARE_RESULT" | jq -e '.error' >/dev/null 2>&1; then
-  ERR=$(echo "$PREPARE_RESULT" | jq -r '.error')
-  echo "Error: prepareLogDownload failed: $ERR" >&2
-  exit 3
+  die 3 "prepareLogDownload failed: $(echo "$PREPARE_RESULT" | jq -r '.error')"
 fi
 
-# Step 4: capture the download
 echo "Downloading..." >&2
-if ! agent-browser --session "$SESSION" download \
-  'a.sequence_printer_menu_button[data-mvd-dl]' "$TMPFILE" >/dev/null 2>&1; then
-  echo "Error: download failed" >&2
-  exit 3
-fi
-if [[ ! -s "$TMPFILE" ]]; then
-  echo "Error: downloaded file is empty" >&2
-  exit 3
-fi
+browser download 'a.sequence_printer_menu_button[data-mvd-dl]' "$TMPFILE" >/dev/null 2>&1 \
+  || die 3 "download failed"
+[[ -s "$TMPFILE" ]] || die 3 "downloaded file is empty"
 
-# Step 5: post-process or move
 if [[ "$FORMAT" == "json" && "$RAW" -eq 0 ]]; then
   echo "Annotating logs with vtime_seconds and active_faults..." >&2
-  if ! python3 "$PROCESS_LOGS" "$TMPFILE" -o "$OUTPUT"; then
-    echo "Error: process-logs.py failed" >&2
-    exit 3
-  fi
+  python3 "$PROCESS_LOGS" "$TMPFILE" -o "$OUTPUT" || die 3 "process-logs.py failed"
 else
   mv "$TMPFILE" "$OUTPUT"
 fi

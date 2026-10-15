@@ -1,4 +1,3 @@
-# Minimal test helpers used by the local test suite.
 { pkgs, ... }:
 
 rec {

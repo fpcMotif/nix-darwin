@@ -1,10 +1,3 @@
-# Test entry point for the flake.
-#
-# Returns an attribute set of derivations (one per test). Each test either:
-#   * builds successfully -> the test passes
-#   * fails to build      -> the test fails with an explanation
-#
-# Wired into the flake via `checks.<system>` so `nix flake check` runs them.
 { inputs, system, self }:
 
 let
@@ -101,10 +94,10 @@ in
             builtins.match ".*(^|[^A-Za-z0-9_])${word}($|[^A-Za-z0-9_]).*" line != null)
           (lib.splitString "\n" text);
       contentForHost = host:
-        lib.concatStringsSep "\n" (map (guide: guide.content) [
+        lib.concatStringsSep "\n" (map (guide: guide.content) ([
           host.startup
           host.development
-        ]);
+        ] ++ lib.attrValues host.languages));
       count = marker: text: builtins.length (lib.splitString marker text) - 1;
       requiredSections = [
         "## Working contract"
@@ -112,6 +105,7 @@ in
         "## Command routing"
         "## Code search"
         "## Python"
+        "## Go"
         "## Version control"
         "## Git hooks"
         "## Parallel checkouts"
@@ -127,6 +121,10 @@ in
         "## Command routing"
         "## Parallel checkouts"
         "## Docs lock"
+        "## JavaScript and TypeScript"
+        "## Python"
+        "## Go"
+        "## Rust"
       ];
       # The adapter line that links human-documents.md must name ADRs, or an
       # agent writing one never loads the ADR rules.
@@ -139,6 +137,15 @@ in
       workspacesTriggerNamesJj = host:
         lib.any
           (line: lib.hasInfix "~/${host.development.target}" line && lib.hasInfix "JJ workspace" line)
+          (lib.splitString "\n" host.startup.content);
+      # The adapter line that links the language files must name each language,
+      # or an agent writing Go never connects its task to go.md.
+      languagesTriggerNamesEach = host:
+        lib.any
+          (line:
+            lib.hasInfix "~/${host.languages.typescript.target}" line
+            && lib.all (language: lib.hasInfix "${language}.md" line) (lib.attrNames host.languages)
+            && lib.all (name: lib.hasInfix name line) [ "TypeScript" "Python" "Go" "Rust" ])
           (lib.splitString "\n" host.startup.content);
       bannedTerms = [ "gemini" "deepwiki" "mgrep" "lazygit" "deep-research" "chezmoi" ];
       requiredTools = [ "fd" "rg" "bat" "eza" "dust" "procs" "btm" "ax" "delta" "hyperfine" ];
@@ -154,7 +161,8 @@ in
         let
           content = contentForHost host;
           links = builtins.filter
-            (guide: guide.target != host.startup.target)
+            (guide: guide.target != host.startup.target
+              && !(builtins.elem guide (lib.attrValues host.languages)))
             host.guides;
           tools = requiredTools ++ lib.optional (name == "claude") "fff";
         in
@@ -179,9 +187,19 @@ in
       [ "wt switch" "wt remove" ];
     assert lib.hasInfix "The document is done when" hosts.claude.humanDocuments.content;
     assert lib.hasInfix "## ADRs and domain documents" hosts.claude.humanDocuments.content;
+    assert !(lib.hasInfix "## Plain English" hosts.claude.startup.content);
+    assert !(lib.hasInfix "ste80" (contentForHost hosts.claude));
+    assert lib.all
+      (name:
+        count "## Plain English" hosts.${name}.startup.content == 1
+        && lib.hasInfix "~/.agents/skills/ste80/SKILL.md" hosts.${name}.startup.content)
+      [ "general" "codex" "omp" "antigravity" ];
+    assert hosts.antigravity.startup.target == ".gemini/config/AGENTS.md";
+    assert hosts.antigravity.startup.content == hosts.general.startup.content;
     assert lib.all documentsTriggerNamesAdr
       (builtins.filter (host: host ? humanDocuments) (lib.attrValues hosts));
     assert lib.all workspacesTriggerNamesJj (lib.attrValues hosts ++ lib.attrValues dojjoHosts);
+    assert lib.all languagesTriggerNamesEach (lib.attrValues hosts);
     assert lib.all
       (name: hosts.${name}.startup.content
         == unlockedHosts.${name}.startup.content + "\n" + builtins.readFile docLockGuide)
@@ -201,6 +219,12 @@ in
   '';
   unit-doc-lock = pkgs.runCommand "unit-doc-lock" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.git pkgs.coreutils ]; } ''
     bash ${../modules/home/doc-lock/doc-lock-test.sh} ${lib.getExe pkgs.martin.doc-lock}
+    touch $out
+  '';
+  unit-comment-lint = pkgs.runCommand "unit-comment-lint" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.ast-grep pkgs.findutils pkgs.gnugrep pkgs.coreutils ]; } ''
+    cd ${self}
+    bash ./tests/unit/comment-lint-test.sh ./scripts/comment-lint.sh
+    bash ./scripts/comment-lint.sh
     touch $out
   '';
   unit-jj-pr = pkgs.runCommand "unit-jj-pr" { nativeBuildInputs = [ pkgs.bash pkgs.git pkgs.gnugrep pkgs.jujutsu pkgs.coreutils ]; } ''
@@ -307,14 +331,8 @@ in
       touch $out
     '';
 
-  # Tier-1 hermetic check for martin.shell.viMode + martin.shell.search:
-  # assembles the zshrc in home-manager's real section order, loads it in a
-  # sandboxed zsh, and asserts on the post-load keymap tables -- ^R/^T/alt-c
-  # fzf widgets in BOTH viins and vicmd, prefix-history Up/Down, fn-Delete,
-  # Home/End/PgUp/PgDn, the keepEmacsKeys set in viins, v -> edit-command-line
-  # in vicmd (#328); plus the ^G search plane -- repo chords, upstream ctrl
-  # chords, prefix purity, per-key nulls, full disablement (#329). Three
-  # scenarios run against three independently evaluated initContents.
+  # Load the rendered zshrc in a sandboxed zsh to verify keymap tables across
+  # default, null-dirjump, and disabled search scenarios.
   unit-zsh-vi-mode =
     let
       zshEval = overrides: (import ./lib/zsh-module-eval.nix { inherit pkgs lib; }) overrides;
@@ -352,10 +370,8 @@ in
         vmConfigurationInput = self.nixosConfigurations.vm-aarch64-utm;
       };
 
-  # Linux-only: the shared Home Manager profile must not leak macOS paths or
-  # tools into the Linux hosts. Evaluating the Linux configs requires a Linux
-  # builder (agent-skills resolves its bundle via import-from-derivation), so
-  # this is a no-op skip on Darwin; CI runs it on the x86_64-linux builder.
+  # Evaluating Linux configs forces agent-skills IFD, so skip on Darwin and run
+  # on the x86_64-linux CI builder.
   integration-home-linux-purity =
     if pkgs.stdenv.hostPlatform.isDarwin then
       pkgs.runCommand "integration-home-linux-purity-skipped" { } ''

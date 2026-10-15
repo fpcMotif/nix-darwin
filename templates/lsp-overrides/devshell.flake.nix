@@ -4,20 +4,14 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    # Pin Rust toolchain (uncomment for nightly):
-    # rust-overlay.url = "github:oxalica/rust-overlay";
-    # rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = { nixpkgs, flake-utils, ... }: flake-utils.lib.eachDefaultSystem (system:
     let pkgs = nixpkgs.legacyPackages.${system};
     in {
       devShells.default = pkgs.mkShell {
-        # Servers listed here shadow whatever's in
-        # ~/nix-config/modules/home/lsp.nix while inside this devShell.
-        # Use direnv (`use flake` in .envrc) so Claude Code, Codex CLI,
-        # and Neovim all inherit this PATH whenever they're launched
-        # from this project.
+        # Shadow global LSP servers from modules/home/lsp.nix when editors and
+        # agents launch inside this project's direnv shell.
         packages = with pkgs; [
           # === TypeScript / Vite stack ===
           nodejs_22
@@ -36,9 +30,6 @@
 
           # === Rust ===
           rust-analyzer
-          # (rust-bin.nightly.latest.default.override {
-          #   extensions = [ "rust-src" "rust-analyzer" ];
-          # })
 
           # === Python ===
           python313

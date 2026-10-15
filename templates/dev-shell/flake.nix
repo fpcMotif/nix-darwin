@@ -18,13 +18,9 @@
         in
         {
           default = pkgs.mkShellNoCC {
-            # Project toolchain goes here. Everything resolves from the
-            # flake.lock pin, so every machine gets identical versions.
-            packages = [
-              # pkgs.nodejs_22
-              # pkgs.uv
-              # pkgs.go
-            ];
+            # Resolve the project toolchain (such as nodejs_22, uv, or go) from
+            # flake.lock so every machine gets identical versions.
+            packages = [ ];
           };
         });
     };

@@ -11,38 +11,42 @@ repo="$tmp/repo"
 fail=0 n=0
 
 report() {
+  local name=$1 want=$2 got=$3 detail=$4
   n=$((n + 1))
-  [ "$2" = "$3" ] && return 0
+  [ "$want" = "$got" ] && return 0
   fail=$((fail + 1))
-  printf 'FAIL %s: want=%s got=%s\n%s\n' "$1" "$2" "$3" "$4"
+  printf 'FAIL %s: want=%s got=%s\n%s\n' "$name" "$want" "$got" "$detail"
 }
 
 run_edit() {
-  local out rc got=allow
-  out=$(printf '%s' "$3" | (cd "$repo" && "$LOCK" edit) 2>&1)
+  local want=$1 name=$2 hook_input=$3 out rc got=allow
+  out=$(printf '%s' "$hook_input" | (cd "$repo" && "$LOCK" edit) 2>&1)
   rc=$?
   [ "$rc" -eq 2 ] && got=deny
   [ "$rc" -ne 0 ] && [ "$rc" -ne 2 ] && got="error($rc)"
-  report "$2" "$1" "$got" "$out"
+  report "$name" "$want" "$got" "$out"
 }
 
 edit_case() {
-  run_edit "$1" "edit $2" "$(jq -cn --arg s "$3" --arg p "$4" --argjson t "$5" '{session_id: $s, tool_input: ({file_path: $p} + $t)}')"
+  local want=$1 name=$2 session=$3 path=$4 tool_input=$5
+  run_edit "$want" "edit $name" "$(jq -cn --arg s "$session" --arg p "$path" --argjson t "$tool_input" '{session_id: $s, tool_input: ({file_path: $p} + $t)}')"
 }
 
 patch_case() {
-  run_edit "$1" "patch $2" "$(jq -cn --arg s "$3" --arg cwd "$repo" --arg c "$4" '{session_id: $s, cwd: $cwd, tool_name: "apply_patch", tool_input: {command: $c}}')"
+  local want=$1 name=$2 session=$3 patch=$4
+  run_edit "$want" "patch $name" "$(jq -cn --arg s "$session" --arg cwd "$repo" --arg c "$patch" '{session_id: $s, cwd: $cwd, tool_name: "apply_patch", tool_input: {command: $c}}')"
 }
 
 tool_case() {
-  run_edit "$1" "tool $2" "$(jq -cn --arg cwd "$repo" --argjson t "$3" '{session_id: "s0", cwd: $cwd, tool_input: $t}')"
+  local want=$1 name=$2 tool_input=$3
+  run_edit "$want" "tool $name" "$(jq -cn --arg cwd "$repo" --argjson t "$tool_input" '{session_id: "s0", cwd: $cwd, tool_input: $t}')"
 }
 
 grant_case() {
-  local got=closed
-  jq -cn --arg s "$3" --arg p "$4" '{session_id: $s, prompt: $p}' | "$LOCK" grant >/dev/null
-  [ -f "$XDG_STATE_HOME/doc-lock/$3" ] && got=open
-  report "grant $2" "$1" "$got" "$4"
+  local want=$1 name=$2 session=$3 prompt=$4 got=closed
+  jq -cn --arg s "$session" --arg p "$prompt" '{session_id: $s, prompt: $p}' | "$LOCK" grant >/dev/null
+  [ -f "$XDG_STATE_HOME/doc-lock/$session" ] && got=open
+  report "grant $name" "$want" "$got" "$prompt"
 }
 
 staged_case() {
@@ -184,11 +188,11 @@ staged_case fail "agent deletes Markdown"     CLAUDECODE=1 CLAUDE_CODE_SESSION_I
 git -C "$repo" reset -q --hard
 
 strip_case() {
-  local out got
-  printf '%s' "$3" >"$repo/$2"
-  out=$(cd "$repo" && "$LOCK" strip "$2" 2>&1)
-  got=$(cat "$repo/$2"; printf .)
-  report "strip $1" "$4." "$got" "$out"
+  local name=$1 file=$2 source=$3 want=$4 out got
+  printf '%s' "$source" >"$repo/$file"
+  out=$(cd "$repo" && "$LOCK" strip "$file" 2>&1)
+  got=$(cat "$repo/$file"; printf .)
+  report "strip $name" "$want." "$got" "$out"
 }
 
 strip_case "TypeScript against HEAD" a.ts \
@@ -212,6 +216,8 @@ strip_case "already clean" flake.nix $'{\n  # keep\n  x = 1;\n}\n' $'{\n  # keep
 printf '// keep\n// abs\nconst a = 1;\n// dup\n' >"$repo/a.ts"
 "$LOCK" strip "$repo/a.ts" >/dev/null
 report "strip absolute path" $'// keep\nconst a = 1;\n// dup\n.' "$(cat "$repo/a.ts"; printf .)" ""
+
+report "parse code comments" '["# keep"]' "$(DOC_LOCK_OFF=1 "$LOCK" parse "$repo/flake.nix" | jq -c '[.comments[].text]')" ""
 
 echo "doc-lock: $((n - fail))/$n passed"
 [ "$fail" -eq 0 ]

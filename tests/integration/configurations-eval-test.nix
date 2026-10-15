@@ -1,19 +1,3 @@
-# Integration test: every flake configuration evaluates and exposes the
-# attributes the active architecture commits to.
-#
-# Per ARCHITECTURE.md, Home Manager now owns selected shell/editor-adjacent
-# config text (zsh, git, tmux, Ghostty, Starship) while still leaving mutable
-# auth/runtime app state outside the store. The asserts below cover what the
-# current architecture commits to:
-#   * each flake configuration evaluates end-to-end (drvPath computable)
-#   * currentSystemUser flows into home-manager + system user options
-#   * agent-skills DSL is wired with the documented sources and targets
-#   * common packages (git) are present in home.packages
-#   * migrated Home Manager program modules are enabled
-#   * darwin-only agent packages are gated to darwin
-#   * system-level zsh stays on (this IS owned by Nix, not unmanaged dotfiles)
-#   * the martin.shell.search plane is on by default (^G chords, fzf-git-sh
-#     packaged) and its Ghostty keybind veneer appears only on darwin
 { pkgs
 , lib
 , inputs
@@ -51,13 +35,8 @@ let
     let r = builtins.tryEval (toString drv.drvPath);
     in r.success && r.value != "";
 
-  # A config's system.build.toplevel can only be eval-checked on a builder of
-  # its own platform. home-manager's agent-skills bundle resolves bundlePath via
-  # import-from-derivation, which builds a platform-stamped source, so computing
-  # a foreign-platform toplevel's drvPath here aborts with a "platform mismatch"
-  # rather than a catchable eval error. The `system != pkgs.system` short-circuit
-  # skips the foreign case; the CI check matrix runs this suite on every
-  # supported system, so each toplevel is still eval-verified on its native host.
+  # agent-skills resolves bundlePath via import-from-derivation, so foreign
+  # toplevels abort with a platform mismatch and are checked on their native runner.
   toplevelEvaluatesOnNative = name: system: config:
     helpers.assertTest "nixos-${name}-evaluates"
       (system != pkgs.system || evalsOk config.system.build.toplevel)
@@ -178,11 +157,8 @@ let
       "the platform assertion should pass for Worktrunk anywhere and dojjo on aarch64-darwin")
   ];
 
-  # Standalone re-evaluation of modules/home/zsh.nix with martin.shell.viMode
-  # toggled (see tests/lib/zsh-module-eval.nix): proves the escape hatch
-  # restores today's emacs shape without paying for a second full-host
-  # evaluation. The enabled-path assertions below still read the REAL host
-  # configuration; these only cover the off/derivation side of the toggle.
+  # Evaluate modules/home/shell/zsh.nix standalone so toggle variants do not
+  # pay for a full host evaluation.
   zshViOff = (import ../lib/zsh-module-eval.nix { inherit pkgs lib; }) { viMode = false; };
   zshViOn = (import ../lib/zsh-module-eval.nix { inherit pkgs lib; }) { };
   zshSearchOff = (import ../lib/zsh-module-eval.nix { inherit pkgs lib; }) { searchEnable = false; };
@@ -703,13 +679,8 @@ let
       )
       "Darwin Crush and Zed adapters should render only GPT-6 semantic routes")
 
-    # BetterMouse left Nix on 2026-08-17 and BetterDisplay on 2026-08-19, for
-    # the same reason: both ship Sparkle, which self-updated the writable
-    # /Applications copy this repo installed, so the pin silently stopped
-    # describing what was on disk. Both are GUI-managed now, and the whole
-    # `martin.mouseDisplay` -> `martin.display` module is gone. See
-    # docs/adr/0011-bettermouse-is-gui-managed-not-nix-managed.md and
-    # docs/adr/0012-betterdisplay-is-gui-managed-not-nix-managed.md.
+    # BetterMouse and BetterDisplay self-update via Sparkle in /Applications,
+    # so both stay GUI-managed outside Nix (ADR-0011, ADR-0012).
     (helpers.assertTest "darwin-bettermouse-not-nix-managed"
       (
         !(darwinConfig.martin ? mouseDisplay)
@@ -852,17 +823,8 @@ let
       )
       "Darwin Starship Git branch chip should be hidden inside Jujutsu repos")
 
-    # skhd is deliberately OFF on this host as of 2026-07-19: its CGEventTap
-    # fights BetterMouse's, and the mouse layer won that argument. Everything
-    # under `services.skhd` -- the launchd agent, the package, and the rendered
-    # `skhdConfig` -- is gated behind `mkIf cfg.enable` in modules/darwin/skhd.nix,
-    # so there is no config text left to assert on. The old
-    # darwin-skhd-finder-cut-mode / darwin-skhd-finder-native-move assertions
-    # were retired with the hotkey layer; modules/darwin/skhd.nix and the
-    # `martin.skhd.extraConfig` block in hosts/darwin/default.nix are kept intact
-    # so re-enabling stays a one-line flip. Assert the OFF state so that flip has
-    # to arrive as a deliberate test change rather than silently reintroducing
-    # the tap conflict.
+    # skhd's CGEventTap conflicts with BetterMouse on this host, so keep the
+    # daemon off unless explicitly flipped in both host config and test.
     (helpers.assertTest "darwin-skhd-disabled-for-bettermouse"
       (
         darwinConfig.martin.skhd.enable == false
@@ -885,12 +847,8 @@ let
       )
       "Darwin Home Manager should own the Hammerspoon init.lua")
 
-    # Native-config only: forcing the home.file spine makes agent-skills resolve
-    # its bundlePath, an import-from-derivation that builds a platform-stamped
-    # source. On aarch64-darwin the foreign x86_64-linux NixOS bundles cannot be
-    # built, so this lives in darwinChecks rather than the cross-platform
-    # homeChecks. The jj install is shared in claude.nix, so checking it once on
-    # the native host covers every host's mechanism.
+    # Forcing home.file triggers agent-skills IFD on the host platform, so check
+    # the shared jj skill wiring on the native Darwin config.
     (helpers.assertTest "darwin-installs-jj-skill"
       (
         darwinHome.home.file ? ".claude/skills/jj"

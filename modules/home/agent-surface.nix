@@ -1,8 +1,5 @@
 { config, lib, pkgs, ... }:
 
-# The Agent surface catalog: what every agent host reads from one place.
-# Feature modules (doc-lock, workspace-backend) contribute guide sections and
-# hook specs here; host adapters (claude.nix, darwin/codex.nix) render them.
 let
   cfg = config.martin.agentSurface;
   hookSpec = lib.types.attrsOf lib.types.str;

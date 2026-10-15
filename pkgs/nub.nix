@@ -1,16 +1,3 @@
-# nub — nubjs/nub (binary `nub`, companion `nubx`).
-#
-# nub = Bun-like DX on stock node, written in Rust (github.com/nubjs/nub).
-# Prebuilt release asset, fetched directly — same pattern as
-# pkgs/bun-canary-bin.nix and pkgs/oh-my-pi.nix use for their prebuilt darwin
-# binaries.
-#
-# The release tarball ships `bin/nub`, `bin/nubx` (the bunx-style
-# package-runner entry), and an empty `runtime/` placeholder dir nub
-# populates itself at first run — nothing to install from it.
-#
-# Updates land via scripts/update-nub.sh (see .github/workflows/auto-update.yml).
-
 { lib
 , stdenvNoCC
 , fetchurl

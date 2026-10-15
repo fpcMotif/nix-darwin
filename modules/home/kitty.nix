@@ -11,14 +11,8 @@ in
 {
   programs.kitty = {
     enable = true;
-    # Stock, Hydra-cached kitty — do NOT overrideAttrs this. Baking the icon
-    # in via overrideAttrs (former kittyWithIcon) changed the drv hash so it
-    # never matched cache.nixos.org and kitty rebuilt from source on every
-    # switch; that rebuild's `make -C docs man` step reliably dies with a
-    # libffi assertion (ffi_trampoline_table_alloc_block_invoke, closures.c:258,
-    # Abort trap 6) at this nixpkgs pin. The icon is instead patched into a
-    # real /Applications copy at activation time (see home.activation below),
-    # which needs no store rebuild.
+    # Do not overrideAttrs this package: changing the derivation hash forces a
+    # source build whose man-page step crashes in libffi on Darwin.
     package = pkgs.kitty;
     themeFile = "Catppuccin-Macchiato";
 
@@ -48,16 +42,8 @@ in
     };
   };
 
-  # Home Manager only ever surfaces kitty.app as a symlink straight into the
-  # (read-only) store under ~/Applications/Home Manager Apps — see
-  # modules/darwin/zed.nix for the same observation about Zed. You can't
-  # patch a custom icon into a read-only store path, and modules/home/zsh.nix
-  # already expects real terminfo files under /Applications/kitty.app, so
-  # place a *copy* of kitty.app in /Applications (same install_managed_app
-  # idea as modules/darwin/display.nix / modules/darwin/zed.nix, just
-  # run from home.activation since kitty is home-managed) and patch the icon
-  # into that writable copy. Idempotent via the `.kitty.src` marker: re-copies
-  # only when the underlying store path actually changes.
+  # Copy kitty.app into /Applications so activation can patch a custom icon onto
+  # a writable bundle and zsh can read terminfo from /Applications/kitty.app.
   home.activation.kittyApp = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     kitty_src="${pkgs.kitty}/Applications/kitty.app"
     kitty_dst="/Applications/kitty.app"

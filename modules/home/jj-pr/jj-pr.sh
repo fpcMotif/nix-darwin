@@ -30,6 +30,34 @@ commit_ids() {
 line_count() {
   if [ -z "$1" ]; then echo 0; else wc -l <<<"$1" | tr -d ' '; fi
 }
+on_remote() {
+  [ -n "$(commit_ids "remote_bookmarks(exact:\"$1\", exact:\"$remote\")")" ]
+}
+github_repo() {
+  local remote=$1 url=$2 repo
+  case "$url" in
+    *github.com[:/]*) ;;
+    *) die "remote $remote is not on GitHub: $url" ;;
+  esac
+  repo=${url#*github.com}
+  repo=${repo#[:/]}
+  repo=${repo%/}
+  repo=${repo%.git}
+  [[ "$repo" =~ ^[^/]+/[^/]+$ ]] || die "cannot read owner/repo from $url"
+  echo "$repo"
+}
+nearest_pushed_bookmark_below() {
+  local head_id=$1 own_bookmark=$2 candidates candidate
+  while read -ra candidates; do
+    for candidate in "${candidates[@]}"; do
+      if [ "$candidate" != "$own_bookmark" ] && on_remote "$candidate"; then
+        echo "$candidate"
+        return
+      fi
+    done
+  done < <(j log -r "(trunk()..$head_id-) & bookmarks()" --no-graph \
+    -T 'local_bookmarks.map(|b| b.name()).join(" ") ++ "\n"')
+}
 
 name="" rev="" body="" title="" base="" rev_set=false title_set=false draft=false dry_run=false
 while [ "$#" -gt 0 ]; do
@@ -59,18 +87,7 @@ done
 
 remote=$(j config get git.push 2>/dev/null) || remote=origin
 url=$(git --git-dir "$(j git root)" config --get "remote.$remote.url") || die "no remote named $remote"
-case "$url" in
-  *github.com[:/]*) ;;
-  *) die "remote $remote is not on GitHub: $url" ;;
-esac
-repo=${url#*github.com}
-repo=${repo#[:/]}
-repo=${repo%/}
-repo=${repo%.git}
-[[ "$repo" =~ ^[^/]+/[^/]+$ ]] || die "cannot read owner/repo from $url"
-on_remote() {
-  [ -n "$(commit_ids "remote_bookmarks(exact:\"$1\", exact:\"$remote\")")" ]
-}
+repo=$(github_repo "$remote" "$url")
 
 if ! $rev_set; then
   rev=@-
@@ -100,17 +117,17 @@ if [ -z "$name" ]; then
   esac
 fi
 
-at=$(commit_ids "bookmarks(exact:\"$name\")")
-if [ -z "$at" ]; then
+bookmark_id=$(commit_ids "bookmarks(exact:\"$name\")")
+if [ -z "$bookmark_id" ]; then
   action=create
-elif [ "$(line_count "$at")" -gt 1 ]; then
+elif [ "$(line_count "$bookmark_id")" -gt 1 ]; then
   die "bookmark $name is conflicted; resolve it with jj bookmark set"
-elif [ "$at" = "$head_id" ]; then
+elif [ "$bookmark_id" = "$head_id" ]; then
   action=keep
-elif [ -n "$(commit_ids "$at & ::$head_id")" ]; then
+elif [ -n "$(commit_ids "$bookmark_id & ::$head_id")" ]; then
   action=move
 else
-  die "bookmark $name is at ${at:0:12}, not below $rev; move it yourself with jj bookmark move"
+  die "bookmark $name is at ${bookmark_id:0:12}, not below $rev; move it yourself with jj bookmark move"
 fi
 track=false
 if [ "$action" != create ] && ! on_remote "$name"; then
@@ -118,15 +135,7 @@ if [ "$action" != create ] && ! on_remote "$name"; then
 fi
 
 if [ -z "$base" ]; then
-  while read -ra candidates; do
-    for candidate in "${candidates[@]}"; do
-      if [ "$candidate" != "$name" ] && on_remote "$candidate"; then
-        base=$candidate
-        break 2
-      fi
-    done
-  done < <(j log -r "(trunk()..$head_id-) & bookmarks()" --no-graph \
-    -T 'local_bookmarks.map(|b| b.name()).join(" ") ++ "\n"')
+  base=$(nearest_pushed_bookmark_below "$head_id" "$name")
   base=${base:-$trunk_name}
   [ -n "$base" ] || die "found no trunk branch on $remote; pass -B BASE"
 fi
@@ -152,7 +161,7 @@ pr_base=$(jq -r '.[0].baseRefName // empty' <<<"$pr")
 
 case $action in
   create) bookmark_plan="create bookmark" ;;
-  move) bookmark_plan="move bookmark from ${at:0:12}" ;;
+  move) bookmark_plan="move bookmark from ${bookmark_id:0:12}" ;;
   keep) bookmark_plan="bookmark in place" ;;
 esac
 if $track; then
@@ -199,24 +208,24 @@ else
 fi
 
 if [ -z "$pr_url" ]; then
-  create=(pr create -R "$repo" --head "$name" --base "$base" --title "$title" --body-file "$body")
+  create_args=(pr create -R "$repo" --head "$name" --base "$base" --title "$title" --body-file "$body")
   if $draft; then
-    create+=(--draft)
+    create_args+=(--draft)
   fi
-  gh "${create[@]}"
+  gh "${create_args[@]}"
 else
-  edit=()
+  edit_args=()
   if [ -n "$body" ]; then
-    edit+=(--body-file "$body")
+    edit_args+=(--body-file "$body")
   fi
   if $title_set; then
-    edit+=(--title "$title")
+    edit_args+=(--title "$title")
   fi
   if [ "$pr_base" != "$base" ]; then
-    edit+=(--base "$base")
+    edit_args+=(--base "$base")
   fi
-  if [ "${#edit[@]}" -gt 0 ]; then
-    gh pr edit "$name" -R "$repo" "${edit[@]}"
+  if [ "${#edit_args[@]}" -gt 0 ]; then
+    gh pr edit "$name" -R "$repo" "${edit_args[@]}"
   else
     printf '%s\n' "$pr_url"
   fi

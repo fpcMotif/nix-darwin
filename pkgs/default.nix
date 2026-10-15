@@ -23,23 +23,8 @@ final: _prev:
     else
       _prev.nodejs-slim_26;
 
-  # tmux 3.7 added a configure check that REFUSES to build on darwin unless
-  # jemalloc is explicitly opted in or out:
-  #   "macOS calloc(3) appears not to correctly zero allocations in some
-  #    circumstances; ... configuring with --enable-jemalloc is recommended.
-  #    To build without anyway, use --disable-jemalloc"
-  # nixpkgs' pkgs/by-name/tm/tmux/package.nix passes neither, so every darwin
-  # build of tmux >=3.7 dies at configure — which takes home-manager-path and
-  # therefore the WHOLE `darwin-rebuild switch` down with it. Upstream has no
-  # fix as of nixpkgs c8f9065 (2026-08-22).
-  #
-  # Opt IN rather than out: the calloc bug the check warns about is real, and
-  # jemalloc is cached for aarch64-darwin, so this costs nothing.
-  #
-  # Darwin-only: the configure check that hard-fails is guarded by
-  # `platform = darwin` upstream, and Linux tmux builds fine untouched — no
-  # reason to drag jemalloc into the Linux hosts' closure.
-  # Drop this override once nixpkgs' own package sets a jemalloc flag.
+  # tmux >= 3.7 refuses to configure on Darwin unless jemalloc is explicitly
+  # enabled or disabled, and nixpkgs passes neither flag.
   tmux =
     if final.stdenv.hostPlatform.isDarwin then
       _prev.tmux.overrideAttrs

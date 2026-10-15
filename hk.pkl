@@ -5,4 +5,15 @@ steps {
     glob = "docs/adr/**"
     check = "bash tests/unit/adr-files-test.sh docs/adr && bash tests/unit/adr-numbers-test.sh docs/adr"
   }
+  ["nix-format"] {
+    glob = "*.nix"
+    exclude = "references/**"
+    check = "nix fmt -- --check {{files}}"
+    fix = "nix fmt -- {{files}}"
+  }
+  ["comment-lint"] {
+    glob = "*.nix"
+    exclude = "references/**"
+    check = "bash scripts/comment-lint.sh {{files}}"
+  }
 }

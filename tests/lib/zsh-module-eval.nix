@@ -1,18 +1,3 @@
-# Evaluate modules/home/zsh.nix standalone -- outside a full home-manager
-# configuration -- so tests can read the module's generated text and toggle
-# martin.shell.viMode without re-evaluating an entire host configuration.
-#
-# Only the attributes tests actually read are declared (and therefore
-# merged/validated); everything else the module writes passes through
-# freeform attrsets and is never looked at. The module system requires each
-# declared subtree's parents to be declared too, hence the programs level.
-# If the zsh module starts writing a namespace that breaks evaluation here,
-# the fix is one more declared (or freeform-covered) level in this shim --
-# failures are loud, never silently swallowed.
-#
-# Kept free of import-from-derivation on purpose: this evaluates on any
-# platform, unlike full-host evaluations (see the agent-skills IFD caveat in
-# tests/integration/configurations-eval-test.nix).
 { pkgs, lib }:
 { viMode ? null, searchEnable ? null, dirJumpNull ? false, includeSession ? false, includeDirenv ? true, includeFzf ? true, includeZoxide ? true, includePrompt ? false }:
 

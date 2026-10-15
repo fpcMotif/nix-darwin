@@ -1,11 +1,10 @@
 #!/bin/bash
-# Table test for shell-guard.sh: one row per command, expected verdict first.
-# Run: bash shell-guard-test.sh [path/to/shell-guard.sh]  (the nix check passes the store path)
+# The nix check runs the hook from the store, so it passes that path in.
 HOOK=${1:-$(dirname "$0")/shell-guard.sh}
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 PLAIN=$TMP/plain; JJ=$TMP/jj; mkdir -p "$PLAIN" "$JJ/.jj" "$JJ/sub"
-COLO=$TMP/colo; WT=$COLO/.claude/worktrees/wt; JJWS=$TMP/jj-ws
-mkdir -p "$COLO/.jj" "$COLO/.git" "$COLO/sub" "$WT/sub" "$JJWS/.jj"; touch "$WT/.git" "$JJWS/.git"
+COLOCATED=$TMP/colo; WORKTREE=$COLOCATED/.claude/worktrees/wt; JJ_WORKSPACE=$TMP/jj-ws
+mkdir -p "$COLOCATED/.jj" "$COLOCATED/.git" "$COLOCATED/sub" "$WORKTREE/sub" "$JJ_WORKSPACE/.jj"; touch "$WORKTREE/.git" "$JJ_WORKSPACE/.git"
 fail=0; n=0
 check() {
   want=$1; cmd=$2; cwd=${3:-$PLAIN}; n=$((n + 1))
@@ -84,7 +83,7 @@ check allow "jq '.a' in.json > out.json"
 check allow "git diff > /tmp/x.diff"
 check allow "bat -pp --line-range 1:30 hooks/shell-guard.sh"
 
-# Separators inside quotes do not start a command; $( inside double quotes does.
+# Separators inside quotes do not start a command. A $( inside double quotes does.
 check allow "rg -n \"ls|find|fff\" x"
 check allow "rg -n 'a|sed' x"
 check allow "rg -n \$'a|find' x"
@@ -125,7 +124,7 @@ check allow $'uv run - <<\'PY\'\nfrom PIL import Image\nprint(Image.open("assets
 check deny  $'uv run - <<\'PY\'\nwith open("out.txt", mode="a") as f:\n    f.write("x")\nPY'
 check deny  "git show HEAD:a.ts | sed -n 150,234p"
 
-# Git writes in a jj workspace go to jj; read-only git and plain Git checkouts pass.
+# Git writes in a jj workspace go to jj. Read-only git and plain Git checkouts pass.
 check deny  "git add -N a.md" "$JJ"
 check deny  "git commit -m 'x'" "$JJ"
 check deny  "git checkout main" "$JJ/sub"
@@ -145,17 +144,17 @@ check allow "git -C $PLAIN commit -m x" "$JJ"
 check allow "cd \"\$OTHER\" && git commit -m x" "$JJ"
 check allow "jj commit -m 'git commit'" "$JJ"
 check allow "rg -n 'git commit' docs/" "$JJ"
-check deny  "git add a.md" "$COLO"
-check deny  "git commit -m x" "$COLO/sub"
-check deny  "git add a.md" "$COLO/.claude/worktrees"
-check deny  "cd $COLO && git add a.md" "$WT"
-check deny  "git add a.md" "$JJWS"
-check allow "git add a.md" "$WT"
-check allow "git commit -m x" "$WT/sub"
-check allow "cd $WT && git commit -m x" "$COLO"
-check allow "git -C $WT/sub add a.md" "$COLO"
+check deny  "git add a.md" "$COLOCATED"
+check deny  "git commit -m x" "$COLOCATED/sub"
+check deny  "git add a.md" "$COLOCATED/.claude/worktrees"
+check deny  "cd $COLOCATED && git add a.md" "$WORKTREE"
+check deny  "git add a.md" "$JJ_WORKSPACE"
+check allow "git add a.md" "$WORKTREE"
+check allow "git commit -m x" "$WORKTREE/sub"
+check allow "cd $WORKTREE && git commit -m x" "$COLOCATED"
+check allow "git -C $WORKTREE/sub add a.md" "$COLOCATED"
 
-# `z NAME` moves the directory through zoxide, like the z function in shell/zoxide.nix.
+# Guards parity with the z function in shell/zoxide.nix.
 if command -v zoxide >/dev/null 2>&1; then
   export _ZO_DATA_DIR=$TMP/zoxide; mkdir -p "$_ZO_DATA_DIR"; zoxide add "$JJ" "$PLAIN"
   check deny  "z jj && git commit -m x" "$PLAIN"
@@ -167,7 +166,7 @@ else
   echo "skip: zoxide not on PATH, z rows not run"
 fi
 
-# PIPESTATUS is bash-only; under zsh it expands to nothing. Single quotes and heredocs run elsewhere.
+# Under zsh PIPESTATUS expands to nothing. Single-quoted and heredoc code runs in bash, where it works.
 SHELL=/bin/zsh check deny  'nix build x 2>&1 | tail -5; echo "exit=${PIPESTATUS[0]}"'
 SHELL=/bin/zsh check deny  'bun test | tee log; exit ${PIPESTATUS[0]}'
 SHELL=/bin/zsh check allow 'nix build x 2>&1 | tail -5; echo "exit=${pipestatus[1]}"'

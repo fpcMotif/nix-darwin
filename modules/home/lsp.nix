@@ -1,31 +1,24 @@
 { pkgs, lib, config, ... }:
 
-# vue-language-server is skipped: with no aarch64-darwin cache hit, it
-# compiled on every bump.
-
 let
   inherit (lib) hm;
 
   homeDir = config.home.homeDirectory;
   codexLsp = import ../shared/codex-lsp.nix { inherit lib pkgs; };
 
-  # ~/.claude/lsp.json for Claude Code's LSP tool. The `typescript-lsp` plugin
-  # adds a second TS server; disable it to keep tsc alone. Unsupported keys:
-  # fileTypes, rootMarkers, restartOnCrash, maxRestarts.
+  # Disable the typescript-lsp plugin so tsc stays the sole TypeScript server.
+  # Claude Code rejects fileTypes, rootMarkers, restartOnCrash, and maxRestarts.
   claudeLspJson = pkgs.writeText "claude-lsp.json" (builtins.toJSON codexLsp.adapters.claude);
 
 in
 {
   home.packages = codexLsp.packages;
 
-  # === Claude Code: declarative LSP config ===
-  # Read-only Nix-managed file. Project-level `.lsp.json` at any repo
-  # root still wins per Claude Code's config cascade.
+  # Project-level .lsp.json at a repo root still overrides this file.
   home.file.".claude/lsp.json".source = claudeLspJson;
 
-  # === Claude Desktop / Codex App: ensure mcpServers key exists ===
-  # Only the key, not the bridges: those are per-project
-  # (templates/lsp-overrides/mcp-bridge.json).
+  # Seed only the top-level mcpServers key; bridges stay per-project in
+  # templates/lsp-overrides/mcp-bridge.json.
   home.activation.claudeDesktopMcpScaffold =
     lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (
       hm.dag.entryAfter [ "writeBoundary" ] ''

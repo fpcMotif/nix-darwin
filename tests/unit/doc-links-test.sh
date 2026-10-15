@@ -3,16 +3,14 @@ set -euo pipefail
 
 root=$1
 
-# The maintained documents: everything under docs/ plus the root guides.
-files=$(
+maintained_docs=$(
   cd "$root"
   find docs -type f -name '*.md' | sort
   printf '%s\n' AGENTS.md ARCHITECTURE.md GLOSSARY.md
 )
 
-# Print "LINE<TAB>TARGET" for each inline link, image, and reference
-# definition. Fenced blocks and inline code spans hold examples, not links.
-extract_links() {
+# Fenced blocks and inline code spans hold examples, not links.
+print_line_and_link_target() {
   awk '
     /^[ \t]*(```|~~~)/ { fenced = !fenced; next }
     fenced { next }
@@ -41,7 +39,7 @@ while IFS= read -r file; do
   }
   dir=$(dirname "$file")
   while IFS=$'\t' read -r line target; do
-    # Drop an optional title and angle brackets: [a](<b c.md> "title").
+    # CommonMark allows spaces inside an angle-bracket link target.
     case $target in
       "<"*) target=${target#<}; target=${target%%>*} ;;
       *) target=${target%%[[:space:]]*} ;;
@@ -62,8 +60,8 @@ while IFS= read -r file; do
       echo "$file:$line: broken link to $target" >&2
       broken=1
     fi
-  done < <(extract_links "$root/$file")
-done <<<"$files"
+  done < <(print_line_and_link_target "$root/$file")
+done <<<"$maintained_docs"
 
 if [ "$broken" -ne 0 ]; then
   echo "docs: fix or remove the broken relative links above" >&2

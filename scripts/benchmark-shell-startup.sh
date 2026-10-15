@@ -1,14 +1,4 @@
 #!/usr/bin/env bash
-# Benchmark shell startup times across modes and environments.
-# Reports mean and spread via hyperfine, without encoding fragile CI thresholds.
-#
-# Usage:
-#   bash scripts/benchmark-shell-startup.sh                   # live dotfiles
-#   bash scripts/benchmark-shell-startup.sh "$HOME_FILES_DIR" # a built config before switching
-#
-#     HOME_FILES_DIR=$(nix build --no-link --print-out-paths \
-#       .#darwinConfigurations.f.config.home-manager.users.martinfan.home-files)
-
 set -euo pipefail
 
 if ! command -v hyperfine >/dev/null 2>&1; then
@@ -18,6 +8,7 @@ fi
 
 HOME_FILES_DIR="${1:-}"
 LABEL="live environment"
+MARKDOWN_REPORT="${TMPDIR:-/tmp}/shell-benchmark.md"
 
 if [ -n "$HOME_FILES_DIR" ]; then
   if [ ! -d "$HOME_FILES_DIR" ]; then
@@ -39,17 +30,18 @@ echo "================================================================="
 echo "Shell Startup Benchmark (${LABEL})"
 echo "================================================================="
 
+# Report mean and spread only. CI thresholds on startup timings are fragile.
 hyperfine --warmup 20 \
-  --export-markdown "${TMPDIR:-/tmp}/shell-benchmark.md" \
+  --export-markdown "$MARKDOWN_REPORT" \
   '/bin/zsh -f -i -c exit' \
   '/bin/zsh -c exit' \
   '/bin/zsh -l -c exit' \
   '/bin/zsh -i -c exit' \
   '/bin/zsh -lic exit'
 
-if [ -f "${TMPDIR:-/tmp}/shell-benchmark.md" ]; then
+if [ -f "$MARKDOWN_REPORT" ]; then
   echo ""
   echo "Markdown Summary:"
-  cat "${TMPDIR:-/tmp}/shell-benchmark.md"
-  rm -f "${TMPDIR:-/tmp}/shell-benchmark.md"
+  cat "$MARKDOWN_REPORT"
+  rm -f "$MARKDOWN_REPORT"
 fi

@@ -1,14 +1,3 @@
-# Hermetic drift checks for the agent-skill curation lists.
-#
-# These are genuine CROSS-SOURCE invariants — the repo's curation lists vs. the
-# pinned `mattpocock-skills` flake input vs. the working tree — not restatements
-# of the module under test, so deriving them here is correct (contrast
-# docs/adr/0004, which forbids deriving a test's EXPECTATION from the module it
-# tests). The exclusion lists below are RESTATED by hand for exactly that
-# reason: a wrong-but-self-consistent edit to claude.nix must fail here.
-#
-# Pure `builtins.readDir` only. Forcing `programs.agent-skills` output would
-# trigger IFD and break evaluating the Linux hosts from Darwin.
 { inputs, pkgs, lib, self, ... }:
 
 let
@@ -46,13 +35,12 @@ let
     (builtins.readDir personalRoot));
 in
 helpers.testSuite "skill-hygiene" (
-  # 1. Every exclusion term must still name a live upstream skill. A term that
-  #    excludes nothing is a silent no-op the day upstream renames something —
-  #    which is exactly how `caveman` and `zoom-out` rotted in the lean list.
+  # 1. Every exclusion term must still name a live upstream skill so upstream
+  #    renames do not leave silent no-ops in the exclusion lists.
   (map
     (id: helpers.assertTest "skill-hygiene-exclusion-live-${id}"
       (builtins.elem id upstreamIds)
-      "exclusion list names '${id}', which no longer exists in any promoted mattpocock-skills bucket — delete the entry or fix the typo")
+      "exclusion list names '${id}', which is missing from promoted mattpocock-skills buckets — delete the entry or fix the typo")
     (disabled ++ leanExcluded))
 
   # 2. A vendored fork must not shadow a promoted upstream skill. Both would
@@ -86,32 +74,33 @@ helpers.testSuite "skill-hygiene" (
         personalTargets)
       "personal skill targets must be unique home-relative paths outside native plugin and system-skill directories")
 
-    # 3. Vendored dirs on disk == the ids this test knows about. claude.nix now
-    #    derives localSkillIds from readDir, so this is the check that a new
-    #    modules/home/skills/<id> got added without a decision.
+    (helpers.assertTest "skill-hygiene-ste80-targets"
+      (personalManifest ? ste80
+      && builtins.elem ".agents/skills/ste80" personalManifest.ste80
+      && !(lib.any (target: lib.hasPrefix ".claude/" target) personalManifest.ste80))
+      "ste80 needs its .agents copy, which the non-Claude guides load by path. It needs no Claude copy, because Claude's Writing section already covers it.")
+
+    # 3. claude.nix derives localSkillIds from readDir, so this checks that a
+    #    new modules/home/skills/<id> directory is added deliberately.
     (helpers.assertTest "skill-hygiene-vendored-dirs-match"
       (sorted vendoredOnDisk == sorted vendored)
       "modules/home/skills/ holds ${toString vendoredOnDisk} but this test expects ${toString vendored} — add the new skill here deliberately")
 
-    # 4. The Karpathy forks are retired. A `transform` on a mattpocock skill
-    #    shadows the plugin copy and re-creates the duplicate this module
-    #    exists to remove, so re-adding one must be a deliberate decision.
+    # 4. A transform on a mattpocock skill shadows the plugin copy and
+    #    duplicates the entry in the skill picker.
     (helpers.assertTest "skill-hygiene-no-mattpocock-transform"
       (!(lib.hasInfix "appendKarpathy" claudeNix)
       && !(lib.hasInfix "transformedMattpocockSkills" claudeNix))
       "a mattpocock skill regained a Nix `transform`; forks shadow the plugin copy and re-create the duplicate this change removed")
 
-    # 5. The in-progress source must not come back by accident: upstream
-    #    promoting a skill that also matches an in-progress regex makes
-    #    discoverCatalog throw on a duplicate id (this is how `teach` ended up
-    #    listed twice before it was promoted into productivity/).
+    # 5. Upstream promoting a skill that also matches an in-progress regex
+    #    makes discoverCatalog throw on a duplicate id.
     (helpers.assertTest "skill-hygiene-no-in-progress-source"
       (!(lib.hasInfix "mp-in-progress" claudeNix))
       "the mp-in-progress source was re-added; teach lives in productivity/ now, so its regex matches nothing and risks a duplicate-id throw")
 
-    # 6. The Claude-only de-duplication must never be implemented by dropping
-    #    ids from the bundle — that would silently strip Codex/Droid/OpenCode/
-    #    Crush, which have no plugin system to fall back on.
+    # 6. Dropping ids from the shared bundle would strip Codex, Droid,
+    #    OpenCode, and Crush, which have no plugin system to fall back on.
     (helpers.assertTest "skill-hygiene-dedup-is-claude-only"
       (lib.hasInfix "skillOverrides" claudeNix
       && lib.hasInfix "pluginProvidedSkillIds = enabledMattpocockSkills;" claudeNix)

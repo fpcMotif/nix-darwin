@@ -1,26 +1,61 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# setup-varlock-env.sh
-# Configures a TypeScript/Vite/Bun project to use Varlock for type-safe envs
-# while explicitly turning off ambient .env loading in mise and Bun.
-# ==============================================================================
+# mise and Bun each load .env on their own and skip Varlock's validation.
 set -euo pipefail
 
 TARGET_DIR="${1:-.}"
 cd "$TARGET_DIR"
 
-echo "🔧 Configuring Varlock environment management in $(pwd)..."
-
-# 1. mise.toml — Disable ambient .env loading so mise only manages runtimes
-if [ -f "mise.toml" ]; then
-  if ! grep -q '_\.dotenv' mise.toml 2>/dev/null; then
-    echo -e '\n[env]\n_.dotenv = false' >> mise.toml
-    echo "  ✓ Updated mise.toml: disabled _.dotenv"
-  else
-    echo "  - mise.toml: already configured"
+# Edits KEY inside an existing [TABLE] rather than appending, because a second
+# [TABLE] header makes the file invalid TOML.
+set_toml_key_false() {
+  local file=$1 table=$2 key=$3 tmp
+  tmp=$(mktemp)
+  if ! awk -v table="$table" -v key="$key" '
+    function header_name(line) {
+      if (line !~ /^[ \t]*\[[^][]+\][ \t]*(#.*)?$/) return ""
+      sub(/^[ \t]*\[[ \t]*/, "", line); sub(/[ \t]*\].*$/, "", line)
+      return line
+    }
+    function is_key(line,   rest) {
+      sub(/^[ \t]*/, "", line)
+      if (substr(line, 1, length(key)) != key) return 0
+      rest = substr(line, length(key) + 1)
+      return rest ~ /^[ \t]*=/
+    }
+    NR == FNR {
+      name = header_name($0)
+      if (name != "") section = name
+      else if (section == table && is_key($0)) has_key = 1
+      if (name == table) has_table = 1
+      next
+    }
+    {
+      name = header_name($0)
+      if (name != "") section = name
+      if (section == table && name == "" && is_key($0)) { print key " = false"; next }
+      print
+      if (name == table && !has_key) print key " = false"
+    }
+    END { if (!has_table) printf "\n[%s]\n%s = false\n", table, key }
+  ' "$file" "$file" > "$tmp"; then
+    rm -f "$tmp"
+    echo "  ✗ $file: could not set [$table] $key = false; left unchanged" >&2
+    return 1
   fi
-else
-  cat << 'EOF' > mise.toml
+  if cmp -s "$tmp" "$file"; then
+    rm -f "$tmp"
+    echo "  - $file: already configured"
+  else
+    mv "$tmp" "$file"
+    echo "  ✓ Updated $file: set [$table] $key = false"
+  fi
+}
+
+configure_mise() {
+  if [ -f "mise.toml" ]; then
+    set_toml_key_false mise.toml env _.dotenv
+  else
+    cat << 'EOF' > mise.toml
 [tools]
 node = "22"
 bun = "latest"
@@ -29,29 +64,26 @@ bun = "latest"
 # Disable ambient .env loading so Varlock owns environment validation
 _.dotenv = false
 EOF
-  echo "  ✓ Created mise.toml with _.dotenv = false"
-fi
-
-# 2. bunfig.toml — Disable Bun auto-loading of .env
-if [ -f "bunfig.toml" ]; then
-  if ! grep -q '\[env\]' bunfig.toml 2>/dev/null; then
-    echo -e '\n[env]\nenv = false' >> bunfig.toml
-    echo "  ✓ Updated bunfig.toml: disabled [env] env = false"
-  else
-    echo "  - bunfig.toml: already configured"
+    echo "  ✓ Created mise.toml with _.dotenv = false"
   fi
-else
-  cat << 'EOF' > bunfig.toml
+}
+
+configure_bunfig() {
+  if [ -f "bunfig.toml" ]; then
+    set_toml_key_false bunfig.toml env env
+  else
+    cat << 'EOF' > bunfig.toml
 [env]
 # Prevent Bun from automatically reading .env without validation
 env = false
 EOF
-  echo "  ✓ Created bunfig.toml with [env] env = false"
-fi
+    echo "  ✓ Created bunfig.toml with [env] env = false"
+  fi
+}
 
-# 3. .env.schema — Define Varlock schema & TypeScript generation target
-if [ ! -f ".env.schema" ]; then
-  cat << 'EOF' > .env.schema
+write_env_schema() {
+  if [ ! -f ".env.schema" ]; then
+    cat << 'EOF' > .env.schema
 # @defaultRequired=false @defaultSensitive=false
 # @generateTsTypes(path=env.d.ts)
 # ------------------------------------------------------------------------------
@@ -68,35 +100,36 @@ VITE_API_URL=http://localhost:3000
 # @sensitive
 VITE_SECRET_KEY=
 EOF
-  echo "  ✓ Created .env.schema"
-else
-  echo "  - .env.schema: already exists"
-fi
+    echo "  ✓ Created .env.schema"
+  else
+    echo "  - .env.schema: already exists"
+  fi
+}
 
-# 4. .env.example — Provide template
-if [ ! -f ".env.example" ]; then
-  cat << 'EOF' > .env.example
+write_env_example_and_default_env() {
+  if [ ! -f ".env.example" ]; then
+    cat << 'EOF' > .env.example
 NODE_ENV=development
 VITE_API_URL=http://localhost:3000
 VITE_SECRET_KEY=dev-secret-key-123
 EOF
-  echo "  ✓ Created .env.example"
-fi
-
-# Create initial .env from .env.example if missing
-if [ ! -f ".env" ] && [ -f ".env.example" ]; then
-  cp .env.example .env
-  echo "  ✓ Created default .env from .env.example"
-fi
-
-# 5. .gitignore — Ensure secrets stay out of git
-if [ -f ".gitignore" ]; then
-  if ! grep -q '^\.env$' .gitignore 2>/dev/null; then
-    echo -e '\n# Environment files\n.env\n.env.local\n.env.*.local\n!.env.example\n!.env.schema' >> .gitignore
-    echo "  ✓ Updated .gitignore"
+    echo "  ✓ Created .env.example"
   fi
-else
-  cat << 'EOF' > .gitignore
+
+  if [ ! -f ".env" ] && [ -f ".env.example" ]; then
+    cp .env.example .env
+    echo "  ✓ Created default .env from .env.example"
+  fi
+}
+
+ignore_env_files_in_git() {
+  if [ -f ".gitignore" ]; then
+    if ! grep -q '^\.env$' .gitignore 2>/dev/null; then
+      echo -e '\n# Environment files\n.env\n.env.local\n.env.*.local\n!.env.example\n!.env.schema' >> .gitignore
+      echo "  ✓ Updated .gitignore"
+    fi
+  else
+    cat << 'EOF' > .gitignore
 .env
 .env.local
 .env.*.local
@@ -105,30 +138,54 @@ else
 node_modules
 dist
 EOF
-  echo "  ✓ Created .gitignore"
-fi
+    echo "  ✓ Created .gitignore"
+  fi
+}
 
-# 6. package.json scripts (if package.json exists)
-if [ -f "package.json" ]; then
-  if command -v jq >/dev/null 2>&1; then
-    tmp=$(mktemp)
-    jq '.scripts = (.scripts // {}) + {
+# Compares parsed JSON, because jq reformats the file even when no value changes.
+rewrite_json_with_jq() {
+  local file=$1 filter=$2 changed_message=$3 tmp
+  tmp=$(mktemp)
+  if ! jq "$filter" "$file" > "$tmp"; then
+    rm -f "$tmp"
+    echo "  ✗ $file: jq failed; left unchanged" >&2
+    return 1
+  fi
+  if jq -e -n --slurpfile old "$file" --slurpfile new "$tmp" '$old == $new' >/dev/null; then
+    rm -f "$tmp"
+    echo "  - $file: already configured"
+  else
+    mv "$tmp" "$file"
+    echo "  ✓ $changed_message"
+  fi
+}
+
+add_varlock_package_scripts() {
+  if [ -f "package.json" ] && command -v jq >/dev/null 2>&1; then
+    rewrite_json_with_jq package.json '.scripts = (.scripts // {}) + {
       "prepare": "varlock codegen",
       "env:check": "varlock load",
       "env:scan": "varlock scan"
-    }' package.json > "$tmp" && mv "$tmp" package.json
-    echo "  ✓ Added Varlock scripts to package.json (prepare, env:check, env:scan)"
+    }' "Added Varlock scripts to package.json (prepare, env:check, env:scan)"
   fi
-fi
+}
 
-# 7. tsconfig.json — Ensure env.d.ts is included in TypeScript checking
-if [ -f "tsconfig.json" ]; then
-  if command -v jq >/dev/null 2>&1; then
-    tmp=$(mktemp)
-    jq 'if .include then (.include = ((.include + ["env.d.ts"]) | unique)) else . end' tsconfig.json > "$tmp" && mv "$tmp" tsconfig.json
-    echo "  ✓ Updated tsconfig.json to include env.d.ts"
+include_env_types_in_tsconfig() {
+  if [ -f "tsconfig.json" ] && command -v jq >/dev/null 2>&1; then
+    rewrite_json_with_jq tsconfig.json 'if .include and (.include | index("env.d.ts") | not) then .include += ["env.d.ts"] else . end' \
+      "Updated tsconfig.json to include env.d.ts"
   fi
-fi
+}
+
+echo "🔧 Configuring Varlock environment management in $(pwd)..."
+
+configure_mise
+configure_bunfig
+write_env_schema
+write_env_example_and_default_env
+ignore_env_files_in_git
+add_varlock_package_scripts
+include_env_types_in_tsconfig
 
 echo ""
 echo "✨ Project configuration complete!"

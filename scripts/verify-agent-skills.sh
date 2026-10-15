@@ -1,25 +1,7 @@
 #!/usr/bin/env bash
-# Tier 2 (opt-in, real-machine) verification of the agent-skill surfaces.
-# Run this AFTER `just switch`. It answers the one question the hermetic Tier 1
-# check (tests/unit/skill-hygiene-test.nix) structurally cannot: is every skill
-# id advertised to Claude Code EXACTLY once, while every other agent still sees
-# the full bundle?
-#
-# Division of labour (see docs/adr/0004-macos-settings-testing-strategy.md):
-#   * Tier 1 (nix flake check) proves the configuration DECLARES the curation.
-#   * Tier 2 (this script)      proves activation APPLIED it to the live picker
-#                               dirs, the live settings.json, and the plugin cache.
-#
-# Deliberately NOT wired into `nix flake check`: it reads mutable machine state
-# (~/.claude/settings*.json, the plugin cache, ~/.agents/skills) that the Nix
-# sandbox cannot see. Invoke via `just verify-skills` or directly.
-#
-# Expectations come from ~/.config/agent-skills/manifest.json, which
-# modules/home/claude.nix regenerates on every switch -- so this script never
-# restates the curation lists and cannot drift from them.
-#
-# Exit status: 0 iff there are zero FAILs. SKIPs (a surface that does not exist
-# on this host) do not fail the run.
+# The Nix sandbox cannot see the live picker dirs, ~/.claude settings, or plugin cache, so
+# tests/unit/skill-hygiene-test.nix cannot prove what activation applied
+# (docs/adr/0004-macos-settings-testing-strategy.md).
 set -uo pipefail
 
 pass=0
@@ -45,16 +27,16 @@ na() {
 
 section() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 
-need() {
+require_tool_or_exit() {
   command -v "$1" >/dev/null 2>&1 || {
     printf 'verify-agent-skills: missing required tool: %s\n' "$1" >&2
     exit 2
   }
 }
-need jq
+require_tool_or_exit jq
 
-# Overridable so the check can be dry-run against a manifest built straight out
-# of `nix build ...home.file."<path>".source` before a switch has applied one.
+# The live manifest only exists after a switch. AGENT_SKILLS_MANIFEST lets a
+# `nix build ...home.file."<path>".source` output be checked before one.
 MANIFEST="${AGENT_SKILLS_MANIFEST:-${HOME}/.config/agent-skills/manifest.json}"
 CLAUDE_SKILLS="${HOME}/.claude/skills"
 AGENTS_SKILLS="${HOME}/.agents/skills"
@@ -66,47 +48,41 @@ if [ ! -f "$MANIFEST" ]; then
   exit 2
 fi
 
-jqm() { jq -r "$1" "$MANIFEST"; }
+manifest_query() { jq -r "$1" "$MANIFEST"; }
 
-# <plugin>@<marketplace>; the cache keys each install as <marketplace>/<plugin>.
-PLUGIN_ID=$(jqm '.pluginId')
+# The cache keys each install as <marketplace>/<plugin>, the reverse of the <plugin>@<marketplace> id.
+PLUGIN_ID=$(manifest_query '.pluginId')
 PLUGIN_CACHE="${HOME}/.claude/plugins/cache/${PLUGIN_ID#*@}/${PLUGIN_ID%@*}"
 
-# Read a manifest array into a named global. Deliberately not `mapfile`: that is
-# a bash-4 builtin and /bin/bash on macOS is still 3.2, so a script invoked with
-# the system bash would silently produce empty lists and "pass" everything.
+# Not `mapfile`: it is a bash-4 builtin and macOS /bin/bash is 3.2, so the
+# system bash would produce empty lists and pass everything.
 CLAUDE_HIDDEN=(); PLUGIN_PROVIDED=(); EXCLUDED=()
 LOCAL_SKILLS=(); DENIED=(); TARGET_DIRS=()
-while IFS= read -r x; do [ -n "$x" ] && CLAUDE_HIDDEN+=("$x"); done < <(jqm '.claudeHidden[]')
-while IFS= read -r x; do [ -n "$x" ] && PLUGIN_PROVIDED+=("$x"); done < <(jqm '.pluginProvided[]')
-while IFS= read -r x; do [ -n "$x" ] && EXCLUDED+=("$x"); done < <(jqm '.excluded[]')
-while IFS= read -r x; do [ -n "$x" ] && LOCAL_SKILLS+=("$x"); done < <(jqm '.localSkills[]')
-while IFS= read -r x; do [ -n "$x" ] && DENIED+=("$x"); done < <(jqm '.deniedPluginSkills[]')
-while IFS= read -r x; do [ -n "$x" ] && TARGET_DIRS+=("$x"); done < <(jqm '.targetDirs[]')
+while IFS= read -r item; do [ -n "$item" ] && CLAUDE_HIDDEN+=("$item"); done < <(manifest_query '.claudeHidden[]')
+while IFS= read -r item; do [ -n "$item" ] && PLUGIN_PROVIDED+=("$item"); done < <(manifest_query '.pluginProvided[]')
+while IFS= read -r item; do [ -n "$item" ] && EXCLUDED+=("$item"); done < <(manifest_query '.excluded[]')
+while IFS= read -r item; do [ -n "$item" ] && LOCAL_SKILLS+=("$item"); done < <(manifest_query '.localSkills[]')
+while IFS= read -r item; do [ -n "$item" ] && DENIED+=("$item"); done < <(manifest_query '.deniedPluginSkills[]')
+while IFS= read -r item; do [ -n "$item" ] && TARGET_DIRS+=("$item"); done < <(manifest_query '.targetDirs[]')
 
-# Empty arrays under `set -u` are an error before bash 4.4, so every expansion
-# below uses the `${a[@]+...}` guard rather than a bare `${a[@]}`.
-
-# The effective skillOverrides value for an id, honouring Claude Code's
-# precedence (user settings.json < settings.local.json). The /skills TUI writes
-# to the local file, so a UI toggle can silently override the managed value.
-effective_override() { # id
-  local id="$1" v=""
+# Claude Code reads settings.local.json over settings.json. The /skills TUI
+# writes to the local file, so a UI toggle can silently override the managed
+# value.
+effective_override() {
+  local id="$1" override=""
   if [ -f "$LOCAL_SETTINGS" ]; then
-    v=$(jq -r --arg k "$id" '.skillOverrides[$k] // empty' "$LOCAL_SETTINGS" 2>/dev/null)
+    override=$(jq -r --arg k "$id" '.skillOverrides[$k] // empty' "$LOCAL_SETTINGS" 2>/dev/null)
   fi
-  if [ -z "$v" ] && [ -f "$SETTINGS" ]; then
-    v=$(jq -r --arg k "$id" '.skillOverrides[$k] // empty' "$SETTINGS" 2>/dev/null)
+  if [ -z "$override" ] && [ -f "$SETTINGS" ]; then
+    override=$(jq -r --arg k "$id" '.skillOverrides[$k] // empty' "$SETTINGS" 2>/dev/null)
   fi
-  printf '%s' "${v:-on}"
+  printf '%s' "${override:-on}"
 }
 
-# ---------------------------------------------------------------------------
 section "1. Claude-visible duplicates (bundle copy must be hidden)"
-# Every id the plugin also provides must be present on disk but overridden
-# "off", so Claude Code lists it once -- as mattpocock-skills:<id>.
+# Bash before 4.4 treats an empty array as unset under `set -u`, hence the
+# `${a[@]+...}` guard on every array expansion.
 for id in ${CLAUDE_HIDDEN[@]+"${CLAUDE_HIDDEN[@]}"}; do
-  [ -n "$id" ] || continue
   got=$(effective_override "$id")
   if [ "$got" = "off" ]; then
     ok "$id hidden from Claude (skillOverrides=off)"
@@ -115,7 +91,6 @@ for id in ${CLAUDE_HIDDEN[@]+"${CLAUDE_HIDDEN[@]}"}; do
   fi
 done
 
-# ---------------------------------------------------------------------------
 section "2. Hidden ids are actually replaced by the plugin"
 # The failure mode of deriving the hidden set from the flake pin: if the pin
 # runs AHEAD of the plugin, an id gets hidden with nothing to replace it.
@@ -128,35 +103,36 @@ if [ -d "$PLUGIN_CACHE" ]; then
   declared=$(find "$PLUGIN_CACHE" -maxdepth 3 -name plugin.json -path '*/.claude-plugin/*' \
     -exec jq -r '.skills[]? | split("/") | last' {} + 2>/dev/null | sort -u)
   for id in ${PLUGIN_PROVIDED[@]+"${PLUGIN_PROVIDED[@]}"}; do
-    [ -n "$id" ] || continue
     if printf '%s\n' "$declared" | grep -qx "$id"; then
       ok "$id is declared by the enabled plugin"
     else
       bad "$id is hidden from Claude but the plugin does not declare it -- the flake pin is ahead of the plugin, so this skill is now invisible"
     fi
   done
-  # Text drift: Claude reads the plugin copy, every other agent the bundle copy.
-  # Different cadences (plugin release vs flake pin) make drift expected, so it
-  # is reported, never failed; an id present on one side only is caught above.
+  # Claude reads the plugin copy, every other agent the bundle copy. Different
+  # cadences (plugin release vs flake pin) make drift expected, not a failure.
   drift=0
   for id in ${PLUGIN_PROVIDED[@]+"${PLUGIN_PROVIDED[@]}"}; do
-    [ -n "$id" ] || continue
     bundle="$CLAUDE_SKILLS/$id/SKILL.md"
     plugin=$(find "$PLUGIN_CACHE" -path "*/skills/*/$id/SKILL.md" -print -quit 2>/dev/null)
-    if [ -f "$bundle" ] && [ -n "$plugin" ] && ! cmp -s "$bundle" "$plugin"; then drift=$((drift + 1)); fi
+    if [ -f "$bundle" ] && [ -n "$plugin" ] && ! cmp -s "$bundle" "$plugin"; then
+      drift=$((drift + 1))
+    fi
   done
-  if [ "$drift" -eq 0 ]; then ok "plugin and bundle SKILL.md identical for every hidden id"; else na "$drift hidden ids differ between plugin and bundle text (plugin release vs flake pin); Claude reads the plugin, other agents the bundle"; fi
+  if [ "$drift" -eq 0 ]; then
+    ok "plugin and bundle SKILL.md identical for every hidden id"
+  else
+    na "$drift hidden ids differ between plugin and bundle text (plugin release vs flake pin); Claude reads the plugin, other agents the bundle"
+  fi
 else
   na "plugin cache not found at $PLUGIN_CACHE"
 fi
 
-# ---------------------------------------------------------------------------
 section "3. Refused ids are gone from the plugin manifest"
 # skillOverrides cannot touch a plugin skill, so these are pruned out of the
 # cached manifest instead. A plugin update restores them until the next switch.
 if [ -d "$PLUGIN_CACHE" ]; then
   for id in ${DENIED[@]+"${DENIED[@]}"}; do
-    [ -n "$id" ] || continue
     if find "$PLUGIN_CACHE" -maxdepth 3 -name plugin.json -path '*/.claude-plugin/*' \
       -exec jq -e --arg id "$id" \
       'any(.skills[]?; split("/") | last == $id)' {} + >/dev/null 2>&1; then
@@ -169,11 +145,9 @@ else
   na "plugin cache not found at $PLUGIN_CACHE"
 fi
 
-# ---------------------------------------------------------------------------
 section "4. Deny rules present (covers the post-update window)"
 if [ -f "$SETTINGS" ]; then
   for id in ${DENIED[@]+"${DENIED[@]}"}; do
-    [ -n "$id" ] || continue
     if jq -e --arg r "Skill(mattpocock-skills:${id})" \
       'any(.permissions.deny[]?; . == $r)' "$SETTINGS" >/dev/null 2>&1; then
       ok "Skill(mattpocock-skills:$id) denied"
@@ -185,29 +159,23 @@ else
   na "$SETTINGS not found"
 fi
 
-# ---------------------------------------------------------------------------
 section "5. Other agents keep the full bundle (the hard constraint)"
-# Codex/Droid/OpenCode/Crush have no plugin system. Everything hidden from
-# Claude MUST still be readable from their own picker dirs.
+# Codex, Droid, OpenCode and Crush have no plugin system, so the bundle is their only copy.
 if [ -d "$AGENTS_SKILLS" ]; then
   missing=0
   for id in ${PLUGIN_PROVIDED[@]+"${PLUGIN_PROVIDED[@]}"}; do
-    [ -n "$id" ] || continue
-    [ -e "$AGENTS_SKILLS/$id/SKILL.md" ] || {
+    if [ ! -e "$AGENTS_SKILLS/$id/SKILL.md" ]; then
       bad "$id hidden from Claude but ALSO absent from $AGENTS_SKILLS -- Codex/Droid lost it"
       missing=$((missing + 1))
-    }
+    fi
   done
   [ "$missing" -eq 0 ] && ok "all ${#PLUGIN_PROVIDED[@]} plugin-duplicated skills still present in ~/.agents/skills"
 else
   na "$AGENTS_SKILLS not found"
 fi
 
-# ---------------------------------------------------------------------------
 section "6. Vendored skills survive on every surface"
-# These have no plugin copy to fall back on, so they must never be hidden.
 for id in ${LOCAL_SKILLS[@]+"${LOCAL_SKILLS[@]}"}; do
-  [ -n "$id" ] || continue
   got=$(effective_override "$id")
   if [ "$got" != "on" ]; then
     bad "vendored skill $id has skillOverrides='$got' -- it has no plugin copy, so it is now unreachable in Claude"
@@ -218,12 +186,10 @@ for id in ${LOCAL_SKILLS[@]+"${LOCAL_SKILLS[@]}"}; do
   fi
 done
 
-# ---------------------------------------------------------------------------
 section "7. Excluded ids absent from every picker dir"
 for dir in ${TARGET_DIRS[@]+"${TARGET_DIRS[@]}"}; do
   [ -d "${HOME}/${dir}" ] || continue
   for id in ${EXCLUDED[@]+"${EXCLUDED[@]}"}; do
-    [ -n "$id" ] || continue
     if [ -e "${HOME}/${dir}/${id}" ]; then
       bad "excluded skill '$id' reappeared in ~/${dir} (the external \`skills\` CLI re-installs some of these)"
     fi
@@ -231,7 +197,6 @@ for dir in ${TARGET_DIRS[@]+"${TARGET_DIRS[@]}"}; do
 done
 ok "excluded-id sweep completed over ${#TARGET_DIRS[@]} picker dirs"
 
-# ---------------------------------------------------------------------------
 section "8. No dangling skill symlinks"
 for dir in ${TARGET_DIRS[@]+"${TARGET_DIRS[@]}"}; do
   [ -d "${HOME}/${dir}" ] || continue
@@ -242,15 +207,16 @@ for dir in ${TARGET_DIRS[@]+"${TARGET_DIRS[@]}"}; do
 done
 ok "dangling-symlink sweep completed"
 
-# ---------------------------------------------------------------------------
 section "9. Global CLAUDE.md hygiene (real tools only, dead tools removed)"
 CLAUDE_MD="${HOME}/.claude/CLAUDE.md"
 CLAUDE_DEV="${HOME}/.claude/guidance/development.md"
 if [ -f "$CLAUDE_MD" ]; then
   claude_md_content=$(cat "$CLAUDE_MD" "$CLAUDE_DEV" 2>/dev/null || cat "$CLAUDE_MD")
+  mentions() { printf '%s\n' "$claude_md_content" | grep -q "$@"; }
+
   banned_found=0
   for term in gemini deepwiki mgrep lazygit deep-research chezmoi; do
-    if printf '%s\n' "$claude_md_content" | grep -qi "$term"; then
+    if mentions -i "$term"; then
       bad "banned term '$term' found in $CLAUDE_MD"
       banned_found=1
     fi
@@ -259,12 +225,12 @@ if [ -f "$CLAUDE_MD" ]; then
 
   tools_missing=0
   for tool in fd rg bat eza dust procs btm ax delta hyperfine fff; do
-    if ! printf '%s\n' "$claude_md_content" | grep -q "\b$tool\b"; then
+    if ! mentions "\b$tool\b"; then
       bad "required tool '$tool' not mentioned in $CLAUDE_MD"
       tools_missing=1
     fi
   done
-  if ! printf '%s\n' "$claude_md_content" | grep -q "ast-grep" && ! printf '%s\n' "$claude_md_content" | grep -q "\bsg\b"; then
+  if ! mentions "ast-grep" && ! mentions "\bsg\b"; then
     bad "ast-grep/sg not mentioned in $CLAUDE_MD"
     tools_missing=1
   fi
@@ -273,7 +239,6 @@ else
   na "$CLAUDE_MD does not exist"
 fi
 
-# ---------------------------------------------------------------------------
 printf '\n%s: %d passed, %d failed, %d skipped\n' \
   "$(basename "$0")" "$pass" "$fail" "$skip"
 [ "$fail" -eq 0 ]

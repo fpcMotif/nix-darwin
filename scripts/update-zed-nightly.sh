@@ -1,55 +1,39 @@
 #!/usr/bin/env bash
-# Bump pkgs/zed-nightly-bin.nix by following the zed.dev "nightly" channel
-# redirect chain.
-#
-# `https://zed.dev/api/releases/nightly/latest/Zed-aarch64.dmg` 307s to
-# `https://cloud.zed.dev/...` which in turn 302s to
-# `https://zed-nightly-host.nyc3.digitaloceanspaces.com/${version}/Zed-aarch64.dmg`.
-# We grab that final URL, lift the `${version}` path segment as the pin, then
-# prefetch the asset for its SRI hash.
-#
-# The nightly channel doesn't tag, doesn't expose a JSON manifest, and the
-# version string in the URL is `1.4.0+nightly.<seq>.<sha>` — verbatim — so
-# updates are URL-driven, not GitHub-driven.
-#
-# Platforms: aarch64-darwin only, matching pkgs/zed-nightly-bin.nix and the
-# flake's supportedSystems list. See the header in pkgs/zed-nightly-bin.nix
-# for what to change if Intel-Mac support is added back.
 . "$(dirname "$0")/lib/auto-update.sh"
 cd "$(au_repo_root)"
 
 FILE="pkgs/zed-nightly-bin.nix"
 
-resolve_final_url() {
-  # `nightly/latest/<asset>` goes through two hops (zed.dev → cloud.zed.dev →
-  # nyc3.digitaloceanspaces.com). `ax` follows redirects and reports the final
-  # destination in its JSON `.url` field. Fall back to curl when ax is absent.
-  local target="https://cloud.zed.dev/releases/nightly/latest/download?asset=zed&os=macos&arch=$1"
+resolve_dmg_url() {
+  local arch=$1
+  local channel_url="https://cloud.zed.dev/releases/nightly/latest/download?asset=zed&os=macos&arch=$arch"
+  # AGENTS.md requires ax for HTTP.
   if command -v ax >/dev/null 2>&1; then
-    ax "$target" --max-bytes 1 | jq -r .url
+    ax "$channel_url" --max-bytes 1 | jq -r .url
   else
-    curl -sL "$target" -o /dev/null -w "%{url_effective}\n" --range 0-0
+    curl -sL "$channel_url" -o /dev/null -w "%{url_effective}\n" --range 0-0
   fi
 }
 
-final_aarch64=$(resolve_final_url aarch64)
-
-# Strip leading "https://.../" and trailing "/Zed-*.dmg" → the version segment.
-# Uses `#` as the s/// delimiter so the `|` inside the alternation is safe.
-extract_version() {
-  printf '%s\n' "$1" | sed -E 's#^https?://[^/]+/##; s#/Zed-(aarch64|x86_64)\.dmg$##'
+# The nightly channel has no tags or JSON manifest, only a redirect to
+# `<host>/<version>/Zed-aarch64.dmg`.
+version_from_dmg_url() {
+  local dmg_url=$1
+  printf '%s\n' "$dmg_url" | sed -E 's#^https?://[^/]+/##; s#/Zed-(aarch64|x86_64)\.dmg$##'
 }
 
-latest=$(extract_version "$final_aarch64")
-# Sanity: the version segment must look like Zed's nightly format, otherwise
-# the redirect chain has changed and we shouldn't bake a garbage string in.
+# flake.nix's supportedSystems skips x86_64-darwin, so an Intel pin would never
+# reach CI or any host.
+dmg_url=$(resolve_dmg_url aarch64)
+latest=$(version_from_dmg_url "$dmg_url")
+# A different shape means the redirect chain changed.
 case "$latest" in
   *+nightly.*) ;;
   *)
-    echo "zed-nightly: unexpected version shape from $final_aarch64: '$latest'" >&2
+    echo "zed-nightly: unexpected version shape from $dmg_url: '$latest'" >&2
     exit 1 ;;
 esac
 
 au_bump_release --name zed-nightly --file "$FILE" --version "$latest" \
   --attr .#legacyPackages.aarch64-darwin.martin.zed-nightly-bin \
-  --asset "$final_aarch64" '"aarch64-darwin"'
+  --asset "$dmg_url" '"aarch64-darwin"'

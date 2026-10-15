@@ -1,13 +1,3 @@
-# Integration test: the shared Home Manager profile must stay portable.
-#
-# modules/home is imported by every host — the active Mac AND the staged
-# Linux scaffolds (x230, vm-aarch64-utm). macOS-only filesystem paths
-# (/Applications bundles, ~/Library trees) and macOS-only commands must be
-# gated behind `pkgs.stdenv.hostPlatform.isDarwin` so they never reach a Linux host's
-# session environment, shell config, or activation scripts.
-#
-# Pure eval-level assertions (no builds): each surface below is the merged
-# option value a Linux host would actually receive.
 { pkgs
 , lib
 , x230ConfigurationInput
@@ -38,12 +28,8 @@ let
   offendersIn = text:
     builtins.filter (pat: lib.hasInfix pat text) macOnlyPatterns;
 
-  # includeActivation: forcing home.activation bodies makes agent-skills
-  # resolve its bundle via import-from-derivation, which only builds on the
-  # configuration's own platform. The CI builder is x86_64-linux, so x230
-  # gets the activation surface and the aarch64 VM is checked on its pure
-  # (string-option) surfaces only — the modules are shared, so x230
-  # activation coverage extends to it.
+  # Forcing home.activation triggers agent-skills IFD on the host platform, so
+  # x86_64-linux CI checks activation on x230 and string surfaces on the VM.
   hostChecks = prefix: includeActivation: configuration:
     let
       home = configuration.config.home-manager.users.${user};

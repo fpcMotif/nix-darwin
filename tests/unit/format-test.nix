@@ -1,4 +1,3 @@
-# Verifies all Nix files in the flake source are formatted with nixpkgs-fmt.
 { system, pkgs, lib, self, ... }:
 
 let
