@@ -102,6 +102,7 @@ in
       requiredSections = [
         "## Working contract"
         "## Completion"
+        "## What I need from you"
         "## Command routing"
         "## Code search"
         "## Python"

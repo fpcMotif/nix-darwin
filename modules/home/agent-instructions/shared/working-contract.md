@@ -26,6 +26,14 @@
 - **Finish**: Define completion from the requested outcome. Include startup, visual inspection, or provider verification when the request requires it.
 - **Verify**: Run required checks and checks addressing changed behavior. Repeat or broaden them only for changes, failures, or unresolved risk. VCS operations (`commit`, `push`, `land`) are not test requests; run at most `hk check`.
 - **Evidence**: Inspect the actual deliverable at the requested boundary. Empty required output fails verification; summaries alone cannot establish completion.
-- **Stop**: Finish when requested outcomes are verified. If blocked, complete independent work and name the missing prerequisite.
+- **Stop**: Finish when requested outcomes are verified. If blocked, complete independent work and list the missing prerequisite under What I need from you.
 - **Report**: State what changed, what checks establish, and which checks could not run.
 - **Failure**: After two failed fixes sharing one assumption, test that assumption before another fix.
+
+## What I need from you
+
+- **Ask**: End every turn that waits on the user with a section headed **What I need from you**. Every request for the user goes in that section.
+- **Item**: Number the items. Each item names one action or decision, where to do it, and what to reply. Example: "Run `sudo darwin-rebuild switch --flake ~/nix-config` in your terminal, then paste the last 20 lines." "I need you to rebuild" is too vague.
+- **Order**: Put the quickest or most blocking item first. Say what you will continue meanwhile.
+- **Carry**: Repeat each unresolved item at the end of later turns until the user resolves it.
+- **None**: When nothing waits on the user, end with "Nothing needed from you right now." Then say whether the work is finished or still running.
