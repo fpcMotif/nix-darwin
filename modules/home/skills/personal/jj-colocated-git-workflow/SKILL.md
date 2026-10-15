@@ -1,45 +1,26 @@
 ---
 name: jj-colocated-git-workflow
-description: "Repeatable Jujutsu (jj) colocated Git workflows: initialization (--colocate), sideways bookmark updates (--allow-backwards), and cross-revision restoration (--from)"
+description: Repeatable Jujutsu (jj) colocated Git workflows: initialization, sideways bookmark moves, revisions, and single-flight landing.
 ---
 
-# Jujutsu (jj) Colocated Git Workflows & Bookmark Management
+# Jujutsu (jj) Colocated Git Workflows
 
-Procedures and recovery patterns when using Jujutsu (`jj`) colocated inside an existing Git repository.
+Jujutsu colocated inside an existing Git repository (`.git` and `.jj` side by side). Git HEAD tracks `@-`.
 
-## Colocated Initialization
+## Core operations
 
-When starting work in a Git repository that does not yet have a `.jj` directory:
-```bash
-jj git init --colocate
+- **Initialize**: `jj git init --colocate` in an existing Git checkout.
+- **Sideways/backwards move**: `jj bookmark move <name> --to <rev> --allow-backwards` (required when moving non-descendant commits).
+- **Restore revisions**: `jj restore --from <rev> [paths...]` (restores files into working copy `@`).
+- **Align Git HEAD**: `git rev-parse HEAD` matches `jj log -r '@-' -T commit_id`. If detached after branch checkout, run `git checkout <branch>`.
+- **Import external Git writes**: run `jj git import` if raw Git write commands were executed.
+
+## Single-flight PR & landing
+
+Run the entire commit, push, PR, merge, and sync sequence in one flight:
+
+```sh
+jj pr <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
+# or Code Mode runner:
+bun run scripts/jj-ship.ts -n <name> -m "type(scope): msg" --land
 ```
-This enables `jj` while sharing the working copy and `.git` refs directly.
-
-## Handling Bookmark Moves During Rewrites & Splits
-
-When reorganizing, splitting, or updating a bookmark to a commit that is not a fast-forward descendant:
-- Plain `jj bookmark move <name> --to <rev>` will fail with:
-  `Error: Refusing to move bookmark backwards or sideways: <name>`
-- Use `--allow-backwards`:
-  ```bash
-  jj bookmark move <name> --to <rev> --allow-backwards
-  ```
-
-## Restoring Exact Revisions
-
-To restore files from a target revision into the working copy (`@`):
-```bash
-# Restore entire tree from revision
-jj restore --from <rev>
-
-# Restore specific files or directories
-jj restore --from <rev> <paths...>
-```
-
-## Git Sync & Alignment
-
-- In colocated repos, running `jj git export` outputs `No export needed in colocated workspaces.` because changes are committed directly into Git's object store.
-- If Git's HEAD becomes detached after `jj` operations, align Git's active branch pointer with:
-  ```bash
-  git checkout <branch-name>
-  ```

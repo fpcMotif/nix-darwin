@@ -8,6 +8,17 @@
 - **Design**: Use `designer` for difficult visual decisions and the vision role for routine image work.
 - **Diagnose**: Use `oracle` for ambiguous architecture, uncertain diagnosis, or two failed fixes.
 - **Escalate**: Move a task to a stronger configured role when its current model cannot complete it.
+- **Code Mode**: For bulk inspection and multi-step tasks, use `eval` (Bun/JS with `Bun.# AGENTS.md — OMP adapter
+
+## OMP
+
+- **Delegate**: Use `scout` for lookup, `sonic` for quick fixes, and `task` for general implementation.
+- **Integrate**: The main agent reviews worker results and verifies combined behavior.
+- **Review**: Use `reviewer` for substantive changes and `security-reviewer` for security work.
+- **Design**: Use `designer` for difficult visual decisions and the vision role for routine image work.
+- **Diagnose**: Use `oracle` for ambiguous architecture, uncertain diagnosis, or two failed fixes.
+- **Escalate**: Move a task to a stronger configured role when its current model cannot complete it.
+ or Python) to run in bulk, gather all relevant context in one pass, and execute actions in 1–2 calls instead of iterative tool round-trips.
 - **Complete**: For bulk work or blocking advisor notes, load `/Users/martinfan/.omp/agent/managed-skills/omp-completion-and-advisor/SKILL.md`.
 - **Develop**: Before choosing a shell command, adding an environment variable, using version control, or setting up Git hooks, read `~/.omp/agent/guidance/development.md`.
 - **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `~/.omp/agent/guidance/languages/typescript.md`, `python.md`, `go.md`, or `rust.md`.
