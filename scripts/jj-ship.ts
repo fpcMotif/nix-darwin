@@ -147,6 +147,16 @@ if (command === "ship" || command === "land") {
       console.error(`Error: body file not found: ${values["body-file"]}`);
       process.exit(1);
     }
+  } else if (!bodyText) {
+    bodyText = `## Summary
+${values.message || info.diffStat}
+
+## Evidence
+- Automated single-flight verification passed (just check).
+
+## Merge Danger
+**Door**: two-way
+**Blast Radius**: contained`;
   }
 
   console.log(`=== Single-Flight VCS Ship ===

@@ -1,181 +1,64 @@
 ---
 name: jj
-description: Use when working in a Jujutsu (jj) repository — for jj workflows (status, log, diff, new, describe, squash, split, rebase, bookmarks, undo, git interop) and for hunk-level diff review. Triggers on "jj"/"jujutsu", reviewing or splitting changes, crafting atomic commits, opening or updating a pull request, or any version-control task in a repo that contains a `.jj` directory.
+description: JJ workflows: inspect status/log/diff, atomic commits, hunk curation, bookmarks, and single-flight PR landing via jj pr.
 ---
 
 # Jujutsu (jj)
 
-A Git-compatible VCS with no staging area. Use this skill instead of raw `git`
-in any repo that has a `.jj/` directory (`jj root` succeeds). Diffs render
-through delta (configured in `modules/home/jujutsu.nix`), so `jj diff`/`jj show`
-already produce syntax-highlighted hunks.
-
-## Mental model (how jj differs from git)
-
-- **The working copy IS a commit.** Your uncommitted edits live in the commit
-  `@` (the "working-copy commit"), which jj amends automatically on every
-  command. There is **no `git add`/staging** — what you see is what's committed.
-- **Change ID vs commit ID.** Every change has a stable *change ID* (letters,
-  e.g. `qpvuntsm`) that survives rewrites/rebases, plus a *commit hash* (hex)
-  that changes when the commit is rewritten. Address commits by either; the
-  short prefix shown in `jj log` is enough.
-- **Everything is undoable.** `jj undo` reverts the last operation; `jj op log`
-  shows the full history of operations. You can recover from almost anything.
-- **Bookmarks are jj's branches.** They do not move automatically — you advance
-  them explicitly. Git branches appear as bookmarks via the git backend.
+Working copy commit `@` amends automatically. Git HEAD tracks `@-`.
 
 ## Core loop
 
-Clone with `jj git clone URL PATH`. Choose the destination explicitly.
-Keep unfamiliar repositories outside automatically trusted direnv project roots.
-Use `jj workspace add --name NAME ../REPO.NAME` for parallel JJ work.
-Reserve Worktrunk for Git-only checkouts; Git worktrees are not JJ workspaces.
-
-| Task | Command |
-|------|---------|
-| What changed in the working copy | `jj status` (alias `jj st`) |
-| History graph | `jj log` (default command here); scope with `-r <revset>` |
-| Start a new, empty change | `jj new` (on top of `@`) or `jj new <rev>` |
-| Set/began the current message | `jj describe -m "msg"` (alias `jj desc`) |
-| Finish change + start the next | `jj commit -m "msg"` |
-| Make an existing commit the working copy | `jj edit <rev>` |
-| Move `@`'s changes into its parent (amend) | `jj squash` |
-| Drop a commit | `jj abandon <rev>` |
-| Restore files from a revision | `jj restore --from <rev> [paths]` |
-| Undo the last operation | `jj undo` (then `jj op log` / `jj op restore`) |
-
-`jj new` then editing files is the normal way to begin work: do the edits, then
-`jj describe -m "..."` (or `jj commit`) to name the change.
-
-## Diff & hunk-level review (the main reason to reach for jj here)
-
-| Goal | Command |
-|------|---------|
-| Review the current change | `jj diff` (delta hunks of `@` vs its parent) |
-| Review what a specific commit introduced | `jj diff -r <rev>` |
-| Compare two revisions | `jj diff --from <a> --to <b>` |
-| Limit to paths | `jj diff <path>...` |
-| Commit message + its diff | `jj show <rev>` |
-| Raw git-format patch (for piping/applying) | `jj diff --git` |
-| Stat summary only | `jj diff --stat` |
-
-**Interactive hunk curation** — pick changes hunk-by-hunk in jj's built-in
-diff editor (space to toggle a hunk, `c` to confirm):
-
-- `jj split -i` — carve `@` into two (or more) commits, choosing which hunks go
-  into the first. The cleanest way to turn one messy change into atomic commits.
-- `jj split -i <paths>` — restrict the split to specific files.
-- `jj squash -i` — move only selected hunks from `@` into its parent (the rest
-  stay in `@`). `jj squash -i --from <a> --into <b>` moves hunks between any two
-  commits.
-- `jj absorb` — automatically distribute each working-copy hunk into the nearest
-  mutable ancestor commit that last touched those lines. Ideal for fixups: edit
-  freely, then `jj absorb` to fold the changes back where they belong.
-
-**Reviewing a series before pushing:** `jj log -r 'trunk()..@'` to see the
-stack, then `jj show <rev>` (or `jj diff -r <rev>`) on each to review per-commit
-hunks.
-
-## Interactive review in Hunk
-
-Use `jj diff` for changes and Hunk for the human walkthrough.
-The shared development guide owns optional call-flow analysis and review evidence.
-Load Hunk's bundled skill before driving sessions. Preserve the user's existing comments.
-
-`hunk` is the TUI the user reviews agent changes in. It detects `.jj/`, so
-`hunk diff [revset]` and `hunk show <rev>` take revsets. Steer the open window
-from this terminal with `hunk session ...`; run `hunk skill path` and load that
-skill for the full session, navigate, reload, and comment commands.
-
-| Goal | Command |
-|------|---------|
-| Open `@` for review, auto-reloading as you edit | `hunk diff --watch` |
-| Open one commit | `hunk show <rev>` |
-| Structure of the loaded review, no patch text | `hunk session review --repo . --json` |
-| The user's inline notes with file:line anchors | `hunk session comment list --repo . --json` |
-| Leave a note | `hunk session comment add --repo . --file <path> --new-line <n> --summary "..."` |
-
-Extensions install imperatively (`hunk extension install <owner/repo>`, not
-through nix): `muzomer/hunk-commit` marks hunks in the TUI and commits, squashes
-into an unpushed commit, or discards them as one jj operation (`jj undo` reverts
-it); `victor-software-house/hunk-history` browses history and reviews commit
-ranges (the 0.22 beta folds it into `hunk log`).
-
-## Bookmarks & Git interop
-
-| Task | Command |
-|------|---------|
-| List bookmarks | `jj bookmark list` (alias `jj b l`) |
-| Create a bookmark at a rev | `jj bookmark create <name> -r <rev>` |
-| Move a bookmark | `jj bookmark move <name> --to <rev>` (or `set -r`) |
-| Move bookmark sideways/backwards | `jj bookmark move <name> --to <rev> --allow-backwards` |
-| Fetch from remotes | `jj git fetch` |
-| Push a bookmark | `jj git push --bookmark <name>` |
-| Create a bookmark for `@` and push | `jj git push -c @` |
-| Initialize in existing git repo | `jj git init --colocate` |
-| Import/export refs after raw git use | `jj git import` / `jj git export` |
-
-When co-located with git (`.git` present), jj and git share the same commits:
-- Initialize an existing git repo with `jj git init --colocate`.
-- In colocated workspaces, refs are exported automatically. Keep Git HEAD detached;
-  give Git-reading tools explicit bookmarks or resolved commit hashes.
-- When rewriting/splitting a branch or updating a bookmark to a non-descendant commit,
-  pass `--allow-backwards` to `jj bookmark move`.
-- Run `jj git import` if you used a `git` command directly so jj sees external changes.
+| Action | Command | Note |
+|---|---|---|
+| Status & Diff | `jj status` · `jj diff` · `jj diff --stat` | Review changes in `@` vs `@-` |
+| Stack History | `jj log -r 'trunk()..@'` · `jj log -n 5` | View current branch commits |
+| Name / Commit | `jj describe -m "type(scope): msg"` | Name `@` without advancing |
+| Finish / Next | `jj commit -m "type(scope): msg"` | Commit `@` and open empty `@` |
+| Amend Parent | `jj squash` | Move `@` changes into `@-` |
+| Switch / Edit | `jj new <rev>` · `jj edit <rev>` | Branch from `<rev>` or edit in place |
+| Rebase | `jj rebase -d <dest>` · `jj rebase -s <src> -d <dest>` | Conflicts store in commits; resolve with `jj edit` |
+| Restore / Undo | `jj restore --from <rev> [paths]` · `jj undo` · `jj op log` | Everything in the op log is reversible |
 
 ## Pull requests & landing
 
-`jj pr` pushes a change and opens, updates, or lands its GitHub PR. It supplies
-the `--head`, `-R`, and stacked `--base` that raw `gh` lacks under jj. Flags are
-in `jj pr --help`.
+Deterministic VCS pipeline: commit, push, open/update PR, merge to trunk, fetch, and advance `@` in one command:
 
-- **Review diff & draft body**: `jj pr NAME -n` prints the base, commits, and diff;
-  write the body with the `pr` skill.
-- **Open or update**: `jj pr NAME -F FILE` (pass `-r @-` to advance an existing bookmark).
-  Done when it prints the PR URL.
-- **Land to trunk**: pass `--land` to merge the PR into trunk, fetch, and advance `@`
-  onto trunk in one flight.
-- **Single-flight**: when changes are ready, run the whole cycle in one command:
-  `jj pr NAME -m "type(scope): msg" -F FILE --land`.
-- **Rewrite**: rerun `jj pr NAME` for each PR bookmark to retarget moved bases.
-## Revsets (the query language)
+```sh
+# Single-flight: commits @, opens PR, merges into trunk, fetches, and advances @ onto trunk
+jj pr <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
 
-`@` working copy · `@-` parent · `@--` grandparent · `root()` · `trunk()`
-(the main branch) · `a..b` (in b but not a) · `a::b` (ancestors of b within a)
-· `mine()` · `description("text")` · `bookmarks()` · `heads(...)`.
-Common: `jj log -r 'trunk()..@'`, `jj diff -r 'description("WIP")'`.
+# Programmatic Code Mode alternative:
+bun run scripts/jj-ship.ts -n <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
+```
 
-## Rebase & history editing
+- **Dry-run plan**: `jj pr <name> -n` prints the base, commits, and diff without pushing.
+- **Update open PR**: `jj pr <name> -F FILE` (pass `-r @-` if new commits were added).
+- **Draft PR body**:
+  ```markdown
+  ## Summary
+  <shallow file tree, diff sketch, or 1-2 sentence core outcome>
 
-- `jj rebase -d <dest>` — rebase `@` (and descendants) onto `<dest>`.
-- `jj rebase -s <src> -d <dest>` — rebase `<src>` and its descendants.
-- `jj rebase -b <branch> -d <dest>` — rebase a whole branch.
-- Conflicts are recorded *in commits* (first-class) — jj never blocks you mid
-  rebase. Resolve later by editing the conflicted commit (`jj edit`, fix, done),
-  then descendants auto-update.
+  ## Evidence
+  - **Before**: <failing command / error output>
+  - **After**: <passing test command / verified output>
 
-## Safety & recovery
+  ## Merge Danger
+  **Door**: two-way | one-way
+  **Blast Radius**: contained | broad
+  ```
+- **Completion criterion**: `jj status` shows clean empty `@` on `trunk()`.
 
-- `jj undo` — undo the last op. `jj op log` — every operation; `jj op restore
-  <op>` — jump the whole repo back to a prior state.
-- `jj abandon` removes a commit but it stays in the op log, so it is recoverable.
-- There is no "detached HEAD" footgun and no stash needed — just `jj new` to set
-  work aside on another change and `jj edit` to return.
+## Interactive hunk curation
 
-## Agent etiquette in jj repos
+- `jj split -i [paths]` — partition `@` into atomic commits via diff editor (`space` toggles, `c` confirms).
+- `jj squash -i [--from A --into B]` — move selected hunks between commits.
+- `jj absorb` — fold working-copy hunks into the mutable ancestor that last touched those lines.
 
-- Inspect with `jj status` + `jj diff` before changing anything.
-- **Colocated contract** (`.git` beside `.jj`): git HEAD is `@-`, so read-only
-  git sees the current change (`git diff HEAD` equals `jj diff`), and tools
-  that read git (code-review, calldiff, hunk) work as they are. Git
-  writes (`checkout`, `add`, `stash`, `commit`, `branch`) desync the two: the
-  next jj command resets the working copy onto the new HEAD and abandons the
-  old working-copy commit.
-- Git-reading tools take git refs, not revsets: the fixed point is the bookmark
-  name (`main`), and "commit first" is `jj new`, which makes the change `@-`
-  and therefore HEAD.
-- Make atomic commits by editing freely then `jj split -i` / `jj absorb`, rather
-  than trying to stage hunks (there is no index).
-- Never assume a bookmark moved — advance it explicitly before `jj git push`.
-- If the user also runs raw `git` in the repo, `jj git import` before relying on
-  `jj log`.
+## Bookmarks & Git colocation
+
+Colocated repository shares `.git` directly. Tools reading Git see `@-` automatically.
+
+- **Create / Advance**: `jj bookmark create <name> -r <rev>` · `jj bookmark move <name> --to <rev> --allow-backwards`
+- **Push / Sync**: `jj git push --bookmark <name>` · `jj git fetch`
+- **External Git sync**: run `jj git import` after direct Git commands; align Git HEAD with `git checkout <branch>`.
