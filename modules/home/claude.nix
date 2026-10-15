@@ -16,30 +16,11 @@ let
 
   mkSkill = from: path: packages: { inherit from path packages; };
 
-  guideCatalog = import ./agent-instructions/guides.nix {
-    inherit lib pkgs docLock;
-    workspaceBackend = config.martin.development.workspaceBackend;
-  };
+  inherit (config.martin.agentSurface) guideCatalog skillTargetDirs claudeHooks;
 
   # `link` points every target at the same store SKILL.md files. Pi de-dupes
   # skills by realpath, so the shared store paths collapse across picker dirs.
   linkTarget = dest: { enable = true; inherit dest; structure = "link"; systems = [ ]; };
-
-  # Skill picker dirs, shared by agent-skills targets and every sweep below,
-  # so a new target is covered everywhere.
-  skillTargetDirs = {
-    agents = ".agents/skills";
-    claude = ".claude/skills";
-    cursor = ".cursor/skills";
-    codex = ".codex/skills";
-    xdg-agents = ".config/agents/skills";
-    crush = ".config/crush/skills";
-    factory = ".factory/skills";
-    opencode = ".config/opencode/skills";
-    pi = ".pi/agent/skills";
-    # Antigravity CLI (`agy`) and Desktop scan this dir globally.
-    gemini = ".gemini/config/skills";
-  };
   # The same dirs as a quoted, absolute, space-separated shell list, for the
   # `for dir in …` loops in the activation sweeps below.
   skillTargetDirsSh = lib.concatMapStringsSep " " (d: ''"${homeDir}/${d}"'')
@@ -393,7 +374,10 @@ let
   # per project via templates/effect-skills/devshell.flake.nix.
   effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 
-  pstack = import ./claude/pstack.nix { inherit lib pkgs inputs mkSource mkSkill docLock; };
+  pstack = import ./claude/pstack.nix {
+    inherit lib pkgs inputs mkSource mkSkill;
+    inherit (config.martin.development) docLock;
+  };
   inherit (pstack) pstackSources pstackExplicit pstackAgentFile pstackModelsSheet pstackDrvs;
 
   # Defaults only: a value already in settings.json wins.
@@ -422,13 +406,7 @@ let
   claudeGuardHooks = [
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/search-guard.sh"; }
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/shell-guard.sh"; }
-  ] ++ worktrunkMarkers.add ++ lib.optionals docLock docLockHooks;
-
-  inherit (config.martin.development) docLock;
-  docLockHooks = [
-    { event = "UserPromptSubmit"; matcher = ""; command = "$HOME/.claude/hooks/doc-lock.sh grant"; }
-    { event = "PreToolUse"; matcher = "Edit|Write|MultiEdit"; command = "$HOME/.claude/hooks/doc-lock.sh edit"; }
-  ];
+  ] ++ claudeHooks.add;
   retiredClaudeHooks = [
     { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
     { event = "PreToolUse"; matcher = "Read"; command = "$HOME/.claude/hooks/read-guard.sh"; }
@@ -440,29 +418,6 @@ let
     { event = "SessionStart"; matcher = ""; command = "$HOME/.claude/hooks/codedb-warmup.sh"; }
     { event = "SessionStart"; matcher = "compact"; command = "$HOME/.claude/hooks/post-compact-reload.sh"; }
   ];
-
-  # Hook list and backend selection: claude/worktrunk-markers.nix. Worktree
-  # creation stays native: a WorktreeCreate hook would drop symlinkDirectories,
-  # .worktreeinclude, and the stale sweep.
-  worktrunkMarkers = import ./claude/worktrunk-markers.nix {
-    inherit lib;
-    enable = config.programs.worktrunk.enable;
-  };
-  worktrunkMarker = pkgs.writeShellApplication {
-    name = "worktrunk-marker";
-    runtimeInputs = [ config.programs.worktrunk.package ];
-    # UserPromptSubmit feeds plain stdout into Claude's context, so all output
-    # is dropped. Outside a git branch wt fails, and the marker is skipped.
-    text = ''
-      case "''${1:-}" in
-        working) args=(set 🤖) ;;
-        waiting) args=(set 💬) ;;
-        clear) args=(clear) ;;
-        *) exit 0 ;;
-      esac
-      wt config state marker "''${args[@]}" </dev/null >/dev/null 2>&1 || true
-    '';
-  };
   claudeSettingsSeed = pkgs.writeText "claude-settings-seed.json" (builtins.toJSON {
     env = claudeSeedEnv;
     permissions = claudePermissions;
@@ -527,7 +482,7 @@ let
     ++ claudeAutoCompactSettings;
     default = lib.mapAttrsToList (key: value: { path = [ "env" key ]; inherit value; }) claudeSeedEnv;
     add = claudeGuardHooks;
-    remove = worktrunkMarkers.remove ++ retiredClaudeHooks ++ lib.optionals (!docLock) docLockHooks;
+    remove = claudeHooks.remove ++ retiredClaudeHooks;
   };
   claudeSettingsOwnership = import ./claude/settings-ownership.nix {
     inherit pkgs;
@@ -594,13 +549,7 @@ in
       ".claude/hooks/shell-guard.sh" = { source = ./claude/hooks/shell-guard.sh; executable = true; };
       ".claude/mods/jev-traits".source = ./claude/mods/jev-traits;
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
-    } // localSkillFiles // pstackSkillFiles
-    // lib.optionalAttrs config.programs.worktrunk.enable {
-      ".claude/hooks/worktrunk-marker.sh".source = lib.getExe worktrunkMarker;
-    }
-    // lib.optionalAttrs docLock {
-      ".claude/hooks/doc-lock.sh".source = lib.getExe pkgs.martin.doc-lock;
-    };
+    } // localSkillFiles // pstackSkillFiles;
 
   home.activation.claudePruneRemovedSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ -n "''${DRY_RUN:-}" ]; then

@@ -30,19 +30,6 @@ let
   vendored = [ "browser-checks" "jj" "setup-ts-deep-modules" ];
 
   claudeNix = builtins.readFile (self + "/modules/home/claude.nix");
-  cleanupNix = builtins.readFile (self + "/modules/home/cleanup.nix");
-
-  targetDirs = [
-    ".agents/skills"
-    ".claude/skills"
-    ".cursor/skills"
-    ".codex/skills"
-    ".config/agents/skills"
-    ".config/crush/skills"
-    ".config/opencode/skills"
-    ".factory/skills"
-    ".pi/agent/skills"
-  ];
 
   vendoredOnDisk = builtins.attrNames (lib.filterAttrs
     (name: type:
@@ -106,13 +93,7 @@ helpers.testSuite "skill-hygiene" (
       (sorted vendoredOnDisk == sorted vendored)
       "modules/home/skills/ holds ${toString vendoredOnDisk} but this test expects ${toString vendored} — add the new skill here deliberately")
 
-    # 4. cleanup.nix hand-mirrors the picker dir list; the "Keep in sync"
-    #    comment was previously the entire enforcement.
-    (helpers.assertTest "skill-hygiene-cleanup-mirrors-targets"
-      (lib.all (d: lib.hasInfix d cleanupNix && lib.hasInfix d claudeNix) targetDirs)
-      "modules/home/cleanup.nix's stale-skill-dir list drifted from skillTargetDirs in claude.nix")
-
-    # 5. The Karpathy forks are retired. A `transform` on a mattpocock skill
+    # 4. The Karpathy forks are retired. A `transform` on a mattpocock skill
     #    shadows the plugin copy and re-creates the duplicate this module
     #    exists to remove, so re-adding one must be a deliberate decision.
     (helpers.assertTest "skill-hygiene-no-mattpocock-transform"
@@ -120,7 +101,7 @@ helpers.testSuite "skill-hygiene" (
       && !(lib.hasInfix "transformedMattpocockSkills" claudeNix))
       "a mattpocock skill regained a Nix `transform`; forks shadow the plugin copy and re-create the duplicate this change removed")
 
-    # 6. The in-progress source must not come back by accident: upstream
+    # 5. The in-progress source must not come back by accident: upstream
     #    promoting a skill that also matches an in-progress regex makes
     #    discoverCatalog throw on a duplicate id (this is how `teach` ended up
     #    listed twice before it was promoted into productivity/).
@@ -128,7 +109,7 @@ helpers.testSuite "skill-hygiene" (
       (!(lib.hasInfix "mp-in-progress" claudeNix))
       "the mp-in-progress source was re-added; teach lives in productivity/ now, so its regex matches nothing and risks a duplicate-id throw")
 
-    # 7. The Claude-only de-duplication must never be implemented by dropping
+    # 6. The Claude-only de-duplication must never be implemented by dropping
     #    ids from the bundle — that would silently strip Codex/Droid/OpenCode/
     #    Crush, which have no plugin system to fall back on.
     (helpers.assertTest "skill-hygiene-dedup-is-claude-only"

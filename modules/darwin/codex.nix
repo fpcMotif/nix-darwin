@@ -1,8 +1,7 @@
 { config, lib, pkgs, currentSystemUser, ... }:
 
 let
-  docLock = config.home-manager.users.${currentSystemUser}.martin.development.docLock;
-  docLockExe = lib.getExe pkgs.martin.doc-lock;
+  codexRequirements = config.home-manager.users.${currentSystemUser}.martin.agentSurface.codexRequirements;
   codexLsp = import ../shared/codex-lsp.nix { inherit lib; };
   modelRouting = import ../shared/agent-model-routing.nix { inherit lib; };
   codexEnvironment = modelRouting.adapters.codex.environment;
@@ -22,18 +21,7 @@ in
   environment.etc."codex/config.toml".text =
     codexDefaults + codexLsp.toml;
 
-  environment.etc."codex/requirements.toml" = lib.mkIf docLock {
-    text = ''
-      [[hooks.UserPromptSubmit]]
-      [[hooks.UserPromptSubmit.hooks]]
-      type = "command"
-      command = "${docLockExe} grant"
-
-      [[hooks.PreToolUse]]
-      matcher = "^apply_patch$"
-      [[hooks.PreToolUse.hooks]]
-      type = "command"
-      command = "${docLockExe} edit"
-    '';
+  environment.etc."codex/requirements.toml" = lib.mkIf (codexRequirements != "") {
+    text = codexRequirements;
   };
 }

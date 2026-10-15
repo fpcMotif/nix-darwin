@@ -216,9 +216,9 @@ modules/home/
 ├── kitty.nix            # Kitty terminal config
 ├── git.nix              # Git behavior without copied identity/signing keys
 ├── jujutsu.nix          # jj VCS config + local jj skill
-├── workspace-backend.nix # martin.development.workspaceBackend: worktrunk (default) or dojjo
-├── worktrunk.nix        # wt Git worktrees: config.toml + build-time zsh wrapper (worktrunk backend)
-├── dojjo.nix            # djo JJ workspaces: config.toml + build-time zsh wrapper (experimental backend)
+├── workspace-backend/   # martin.development.workspaceBackend: wt (default) or djo package, config, zsh wrapper, Claude markers, guide
+├── doc-lock/            # martin.development.docLock: Claude, Codex, pi, omp, and hk adapters plus the guide section
+├── agent-surface.nix    # Agent surface catalog: skill picker dirs, guide catalog, hook specs for host adapters
 ├── ssh.nix              # SSH client config (settings, not deprecated matchBlocks)
 ├── yazi.nix             # Yazi file manager
 ├── obsidian.nix         # Obsidian vault wiring

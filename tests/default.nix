@@ -80,16 +80,14 @@ in
   '';
   unit-agent-guides =
     let
-      guideCatalog = import ../modules/home/agent-instructions/guides.nix { inherit lib pkgs; };
-      hosts = guideCatalog.hosts;
-      dojjoHosts = (import ../modules/home/agent-instructions/guides.nix {
-        inherit lib pkgs;
-        workspaceBackend = "dojjo";
+      docLockGuide = ../modules/home/doc-lock/guide.md;
+      guideHosts = startupSections: workspaceGuide: (import ../modules/home/agent-instructions/guides.nix {
+        inherit lib pkgs startupSections;
+        developmentSections = [ workspaceGuide ];
       }).hosts;
-      unlockedHosts = (import ../modules/home/agent-instructions/guides.nix {
-        inherit lib pkgs;
-        docLock = false;
-      }).hosts;
+      hosts = guideHosts [ docLockGuide ] ../modules/home/workspace-backend/guide-worktrunk.md;
+      dojjoHosts = guideHosts [ docLockGuide ] ../modules/home/workspace-backend/guide-dojjo.md;
+      unlockedHosts = guideHosts [ ] ../modules/home/workspace-backend/guide-worktrunk.md;
       # Each backend's guide names only its own isolation commands.
       workspaceGuideFits = backendHosts: required: forbidden:
         lib.all
@@ -186,7 +184,7 @@ in
     assert lib.all workspacesTriggerNamesJj (lib.attrValues hosts ++ lib.attrValues dojjoHosts);
     assert lib.all
       (name: hosts.${name}.startup.content
-        == unlockedHosts.${name}.startup.content + "\n" + builtins.readFile ../modules/home/agent-instructions/shared/doc-lock.md)
+        == unlockedHosts.${name}.startup.content + "\n" + builtins.readFile docLockGuide)
       (builtins.attrNames hosts);
     pkgs.runCommand "unit-agent-guides" { } ''
       touch $out

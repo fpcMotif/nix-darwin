@@ -71,30 +71,61 @@ let
   darwinDojjo = if selectedScope == "darwin" then darwinDojjoConfigurationInput else null;
   darwinDojjoHome = darwinDojjo.config.home-manager.users.${user};
 
-  # workspace-backend.nix alone, for platforms this host cannot evaluate in
-  # full (see toplevelEvaluatesOnNative). Returns the failed assertion messages.
+  # The workspace-backend module alone, for platforms this host cannot evaluate
+  # in full (see toplevelEvaluatesOnNative). Returns the failed assertion messages.
   backendAssertionFailures = system: backend:
     let
-      evaluated = lib.evalModules {
+      evaluated = import ../lib/agent-surface-eval.nix { inherit lib; } {
+        pkgs = import inputs.nixpkgs {
+          inherit system;
+          overlays = [ (import ../../pkgs) ];
+        };
         modules = [
-          ../../modules/home/workspace-backend.nix
-          {
-            options.assertions = lib.mkOption {
-              type = lib.types.listOf lib.types.unspecified;
-              default = [ ];
-            };
-            config = {
-              _module.args.pkgs = import inputs.nixpkgs {
-                inherit system;
-                overlays = [ (import ../../pkgs) ];
-              };
-              martin.development.workspaceBackend = backend;
-            };
-          }
+          ../../modules/home/workspace-backend
+          { martin.development.workspaceBackend = backend; }
         ];
       };
     in
-    map (a: a.message) (builtins.filter (a: !a.assertion) evaluated.config.assertions);
+    map (a: a.message) (builtins.filter (a: !a.assertion) evaluated.assertions);
+
+  docLockSurface = docLock: (import ../lib/agent-surface-eval.nix { inherit lib; } {
+    inherit pkgs;
+    modules = [ ../../modules/home/doc-lock { martin.development.docLock = docLock; } ];
+  }).martin.agentSurface;
+  lockedSurface = docLockSurface true;
+  unlockedSurface = docLockSurface false;
+
+  agentSurfaceChecks = [
+    (helpers.assertTest "doc-lock-surface-toggles-every-adapter"
+      (lockedSurface.claudeHooks.add != [ ] && lockedSurface.claudeHooks.remove == [ ]
+        && unlockedSurface.claudeHooks.add == [ ]
+        && unlockedSurface.claudeHooks.remove == lockedSurface.claudeHooks.add
+        && lib.hasInfix "doc-lock grant" lockedSurface.codexRequirements
+        && unlockedSurface.codexRequirements == ""
+        && lockedSurface.guideSections.startup == [ ../../modules/home/doc-lock/guide.md ]
+        && unlockedSurface.guideSections.startup == [ ])
+      "docLock should add Claude hooks, Codex requirements, and the guide section when on, and remove the Claude hooks when off")
+
+    (helpers.assertTest "darwin-doc-lock-adapters"
+      (darwinConfig.environment.etc ? "codex/requirements.toml"
+        && darwinHome.xdg.configFile ? "hk/config.pkl"
+        && darwinHome.home.file ? ".claude/hooks/doc-lock.sh"
+        && lib.hasInfix "## Docs lock" darwinHome.home.file.".claude/CLAUDE.md".source.text)
+      "host f should wire doc-lock into Codex, hk, Claude hooks, and the agent guides")
+
+    (helpers.assertTest "darwin-cleanup-covers-every-skill-target"
+      (
+        let
+          targetDirs = lib.attrValues darwinHome.martin.agentSurface.skillTargetDirs;
+          purgeLine = lib.findFirst (lib.hasInfix "for skills_rel in ") ""
+            (lib.splitString "\n" darwinHome.home.activation.cleanupLegacyDotfiles.data);
+          purgedDirs = lib.splitString " " (lib.removeSuffix "; do" (lib.trim purgeLine));
+        in
+        lib.all (dir: builtins.elem dir purgedDirs) targetDirs
+        && builtins.elem ".gemini/config/skills" targetDirs
+      )
+      "cleanupLegacyDotfiles should sweep every skill picker dir from the Agent surface catalog, .gemini/config/skills included")
+  ];
 
   workspaceBackendChecks = [
     (helpers.assertTest "darwin-dojjo-evaluates"
@@ -903,7 +934,7 @@ let
     (helpers.assertTest "darwin-zed-settings-force-managed"
       (darwinHome.xdg.configFile."zed/settings.json".force == true)
       "Darwin Home Manager should force-manage Zed settings so an equivalent regular file cannot block activation")
-  ] ++ viModeToggleChecks ++ searchToggleChecks ++ modularShellChecks ++ workspaceBackendChecks
+  ] ++ viModeToggleChecks ++ searchToggleChecks ++ modularShellChecks ++ workspaceBackendChecks ++ agentSurfaceChecks
   ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
   nixosChecks = [

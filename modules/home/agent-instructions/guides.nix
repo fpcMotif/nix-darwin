@@ -1,4 +1,4 @@
-{ lib, pkgs, workspaceBackend ? "worktrunk", docLock ? true }:
+{ lib, pkgs, startupSections ? [ ], developmentSections ? [ ] }:
 
 let
   renderAgentGuide = import ./render-agent-guide.nix { inherit lib; };
@@ -7,11 +7,6 @@ let
     development = ./shared/development.md;
     qualityAndStyle = ./shared/quality-and-style.md;
     humanDocuments = ./shared/human-documents.md;
-    docLock = ./shared/doc-lock.md;
-    workspaces = {
-      worktrunk = ./shared/workspaces-worktrunk.md;
-      dojjo = ./shared/workspaces-dojjo.md;
-    }.${workspaceBackend};
   };
   mkGuide = name: target: adapter: sections:
     let
@@ -35,11 +30,9 @@ let
           startup = mkGuide "${name}-agents.md" startupTarget startupAdapter ([
             shared.workingContract
             shared.qualityAndStyle
-          ] ++ lib.optional docLock shared.docLock);
-          development = mkGuide "${name}-development.md" developmentTarget developmentAdapter [
-            shared.development
-            shared.workspaces
-          ];
+          ] ++ startupSections);
+          development = mkGuide "${name}-development.md" developmentTarget developmentAdapter
+            ([ shared.development ] ++ developmentSections);
         }
         // lib.optionalAttrs (humanDocumentsTarget != null) {
           humanDocuments = {

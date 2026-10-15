@@ -33,6 +33,7 @@ AGENTS.md supplies policy; skills supply procedures; MCP tools perform actions.
 Keep configuration values in configuration files. Read them when needed instead of copying them into instructions.
 
 Shared agent wording lives in `~/nix-config/modules/home/agent-instructions/shared/`.
+Feature modules own their own sections: the Docs lock in `modules/home/doc-lock/guide.md`, and Parallel checkouts in `modules/home/workspace-backend/guide-*.md`.
 `render-agent-guide.nix` combines those blocks with the Claude, Codex, OMP, and general host adapters.
 Edit a shared rule there. Keep native tool names and runtime behavior in the matching host adapter.
 

@@ -1,5 +1,8 @@
-{ lib, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
+let
+  skillTargetDirs = lib.escapeShellArgs (lib.attrValues config.martin.agentSurface.skillTargetDirs);
+in
 {
   home.activation.cleanupLegacyDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
     remove_legacy_path() {
@@ -46,11 +49,11 @@
       ${pkgs.jq}/bin/jq "del(.mcpServers.codedbpro)" "$HOME/.mcp.json" > "$tmp" && mv -- "$tmp" "$HOME/.mcp.json"
     fi
     # aily-md is a per-project skill (Feishu aily docs); it leaves the global pickers.
-    for d in .claude/skills .agents/skills .config/crush/skills .config/opencode/skills .pi/agent/skills .codex/skills .cursor/skills .factory/skills; do
+    for d in ${skillTargetDirs}; do
       if [ -L "$HOME/$d/aily-md" ]; then remove_legacy_path "$HOME/$d/aily-md"; fi
     done
     # hyperframes and related video skills are per-project; prune them from global pickers.
-    for d in .claude/skills .agents/skills .config/crush/skills .config/opencode/skills .pi/agent/skills .codex/skills .cursor/skills .factory/skills .config/agents/skills .gemini/skills .gemini/config/skills; do
+    for d in ${skillTargetDirs} .gemini/skills; do
       for skill in hyperframes hyperframes-cli faceless-explainer hyperframes-animation hyperframes-registry hyperframes-creative general-video hyperframes-core hyperframes-audio hyperframes-studio media-use hyperframes-keyframes; do
         if [ -L "$HOME/$d/$skill" ] || [ -d "$HOME/$d/$skill" ]; then remove_legacy_path "$HOME/$d/$skill"; fi
       done
@@ -97,18 +100,7 @@
       [ -n "$newGenFiles" ] || return 0
 
       local skills_rel
-      # Keep in sync with `skillTargetDirs` in modules/home/claude.nix.
-      for skills_rel in \
-        .agents/skills \
-        .claude/skills \
-        .cursor/skills \
-        .codex/skills \
-        .config/agents/skills \
-        .config/crush/skills \
-        .factory/skills \
-        .config/opencode/skills \
-        .pi/agent/skills
-      do
+      for skills_rel in ${skillTargetDirs}; do
         local src="$newGenFiles/$skills_rel" dst="$HOME/$skills_rel"
         [ -d "$src" ] && [ -d "$dst" ] || continue
 

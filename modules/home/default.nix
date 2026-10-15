@@ -12,6 +12,7 @@
     ./ai-cli.nix
     ./pi.nix
     ./ai-model-routing.nix
+    ./agent-surface.nix
     ./agent-instructions.nix
     ./obsidian.nix
     ./tmux.nix
@@ -19,9 +20,7 @@
     ./hk.nix
     ./doc-lock
     ./jujutsu.nix
-    ./workspace-backend.nix
-    ./worktrunk.nix
-    ./dojjo.nix
+    ./workspace-backend
     ./ghostty.nix
     ./kitty.nix
     ./yazi.nix
