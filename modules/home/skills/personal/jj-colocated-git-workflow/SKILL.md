@@ -21,6 +21,8 @@ Run the entire commit, push, PR, merge, and sync sequence in one flight:
 
 ```sh
 jj pr <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
-# or Code Mode runner:
-bun run scripts/jj-ship.ts -n <name> -m "type(scope): msg" --land
+# or, in nix-config, the checkout's script:
+bun run scripts/jj-ship.ts ship -n <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
 ```
+
+An older installed `jj pr` lacks `-m` and `--land`. Run `jj pr --help` before you use them.

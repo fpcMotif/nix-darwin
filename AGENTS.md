@@ -29,7 +29,6 @@ Use Code Mode (`eval` with Bun/JS or Python in OMP, or compound programmatic scr
 - **Single-flight actions**: Execute multi-step operations in 1–2 dense invocations. Parse and filter data in-memory; do not spend agent turns on intermediate terminal output.
 - **Deterministic VCS**: For committing, opening PRs, and landing on main, run in a single flight:
   ```bash
-  jj pr <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
-  # or programmatic Code Mode runner:
-  bun run scripts/jj-ship.ts -n <name> -m "type(scope): msg" --land
+  bun run scripts/jj-ship.ts ship -n <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
   ```
+  `jj-ship.ts` runs the checkout's `modules/home/jj-pr/jj-pr.sh`, so it works before a rebuild. The installed `jj pr` takes `-m` and `--land` only after `darwin-rebuild switch` installs that script. Check `jj pr --help` before you call it with those flags.
