@@ -28,9 +28,11 @@ Deterministic VCS pipeline: commit, push, open/update PR, merge to trunk, fetch,
 # Single-flight: commits @, opens PR, merges into trunk, fetches, and advances @ onto trunk
 jj pr <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
 
-# Programmatic Code Mode alternative:
-bun run scripts/jj-ship.ts -n <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
+# In nix-config, the same flight from the checkout's script:
+bun run scripts/jj-ship.ts ship -n <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
 ```
+
+- **Flag check**: an older installed `jj pr` lacks `-m` and `--land`. Run `jj pr --help` first. Without them, run `jj commit -m MSG`, then `jj pr <name> -F FILE`, then `gh pr merge`.
 
 - **Dry-run plan**: `jj pr <name> -n` prints the base, commits, and diff without pushing.
 - **Update open PR**: `jj pr <name> -F FILE` (pass `-r @-` if new commits were added).
