@@ -65,14 +65,14 @@ Ranked results alone cannot prove absence.
 
 ## Version control
 
-- **Commit intent**: Commands like `jj commit`, `git commit`, `push`, and `land` are VCS operations, not test requests. Execute them directly. Do not run full test suites or build targets (`just check`, `bun build`, `test`) unless explicitly requested. Run at most `hk check`.
+- **Commit intent**: Commands like `jj commit`, `git commit`, `push`, and `land` are VCS operations, not test requests. Execute them directly. Do not run full test suites or build targets (`just check`, `bun build`, `test`) unless explicitly requested. Run at most `hk check`. Chain deterministic VCS operations in one command (`jj pr ... --land` or compound `&&` pipelines) instead of calling one command per turn.
 - Detect a `.jj` workspace before the first version-control operation.
 - Use `jj` in a Jujutsu workspace and Git in a Git-only checkout.
 - Read the diff before every commit. Use `type(scope): message`.
 - Run `jj diff --stat` before `jj squash`. Pass explicit paths (`jj squash PATH...`) when another session or editor can write to the working copy.
 - When merge conflicts resolve to one side, list each merged pull request the other side loses, and ask first.
 - Use `gh` for GitHub when no host-specific GitHub tool applies.
-- Open or update a pull request from JJ with `jj pr`, as the `jj` skill describes. The `pr` skill writes the body.
+- Open, update, or land a pull request from JJ with `jj pr` (pass `--land` to merge and advance trunk in one flight), as the `jj` skill describes. The `pr` skill writes the body.
 - Inspect diff shape first, then read path-scoped changes.
 - Search history with merge diffs included: `jj log -r '::@ & files(PATH)'` or `git log -m -S TEXT`. Plain `git log -S` and `git log -- PATH` can miss a merge that dropped text.
 

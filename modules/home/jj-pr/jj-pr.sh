@@ -1,6 +1,6 @@
 usage() {
   cat <<'EOF'
-Usage: jj pr [NAME] [-r REV] [-F FILE] [-t TITLE] [-B BASE] [--draft] [-n]
+Usage: jj pr [NAME] [-r REV] [-m MSG] [-F FILE] [-t TITLE] [-B BASE] [--draft] [--land] [-n]
 
 Push REV under bookmark NAME, then open its GitHub pull request or update the
 open one. Rerun it after every rewrite; it pushes and updates again.
@@ -8,11 +8,13 @@ open one. Rerun it after every rewrite; it pushes and updates again.
   NAME           PR bookmark. Defaults to the one bookmark already on REV.
   -r REV         Head commit of the PR. Defaults to NAME's bookmark when it
                  exists, else @-. Pass -r to move an existing bookmark forward.
+  -m MSG         Commit working copy @ before opening the PR.
   -F FILE        PR body. Required to open; replaces the body on update.
   -t TITLE       PR title. Defaults to REV's subject when the PR has one commit.
   -B BASE        Base branch. Defaults to the nearest pushed bookmark below REV,
                  else trunk. An open PR is retargeted to it.
   --draft        Open as a draft.
+  --land         Merge the PR into BASE, fetch, and advance @ onto BASE.
   -n, --dry-run  Print the plan and the diff to read. Push nothing.
 EOF
 }
@@ -59,20 +61,22 @@ nearest_pushed_bookmark_below() {
     -T 'local_bookmarks.map(|b| b.name()).join(" ") ++ "\n"')
 }
 
-name="" rev="" body="" title="" base="" rev_set=false title_set=false draft=false dry_run=false
+name="" rev="" body="" title="" base="" msg="" rev_set=false title_set=false draft=false land=false dry_run=false
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    -r | -F | -t | -B)
+    -r | -F | -t | -B | -m)
       [ "$#" -ge 2 ] || die "$1 needs a value"
       case "$1" in
         -r) rev=$2 rev_set=true ;;
         -F) body=$2 ;;
         -t) title=$2 title_set=true ;;
         -B) base=$2 ;;
+        -m) msg=$2 ;;
       esac
       shift 2
       ;;
     --draft) draft=true; shift ;;
+    --land | --merge) land=true; shift ;;
     -n | --dry-run) dry_run=true; shift ;;
     -h | --help) usage; exit 0 ;;
     -*) usage >&2; exit 2 ;;
@@ -84,6 +88,17 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 [ -z "$body" ] || [ -f "$body" ] || die "no body file at $body"
+if $land && $draft; then
+  die "cannot land a draft PR"
+fi
+
+if [ -n "$msg" ]; then
+  if [ -n "$(commit_ids "@ & ~empty()")" ]; then
+    j commit -m "$msg"
+  elif [ -n "$(commit_ids "@- & ~trunk()")" ]; then
+    j describe -r @- -m "$msg"
+  fi
+fi
 
 remote=$(j config get git.push 2>/dev/null) || remote=origin
 url=$(git --git-dir "$(j git root)" config --get "remote.$remote.url") || die "no remote named $remote"
@@ -186,6 +201,9 @@ fi
 if ! $rev_set && [ "$rev" = "$name" ] && [ -n "$(commit_ids "@- & $head_id:: & ~$head_id")" ]; then
   printf 'note     @- is above %s; pass -r @- to include it\n' "$name"
 fi
+if $land; then
+  printf 'land     merge into %s, fetch, and advance @\n' "$base"
+fi
 if $dry_run; then
   exit 0
 fi
@@ -229,4 +247,14 @@ else
   else
     printf '%s\n' "$pr_url"
   fi
+fi
+
+if $land; then
+  gh pr merge "$name" -R "$repo" --merge
+  j git fetch --remote "$remote"
+  if [ -n "$(commit_ids "remote_bookmarks(exact:\"$base\", exact:\"$remote\")")" ]; then
+    j bookmark move "exact:$base" --to "exact:$base@$remote" --allow-backwards 2>/dev/null || true
+  fi
+  j new "$base"
+  j bookmark forget "exact:$name" 2>/dev/null || true
 fi
