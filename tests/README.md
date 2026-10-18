@@ -23,9 +23,10 @@ tests/
 |   |-- doc-links-test.sh                    # relative links in maintained docs resolve
 |   |-- doc-checks-fixtures-test.sh          # the three docs checks fail on broken fixtures
 |   |-- build-workflow-test.sh               # CI builds every checks.<system> name, none by hand
+|   |-- module-seams-test.nix                # doc-lock, workspace-backend, and zsh toggles without a host
 |   `-- zsh-vi-mode-test.sh                  # martin.shell.viMode keymap contract in a sandboxed zsh
 `-- integration/
-    `-- configurations-eval-test.nix         # current darwin/nixos configs and module outputs
+    `-- configurations-eval-test.nix         # current darwin/nixos configs and host wiring
 ```
 
 ## Running locally
@@ -75,10 +76,23 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `unit-doc-checks-fixtures`          | The three docs checks pass a clean fixture tree and fail broken ones, naming the offending file. |
 | `unit-build-workflow`               | Both `build.yml` check jobs read the `checks.<system>` names with `builtins.attrNames` and build them all. The workflow names no check by hand. |
 | `unit-claude-settings-ownership`          | Runs the production jq reconciler in temporary homes; checks own/default/add semantics, safe stale-key cleanup, dry-run immutability, and byte-identical no-ops. |
-| `unit-ai-model-routing`             | One semantic job policy renders OMP, Pi, Codex, Crush, and Zed adapters. Search and check use Spark; general and plan use Terra; fallback uses Luna. GPT-5.5 and Sol are rejected. |
+| `unit-ai-model-routing`             | One semantic job policy renders OMP, Pi, Codex, Crush, and Zed adapters. Search and check use Sol; general and plan use Astra and fall back to economy, which uses Luna. GPT-5 ids are rejected. |
 | `unit-skill-router`                 | Runs the `tools/skill-router` bun suite (`test/subprocess-gating.test.ts`) offline inside the Nix sandbox. Pins the spawn seam so `discover`/`load` never reach a real `bunx @tanstack/intent` subprocess unless package scope is explicitly requested (ADR-0006); the bundled `bunfig.toml` preload (`SKILL_ROUTER_NO_REAL_SPAWN`) makes any real spawn fail loud and offline. Uses the shipped canary Bun on Darwin, stock `pkgs.bun` on Linux. |
 | `unit-skill-hygiene`                | Cross-source drift checks for the agent-skill curation lists: every exclusion term still names a live skill in the pinned `mattpocock-skills` buckets, no vendored fork under `modules/home/skills/` shadows a promoted upstream id, and neither the retired Karpathy `transform`s nor the `mp-in-progress` source has crept back. Pure `readDir` — no IFD, so it evaluates the Linux hosts from Darwin. |
+| `unit-module-seams`                 | Evaluates the doc-lock and workspace-backend modules through the agent-surface seam, and the zsh vi-mode, search, and optional shell modules through the zsh seam, with no host. |
+| `unit-pstack-hygiene`               | Every pstack id `claude.nix` installs exists upstream, no foreign spelling survives the transform, and `poteto-mode` keeps its required rewrites. |
+| `unit-justfile`                     | The `_daemon` probe uses one working socket check for both the repair and its verification, the recipes survive a wiped `/run`, and the check names come from the flake. |
+| `unit-rolling-pins`                 | Every pin at a URL without a version has a hash-driven updater, and no `rolling_pins` entry is left for a package that moved to a versioned URL. |
+| `unit-shell-guard`                  | Runs the shell-guard hook against its deny and allow cases. |
+| `unit-search-guard`                 | Runs the search-guard hook against its uncapped-search, umbrella-root, and long-file-read cases. |
+| `unit-doc-lock`                     | `doc-lock` blocks an agent's new comments at commit for Claude Code, Codex, pi, and omp, and passes a human commit or a granted session. |
+| `unit-doc-lock-extension`           | The pi doc-lock extension blocks a comment edit, a hashline comment, and a Markdown write, names the comment in its reason, and blocks when the checker cannot start. |
+| `unit-comment-lint`                 | Runs the comment-lint fixtures, then lints the comments in every flake `.nix` file. |
+| `unit-jj-pr`                        | Drives `jj pr` against a stub `gh` and a bare remote: open, stack, update, retarget, path-limited commits, and `--land` keeping edits in `@`. |
+| `unit-workspace-backend-lifecycle`  | Drives `wt` and `djo` through create, switch, list, remove, hooks, and a backend switch in disposable repositories, with host "f"'s shipped config. |
+| `unit-tests-readme`                 | This table names every registered check, and no check that is not registered. |
 | `integration-configurations-eval`   | The flake's Darwin/NixOS configs evaluate and keep expected user, host, pure-Nix dotfile, activation dry-run, required/forbidden toolchain, and agent-skills settings, including one Claude settings reconciliation activation. |
+| `integration-home-linux-purity`     | Linux-only. The Linux homes carry no Darwin-only path or tool in their generated config, activation, or string surfaces. Skips on Darwin. |
 | `integration-darwin-settings`       | Darwin-only. Exact-value assertions for every `system.defaults` key plus sudo Touch ID, firewall, pmset power management, the skhd-stays-disabled guard (BetterMouse tap conflict), and the Gatekeeper guard; font-bundle membership + count; Rime/Squirrel agent wiring, plus the guards that BetterMouse and BetterDisplay stay GUI-managed. No-op skip on Linux. |
 
 Real-machine verification (Tier 2) lives outside the Nix checks in
