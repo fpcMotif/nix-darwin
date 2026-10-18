@@ -10,12 +10,12 @@ let
         type == "directory" && builtins.pathExists (root + "/${name}/SKILL.md"))
       (builtins.readDir root));
 
-  # The promoted buckets claude.nix discovers from.
-  upstreamIds = lib.unique (lib.concatMap bucketIds [ "engineering" "productivity" ]);
+  curation = import (self + "/modules/home/claude/skill-curation.nix");
+  upstreamIds = lib.unique (lib.concatMap bucketIds curation.mattpocockBuckets);
+  disabled = curation.disabledMattpocockSkills;
+  leanExcluded = curation.leanExcludedMattpocockSkills;
 
   # RESTATED, not imported — must match modules/home/claude.nix by hand.
-  disabled = [ "grill-me" ];
-  leanExcluded = [ ];
   vendored = [ "browser-checks" "jj" "setup-ts-deep-modules" ];
 
   claudeNix = builtins.readFile (self + "/modules/home/claude.nix");
