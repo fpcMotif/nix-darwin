@@ -28,9 +28,9 @@ let
 
   sorted = lib.sort (a: b: a < b);
   personalRoot = self + "/modules/home/skills/personal";
-  personalManifest = builtins.fromJSON (builtins.readFile (personalRoot + "/manifest.json"));
-  personalIds = builtins.attrNames personalManifest;
-  personalTargets = lib.concatLists (builtins.attrValues personalManifest);
+  personalPlacement = import (personalRoot + "/placement.nix");
+  personalIds = lib.concatLists (builtins.attrValues (removeAttrs personalPlacement [ "hosts" ]))
+    ++ builtins.attrNames personalPlacement.hosts;
   personalDirs = builtins.attrNames (lib.filterAttrs (_: type: type == "directory")
     (builtins.readDir personalRoot));
 in
@@ -54,30 +54,17 @@ helpers.testSuite "skill-hygiene" (
 
   ++ [
     (helpers.assertTest "skill-hygiene-personal-source-complete"
-      (personalIds != [ ] && sorted personalDirs == sorted personalIds
+      (personalIds != [ ] && sorted personalDirs == sorted (lib.unique personalIds)
       && lib.all
         (id:
           builtins.pathExists (personalRoot + "/${id}/SKILL.md")
-          && builtins.readFile (personalRoot + "/${id}/SKILL.md") != ""
-          && personalManifest.${id} != [ ])
-        personalIds)
-      "every personal skill must have a nonempty source and at least one declared target")
-
-    (helpers.assertTest "skill-hygiene-personal-target-ownership"
-      (builtins.length personalTargets == builtins.length (lib.unique personalTargets)
-      && lib.all
-        (target:
-          !(lib.hasPrefix "/" target)
-          && !(builtins.elem ".." (lib.splitString "/" target))
-          && !(lib.hasInfix "/plugins/" target)
-          && !(lib.hasInfix "/.system" target))
-        personalTargets)
-      "personal skill targets must be unique home-relative paths outside native plugin and system-skill directories")
+          && builtins.readFile (personalRoot + "/${id}/SKILL.md") != "")
+        personalIds
+      && lib.all (hosts: hosts != [ ]) (builtins.attrValues personalPlacement.hosts))
+      "every personal skill dir must have a nonempty SKILL.md and appear in placement.nix")
 
     (helpers.assertTest "skill-hygiene-ste80-targets"
-      (personalManifest ? ste80
-      && builtins.elem ".agents/skills/ste80" personalManifest.ste80
-      && !(lib.any (target: lib.hasPrefix ".claude/" target) personalManifest.ste80))
+      (builtins.elem "ste80" personalPlacement.outside-claude)
       "ste80 needs its .agents copy, which the non-Claude guides load by path. It needs no Claude copy, because Claude's Writing section already covers it.")
 
     # 3. claude.nix derives localSkillIds from readDir, so this checks that a

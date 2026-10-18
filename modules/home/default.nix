@@ -13,6 +13,7 @@
     ./pi.nix
     ./ai-model-routing.nix
     ./agent-surface.nix
+    ./skill-placement.nix
     ./agent-instructions.nix
     ./obsidian.nix
     ./tmux.nix
