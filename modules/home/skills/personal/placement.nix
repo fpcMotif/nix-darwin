@@ -26,6 +26,7 @@
     "show-me"
     "skill-creator"
     "term-radar"
+    "verified-architecture-review"
     "write-swift"
   ];
 
