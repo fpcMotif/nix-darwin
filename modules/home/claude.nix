@@ -23,10 +23,15 @@ let
   skillTargetDirsSh = lib.concatMapStringsSep " " (d: ''"${homeDir}/${d}"'')
     (lib.attrValues skillTargetDirs);
 
-  # Droid scans both ~/.factory/skills and ~/.agents/skills and flags
-  # duplicate names, so it gets skills only via ~/.agents/skills. The factory
-  # dir stays in skillTargetDirs so sweeps still prune it.
-  skillLinkDirs = removeAttrs skillTargetDirs [ "factory" ];
+  skillLinkDirs = config.martin.agentSurface.skillPlacement.pickerDirs;
+
+  # An agent-skills `path` source uses IFD and breaks cross-platform
+  # `nix flake check`, so local skills go through Skill placement instead.
+  # Read from disk so no new skill dir is missed.
+  localSkillIds = builtins.attrNames (lib.filterAttrs
+    (name: type:
+      type == "directory" && builtins.pathExists (./skills + "/${name}/SKILL.md"))
+    (builtins.readDir ./skills));
 
   mkSkillTargetRm = ids: ''
     for dir in ${skillTargetDirsSh}; do
@@ -79,13 +84,16 @@ let
   # lags. Change one here, not via /plugin, or every skill lists twice.
   mattpocockPluginId = "mattpocock-skills@mattpocock";
   convexPluginId = "convex@convex";
+  pstackPluginId = "pstack@cursor-plugins";
   claudeManagedPlugins = {
     ${mattpocockPluginId} = true;
     ${convexPluginId} = true;
+    ${pstackPluginId} = true;
   };
   claudeManagedMarketplaces = {
     mattpocock = { source = { source = "github"; repo = "mattpocock/skills"; }; autoUpdate = true; };
     convex = { source = { source = "github"; repo = "get-convex/convex-backend-skill"; }; autoUpdate = true; };
+    cursor-plugins = { source = { source = "github"; repo = "cursor/plugins"; }; autoUpdate = true; };
   };
   # ~/.claude/plugins/cache keys each install as <marketplace>/<plugin>/<version>.
   pluginCacheDir = id:
@@ -304,23 +312,6 @@ let
   # Ids the Claude harness already ships (e.g. anthropic-skills:notebooklm);
   # the local copy is hidden in Claude but stays visible to other agents.
   harnessProvidedSkillIds = [ "notebooklm" ];
-  idleClaudeSkillIds = [
-    "animation-vocabulary"
-    "autoresearch"
-    "chronicle"
-    "claude-handoff"
-    "edit-article"
-    "eli5"
-    "ground-truth-audit"
-    "loop-me"
-    "pick-ui-library"
-    "pixel-clone-landing-page"
-    "review-animations"
-    "ubiquitous-language"
-    "writing-beats"
-    "writing-fragments"
-    "writing-shape"
-  ];
   interfacesSkillNames = [
     "better-accessibility"
     "better-colors"
@@ -336,7 +327,8 @@ let
     "state-machine"
     "variant"
   ];
-  claudeHiddenSkillIds = pluginProvidedSkillIds ++ harnessProvidedSkillIds ++ idleClaudeSkillIds ++ interfacesSkillNames;
+  pstackPluginSkillIds = builtins.attrNames pstackDrvs;
+  claudeHiddenSkillIds = pluginProvidedSkillIds ++ pstackPluginSkillIds ++ harnessProvidedSkillIds ++ interfacesSkillNames;
 
   # Plugin skills to block outright. skillOverrides ignores plugin skills, so
   # claudePrunePluginSkills unlists them every switch and a deny rule refuses
@@ -375,7 +367,7 @@ let
     inherit lib pkgs inputs mkSource mkSkill;
     inherit (config.martin.development) docLock;
   };
-  inherit (pstack) pstackSources pstackExplicit pstackAgentFile pstackModelsSheet pstackDrvs;
+  inherit (pstack) pstackSources pstackExplicit pstackModelsSheet pstackDrvs;
 
   # Defaults only: a value already in settings.json wins.
   claudeSeedEnv = {
@@ -492,26 +484,11 @@ in
 
   # `.local/bin/claude` is a stable user-PATH binary that survives store-path
   # churn so macOS TCC and editor integrations don't re-prompt every switch.
+  martin.agentSurface.skills =
+    lib.genAttrs localSkillIds (id: { source = ./skills + "/${id}"; audience = "pickers"; })
+    // lib.mapAttrs (_: drv: { source = drv; audience = "pickers"; }) pstackDrvs;
+
   home.file =
-    let
-      # Local skills from modules/home/skills, linked with plain home.file:
-      # an agent-skills `path` source uses IFD and breaks cross-platform
-      # `nix flake check`. Read from disk so no new skill dir is missed.
-      localSkillIds = builtins.attrNames (lib.filterAttrs
-        (name: type:
-          type == "directory" && builtins.pathExists (./skills + "/${name}/SKILL.md"))
-        (builtins.readDir ./skills));
-      localSkillFiles = listToAttrs (lib.concatMap
-        (dir: map
-          (skill: { name = "${dir}/${skill}"; value = { source = ./skills + "/${skill}"; }; })
-          localSkillIds)
-        (lib.attrValues skillLinkDirs));
-      pstackSkillFiles = listToAttrs (lib.concatMap
-        (dir: lib.mapAttrsToList
-          (skill: drv: { name = "${dir}/${skill}"; value = { source = drv; }; })
-          pstackDrvs)
-        (lib.attrValues skillLinkDirs));
-    in
     lib.mapAttrs (_: source: { inherit source; }) (guideCatalog.filesFor [ "claude" ]) //
     {
       # Curation lists for scripts/verify-agent-skills.sh, so it never restates
@@ -538,15 +515,12 @@ in
       ".claude/search-routing.md".source = ./claude/search-routing.md;
       ".claude/references/search-routing-examples.md".source = ./claude/references/search-routing-examples.md;
 
-      # pstack subagent (see pstackSkills). A skills tree carries no agents;
-      # Claude Code reads user agents from ~/.claude/agents by bare name.
-      ".claude/agents/poteto-agent.md".source = pstackAgentFile "poteto-agent.md";
       ".claude/pstack-models.md".source = pstackModelsSheet;
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
       ".claude/hooks/shell-guard.sh" = { source = ./claude/hooks/shell-guard.sh; executable = true; };
       ".claude/mods/jev-traits".source = ./claude/mods/jev-traits;
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
-    } // localSkillFiles // pstackSkillFiles;
+    };
 
   home.activation.claudePruneRemovedSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ -n "''${DRY_RUN:-}" ]; then

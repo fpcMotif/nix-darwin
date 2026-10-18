@@ -72,6 +72,16 @@ A skill that is in this flake's bundle *and* declared by an enabled Claude Code 
 **Skill hygiene**:
 The drift checks over the curation lists: Tier 1 `unit-skill-hygiene` (hermetic — exclusion terms still name live upstream skills, no vendored fork shadows a promoted id, no `transform` returns to a mattpocock skill) and Tier 2 `just verify-skills` (live — every id advertised to Claude exactly once, every hidden id genuinely replaced by the plugin, every other agent still sees the full bundle). Deliberately not called a "health check": `martin.healthCheck` already owns that term for the macOS health report.
 
+**Skill placement**:
+The module in `modules/home/skill-placement.nix` that decides which host dirs link each skill. Callers declare `martin.agentSurface.skills.<id> = { source; audience; }`. The module returns the read-only `skillPlacement` record with the links, picker dirs, and targets per id. Personal skills declare their audiences in `modules/home/skills/personal/placement.nix`.
+_Avoid_: manifest (the retired `manifest.json`).
+
+**Skill audience**:
+A named set of skill hosts. `pickers` is every picker target except Droid. `everywhere` is agents, claude, codex, gemini, skillshub, and omp. `outside-claude` is agents, gemini, and omp. `codex-family` is agents, codex, and gemini. A skill that needs another set lists its hosts directly.
+
+**Skill host**:
+One dir that a skill placement can link into, such as `.agents/skills` or `.omp/agent/managed-skills`. Picker targets are hosts. `.skillshub` and the two omp dirs are hosts only: another tool writes real dirs into `~/.skillshub`, so the name-based picker sweeps never touch these dirs.
+
 **Enabled skill** vs **Discovered skill**:
 A *discovered* skill exists in the catalog (its source is wired up) but is not placed in any picker. An *enabled* skill is additionally surfaced into the picker target dirs and is selectable. Wiring a source discovers its skills; it does not enable them.
 Rejected workflow skills should be removed from source filters instead of left discovered-but-disabled.
