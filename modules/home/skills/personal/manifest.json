@@ -766,6 +766,13 @@
     ".gemini/config/skills/review-animations",
     ".skillshub/review-animations"
   ],
+  "review-diagrams": [
+    ".agents/skills/review-diagrams",
+    ".claude/skills/review-diagrams",
+    ".codex/skills/review-diagrams",
+    ".gemini/config/skills/review-diagrams",
+    ".skillshub/review-diagrams"
+  ],
   "seeded-landing-direction": [
     ".agents/skills/seeded-landing-direction",
     ".codex/skills/seeded-landing-direction",

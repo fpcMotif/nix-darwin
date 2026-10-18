@@ -1,0 +1,233 @@
+<title>__TITLE__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Reviewers need the answer before the proof, so the headline and picture lead and evidence waits behind clicks. */
+:root {
+  --bg: #f6f7f9; --fg: #14171c; --muted: #5d6470; --surface: #eceef2; --surface-alt: #e1e4ea; --border: #cfd4dc;
+  --accent: #2453c7; --on-accent: #ffffff; --walked: #2f7d4f; --finding: #c4302b;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --gutter-left: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-right: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1115; --fg: #d7dbe2; --muted: #8b93a1; --surface: #171a20; --surface-alt: #20242c; --border: #323843;
+    --accent: #6f95ff; --on-accent: #0f1115; --walked: #5fb37f; --finding: #ef5f57;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1115; --fg: #d7dbe2; --muted: #8b93a1; --surface: #171a20; --surface-alt: #20242c; --border: #323843;
+  --accent: #6f95ff; --on-accent: #0f1115; --walked: #5fb37f; --finding: #ef5f57;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--font-body); }
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; display: flex; align-items: center; gap: 12px; padding-block: 12px; padding-left: var(--gutter-left); padding-right: var(--gutter-right); background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+header h1 { flex: 1; min-width: 0; margin: 0; font-size: 17px; font-weight: 600; }
+header .count { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+nav { display: flex; gap: 6px; overflow-x: auto; padding-block: 10px; padding-left: var(--gutter-left); padding-right: var(--gutter-right); border-bottom: 1px solid var(--border); }
+nav a { flex: none; padding: 4px 10px; border-radius: 999px; background: var(--surface); color: var(--fg); font-size: 13px; text-decoration: none; }
+nav a:hover { background: var(--surface-alt); }
+main { max-width: 1100px; margin: 0 auto; padding-block: 24px 80px; padding-left: var(--gutter-left); padding-right: var(--gutter-right); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { font: 13px var(--font-body); color: var(--fg); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; cursor: pointer; }
+button:hover { background: var(--surface-alt); }
+article { margin-bottom: 56px; scroll-margin-top: 72px; }
+.headline { margin: 0 0 4px; font-size: clamp(22px, 3.2vw, 30px); line-height: 1.25; font-weight: 650; letter-spacing: -0.01em; text-wrap: balance; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; color: var(--muted); font: 12px var(--font-mono); }
+.badge { padding: 1px 8px; border-radius: 999px; background: var(--surface-alt); color: var(--fg); font-family: system-ui, sans-serif; }
+.badge.finding { background: var(--finding); color: var(--on-accent); }
+.meta .spacer { flex: 1; }
+.stage { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.stage.has-walker { grid-template-columns: minmax(0, 1fr) 260px; }
+@media (max-width: 760px) { .stage.has-walker { grid-template-columns: minmax(0, 1fr); } }
+.diagram { position: relative; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); min-height: 120px; }
+.diagram svg { display: block; margin: 0 auto; max-height: 78vh; }
+.pele { --pele-bg: var(--bg); --pele-fg: var(--fg); --pele-muted: var(--muted); --pele-line: var(--fg); --pele-surface: var(--surface); --pele-surface-alt: var(--surface-alt); --pele-border: var(--border); }
+.walker { align-self: start; position: sticky; top: 76px; padding: 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.walker h3 { margin: 0 0 2px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.walker .now { margin: 0 0 12px; font-size: 22px; font-weight: 650; color: var(--accent); }
+.walker .events { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.walker .events button { text-align: left; background: var(--bg); }
+.walker .events button span { color: var(--muted); }
+.walker .done { margin: 0 0 12px; color: var(--walked); font-weight: 600; }
+.walker .trail { margin: 0 0 12px; padding: 0; list-style: none; font-size: 13px; color: var(--muted); max-height: 160px; overflow-y: auto; }
+.walker .trail li::before { content: "→ "; }
+.walker .row { display: flex; flex-wrap: wrap; gap: 6px; }
+.pele-node.is-current { filter: drop-shadow(0 0 7px var(--accent)); }
+.pele-node.is-current :is(rect, path, circle, ellipse, polygon) { stroke: var(--accent) !important; stroke-width: 3px !important; }
+.pele-node.is-next { cursor: pointer; }
+.pele-node.is-next :is(rect, path, polygon) { stroke-dasharray: 5 3; }
+.pele-edge.is-next :is(path, line) { stroke: var(--accent) !important; stroke-width: 2.5px !important; }
+.pele-edge.is-walked :is(path, line) { stroke: var(--walked) !important; stroke-width: 2.5px !important; }
+details { margin-top: 12px; border: 1px solid var(--border); border-radius: 12px; }
+details summary { cursor: pointer; padding: 8px 14px; color: var(--muted); font-size: 13px; }
+details > div { padding: 0 14px 12px; }
+details ul { margin: 0; padding-left: 18px; }
+details li { margin: 4px 0; }
+code { font: 0.92em var(--font-mono); background: var(--surface-alt); padding: 1px 5px; border-radius: 5px; }
+pre { margin: 0; padding: 12px; overflow-x: auto; background: var(--surface); border-radius: 8px; font: 12.5px/1.5 var(--font-mono); }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px); padding: 8px 14px; border-radius: 999px; background: var(--fg); color: var(--bg); font-size: 13px; opacity: 0; transition: opacity 150ms, transform 150ms; pointer-events: none; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+<header>
+  <h1>__TITLE__</h1>
+  <span class="count" id="count"></span>
+  <button id="theme" type="button" aria-label="Switch light or dark">◐</button>
+</header>
+<nav id="toc" aria-label="Diagrams"></nav>
+<main id="main"></main>
+<div class="toast" id="toast" role="status"></div>
+<script type="application/json" id="data">__DATA__</script>
+<script>
+const items = JSON.parse(document.getElementById("data").textContent);
+const main = document.getElementById("main");
+const toc = document.getElementById("toc");
+const toastEl = document.getElementById("toast");
+
+function toast(text) {
+  toastEl.textContent = text;
+  toastEl.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => toastEl.classList.remove("show"), 1400);
+}
+
+async function copy(text, label, pre) {
+  try { await navigator.clipboard.writeText(text); toast(label + " copied"); }
+  catch {
+    const details = pre.closest("details");
+    if (details) details.open = true;
+    getSelection().selectAllChildren(pre);
+    toast("Clipboard blocked. Text selected, press Copy.");
+  }
+}
+
+function el(tag, attrs = {}, children = []) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key === "text") node.textContent = value;
+    else if (key === "html") node.innerHTML = value;
+    else if (key.startsWith("on")) node.addEventListener(key.slice(2), value);
+    else node.setAttribute(key, value);
+  }
+  for (const child of children) if (child) node.append(child);
+  return node;
+}
+
+function xstateConfig(item) {
+  const m = item.machine;
+  const states = {};
+  for (const id of m.states) states[id] = {};
+  for (const t of m.transitions) {
+    const node = states[t.from];
+    if (t.to === null) continue;
+    if (!t.event) { node.always = node.always ? [].concat(node.always, { target: t.to }) : t.to; continue; }
+    node.on ??= {};
+    const prev = node.on[t.event];
+    node.on[t.event] = prev === undefined ? t.to : [].concat(prev, { target: t.to }).map((x) => typeof x === "string" ? { target: x } : x);
+  }
+  for (const id of m.finals) states[id].type = "final";
+  return JSON.stringify({ id: item.anchor, initial: m.initial, states }, null, 2);
+}
+
+function setupWalker(item, diagram, stage) {
+  const m = item.machine;
+  const svg = diagram.querySelector("svg");
+  const nodeOf = (id) => svg.querySelector(`.pele-node[data-id="${CSS.escape(id)}"]`);
+  const edgeOf = (t) => svg.querySelector(`.pele-edge[data-id="${t.edge}"]`);
+  let current = m.initial;
+  const trail = [];
+
+  const now = el("p", { class: "now" });
+  const events = el("div", { class: "events" });
+  const done = el("p", { class: "done", hidden: "" });
+  const trailList = el("ol", { class: "trail" });
+  const panel = el("aside", { class: "walker", "aria-label": "Walk the state machine" }, [
+    el("h3", { text: "You are in" }), now, events, done,
+    el("h3", { text: "Path so far" }), trailList,
+    el("div", { class: "row" }, [
+      el("button", { type: "button", text: "Back", onclick: () => { const last = trail.pop(); if (last) { current = last.from; draw(); } } }),
+      el("button", { type: "button", text: "Reset", onclick: () => { trail.length = 0; current = m.initial; draw(); } }),
+      el("button", { type: "button", text: "Copy path", onclick: () => copy(pathText(), "Path", trailList) }),
+    ]),
+  ]);
+  stage.classList.add("has-walker");
+  stage.append(panel);
+
+  const label = (t) => t.event || "automatic";
+  const pathText = () => [m.initial, ...trail.map((t) => `--${label(t)}--> ${t.to ?? "end"}`)].join(" ");
+  const take = (t) => { trail.push(t); current = t.to; draw(); };
+
+  function draw() {
+    svg.querySelectorAll(".is-current, .is-next, .is-walked").forEach((n) => n.classList.remove("is-current", "is-next", "is-walked"));
+    for (const t of trail) edgeOf(t)?.classList.add("is-walked");
+    const out = current === null ? [] : m.transitions.filter((t) => t.from === current);
+    if (current !== null) nodeOf(current)?.classList.add("is-current");
+    now.textContent = current ?? "End";
+    events.replaceChildren(...out.map((t) => {
+      edgeOf(t)?.classList.add("is-next");
+      if (t.to) nodeOf(t.to)?.classList.add("is-next");
+      return el("button", { type: "button", onclick: () => take(t) }, [document.createTextNode(label(t) + " "), el("span", { text: "→ " + (t.to ?? "end") })]);
+    }));
+    done.hidden = out.length > 0;
+    done.textContent = current === null || m.finals.includes(current) ? "Finished." : "No way out of this state.";
+    trailList.replaceChildren(...(trail.length
+      ? trail.map((t) => el("li", { text: `${label(t)} → ${t.to ?? "end"}` }))
+      : [el("li", { text: "Pick an event, or click a dashed state." })]));
+  }
+
+  svg.addEventListener("click", (event) => {
+    const node = event.target.closest(".pele-node.is-next");
+    if (!node) return;
+    const t = m.transitions.find((x) => x.from === current && x.to === node.dataset.id);
+    if (t) take(t);
+  });
+  draw();
+}
+
+let findings = 0;
+for (const item of items) {
+  findings += item.findings;
+  toc.append(el("a", { href: "#" + item.anchor, text: item.headline }));
+  const diagram = el("div", { class: "diagram", html: item.svg });
+  const stage = el("div", { class: "stage" }, [diagram]);
+  const sourcePre = el("pre", { text: item.source });
+  const xstatePre = item.machine && el("pre", { text: xstateConfig(item) });
+  const tools = [
+    el("button", { type: "button", text: "Copy Mermaid", onclick: () => copy(item.source, "Mermaid", sourcePre) }),
+    item.machine && el("button", { type: "button", text: "Copy XState", title: "Paste into Stately Studio or createMachine()", onclick: () => copy(xstatePre.textContent, "XState config", xstatePre) }),
+  ];
+  const article = el("article", { id: item.anchor }, [
+    el("h2", { class: "headline", text: item.headline }),
+    el("div", { class: "meta" }, [
+      el("span", { class: "badge", text: item.type }),
+      item.findings > 0 && el("span", { class: "badge finding", text: item.findings + (item.findings === 1 ? " finding" : " findings") }),
+      el("span", { text: item.location }),
+      el("span", { class: "spacer" }),
+      ...tools,
+    ]),
+    stage,
+    item.evidence && el("details", {}, [el("summary", { text: "Evidence" }), el("div", { html: item.evidence })]),
+    el("details", {}, [el("summary", { text: "Mermaid source" }), el("div", {}, [sourcePre])]),
+    xstatePre && el("details", {}, [el("summary", { text: "XState config" }), el("div", {}, [xstatePre])]),
+  ]);
+  main.append(article);
+  if (item.machine) setupWalker(item, diagram, stage);
+}
+document.getElementById("count").textContent =
+  `${items.length} diagram${items.length === 1 ? "" : "s"}` + (findings ? ` · ${findings} finding${findings === 1 ? "" : "s"}` : "");
+if (items.length < 2) toc.hidden = true;
+
+const root = document.documentElement;
+try { const saved = localStorage.getItem("review-diagrams-theme"); if (saved) root.dataset.theme = saved; } catch {}
+document.getElementById("theme").addEventListener("click", () => {
+  const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem("review-diagrams-theme", root.dataset.theme); } catch {}
+});
+</script>
