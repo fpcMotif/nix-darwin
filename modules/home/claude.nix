@@ -66,17 +66,10 @@ let
     fi
   '';
 
-  # Only the buckets upstream's CLAUDE.md promotes.
-  mattpocockBuckets = [ "engineering" "productivity" ];
-  disabledMattpocockSkills = [
-    "grill-me" # the `grilling` + `grill-with-docs` pairing is the tradeoff we want
-  ];
-  # Niche skills trimmed to keep the auto-loaded catalog small. Handled like
-  # disabledMattpocockSkills, listed apart because the reason is noise, not
-  # breakage.
-  leanExcludedMattpocockSkills = [ ];
+  inherit (import ./claude/skill-curation.nix)
+    mattpocockBuckets disabledMattpocockSkills leanExcludedMattpocockSkills
+    removedSkillIds harnessProvidedSkillIds interfacesSkillNames;
   excludedSkillIds = disabledMattpocockSkills ++ leanExcludedMattpocockSkills;
-  removedSkillIds = [ "git-workflow" "lazygit" "ralph-loop" "unslop" ];
   # Park here (off but installed) to keep a plugin's cache and config.
   disabledClaudePlugins = [ "typescript-lsp@claude-plugins-official" ];
   # This module edits these plugins' caches, so it also owns their flag and
@@ -309,24 +302,6 @@ let
   # plugin copy wins, so skillOverrides hides the bundle copy in Claude only;
   # other agents keep the bundle. verify-agent-skills.sh checks the plugin has each.
   pluginProvidedSkillIds = enabledMattpocockSkills;
-  # Ids the Claude harness already ships (e.g. anthropic-skills:notebooklm);
-  # the local copy is hidden in Claude but stays visible to other agents.
-  harnessProvidedSkillIds = [ "notebooklm" ];
-  interfacesSkillNames = [
-    "better-accessibility"
-    "better-colors"
-    "better-interface"
-    "better-layout"
-    "better-typography"
-    "better-ui"
-    "better-writing"
-    "break"
-    "build-design"
-    "explain-interface"
-    "interface-review"
-    "state-machine"
-    "variant"
-  ];
   pstackPluginSkillIds = builtins.attrNames pstackDrvs;
   claudeHiddenSkillIds = pluginProvidedSkillIds ++ pstackPluginSkillIds ++ harnessProvidedSkillIds ++ interfacesSkillNames;
 

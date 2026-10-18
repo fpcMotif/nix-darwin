@@ -2,7 +2,7 @@
 
 Status: accepted
 
-`modules/home/claude.nix` curates the mattpocock bundle with three hand-written lists:
+`modules/home/claude/skill-curation.nix` curates the mattpocock bundle with three hand-written lists. `modules/home/claude.nix` and `unit-skill-hygiene` import them:
 
 - `disabledMattpocockSkills`: skills turned off everywhere, including the Claude plugin surface.
 - `leanExcludedMattpocockSkills`: niche skills trimmed from discovery. It is empty and kept for a future bucket.
