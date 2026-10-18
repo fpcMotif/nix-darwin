@@ -202,13 +202,37 @@ pass "--draft with --land is refused"
 expect_output "$work/out" "land     merge into main, fetch, and advance @" "dry run does not report land step"
 pass "dry run reports land plan"
 
+expect_failure "$work/out" "$jj_pr" feat/g -F "$body" -- g.txt
+expect_output "$work/out" "paths need -m" "paths without -m are not refused"
+pass "paths without -m are refused"
+
+j new 'trunk()' >/dev/null 2>&1
+write g.txt g
+write h.txt h
+"$jj_pr" feat/g -m "feat(g): add g" -F "$body" -- g.txt >"$work/out" 2>&1
+[ "$(j diff -r feat/g --name-only)" = "g.txt" ] || fail "feat/g holds more than g.txt"
+[ "$(j diff -r @ --name-only)" = "h.txt" ] || fail "h.txt did not stay in @"
+pass "-m with paths commits only those paths and leaves the rest in @"
+
 : >"$GH_LOG"
 j new 'trunk()' >/dev/null 2>&1
 write f.txt f
-"$jj_pr" feat/f -m "feat(f): add f" -F "$body" --land >"$work/out" 2>&1
+write keep.txt keep
+"$jj_pr" feat/f -m "feat(f): add f" -F "$body" --land -- f.txt >"$work/out" 2>&1
 expect_output "$GH_LOG" "pr create -R acme/widget --head feat/f --base main --title feat(f): add f" "pr create with -m"
 expect_output "$GH_LOG" "pr merge feat/f -R acme/widget --merge" "pr merge called"
 expect_output "$work/out" "https://github.com/acme/widget/pull/feat/f" "PR URL printed"
 [ "$(commit_id 'trunk()')" = "$(commit_id @-)" ] || fail "trunk not advanced to landed commit"
 [ "$(remote_at main)" = "$(commit_id @-)" ] || fail "remote main not updated"
-pass "-m commits working copy and --land merges to trunk, fetches, and advances @"
+[ "$(j diff -r @ --name-only)" = "keep.txt" ] || fail "keep.txt was left behind by --land"
+pass "-m commits the paths and --land merges to trunk, fetches, and moves @ with its edits onto trunk"
+
+: >"$GH_LOG"
+j new 'trunk()' >/dev/null 2>&1
+write i.txt i
+j commit -m "feat(i): add i" >/dev/null 2>&1
+"$jj_pr" feat/i -F "$body" --land >"$work/out" 2>&1
+expect_output "$work/out" "base     main" "a merged branch left on trunk was picked as base"
+[ "$(commit_id 'trunk()')" = "$(commit_id @-)" ] || fail "trunk not advanced after landing from an empty @"
+[ -z "$(j diff -r @ --name-only)" ] || fail "@ is not a fresh empty change on trunk"
+pass "--land from an empty @ starts a fresh change on trunk"

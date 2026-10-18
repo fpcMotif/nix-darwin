@@ -1,6 +1,6 @@
 ---
 name: nix-config-land-autoupdate-main
-description: PR creation, review, and landing onto main in nix-config via single-flight jj pr or jj-ship.
+description: PR creation, review, and landing onto main in nix-config via single-flight jj pr.
 ---
 
 # Land PR and local work onto main
@@ -21,8 +21,8 @@ just verify-skills    # only when agent-skill files changed
 Execute the entire commit → PR → merge → sync pipeline in one command:
 
 ```sh
-# Runs the checkout's jj-pr.sh, so it works before a rebuild
-bun run scripts/jj-ship.ts ship -n <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
+# Builds the checkout's jj pr, so it works before a rebuild
+nix run .#martin.jj-pr -- <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
 
 # Same flight through the installed alias, after darwin-rebuild switch
 jj pr <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
