@@ -10,13 +10,48 @@ let
 
   callTest = path: extraArgs: import path ({ inherit inputs system pkgs lib self; } // extraArgs);
 
+  shellTest = name: { script, inputs, args ? [ ] }:
+    pkgs.runCommand name { nativeBuildInputs = [ pkgs.bash ] ++ inputs; } ''
+      bash ${script} ${lib.concatMapStringsSep " " (arg: "${arg}") args}
+      touch $out
+    '';
+
+  onlyOn = platform: name: test:
+    if (platform == "darwin") == pkgs.stdenv.hostPlatform.isDarwin then test
+    else
+      pkgs.runCommand "${name}-skipped" { } ''
+        echo "Skipping ${platform}-only ${name} on ${system}"
+        touch $out
+      '';
+
   # Host "f" with the experimental workspace backend, the way its user would
   # select it. Evaluated once and shared by every check that reads it.
   darwinDojjo = self.darwinConfigurations."f".extendModules {
     modules = [{ home-manager.users.martinfan.martin.development.workspaceBackend = "dojjo"; }];
   };
+
+  readmeTestNames = lib.concatMap
+    (line:
+      let row = builtins.match "\\| `([a-z0-9-]+)`.*" line;
+      in if row == null then [ ] else row)
+    (lib.splitString "\n" (builtins.readFile ./README.md));
 in
-{
+lib.fix (checks: {
+  unit-tests-readme =
+    let
+      registered = builtins.attrNames checks;
+      missing = lib.subtractLists readmeTestNames registered;
+      unknown = lib.subtractLists registered readmeTestNames;
+    in
+    pkgs.runCommand "unit-tests-readme" { } (
+      if missing == [ ] && unknown == [ ] then "touch $out"
+      else ''
+        echo "tests/README.md table is missing: ${toString missing}" >&2
+        echo "tests/README.md table names unregistered checks: ${toString unknown}" >&2
+        exit 1
+      ''
+    );
+
   smoke = pkgs.runCommand "smoke-test" { } ''
     echo "PASS test infrastructure OK on ${system}"
     touch $out
@@ -26,51 +61,51 @@ in
   unit-mksystem = callTest ./unit/mksystem-test.nix { };
   unit-overlay = callTest ./unit/overlay-test.nix { };
   unit-format = callTest ./unit/format-test.nix { };
-  unit-auto-update = pkgs.runCommand "unit-auto-update" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep pkgs.jq pkgs.perl ]; } ''
-    bash ${./unit/auto-update-test.sh} \
-      ${../scripts/lib/auto-update.sh} \
-      ${../modules/darwin/auto-switch.nix} \
-      ${../pkgs} \
-      ${../scripts} \
-      ${../.github}
-    touch $out
-  '';
-  unit-justfile = pkgs.runCommand "unit-justfile" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep pkgs.gawk ]; } ''
-    bash ${./unit/justfile-test.sh} ${../justfile}
-    touch $out
-  '';
-  unit-build-workflow = pkgs.runCommand "unit-build-workflow" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
-    bash ${./unit/build-workflow-test.sh} ${../.github/workflows/build.yml}
-    touch $out
-  '';
-  unit-rolling-pins = pkgs.runCommand "unit-rolling-pins" { nativeBuildInputs = [ pkgs.bash pkgs.gnugrep ]; } ''
-    bash ${./unit/rolling-pins-test.sh} ${../pkgs} ${../scripts}
-    touch $out
-  '';
+  unit-auto-update = shellTest "unit-auto-update" {
+    script = ./unit/auto-update-test.sh;
+    inputs = [ pkgs.gnugrep pkgs.jq pkgs.perl ];
+    args = [ ../scripts/lib/auto-update.sh ../modules/darwin/auto-switch.nix ../pkgs ../scripts ../.github ];
+  };
+  unit-justfile = shellTest "unit-justfile" {
+    script = ./unit/justfile-test.sh;
+    inputs = [ pkgs.gnugrep pkgs.gawk ];
+    args = [ ../justfile ];
+  };
+  unit-build-workflow = shellTest "unit-build-workflow" {
+    script = ./unit/build-workflow-test.sh;
+    inputs = [ pkgs.gnugrep ];
+    args = [ ../.github/workflows/build.yml ];
+  };
+  unit-rolling-pins = shellTest "unit-rolling-pins" {
+    script = ./unit/rolling-pins-test.sh;
+    inputs = [ pkgs.gnugrep ];
+    args = [ ../pkgs ../scripts ];
+  };
 
   # Current-state integrity for the maintained documents: file-level checks
   # fast enough to run on every change.
-  unit-adr-files = pkgs.runCommand "unit-adr-files" { nativeBuildInputs = [ pkgs.bash pkgs.findutils ]; } ''
-    bash ${./unit/adr-files-test.sh} ${../docs/adr}
-    touch $out
-  '';
-  unit-adr-numbers = pkgs.runCommand "unit-adr-numbers" { nativeBuildInputs = [ pkgs.bash pkgs.findutils pkgs.gnugrep ]; } ''
-    bash ${./unit/adr-numbers-test.sh} ${../docs/adr}
-    touch $out
-  '';
+  unit-adr-files = shellTest "unit-adr-files" {
+    script = ./unit/adr-files-test.sh;
+    inputs = [ pkgs.findutils ];
+    args = [ ../docs/adr ];
+  };
+  unit-adr-numbers = shellTest "unit-adr-numbers" {
+    script = ./unit/adr-numbers-test.sh;
+    inputs = [ pkgs.findutils pkgs.gnugrep ];
+    args = [ ../docs/adr ];
+  };
   # Link targets can sit anywhere in the repo, so this one reads the whole
   # flake source.
-  unit-doc-links = pkgs.runCommand "unit-doc-links" { nativeBuildInputs = [ pkgs.bash pkgs.findutils pkgs.gawk ]; } ''
-    bash ${./unit/doc-links-test.sh} ${self}
-    touch $out
-  '';
-  unit-doc-checks-fixtures = pkgs.runCommand "unit-doc-checks-fixtures" { nativeBuildInputs = [ pkgs.bash pkgs.findutils pkgs.gnugrep pkgs.gawk ]; } ''
-    bash ${./unit/doc-checks-fixtures-test.sh} \
-      ${./unit/adr-files-test.sh} \
-      ${./unit/adr-numbers-test.sh} \
-      ${./unit/doc-links-test.sh}
-    touch $out
-  '';
+  unit-doc-links = shellTest "unit-doc-links" {
+    script = ./unit/doc-links-test.sh;
+    inputs = [ pkgs.findutils pkgs.gawk ];
+    args = [ self ];
+  };
+  unit-doc-checks-fixtures = shellTest "unit-doc-checks-fixtures" {
+    script = ./unit/doc-checks-fixtures-test.sh;
+    inputs = [ pkgs.findutils pkgs.gnugrep pkgs.gawk ];
+    args = [ ./unit/adr-files-test.sh ./unit/adr-numbers-test.sh ./unit/doc-links-test.sh ];
+  };
   unit-agent-guides =
     let
       docLockGuide = ../modules/home/doc-lock/guide.md;
@@ -208,30 +243,32 @@ in
     pkgs.runCommand "unit-agent-guides" { } ''
       touch $out
     '';
-  unit-shell-guard = pkgs.runCommand "unit-shell-guard" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.gawk pkgs.zoxide ]; } ''
-    bash ${../modules/home/claude/hooks/shell-guard-test.sh} \
-      ${../modules/home/claude/hooks/shell-guard.sh}
-    touch $out
-  '';
-  unit-search-guard = pkgs.runCommand "unit-search-guard" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.coreutils ]; } ''
-    bash ${../modules/home/claude/hooks/search-guard-test.sh} \
-      ${../modules/home/claude/hooks/search-guard.sh}
-    touch $out
-  '';
-  unit-doc-lock = pkgs.runCommand "unit-doc-lock" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.git pkgs.coreutils ]; } ''
-    bash ${../modules/home/doc-lock/doc-lock-test.sh} ${lib.getExe pkgs.martin.doc-lock}
-    touch $out
-  '';
+  unit-shell-guard = shellTest "unit-shell-guard" {
+    script = ../modules/home/claude/hooks/shell-guard-test.sh;
+    inputs = [ pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.gawk pkgs.zoxide ];
+    args = [ ../modules/home/claude/hooks/shell-guard.sh ];
+  };
+  unit-search-guard = shellTest "unit-search-guard" {
+    script = ../modules/home/claude/hooks/search-guard-test.sh;
+    inputs = [ pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.coreutils ];
+    args = [ ../modules/home/claude/hooks/search-guard.sh ];
+  };
+  unit-doc-lock = shellTest "unit-doc-lock" {
+    script = ../modules/home/doc-lock/doc-lock-test.sh;
+    inputs = [ pkgs.jq pkgs.git pkgs.coreutils ];
+    args = [ (lib.getExe pkgs.martin.doc-lock) ];
+  };
   unit-comment-lint = pkgs.runCommand "unit-comment-lint" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.ast-grep pkgs.findutils pkgs.gnugrep pkgs.coreutils ]; } ''
     cd ${self}
     bash ./tests/unit/comment-lint-test.sh ./scripts/comment-lint.sh
     bash ./scripts/comment-lint.sh
     touch $out
   '';
-  unit-jj-pr = pkgs.runCommand "unit-jj-pr" { nativeBuildInputs = [ pkgs.bash pkgs.git pkgs.gnugrep pkgs.jujutsu pkgs.coreutils ]; } ''
-    bash ${../modules/home/jj-pr/jj-pr-test.sh} ${lib.getExe pkgs.martin.jj-pr}
-    touch $out
-  '';
+  unit-jj-pr = shellTest "unit-jj-pr" {
+    script = ../modules/home/jj-pr/jj-pr-test.sh;
+    inputs = [ pkgs.git pkgs.gnugrep pkgs.jujutsu pkgs.coreutils ];
+    args = [ (lib.getExe pkgs.martin.jj-pr) ];
+  };
   unit-doc-lock-extension = pkgs.runCommand "unit-doc-lock-extension" { nativeBuildInputs = [ pkgs.bun pkgs.git ]; } ''
     export HOME=$TMPDIR
     bun ${../modules/home/doc-lock/agent-extension-test.ts} ${pkgs.martin.doc-lock-extension}
@@ -355,6 +392,10 @@ in
         touch $out
       '';
 
+  # Module-level evals of the agent surface, workspace backend, and zsh
+  # toggles. They need no host, so they run apart from the host eval.
+  unit-module-seams = callTest ./unit/module-seams-test.nix { };
+
   # Integration tests
   integration-configurations-eval =
     if pkgs.stdenv.hostPlatform.isDarwin then
@@ -373,44 +414,27 @@ in
 
   # Evaluating Linux configs forces agent-skills IFD, so skip on Darwin and run
   # on the x86_64-linux CI builder.
-  integration-home-linux-purity =
-    if pkgs.stdenv.hostPlatform.isDarwin then
-      pkgs.runCommand "integration-home-linux-purity-skipped" { } ''
-        echo "Skipping Linux-only home purity test on ${system}"
-        touch $out
-      ''
-    else
-      callTest ./integration/home-linux-purity-test.nix {
-        x230ConfigurationInput = self.nixosConfigurations.x230;
-        vmConfigurationInput = self.nixosConfigurations.vm-aarch64-utm;
-      };
+  integration-home-linux-purity = onlyOn "linux" "integration-home-linux-purity"
+    (callTest ./integration/home-linux-purity-test.nix {
+      x230ConfigurationInput = self.nixosConfigurations.x230;
+      vmConfigurationInput = self.nixosConfigurations.vm-aarch64-utm;
+    });
 
   # Darwin-only: exact-value lock-in for the macOS settings host "f" commits to.
   # macOS settings have no meaning on the NixOS hosts, so this is a no-op skip
   # off-darwin (the CI matrix still runs it on its native macOS builder).
-  integration-darwin-settings =
-    if pkgs.stdenv.hostPlatform.isDarwin then
-      callTest ./integration/darwin-settings-test.nix
-        {
-          darwinConfigurationInput = self.darwinConfigurations."f";
-        }
-    else
-      pkgs.runCommand "integration-darwin-settings-skipped" { } ''
-        echo "Skipping darwin-only macOS settings test on ${system}"
-        touch $out
-      '';
+  integration-darwin-settings = onlyOn "darwin" "integration-darwin-settings"
+    (callTest ./integration/darwin-settings-test.nix {
+      darwinConfigurationInput = self.darwinConfigurations."f";
+    });
 
 
-  smoke-build-oh-my-pi = pkgs.runCommand "smoke-build-oh-my-pi" { } (
-    if pkgs.stdenv.hostPlatform.isDarwin then ''
+  smoke-build-oh-my-pi = onlyOn "darwin" "smoke-build-oh-my-pi"
+    (pkgs.runCommand "smoke-build-oh-my-pi" { } ''
       echo "Building oh-my-pi as a Darwin smoke test..."
       test -x ${pkgs.martin.oh-my-pi}/bin/omp
       touch $out
-    '' else ''
-      echo "Skipping Darwin-only smoke test on this platform"
-      touch $out
-    ''
-  );
+    '');
 
   smoke-build-toolchain = pkgs.runCommand "smoke-build-toolchain" { } (
     ''
@@ -433,4 +457,4 @@ in
       touch $out
     ''
   );
-}
+})
