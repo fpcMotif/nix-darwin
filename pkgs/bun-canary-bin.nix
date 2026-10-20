@@ -4,12 +4,12 @@
 }:
 
 let
-  version = "1.4.3-canary.20261014.1";
+  version = "1.4.3-canary.20261019.1";
 
   sources = {
     "aarch64-darwin" = {
       url = "https://registry.npmjs.org/@oven/bun-darwin-aarch64/-/bun-darwin-aarch64-${version}.tgz";
-      hash = "sha256-xJ9SOGV/4ls1sYjLVKaUQICXOuhMQ/va6/+2Ns3qaTM=";
+      hash = "sha256-4zowaldnyRvafWV++3fq71UkSZ1MS9bxVMeOdw8pADA=";
     };
   };
 
