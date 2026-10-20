@@ -72,7 +72,7 @@
     # The trait engine behind the traits CLI and the jev-traits mod. Pinned by
     # rev so the node_modules hash in pkgs/traits.nix stays valid.
     traits = {
-      url = "github:fpcMotif/traits/cb04a69adf3caae4005e6406ada6a34c1698ad38";
+      url = "github:fpcMotif/traits/37a5705588600d6b42402dec511489512db9be50";
       flake = false;
     };
   };

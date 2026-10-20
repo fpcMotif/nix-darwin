@@ -312,17 +312,17 @@
     "traits": {
       "flake": false,
       "locked": {
-        "lastModified": 1792463669,
-        "narHash": "sha256-fDVjHgFDlfSM4UAY8RfFCPEDrRAHXb6T4GJw9BwMzC8=",
+        "lastModified": 1792473899,
+        "narHash": "sha256-5EzrExTE8vggJ7Wg/GwZ29DW8govL/wMcuvEt0VaW58=",
         "owner": "fpcMotif",
         "repo": "traits",
-        "rev": "cb04a69adf3caae4005e6406ada6a34c1698ad38",
+        "rev": "37a5705588600d6b42402dec511489512db9be50",
         "type": "github"
       },
       "original": {
         "owner": "fpcMotif",
         "repo": "traits",
-        "rev": "cb04a69adf3caae4005e6406ada6a34c1698ad38",
+        "rev": "37a5705588600d6b42402dec511489512db9be50",
         "type": "github"
       }
     }
