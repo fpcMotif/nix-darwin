@@ -436,6 +436,7 @@ let
       { path = [ "effortLevel" ]; value = "medium"; }
       { path = [ "env" "CLAUDE_CODE_PLUGIN_DIRS" ]; value = "${homeDir}/.claude/mods/jev-traits"; }
     ]
+    ++ lib.optional isDarwin { path = [ "env" "TRAITS_BIN" ]; value = lib.getExe pkgs.martin.traits; }
     ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeHiddenSkillIds
     ++ map (id: { path = [ "enabledPlugins" id ]; value = false; }) disabledClaudePlugins
     ++ lib.mapAttrsToList (id: value: { path = [ "enabledPlugins" id ]; inherit value; }) claudeManagedPlugins

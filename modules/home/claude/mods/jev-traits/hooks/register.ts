@@ -1,33 +1,31 @@
-import type { EngineInterface, FsEntry, PluginOptions, Register, Timer, ToolCallInput } from 'claude-code'
+import type { EngineInterface, FsEntry, PluginOptions, Register, ToolCallInput } from 'claude-code'
 
 import {
-  diffArgs,
-  diffChanges,
+  dirOf,
+  editArgs,
+  failureText,
   formatReport,
-  isCheckable,
-  jobsFor,
-  judgmentsFrom,
-  MAX_IN_FLIGHT,
+  judged,
+  KEYCHAIN_SERVICE,
   plural,
-  requestBody,
+  relativeTo,
+  reviewFrom,
+  settingsFrom,
   SKIP,
   TARGETS,
+  targetArgs,
   targetFrom,
-  UNTRACKED_ARGS,
-  untrackedPaths,
-  workFor,
+  traitFile,
+  TRAITS_DIR,
 } from './check'
-import type { Job, Target } from './check'
-import { chunk, ENDPOINT, headOf, KEYCHAIN_SERVICE, settingsFrom } from './jev'
-import type { Change, ChangeKind, Judgment, Review, Settings, SystemOneReply, Work } from './jev'
-import { appliesTo, dirOf, parseTrait, relativeTo, TRAITS_DIR } from './traits'
-import type { Trait } from './traits'
+import type { ChangeKind, Judgment, Review, Target } from './check'
 
 const CHECK_TOOL = 'mcp__jev-traits__check_traits'
 
 const EDIT_TIMEOUT_MS = 6_000
 const CHECK_TIMEOUT_MS = 8_000
-const MAX_EDIT_CHUNKS = 4
+const LS_TIMEOUT_MS = 5_000
+const MAX_EDIT_CHARS = 48_000
 
 const KEY_HELP = [
   'jev-traits found no TypeSafe API key. Store it once, by hand, in the macOS Keychain (jev-lint reads the same item):',
@@ -35,13 +33,13 @@ const KEY_HELP = [
   `  security add-generic-password -U -a "$USER" -s ${KEYCHAIN_SERVICE} -w`,
   '',
   'The command prompts for the key, so it stays out of your shell history and this chat. Then run /traits again.',
-  'Or export TYPESAFE_API_KEY before starting Claude Code, or set the typesafe_api_key option',
-  '(kept in secure storage) once the plugin is installed from a marketplace.',
+  'Lookup order: the typesafe_api_key option (kept in secure storage, once the plugin is installed from a marketplace),',
+  `then the Keychain item ${KEYCHAIN_SERVICE}, then TYPESAFE_API_KEY as a fallback for machines without the item, such as CI.`,
+  'Do not keep the key in a .env file.',
 ].join('\n')
 
 type Entry = { readonly at: number; readonly line: string }
 const history: Entry[] = []
-const parsedTraits = new Map<string, { stamp: string; trait: Trait }>()
 type ApiKey = { readonly key: string; readonly source: string }
 let cachedKey: ApiKey | undefined
 let lastKeyMissAt = -Infinity
@@ -57,28 +55,17 @@ async function listDir($: EngineInterface, path: string): Promise<FsEntry[]> {
   return $.fs.list(path).catch((): FsEntry[] => [])
 }
 
-async function loadTrait($: EngineInterface, group: string, path: string, entry: FsEntry): Promise<Trait> {
-  const stamp = `${entry.size}:${entry.mtimeMs}`
-  const known = parsedTraits.get(path)
-  if (known?.stamp === stamp) return known.trait
-  const trait = parseTrait(`${group}/${entry.name.slice(0, -'.md'.length)}`, path, await $.fs.read(path))
-  parsedTraits.set(path, { stamp, trait })
-  return trait
-}
-
-async function loadTraits($: EngineInterface, root: string): Promise<Trait[]> {
+// The CLI exits 2 without a key even when no trait exists, so an empty store
+// must not reach it.
+async function hasTraits($: EngineInterface, root: string): Promise<boolean> {
   const base = `${root}/${TRAITS_DIR}`
-  const groups = (await listDir($, base)).filter(
-    entry => (entry.kind === 'dir' || entry.isLink) && !entry.name.startsWith('.'),
-  )
-  const traits: Trait[] = []
-  for (const group of groups) {
-    const files = (await listDir($, `${base}/${group.name}`)).filter(
-      entry => entry.kind === 'file' && entry.name.endsWith('.md'),
-    )
-    for (const file of files) traits.push(await loadTrait($, group.name, `${base}/${group.name}/${file.name}`, file))
-  }
-  return traits.sort((a, b) => a.id.localeCompare(b.id))
+  const isTrait = (entry: FsEntry) => entry.kind === 'file' && entry.name.endsWith('.md')
+  const entries = await listDir($, base)
+  if (entries.some(isTrait)) return true
+  for (const group of entries)
+    if ((group.kind === 'dir' || group.isLink) && !group.name.startsWith('.'))
+      if ((await listDir($, `${base}/${group.name}`)).some(isTrait)) return true
+  return false
 }
 
 async function apiKey($: EngineInterface, options: PluginOptions): Promise<ApiKey | undefined> {
@@ -86,13 +73,15 @@ async function apiKey($: EngineInterface, options: PluginOptions): Promise<ApiKe
   if (option) return { key: option, source: 'the typesafe_api_key plugin option' }
   if (cachedKey) return cachedKey
   if (Date.now() - lastKeyMissAt < 30_000) return undefined
-  const fromEnv = (await $.env.get('TYPESAFE_API_KEY'))?.trim()
-  if (fromEnv) return (cachedKey = { key: fromEnv, source: 'TYPESAFE_API_KEY' })
   const keychain = await $.process
     .run(['security', 'find-generic-password', '-s', KEYCHAIN_SERVICE, '-w'], { timeoutMs: 3000 })
     .catch(() => undefined)
   const fromKeychain = keychain?.exitCode === 0 ? keychain.stdout.trim() : ''
   if (fromKeychain) return (cachedKey = { key: fromKeychain, source: `the Keychain item ${KEYCHAIN_SERVICE}` })
+  // The Keychain wins so a key that direnv, mise or bun loads from a plaintext
+  // .env cannot override it; the env var only serves machines without the item.
+  const fromEnv = (await $.env.get('TYPESAFE_API_KEY'))?.trim()
+  if (fromEnv) return (cachedKey = { key: fromEnv, source: 'TYPESAFE_API_KEY (fallback, no Keychain item)' })
   lastKeyMissAt = Date.now()
   return undefined
 }
@@ -102,66 +91,50 @@ function forgetKey() {
   lastKeyMissAt = -Infinity
 }
 
-async function review(
+// Home Manager sets TRAITS_BIN to the store path, since a GUI-launched Claude
+// Code may not have the Nix profile on PATH.
+async function traitsBin($: EngineInterface): Promise<string> {
+  return (await $.env.get('TRAITS_BIN'))?.trim() || 'traits'
+}
+
+type Run = { readonly ok: true; readonly review: Review } | { readonly ok: false; readonly message: string }
+
+async function runTraits(
   $: EngineInterface,
-  key: string,
-  settings: Settings,
-  work: readonly Work[],
-  timeoutMs: number,
-): Promise<Review> {
+  root: string,
+  args: readonly string[],
+  init: { key?: string; stdin?: string; timeoutMs: number },
+): Promise<Run> {
   const startedAt = Date.now()
-  const jobs = jobsFor(work)
-  const judgments: Judgment[] = []
-  const errors: { path: string; message: string }[] = []
-  let model: string | undefined
-  let inputTokens = 0
-
-  let timer: Timer | undefined
-  const deadline = new Promise<'timeout'>(resolve => {
-    timer = $.clock.after(timeoutMs, () => resolve('timeout'))
-  })
-
-  const ask = async (job: Job) => {
-    const request = $.http.fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody(settings, job)),
+  const ran = await $.process
+    .run([await traitsBin($), ...args], {
+      cwd: root,
+      timeoutMs: init.timeoutMs,
+      ...(init.key === undefined ? {} : { env: { TYPESAFE_API_KEY: init.key } }),
+      ...(init.stdin === undefined ? {} : { stdin: init.stdin }),
     })
-    const response = await Promise.race([request, deadline])
-    if (response === 'timeout') throw new Error(`TypeSafe timed out after ${timeoutMs} ms`)
-    if (response.status === 401) {
-      forgetKey()
-      throw new Error('TypeSafe rejected the API key (401), see /traits')
-    }
-    if (!response.ok) throw new Error(`TypeSafe ${response.status}`)
-    const reply = JSON.parse(response.text) as SystemOneReply
-    model = reply.model ?? model
-    inputTokens += reply.usage?.input_tokens ?? 0
-    judgments.push(...judgmentsFrom(reply, job, settings))
-  }
-
-  let next = 0
-  const worker = async () => {
-    while (next < jobs.length) {
-      const job = jobs[next++]
-      if (!job) return
-      await ask(job).catch((error: unknown) => {
-        errors.push({ path: job.change.path, message: errorText(error) })
-      })
-    }
+    .catch((error: unknown) => errorText(error))
+  if (typeof ran === 'string')
+    return /time/i.test(ran)
+      ? { ok: false, message: `traits did not finish within ${init.timeoutMs / 1000} s` }
+      : { ok: false, message: `could not run traits: ${ran}` }
+  if (ran.exitCode !== 0 && ran.exitCode !== 1) {
+    if (/\b401\b|unauthori[sz]ed/i.test(ran.stderr)) forgetKey()
+    return { ok: false, message: failureText(ran.stderr) }
   }
   try {
-    await Promise.all(Array.from({ length: Math.min(MAX_IN_FLIGHT, jobs.length) }, worker))
-  } finally {
-    timer?.cancel()
+    return { ok: true, review: reviewFrom(root, ran.stdout, Date.now() - startedAt) }
+  } catch {
+    return { ok: false, message: 'traits printed no JSON report' }
   }
-  return { judgments, errors, model, requests: jobs.length, inputTokens, ms: Date.now() - startedAt }
 }
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error))
 const shortPath = (path: string) => (path.length > 44 ? `…${path.slice(-43)}` : path)
 
-function editedChange(e: ToolCallInput): Change | undefined {
+type EditedChange = { readonly path: string; readonly kind: ChangeKind; readonly code: string }
+
+function editedChange(e: ToolCallInput): EditedChange | undefined {
   if (e.tool === 'Edit') return { path: e.file_path, kind: 'edit', code: e.new_string }
   if (e.tool === 'Write') return { path: e.file_path, kind: 'write', code: e.content }
   if (e.tool === 'NotebookEdit' && e.edit_mode !== 'delete')
@@ -179,21 +152,19 @@ function flaggedByTrait(result: Review): Judgment[] {
   return [...worst.values()].sort((a, b) => b.probabilities.violation - a.probabilities.violation)
 }
 
-function editStatus(rel: string, result: Review, asked: number): string {
-  const first = result.errors[0]
-  if (first && result.judgments.length === 0) return `jev: ${first.message}; ${shortPath(rel)} unchecked`
+function editStatus(rel: string, result: Review): string {
   const flagged = flaggedByTrait(result)
   const fixes = flagged.filter(j => j.verdict === 'fix').length
   const checks = flagged.length - fixes
   const head = fixes > 0 ? `jev ⚠ ${fixes} to fix` : checks > 0 ? `jev ? ${checks} to double-check` : 'jev ✓'
-  return `${head} · ${shortPath(rel)} · ${plural(asked, 'trait')} · ${result.ms} ms${result.errors.length > 0 ? ' · partial' : ''}`
+  return `${head} · ${shortPath(rel)} · ${plural(judged(result), 'judgment')} · ${result.ms} ms`
 }
 
-function feedbackFor(root: string, rel: string, kind: ChangeKind, result: Review): string | undefined {
+function feedbackFor(rel: string, kind: ChangeKind, result: Review): string | undefined {
   const flagged = flaggedByTrait(result)
   if (flagged.length === 0) return undefined
   const line = (j: Judgment) =>
-    `  - ${j.trait.id} (p=${j.probabilities.violation.toFixed(2)}): ${j.trait.title} [${relativeTo(root, j.trait.path)}]`
+    `  - ${j.trait.id} (p=${j.probabilities.violation.toFixed(2)}): ${j.trait.title} [${traitFile(j.trait.id)}]`
   const fixes = flagged.filter(j => j.verdict === 'fix')
   const checks = flagged.filter(j => j.verdict === 'check')
   const scope = kind === 'write' ? 'the whole file this write produced' : 'the code this edit added'
@@ -203,33 +174,6 @@ function feedbackFor(root: string, rel: string, kind: ChangeKind, result: Review
     ...(checks.length > 0 ? ['Possible violations, double-check and keep the code if it is fine:', ...checks.map(line)] : []),
     'These are fast model judgments and can be wrong: read the trait file before changing code.',
   ].join('\n')
-}
-
-async function gather(
-  $: EngineInterface,
-  root: string,
-  target: Target,
-  files: readonly string[],
-): Promise<{ changes: Change[]; skipped: string[] }> {
-  const changes: Change[] = []
-  const skipped: string[] = []
-  const git = async (args: string[]) => {
-    const ran = await $.process.run(['git', ...args], { cwd: root, timeoutMs: 15_000 })
-    if (ran.exitCode !== 0) throw new Error(`git ${args[0]} failed: ${ran.stderr.trim().split('\n')[0] ?? ''}`)
-    return ran.stdout
-  }
-  const readWhole = async (rel: string) => {
-    const text = await $.fs.read(`${root}/${rel}`).catch(() => undefined)
-    if (isCheckable(text)) changes.push({ path: rel, kind: 'file', code: text })
-    else skipped.push(rel)
-  }
-  if (target === 'files')
-    for (const file of files) await readWhole(relativeTo(root, file.startsWith('/') ? file : `${root}/${file}`))
-  if (target === 'staged' || target === 'changed') changes.push(...diffChanges(await git(diffArgs(true))))
-  if (target === 'unstaged' || target === 'changed') changes.push(...diffChanges(await git(diffArgs(false))))
-  if (target === 'untracked' || target === 'changed')
-    for (const rel of untrackedPaths(await git(UNTRACKED_ARGS))) await readWhole(rel)
-  return { changes, skipped }
 }
 
 function report($: EngineInterface, line: string) {
@@ -245,18 +189,9 @@ async function checkEdit($: EngineInterface, options: PluginOptions, e: ToolCall
   if (!root) return undefined
   const rel = relativeTo(root, edited.path)
   if (SKIP.test(rel)) return undefined
-  const traits = await loadTraits($, root)
-  if (traits.length === 0) return undefined
-  const chunks = chunk({ ...edited, path: rel })
-  if (chunks.length > MAX_EDIT_CHUNKS) {
+  if (!(await hasTraits($, root))) return undefined
+  if (edited.code.length > MAX_EDIT_CHARS) {
     report($, `jev: ${shortPath(rel)} is too large to check per edit; use /traits check`)
-    return undefined
-  }
-  const work: Work[] = chunks
-    .map(change => ({ change, traits: traits.filter(trait => appliesTo(trait, rel, change.code)) }))
-    .filter(item => item.traits.length > 0)
-  if (work.length === 0) {
-    report($, `jev · ${shortPath(rel)}: no trait applies`)
     return undefined
   }
   const key = await apiKey($, options)
@@ -264,13 +199,21 @@ async function checkEdit($: EngineInterface, options: PluginOptions, e: ToolCall
     report($, 'jev: no TypeSafe API key; run /traits')
     return undefined
   }
-  const written = edited.kind === 'edit' ? await $.fs.read(edited.path).catch(() => undefined) : undefined
-  const head = typeof written === 'string' ? headOf(written) : undefined
-  const judged = head ? work.map(item => ({ ...item, change: { ...item.change, head } })) : work
-  const result = await review($, key.key, settingsFrom(options), judged, EDIT_TIMEOUT_MS)
-  const asked = new Set(work.flatMap(item => item.traits.map(trait => trait.id))).size
-  report($, editStatus(rel, result, asked))
-  return feedbackFor(root, rel, edited.kind, result)
+  const ran = await runTraits($, root, editArgs(rel, edited.kind, settingsFrom(options)), {
+    key: key.key,
+    stdin: edited.code,
+    timeoutMs: EDIT_TIMEOUT_MS,
+  })
+  if (!ran.ok) {
+    report($, `jev: ${ran.message}; ${shortPath(rel)} not checked`)
+    return undefined
+  }
+  if (judged(ran.review) === 0) {
+    report($, `jev · ${shortPath(rel)}: no trait applies`)
+    return undefined
+  }
+  report($, editStatus(rel, ran.review))
+  return feedbackFor(rel, edited.kind, ran.review)
 }
 
 async function checkTarget(
@@ -286,18 +229,33 @@ async function checkTarget(
     ? path.startsWith('/') ? path : `${sessionRoot}/${path}`
     : (files.find(file => file.startsWith('/')) ?? sessionRoot)
   const root = await findRoot($, start)
-  if (!root) return `No ${TRAITS_DIR} folder at or above ${start}. Add a trait as ${TRAITS_DIR}/project/<name>.md first.`
-  const all = await loadTraits($, root)
-  const traits = traitId ? all.filter(trait => trait.id === traitId) : all
-  if (traits.length === 0) return traitId ? `No trait ${traitId} in ${root}/${TRAITS_DIR}.` : `No traits in ${root}/${TRAITS_DIR}.`
+  if (!root) return `No ${TRAITS_DIR} folder at or above ${start}. Add a trait as ${TRAITS_DIR}/<name>.md first.`
+  if (!(await hasTraits($, root))) return `No traits in ${root}/${TRAITS_DIR}.`
   const key = await apiKey($, options)
   if (!key) return KEY_HELP
-  const { changes, skipped } = await gather($, root, target, files)
-  const work = workFor(changes, traits)
-  if (work.length === 0)
-    return `jev-traits ${target}: nothing to check (${changes.length > 0 ? 'no trait applies to the changes' : 'no changes'}).`
-  const result = await review($, key.key, settingsFrom(options), work, CHECK_TIMEOUT_MS)
-  return formatReport(root, target, result, skipped)
+  const settings = settingsFrom(options)
+  const ran = await runTraits($, root, targetArgs(root, target, files, settings, traitId), {
+    key: key.key,
+    timeoutMs: CHECK_TIMEOUT_MS,
+  })
+  if (!ran.ok) return `jev-traits ${target}: not checked, ${ran.message}.`
+  if (judged(ran.review) === 0)
+    return `jev-traits ${target}: nothing to check (${ran.review.files > 0 ? 'no trait applies to the changes' : 'no changes'}).`
+  return formatReport(target, settings, ran.review)
+}
+
+async function storedTraits($: EngineInterface, root: string): Promise<string[]> {
+  const ran = await $.process
+    .run([await traitsBin($), 'ls', '--json'], { cwd: root, timeoutMs: LS_TIMEOUT_MS })
+    .catch((error: unknown) => errorText(error))
+  if (typeof ran === 'string') return [`  traits ls failed: ${ran}`]
+  if (ran.exitCode !== 0) return [`  traits ls failed: ${failureText(ran.stderr)}`]
+  try {
+    const traits = JSON.parse(ran.stdout) as { name: string; path: string }[]
+    return traits.map(trait => `  ${trait.name}: ${relativeTo(root, trait.path)}`)
+  } catch {
+    return ['  traits ls printed no JSON list']
+  }
 }
 
 async function summary($: EngineInterface, options: PluginOptions): Promise<string> {
@@ -306,19 +264,15 @@ async function summary($: EngineInterface, options: PluginOptions): Promise<stri
   const key = await apiKey($, options)
   const sessionRoot = await $.session.root()
   const root = await findRoot($, sessionRoot)
-  const traits: Trait[] = root ? await loadTraits($, root) : []
-  const describe = (trait: Trait) =>
-    `  ${trait.id}: ${trait.title}` +
-    (trait.paths.length > 0 ? ` [paths: ${trait.paths.join(', ')}]` : '') +
-    (trait.when.length > 0 ? ` [when: ${plural(trait.when.length, 'pattern')}]` : '')
+  const traits = root && (await hasTraits($, root)) ? await storedTraits($, root) : []
   return [
     `jev-traits · ${settings.model} · fix ≥ ${settings.fix} · double-check ≥ ${settings.check} · pass ≥ ${settings.pass}` +
       ` · edits ${options.check_edits === false ? 'not checked' : 'checked'}`,
     key ? `Key: from ${key.source}.` : KEY_HELP,
     root
       ? `Traits: ${traits.length} in ${root}/${TRAITS_DIR}`
-      : `Traits: no ${TRAITS_DIR} folder at or above ${sessionRoot}. Add one as ${TRAITS_DIR}/project/<name>.md.`,
-    ...traits.map(describe),
+      : `Traits: no ${TRAITS_DIR} folder at or above ${sessionRoot}. Add one as ${TRAITS_DIR}/<name>.md.`,
+    ...traits,
     ...(history.length > 0
       ? ['Recent checks:', ...history.slice(-10).map(entry => `  ${new Date(entry.at).toTimeString().slice(0, 8)}  ${entry.line}`)]
       : []),
@@ -336,7 +290,7 @@ export const register: Register = (on, options: PluginOptions) => {
     await $.tool.register({
       name: 'check_traits',
       description:
-        "Checks code against this repository's traits (.agents/traits/<group>/*.md) with TypeSafe Jev. " +
+        "Checks code against this repository's traits (.agents/traits/*.md and .agents/traits/<group>/*.md) with the traits CLI and TypeSafe Jev. " +
         'Use it before committing (target staged), after adding or revising a trait, or to audit files. ' +
         'Findings are fast model judgments: read the trait and the code before changing anything, ' +
         'and report unsure results as unsure, never as passes.',
@@ -351,9 +305,12 @@ export const register: Register = (on, options: PluginOptions) => {
           files: {
             type: 'array',
             items: { type: 'string' },
-            description: 'Paths relative to the folder holding .agents/, or absolute; for target files',
+            description: 'Paths or globs relative to the folder holding .agents/, or absolute; for target files',
           },
-          trait: { type: 'string', description: 'Check one trait only, as group/name (for example project/no_default_exports)' },
+          trait: {
+            type: 'string',
+            description: 'Check one trait only, by name, or group/name for a grouped trait (for example project/no_default_exports)',
+          },
           path: {
             type: 'string',
             description:

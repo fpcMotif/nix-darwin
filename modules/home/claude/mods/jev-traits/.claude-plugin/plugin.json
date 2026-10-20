@@ -1,13 +1,13 @@
 {
   "name": "jev-traits",
   "version": "0.1.0",
-  "description": "Checks each edit against the repository's traits (.agents/traits) with TypeSafe Jev and tells Claude what to fix",
+  "description": "Checks each edit against the repository's traits (.agents/traits) with the traits CLI and TypeSafe Jev, and tells Claude what to fix",
   "author": { "name": "f" },
   "userConfig": {
     "typesafe_api_key": {
       "type": "string",
       "title": "TypeSafe API key",
-      "description": "Kept in secure storage. Leave empty to use TYPESAFE_API_KEY or the macOS Keychain item typesafe-api-key.",
+      "description": "Kept in secure storage. Leave empty to use the macOS Keychain item typesafe-api-key, then TYPESAFE_API_KEY as a fallback for machines without the item. Do not keep the key in a .env file.",
       "sensitive": true
     },
     "model": {
