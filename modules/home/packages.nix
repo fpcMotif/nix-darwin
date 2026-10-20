@@ -80,6 +80,7 @@ let
     martin.nub
     martin.drafts-mcp-server
     martin.jev-traits
+    martin.traits
   ];
 in
 {

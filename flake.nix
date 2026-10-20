@@ -68,6 +68,13 @@
       url = "github:michael-denyer/pstack-claude";
       flake = false;
     };
+
+    # The trait engine behind the traits CLI and the jev-traits mod. Pinned by
+    # rev so the node_modules hash in pkgs/traits.nix stays valid.
+    traits = {
+      url = "github:fpcMotif/traits/a43ba97bc70a5c98c9c2bd568caa4f5a0bf6b3d0";
+      flake = false;
+    };
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:
@@ -115,6 +122,11 @@
         inputs.nur.overlays.default
         inputs.rust-overlay.overlays.default
         (import ./pkgs)
+        (final: prev: {
+          martin = prev.martin // {
+            traits = final.callPackage ./pkgs/traits.nix { src = inputs.traits; };
+          };
+        })
         inputs.claude-code.overlays.default
       ];
 
