@@ -157,7 +157,8 @@ function editStatus(rel: string, result: Review): string {
   const fixes = flagged.filter(j => j.verdict === 'fix').length
   const checks = flagged.length - fixes
   const head = fixes > 0 ? `jev ⚠ ${fixes} to fix` : checks > 0 ? `jev ? ${checks} to double-check` : 'jev ✓'
-  return `${head} · ${shortPath(rel)} · ${plural(judged(result), 'judgment')} · ${result.ms} ms`
+  const skipped = result.skipped.length > 0 ? ` · ${result.skipped.length} skipped as too large` : ''
+  return `${head} · ${shortPath(rel)} · ${plural(judged(result), 'judgment')}${skipped} · ${result.ms} ms`
 }
 
 function feedbackFor(rel: string, kind: ChangeKind, result: Review): string | undefined {
@@ -209,7 +210,13 @@ async function checkEdit($: EngineInterface, options: PluginOptions, e: ToolCall
     return undefined
   }
   if (judged(ran.review) === 0) {
-    report($, `jev · ${shortPath(rel)}: no trait applies`)
+    const skipped = ran.review.skipped.length
+    report(
+      $,
+      skipped > 0
+        ? `jev · ${shortPath(rel)}: ${skipped} skipped as too large; use /traits check`
+        : `jev · ${shortPath(rel)}: no trait applies`,
+    )
     return undefined
   }
   report($, editStatus(rel, ran.review))
@@ -239,7 +246,7 @@ async function checkTarget(
     timeoutMs: CHECK_TIMEOUT_MS,
   })
   if (!ran.ok) return `jev-traits ${target}: not checked, ${ran.message}.`
-  if (judged(ran.review) === 0)
+  if (judged(ran.review) === 0 && ran.review.skipped.length === 0)
     return `jev-traits ${target}: nothing to check (${ran.review.files > 0 ? 'no trait applies to the changes' : 'no changes'}).`
   return formatReport(target, settings, ran.review)
 }

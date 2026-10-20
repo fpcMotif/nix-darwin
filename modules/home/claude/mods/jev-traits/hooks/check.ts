@@ -25,8 +25,16 @@ export type Judgment = {
   readonly probabilities: Probabilities
   readonly verdict: Verdict
 }
+export type Skip = {
+  readonly path: string
+  readonly trait: string
+  readonly line: number
+  readonly bytes: number
+  readonly maxBytes: number
+}
 export type Review = {
   readonly judgments: Judgment[]
+  readonly skipped: Skip[]
   readonly verdicts: Readonly<Record<Verdict, number>>
   readonly files: number
   readonly requests: number
@@ -100,8 +108,10 @@ type CliFinding = {
   source: { location?: { _tag: string; path?: string; startLine?: number } }
   assessment: { probabilities: Probabilities; verdict: Verdict }
 }
+type CliSkip = { path: string; trait: string; startLine: number; bytes: number; maxBytes: number }
 type CliReport = {
   findings: CliFinding[]
+  skipped: CliSkip[]
   summary: { files: number; requests: number; verdicts: Record<Verdict, number> }
 }
 
@@ -119,6 +129,13 @@ export function reviewFrom(root: string, stdout: string, ms: number): Review {
         verdict: finding.assessment.verdict,
       }
     }),
+    skipped: report.skipped.map(skip => ({
+      path: relativeTo(root, skip.path),
+      trait: skip.trait,
+      line: skip.startLine,
+      bytes: skip.bytes,
+      maxBytes: skip.maxBytes,
+    })),
     verdicts: report.summary.verdicts,
     files: report.summary.files,
     requests: report.summary.requests,
@@ -137,6 +154,7 @@ export function failureText(stderr: string): string {
 export const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`
 
 const VERDICT_ORDER = { fix: 0, check: 1, unsure: 2, pass: 3 } as const
+const MAX_SKIP_LINES = 20
 
 export function formatReport(target: Target, settings: Settings, result: Review): string {
   const flagged = result.judgments
@@ -146,10 +164,12 @@ export function formatReport(target: Target, settings: Settings, result: Review)
         a.path.localeCompare(b.path) || (a.line ?? 0) - (b.line ?? 0) || VERDICT_ORDER[a.verdict] - VERDICT_ORDER[b.verdict],
     )
   const unsure = result.judgments.filter(j => j.verdict === 'unsure')
-  const status = flagged.length > 0 ? 'violations' : unsure.length > 0 ? 'inconclusive' : 'pass'
+  const status =
+    flagged.length > 0 ? 'violations' : unsure.length > 0 || result.skipped.length > 0 ? 'inconclusive' : 'pass'
   const lines = [
     `jev-traits ${target}: ${status} · ${plural(judged(result), 'judgment')} over ${plural(result.files, 'file')}` +
-      ` · ${plural(result.requests, 'request')} · ${result.ms} ms · ${settings.model}`,
+      ` · ${plural(result.requests, 'request')} · ${result.ms} ms · ${settings.model}` +
+      (result.skipped.length > 0 ? ` · ${result.skipped.length} skipped as too large` : ''),
   ]
   let heading = ''
   for (const j of flagged) {
@@ -166,6 +186,12 @@ export function formatReport(target: Target, settings: Settings, result: Review)
     for (const j of unsure) byPath.set(j.path, [...(byPath.get(j.path) ?? []), j])
     for (const [path, judgments] of [...byPath].sort(([a], [b]) => a.localeCompare(b)))
       lines.push(`  ${path}: ${judgments.length} (${[...new Set(judgments.map(j => j.trait.id))].sort().join(', ')})`)
+  }
+  if (result.skipped.length > 0) {
+    lines.push('Skipped as too large, not checked:')
+    for (const skip of result.skipped.slice(0, MAX_SKIP_LINES))
+      lines.push(`  ${skip.path}:${skip.line} ${skip.trait} (${skip.bytes}/${skip.maxBytes} bytes)`)
+    if (result.skipped.length > MAX_SKIP_LINES) lines.push(`  … and ${result.skipped.length - MAX_SKIP_LINES} more`)
   }
   if (flagged.length > 0 || unsure.length > 0) {
     const traitFiles = new Set([...flagged, ...unsure].map(j => traitFile(j.trait.id)))

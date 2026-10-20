@@ -10,7 +10,21 @@ type Answer =
   | { exitCode: number; stdout?: string; stderr?: string }
   | { reject: string }
 
-function cliReport(verdicts: readonly { verdict: Verdict; violation: number; path?: string }[]) {
+type CliSkip = { path: string; trait: string; reason: 'too-large'; startLine: number; bytes: number; maxBytes: number }
+
+const TOO_LARGE: CliSkip = {
+  path: '/repo/src/big.ts',
+  trait: 'project/fetch_timeout',
+  reason: 'too-large',
+  startLine: 201,
+  bytes: 300000,
+  maxBytes: 120000,
+}
+
+function cliReport(
+  verdicts: readonly { verdict: Verdict; violation: number; path?: string }[],
+  skipped: readonly CliSkip[] = [],
+) {
   const findings = verdicts
     .filter(one => one.verdict !== 'pass')
     .map(one => ({
@@ -30,10 +44,12 @@ function cliReport(verdicts: readonly { verdict: Verdict; violation: number; pat
   const count = (verdict: Verdict) => verdicts.filter(one => one.verdict === verdict).length
   return JSON.stringify({
     findings,
+    skipped,
     summary: {
       files: 1,
       traits: 1,
       requests: verdicts.length,
+      skipped: skipped.length,
       verdicts: { fix: count('fix'), check: count('check'), unsure: count('unsure'), pass: count('pass') },
     },
   })
@@ -157,6 +173,24 @@ describe('per-edit check', () => {
     expect(statuses.at(-1)).toContain('jev ✓ · src/api.ts · 1 judgment ·')
   })
 
+  test('says so when traits skipped the edit as too large', KEYED, async ($, on) => {
+    const { statuses } = world(on, { exitCode: 0, stdout: cliReport([], [{ ...TOO_LARGE, path: '/repo/src/api.ts' }]) })
+    const ran = await $.tool.call(edit('await fetch(url)'))
+
+    expect(ran.context).toBeUndefined()
+    expect(statuses.at(-1)).toBe('jev · src/api.ts: 1 skipped as too large; use /traits check')
+  })
+
+  test('counts too-large skips in the edit status', KEYED, async ($, on) => {
+    const { statuses } = world(on, {
+      exitCode: 0,
+      stdout: cliReport([{ verdict: 'pass', violation: 0.02 }], [{ ...TOO_LARGE, path: '/repo/src/api.ts' }]),
+    })
+    await $.tool.call(edit('await fetch(url)'))
+
+    expect(statuses.at(-1)).toContain('jev ✓ · src/api.ts · 1 judgment · 1 skipped as too large ·')
+  })
+
   test('says no trait applies when traits judged nothing', KEYED, async ($, on) => {
     const { statuses } = world(on, { exitCode: 0, stdout: cliReport([]) })
     const ran = await $.tool.call(edit('const total = a + b'))
@@ -265,6 +299,37 @@ describe('check_traits', () => {
     const report = String(ran.result)
     expect(report).toContain('jev-traits changed: inconclusive')
     expect(report).toContain('Unsure, Jev lacked context:\n  src/api.ts: 2 (project/fetch_timeout)')
+  })
+
+  test('reports too-large skips as inconclusive, never as a pass', KEYED, async ($, on) => {
+    world(on, { exitCode: 0, stdout: cliReport([{ verdict: 'pass', violation: 0.02 }], [TOO_LARGE]) })
+    const ran = await $.tool.call({ tool: 'mcp__jev-traits__check_traits', target: 'changed' })
+
+    const report = String(ran.result)
+    expect(report).toContain('jev-traits changed: inconclusive · 1 judgment over 1 file · 1 request · ')
+    expect(report).toContain('· 1 skipped as too large')
+    expect(report).toContain(
+      'Skipped as too large, not checked:\n  src/big.ts:201 project/fetch_timeout (300000/120000 bytes)',
+    )
+  })
+
+  test('lists at most 20 too-large skips', KEYED, async ($, on) => {
+    const skipped = Array.from({ length: 25 }, (_, i) => ({ ...TOO_LARGE, startLine: i * 200 + 1 }))
+    world(on, { exitCode: 0, stdout: cliReport([], skipped) })
+    const ran = await $.tool.call({ tool: 'mcp__jev-traits__check_traits', target: 'changed' })
+
+    const report = String(ran.result)
+    expect(report.split('\n').filter(line => line.startsWith('  src/big.ts:')).length).toBe(20)
+    expect(report).toContain('  … and 5 more')
+  })
+
+  test('reports a check where every pair was skipped', KEYED, async ($, on) => {
+    world(on, { exitCode: 0, stdout: cliReport([], [TOO_LARGE]) })
+    const ran = await $.tool.call({ tool: 'mcp__jev-traits__check_traits', target: 'changed' })
+
+    const report = String(ran.result)
+    expect(report).toContain('jev-traits changed: inconclusive')
+    expect(report).not.toContain('nothing to check')
   })
 
   test('reports a timeout as not checked', KEYED, async ($, on) => {
