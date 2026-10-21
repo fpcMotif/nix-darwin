@@ -79,7 +79,7 @@
 
   outputs = inputs@{ self, nixpkgs, ... }:
     let
-      lib = nixpkgs.lib;
+      inherit (nixpkgs) lib;
       systemUser = "martinfan";
 
       supportedSystems = [
@@ -159,8 +159,7 @@
         {
           crush = pkgs.nur.repos.charmbracelet.crush;
           # Overlay override of nixpkgs' codex; exposed so update-codex.sh can build it.
-          codex = pkgs.codex;
-          martin = pkgs.martin;
+          inherit (pkgs) codex martin;
         };
     in
     {

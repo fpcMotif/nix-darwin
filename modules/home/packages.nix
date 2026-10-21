@@ -49,7 +49,7 @@ let
     go
     gofumpt
     golangci-lint
-    uv
+    martin.uv-bin
     cmake
     tree-sitter
     wget

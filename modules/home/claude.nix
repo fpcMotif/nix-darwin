@@ -342,7 +342,7 @@ let
     inherit lib pkgs inputs mkSource mkSkill;
     inherit (config.martin.development) docLock;
   };
-  inherit (pstack) pstackSources pstackExplicit pstackModelsSheet pstackDrvs;
+  inherit (pstack) pstackModelsSheet pstackDrvs;
 
   # Defaults only: a value already in settings.json wins.
   claudeSeedEnv = {

@@ -6,7 +6,7 @@ let
     overlays = [ (import ../pkgs) ];
     config.allowUnfree = true;
   };
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
 
   callTest = path: extraArgs: import path ({ inherit inputs system pkgs lib self; } // extraArgs);
 
@@ -327,7 +327,7 @@ lib.fix (checks: {
         let role = lib.removePrefix "@" omp.normal.task.agentModelOverrides.${agent};
         in roleModel role;
       fallbackChains = omp.normal.retry.fallbackChains;
-      economy = omp.economy;
+      inherit (omp) economy;
       serializedAdapters = builtins.toJSON routing.adapters;
       routingPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
     in
@@ -444,7 +444,7 @@ lib.fix (checks: {
       ${lib.getExe pkgs.oxfmt} --version
       ${lib.getExe pkgs.tsgolint} --help >/dev/null
       ${lib.getExe pkgs.typescript} --version
-      ${lib.getExe pkgs.uv} --version
+      ${lib.getExe pkgs.martin.uv-bin} --version
       ${lib.getExe pkgs.ruff} --version
     ''
     # bun is shipped as the canary prebuilt (aarch64-darwin only), so validate

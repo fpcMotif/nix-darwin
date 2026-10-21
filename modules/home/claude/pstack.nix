@@ -54,7 +54,7 @@ let
     then "Comments change only in docs work, per the Docs lock in CLAUDE.md. There, keep a comment only for a non-obvious *why* the code can't show."
     else "Keep a comment only for a non-obvious *why* the code can't show.";
   pstackModelsIntro = "Role defaults. The Agent tool's `model` parameter takes an alias: `fable` is Fable 5.1, `opus` is Opus 5, `sonnet` is Sonnet 5, `haiku` is Haiku 4.5. `~/.claude/pstack-models.md` is installed by nix with every role and overrides each line below; change a model there, not here.";
-  pstackTransform = id: { original, dependencies }:
+  pstackTransform = id: { original, ... }:
     let
       body = lib.replaceStrings
         [
@@ -186,7 +186,7 @@ let
       (id: { name = id; value = mkSkill "pstack" id [ ] // { transform = pstackTransform id; }; })
       pstackSkills) // {
     pstack-principles = mkSkill "pstack" "principle-laziness-protocol" [ ]
-      // { transform = { original, dependencies }: pstackPrinciplesSkill; };
+      // { transform = _: pstackPrinciplesSkill; };
   };
   pstackSkillDrv = id: pkgs.runCommand "pstack-skill-${id}" { preferLocalBuild = true; } ''
     mkdir -p "$out"

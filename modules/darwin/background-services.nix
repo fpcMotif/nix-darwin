@@ -1,4 +1,4 @@
-{ config, lib, pkgs, currentSystemUser, ... }:
+{ config, lib, currentSystemUser, ... }:
 
 let
   cfg = config.martin.backgroundServices;

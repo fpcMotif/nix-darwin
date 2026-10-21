@@ -1,4 +1,4 @@
-{ config, lib, pkgs, currentSystemUser, ... }:
+{ config, lib, currentSystemUser, ... }:
 
 let
   codexRequirements = config.home-manager.users.${currentSystemUser}.martin.agentSurface.codexRequirements;

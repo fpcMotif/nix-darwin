@@ -73,6 +73,7 @@ final: _prev:
     sourcegraph-amp = final.callPackage ./sourcegraph-amp.nix { };
     droid = final.callPackage ./droid.nix { };
     opencode = final.callPackage ./opencode.nix { };
+    uv-bin = final.callPackage ./uv-bin.nix { };
     zed-nightly-bin = final.callPackage ./zed-nightly-bin.nix { };
   };
 }

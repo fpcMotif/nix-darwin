@@ -15,7 +15,7 @@ buildNpmPackage {
     npmRoot = ./drafts-mcp-server;
   };
 
-  npmConfigHook = importNpmLock.npmConfigHook;
+  inherit (importNpmLock) npmConfigHook;
 
   dontNpmBuild = true;
 

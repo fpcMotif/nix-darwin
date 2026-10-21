@@ -40,7 +40,7 @@ let
       ];
     };
 
-    models = lib.mapAttrs (_: job: routeDefaults job) routing.adapters.crush;
+    models = lib.mapAttrs (_: routeDefaults) routing.adapters.crush;
 
     options = {
       disable_default_providers = true;

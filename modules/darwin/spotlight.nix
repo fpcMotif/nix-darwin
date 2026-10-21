@@ -43,7 +43,7 @@ in
       martin.darwinBaseline.activationState.pathMarkers = [
         {
           name = "spotlightExclusions";
-          enable = cfg.enable;
+          inherit (cfg) enable;
           stateFile = "${currentSystemUserHome}/Library/Application Support/nix-config/spotlight-exclusions";
           paths = cfg.excludedPaths;
           markerName = ".metadata_never_index";

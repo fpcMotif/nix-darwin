@@ -182,9 +182,9 @@ test-router:
     nix build --no-link --print-build-logs \
         '.#checks.aarch64-darwin.unit-skill-router'
 
-# Lint Nix sources: statix (antipatterns) + deadnix (dead code). Advisory —
-# not yet a CI gate (see ARCHITECTURE.md). Tools come pinned from the repo
-# dev shell; statix.toml scopes both away from references/.
+# Lint Nix sources: statix (antipatterns) + deadnix (dead code). hk runs both
+# before each commit, but CI does not (see ARCHITECTURE.md). Tools come pinned
+# from the repo dev shell. statix.toml scopes both away from references/.
 lint:
     nix develop --command statix check .
     nix develop --command deadnix --fail . --exclude ./references

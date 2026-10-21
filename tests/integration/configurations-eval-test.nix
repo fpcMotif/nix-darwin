@@ -733,8 +733,8 @@ let
 
 
     (helpers.assertTest "darwin-has-uv"
-      (hasPackage "uv" darwinHome.home.packages)
-      "Darwin Home Manager packages should include uv for Python package management")
+      (hasPackage "uv-bin" darwinHome.home.packages)
+      "Darwin Home Manager packages should include the official uv release for Python package management")
     (helpers.assertTest "darwin-registers-drafts-mcp"
       (lib.hasInfix "drafts-mcp-server" darwinHome.home.activation.claudeMcp.data)
       "Darwin Home Manager should register the Drafts MCP server")

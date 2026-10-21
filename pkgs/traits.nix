@@ -7,7 +7,7 @@
 }:
 
 let
-  version = (lib.importJSON "${src}/traits/package.json").version;
+  inherit (lib.importJSON "${src}/traits/package.json") version;
 
   # --filter traits installs only the CLI workspace's dependencies; the whole
   # workspace (alchemy, the traits.sh site) is over 1 GB.

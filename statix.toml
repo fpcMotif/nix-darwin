@@ -1,5 +1,5 @@
 # statix lint configuration (used by `just lint`).
 # references/ holds third-party sample repos that are never imported by the
 # flake; linting them is noise.
-disabled = []
+disabled = ["repeated_keys"]
 ignore = ["references", ".direnv"]

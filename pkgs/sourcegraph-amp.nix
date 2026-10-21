@@ -18,7 +18,7 @@ let
 in
 buildNpmPackage {
   pname = "sourcegraph-amp";
-  version = "0.0.1792022479-ge66e24";
+  version = "0.0.1792540877-gcc084c";
 
   src = ./sourcegraph-amp;
 
@@ -26,7 +26,7 @@ buildNpmPackage {
     npmRoot = ./sourcegraph-amp;
   };
 
-  npmConfigHook = importNpmLock.npmConfigHook;
+  inherit (importNpmLock) npmConfigHook;
 
   dontNpmBuild = true;
 
