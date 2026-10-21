@@ -54,6 +54,14 @@ Ranked results alone cannot prove absence.
 - Run `mise install` once to fetch the versions the project pins.
 - Pin a new tool in the project with `mise use TOOL@VERSION`. The global mise config belongs to the user.
 
+## Nix
+
+On the Mac, `nix`, `nix-build`, and `nix-shell` are iets, a faster Rust Nix client. Linux hosts, `sudo darwin-rebuild`, and the daemon run the real Nix.
+
+- **Use**: Run `nix` as usual. iets runs what it implements and hands the rest to the real Nix. A stderr line `iets: falling back to nix: REASON` marks a handoff, not an error.
+- **Check a change**: Run `nix eval --raw .#ATTR.drvPath` before a build. iets caches evaluations, so a repeat eval of unchanged files returns in milliseconds.
+- **Doubt**: When iets fails or an answer looks wrong, rerun the same command with `/run/current-system/sw/bin/nix`. If the two differ, report both outputs as an iets bug. The pin is the `iets` input in `~/nix-config/flake.nix`.
+
 ## Environment variables
 
 - A project with `.env.schema` uses Varlock. The schema is the typed source of truth for every variable.

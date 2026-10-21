@@ -75,6 +75,11 @@
       url = "github:fpcMotif/traits/37a5705588600d6b42402dec511489512db9be50";
       flake = false;
     };
+
+    # iets, a Rust Nix client, under the classic nix names on the Mac
+    # (modules/home/iets.nix). Pinned by rev so pkgs/iets/host-system.patch
+    # applies. No nixpkgs follows: its crane build stays as upstream tests it.
+    iets.url = "github:numtide/iets/0fba531c064e818701b02590bb647e83ee0f74a0";
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:
@@ -125,6 +130,7 @@
         (final: prev: {
           martin = prev.martin // {
             traits = final.callPackage ./pkgs/traits.nix { src = inputs.traits; };
+            iets-classic = final.callPackage ./pkgs/iets { inherit (inputs) iets; };
           };
         })
         inputs.claude-code.overlays.default

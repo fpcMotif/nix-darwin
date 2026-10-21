@@ -74,6 +74,21 @@
         "type": "github"
       }
     },
+    "crane": {
+      "locked": {
+        "lastModified": 1791754810,
+        "narHash": "sha256-cN0Mgk+sQtCJcGWs9H4M0CnLRAuC4I8aCwiBTcBJs6E=",
+        "owner": "ipetkov",
+        "repo": "crane",
+        "rev": "bd63bf1d0a0f6dcacd7549c714a671ee63b0db6a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ipetkov",
+        "repo": "crane",
+        "type": "github"
+      }
+    },
     "darwin": {
       "inputs": {
         "nixpkgs": [
@@ -168,6 +183,26 @@
         "type": "github"
       }
     },
+    "iets": {
+      "inputs": {
+        "crane": "crane",
+        "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1792534189,
+        "narHash": "sha256-/GFsF0aY7UOMuynKGxMCVpo8Ci7LpaSgR5RwYYJ55XU=",
+        "owner": "numtide",
+        "repo": "iets",
+        "rev": "0fba531c064e818701b02590bb647e83ee0f74a0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "iets",
+        "rev": "0fba531c064e818701b02590bb647e83ee0f74a0",
+        "type": "github"
+      }
+    },
     "interfaces-skills": {
       "flake": false,
       "locked": {
@@ -203,6 +238,22 @@
       }
     },
     "nixpkgs": {
+      "locked": {
+        "lastModified": 1791734076,
+        "narHash": "sha256-i5qk1kLiit98rRbh1AXmWBNT9QXC/y4l5Wk/u5EdpDQ=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "7fd4004d0511991fff3a0524856a9be09e28c5f0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
       "locked": {
         "lastModified": 1792488032,
         "narHash": "sha256-RkAXQ3+a5rHMiP97Er7AawR1kvEXX9tK1mhiWedOPTc=",
@@ -265,9 +316,10 @@
         "dotfiles": "dotfiles",
         "effect-ts-skills": "effect-ts-skills",
         "home-manager": "home-manager",
+        "iets": "iets",
         "interfaces-skills": "interfaces-skills",
         "mattpocock-skills": "mattpocock-skills",
-        "nixpkgs": "nixpkgs",
+        "nixpkgs": "nixpkgs_2",
         "nur": "nur",
         "pstack-claude": "pstack-claude",
         "rust-overlay": "rust-overlay",

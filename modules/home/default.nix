@@ -36,6 +36,7 @@
     ./ssh.nix
     ./cursor.nix
     ./skill-router.nix
+    ./iets.nix
   ];
 
   home = {

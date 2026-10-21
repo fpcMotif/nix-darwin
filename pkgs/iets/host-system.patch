@@ -1,0 +1,13 @@
+diff --git a/src/eval/mod.rs b/src/eval/mod.rs
+index a636950..2a18ceb 100644
+--- a/src/eval/mod.rs
++++ b/src/eval/mod.rs
+@@ -391,7 +391,7 @@ macro_rules! bail {
+ use crate::sys;
+ pub(crate) use bail;
+ 
+-pub const DEFAULT_SYSTEM: &str = "x86_64-linux";
++pub const DEFAULT_SYSTEM: &str = crate::config::DEFAULT_SYSTEM;
+ 
+ /// Everything fixed before evaluation starts. A field set after `try_run` clones
+ /// the evaluator is one fiber's alone, so there is no setter (docs/explanation/evaluation.md).
