@@ -45,3 +45,4 @@ __pycache__/
 /MyRime-main/*.userdb.txt
 /MyRime-main/sync/
 /MyRime-main/installation.yaml
+/.graff/
