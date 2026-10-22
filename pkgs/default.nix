@@ -37,6 +37,7 @@ final: _prev:
 
   codex = final.callPackage ./codex.nix { };
   typescript = final.callPackage ./typescript.nix { };
+  tsrs = final.callPackage ./tsrs-bin.nix { };
 
 
   martin = {

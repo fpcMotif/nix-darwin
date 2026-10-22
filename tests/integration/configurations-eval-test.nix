@@ -505,7 +505,7 @@ let
           codexDefaults = darwinConfig.environment.etc."codex/config.toml".text;
         in
         builtins.hasAttr "codex/config.toml" darwinConfig.environment.etc
-          && lib.hasInfix "[lsp.servers.tsc]" codexDefaults
+          && lib.hasInfix "[lsp.servers.tsrs]" codexDefaults
           && !(lib.hasInfix "[lsp.servers.vue]" codexDefaults)
           && !(lib.hasInfix "[lsp.servers.haskell]" codexDefaults)
           && lib.hasInfix "[mcp_servers.fff]" codexDefaults

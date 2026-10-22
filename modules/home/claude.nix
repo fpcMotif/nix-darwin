@@ -142,6 +142,7 @@ let
     "Bash(node:*)"
     "Bash(tsx:*)"
     "Bash(tsc:*)"
+    "Bash(tsrs:*)"
     "Bash(deno:*)"
     "Bash(biome:*)"
     "Bash(prettier:*)"

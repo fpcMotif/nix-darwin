@@ -6,7 +6,7 @@ let
   homeDir = config.home.homeDirectory;
   codexLsp = import ../shared/codex-lsp.nix { inherit lib pkgs; };
 
-  # Disable the typescript-lsp plugin so tsc stays the sole TypeScript server.
+  # Disable the typescript-lsp plugin so tsrs stays the sole TypeScript server.
   # Claude Code rejects fileTypes, rootMarkers, restartOnCrash, and maxRestarts.
   claudeLspJson = pkgs.writeText "claude-lsp.json" (builtins.toJSON codexLsp.adapters.claude);
 
