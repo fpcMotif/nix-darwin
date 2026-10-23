@@ -39,7 +39,7 @@ function world(on: On, jev: Jev) {
   const statuses: (string | undefined)[] = []
   const suggestions: string[] = []
   const contexts: (readonly string[] | undefined)[] = []
-  mock.clock(on)
+  const clock = mock.clock(on)
   mock.env(on, {})
   on('http.fetch', (_, e) => {
     fetched.push(e.url)
@@ -58,7 +58,7 @@ function world(on: On, jev: Jev) {
     contexts.push(e.context)
     return { text: e.text, ...(e.context ? { context: e.context } : {}) }
   })
-  return { fetched, statuses, suggestions, contexts }
+  return { clock, fetched, statuses, suggestions, contexts }
 }
 
 const finish = (answer: string) =>
@@ -91,8 +91,9 @@ describe('parseAnswer', () => {
 
 describe('turn.complete', () => {
   test('pins each ask above the prompt when the report waits on the user', KEYED, async ($, on) => {
-    const { statuses } = world(on, { waits: 0.95 })
+    const { statuses , clock } = world(on, { waits: 0.95 })
     await $.turn.complete(finish(ASKING))
+    await clock.settle()
     expect(statuses.at(-1)).toContain('◆ 2 for you')
     const ui = await $.ui.mount(BAND)
     expect((await ui.find({ type: 'Text', text: /darwin-rebuild/ }))?.text).toContain('1. Run sudo darwin-rebuild')
@@ -100,8 +101,9 @@ describe('turn.complete', () => {
   })
 
   test('tells the model once that an ask section held nothing', KEYED, async ($, on) => {
-    const { contexts, statuses } = world(on, { waits: 0.05 })
+    const { contexts, statuses , clock } = world(on, { waits: 0.05 })
     await $.turn.complete(finish(EMPTY_ASK))
+    await clock.settle()
     expect(statuses.at(-1)).toBeUndefined()
     await $.prompt.submit(typed('next task'))
     await $.prompt.submit(typed('and another'))
@@ -110,26 +112,30 @@ describe('turn.complete', () => {
   })
 
   test('proposes the figure Jev picks for a dense report without one', KEYED, async ($, on) => {
-    const { suggestions } = world(on, { waits: 0.02, figure: 'sequence', figureP: 0.85, strain: 1.8 })
+    const { suggestions , clock } = world(on, { waits: 0.02, figure: 'sequence', figureP: 0.85, strain: 1.8 })
     await $.turn.complete(finish(DENSE))
+    await clock.settle()
     expect(suggestions).toEqual(['/show-me that as a Mermaid sequence diagram'])
   })
 
   test('proposes nothing when the report already has a figure', KEYED, async ($, on) => {
-    const { suggestions } = world(on, { waits: 0.02, figure: 'sequence', figureP: 0.85, strain: 1.8 })
+    const { suggestions , clock } = world(on, { waits: 0.02, figure: 'sequence', figureP: 0.85, strain: 1.8 })
     await $.turn.complete(finish(DRAWN))
+    await clock.settle()
     expect(suggestions).toEqual([])
   })
 
   test('leaves a short reply unread', KEYED, async ($, on) => {
-    const { fetched } = world(on, { waits: 0.9 })
+    const { fetched , clock } = world(on, { waits: 0.9 })
     await $.turn.complete(finish('Done.'))
+    await clock.settle()
     expect(fetched).toEqual([])
   })
 
   test('still pins the parsed asks when Jev fails', KEYED, async ($, on) => {
-    const { statuses } = world(on, { status: 529 })
+    const { statuses , clock } = world(on, { status: 529 })
     await $.turn.complete(finish(ASKING))
+    await clock.settle()
     expect(statuses).toContain('jev-report: HTTP 529; report not read')
     expect(statuses.at(-1)).toContain('◆ 2 for you')
   })

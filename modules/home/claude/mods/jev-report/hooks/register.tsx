@@ -63,32 +63,33 @@ async function pin($: EngineInterface, asks: readonly string[]) {
   $.ui.status(asks.length > 0 ? `◆ ${asks.length} for you · ${firstLine(asks[0] ?? '', 40)}` : undefined)
 }
 
+async function readReport($: EngineInterface, options: PluginOptions, model: string, answer: string) {
+  const parsed = parseAnswer(answer)
+  if (!shouldJudge(answer, parsed)) return pin($, [])
+  const key = await apiKey($, options)
+  if (!key) return pin($, parsed.asks)
+  const judged = await askJev($, key, model, answer)
+  if ('failure' in judged) {
+    $.ui.status(`jev-report: ${judged.failure}; report not read`)
+    return pin($, parsed.asks)
+  }
+  const lens = decide(parsed, judged.answers)
+  pendingNudge = lens.nudge
+  await pin($, lens.asks)
+  if (lens.suggestion) await $.prompt.suggest({ text: lens.suggestion })
+}
+
 export const register: Register = (on, options: PluginOptions) => {
   const model = typeof options.model === 'string' && options.model.trim() ? options.model.trim() : DEFAULT_MODEL
 
+  // Jev answers in about a second; a timer reads the report after the turn
+  // has ended, so that second never holds up the prompt.
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
-    if (e.agentId !== undefined || e.reason !== 'answer') return result
-    const parsed = parseAnswer(e.answer)
-    if (!shouldJudge(e.answer, parsed)) {
-      await pin($, [])
-      return result
-    }
-    const key = await apiKey($, options)
-    if (!key) {
-      await pin($, parsed.asks)
-      return result
-    }
-    const judged = await askJev($, key, model, e.answer)
-    if ('failure' in judged) {
-      $.ui.status(`jev-report: ${judged.failure}; report not read`)
-      await pin($, parsed.asks)
-      return result
-    }
-    const lens = decide(parsed, judged.answers)
-    pendingNudge = lens.nudge
-    await pin($, lens.asks)
-    if (lens.suggestion) await $.prompt.suggest({ text: lens.suggestion })
+    if (e.agentId === undefined && e.reason === 'answer')
+      $.clock.after(0, () => {
+        readReport($, options, model, e.answer).catch(() => $.ui.status('jev-report: report not read'))
+      })
     return result
   })
 
