@@ -142,6 +142,7 @@ let
     "Bash(node:*)"
     "Bash(tsx:*)"
     "Bash(tsc:*)"
+    "Bash(tsrs:*)"
     "Bash(deno:*)"
     "Bash(biome:*)"
     "Bash(prettier:*)"
@@ -434,7 +435,7 @@ let
       { path = [ "permissions" "ask" ]; value = claudePermissions.ask; }
       { path = [ "permissions" "defaultMode" ]; value = claudePermissions.defaultMode; }
       { path = [ "effortLevel" ]; value = "medium"; }
-      { path = [ "env" "CLAUDE_CODE_PLUGIN_DIRS" ]; value = "${homeDir}/.claude/mods/jev-traits"; }
+      { path = [ "env" "CLAUDE_CODE_PLUGIN_DIRS" ]; value = "${homeDir}/.claude/mods/jev-traits:${homeDir}/.claude/mods/jev-report"; }
     ]
     ++ lib.optional isDarwin { path = [ "env" "TRAITS_BIN" ]; value = lib.getExe pkgs.martin.traits; }
     ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeHiddenSkillIds
@@ -495,6 +496,7 @@ in
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
       ".claude/hooks/shell-guard.sh" = { source = ./claude/hooks/shell-guard.sh; executable = true; };
       ".claude/mods/jev-traits".source = ./claude/mods/jev-traits;
+      ".claude/mods/jev-report".source = ./claude/mods/jev-report;
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
     };
 

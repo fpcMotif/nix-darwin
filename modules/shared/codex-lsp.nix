@@ -28,9 +28,9 @@ let
   validTargets = [ "claude" "codex" "zed" ];
 
   servers = {
-    tsc = {
-      package = "typescript";
-      command = "tsc";
+    tsrs = {
+      package = "tsrs";
+      command = "tsrs";
       args = [ "--lsp" "--stdio" ];
       extensions = jsExtensions;
       targets = [ "claude" "codex" "zed" ];
@@ -127,7 +127,7 @@ let
   };
 
   codexOrder = [
-    "tsc"
+    "tsrs"
     "oxlint"
     "astro"
     "svelte"
@@ -224,6 +224,7 @@ assert lib.all (name: builtins.elem "codex" servers.${name}.targets) codexOrder;
   packages =
     if pkgs == null then [ ]
     else packagesForTargets [ "claude" "codex" ] ++ [
+      pkgs.typescript
       pkgs.emmet-language-server
       pkgs.mcp-language-server
     ];

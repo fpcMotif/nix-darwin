@@ -27,13 +27,24 @@
 - **Verify**: Run required checks and checks addressing changed behavior. Repeat or broaden them only for changes, failures, or unresolved risk. VCS operations (`commit`, `push`, `land`) are not test requests; run at most `hk check`.
 - **Evidence**: Inspect the actual deliverable at the requested boundary. Empty required output fails verification; summaries alone cannot establish completion.
 - **Stop**: Finish when requested outcomes are verified. If blocked, complete independent work and list the missing prerequisite under What I need from you.
-- **Report**: State what changed, what checks establish, and which checks could not run.
+- **Diagnose**: Name the measurement behind a cause (a timing, memory size, or log line) before you fix it or report it.
 - **Failure**: After two failed fixes sharing one assumption, test that assumption before another fix.
+
+## Final report
+
+The last message of a task is the report. The user scans it before reading it.
+
+- **Lead**: Open with the outcome in one sentence.
+- **Figure**: Show a change that has shape as a figure. Use a `mermaid` flowchart or sequence diagram for a flow of three or more steps. Use a `diff` tree for a file-layout change and a table for items that share fields. The show-me skill holds these views; pick the smallest one that makes the point.
+- **Checks**: Put the checks in a table with the command and its result. Name each check that could not run and why.
+- **Files**: Name each changed file as `path:line`.
+- **Length**: Fit the report on one screen. A one-line change gets a one-line report.
+- **Running**: When work still runs in the background, say what runs and how the user will learn it finished.
 
 ## What I need from you
 
-- **Ask**: End every turn that waits on the user with a section headed **What I need from you**. Every request for the user goes in that section.
+- **Ask**: When the turn waits on the user, end with a section headed **What I need from you**. Every request for the user goes in that section.
 - **Item**: Number the items. Each item names one action or decision, where to do it, and what to reply. Example: "Run `sudo darwin-rebuild switch --flake ~/nix-config` in your terminal, then paste the last 20 lines." "I need you to rebuild" is too vague.
 - **Order**: Put the quickest or most blocking item first. Say what you will continue meanwhile.
 - **Carry**: Repeat each unresolved item at the end of later turns until the user resolves it.
-- **None**: When nothing waits on the user, end with "Nothing needed from you right now." Then say whether the work is finished or still running.
+- **None**: When nothing waits on the user, omit the section. End on the report's last line.
