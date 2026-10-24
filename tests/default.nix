@@ -259,7 +259,10 @@ lib.fix (checks: {
     args = [ (lib.getExe pkgs.martin.doc-lock) ];
   };
   unit-comment-lint = pkgs.runCommand "unit-comment-lint" { nativeBuildInputs = [ pkgs.bash pkgs.jq pkgs.ast-grep pkgs.findutils pkgs.gnugrep pkgs.coreutils ]; } ''
-    cd ${self}
+    cp -R ${self} src
+    chmod -R u+w src
+    cd src
+    patchShebangs scripts tests/unit modules/home/doc-lock
     bash ./tests/unit/comment-lint-test.sh ./scripts/comment-lint.sh
     bash ./scripts/comment-lint.sh
     touch $out
