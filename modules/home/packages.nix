@@ -80,6 +80,7 @@ let
     martin.nub
     martin.drafts-mcp-server
     martin.traits
+    martin.vesalius-bin
   ];
 in
 {

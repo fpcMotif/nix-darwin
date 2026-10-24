@@ -187,6 +187,8 @@ let
     "mcp__fff__find_files"
     "mcp__fff__grep"
     "mcp__fff__multi_grep"
+    "mcp__vesalius__*"
+    "Bash(vesalius:*)"
 
     # Allowed by choice; a stricter config would deny these.
     "Bash(rm -rf /)"
@@ -635,6 +637,7 @@ in
       fi
       ${lib.optionalString isDarwin ''
         registerMcp drafts '{"type":"stdio","command":"${pkgs.martin.drafts-mcp-server}/bin/drafts-mcp-server","args":[]}'
+        registerMcp vesalius '{"type":"stdio","command":"${lib.getExe pkgs.martin.vesalius-bin}","args":["mcp"]}'
       ''}
     fi
   '';
