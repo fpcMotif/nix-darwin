@@ -75,6 +75,7 @@ final: _prev:
     droid = final.callPackage ./droid.nix { };
     opencode = final.callPackage ./opencode.nix { };
     uv-bin = final.callPackage ./uv-bin.nix { };
+    vesalius-bin = final.callPackage ./vesalius-bin.nix { };
     zed-nightly-bin = final.callPackage ./zed-nightly-bin.nix { };
   };
 }
