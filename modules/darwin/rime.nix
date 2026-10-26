@@ -7,11 +7,21 @@ let
 in
 {
   options.martin.rime = {
-    enable = lib.mkEnableOption "Squirrel (Rime) input method with the MyRime-main schema bundle";
+    enable = lib.mkEnableOption "Squirrel (Rime) input method with the rime-frost schema bundle";
 
     config = lib.mkOption {
       type = lib.types.either lib.types.path lib.types.str;
-      description = "Path to the Rime user-config directory (the directory copied into ~/Library/Rime).";
+      description = ''
+        Path to my Rime overrides (*.custom.yaml, squirrel.yaml). Its sync/
+        subdirectory becomes Rime's sync_dir.
+      '';
+    };
+
+    schemaSource = lib.mkOption {
+      type = lib.types.package;
+      default = pkgs.callPackage ../../pkgs/rime-frost.nix { };
+      defaultText = lib.literalExpression "pkgs.callPackage ../../pkgs/rime-frost.nix { }";
+      description = "Schema tree mirrored into ~/Library/Rime on every switch.";
     };
 
     manageApp = lib.mkOption {
@@ -59,12 +69,13 @@ in
       fi
     '');
 
-    # Ship the MyRime-main schema/config tree to ~/Library/Rime via Home Manager,
-    # then ask Squirrel to redeploy. Activation runs every switch so config edits land.
+    # Ship the pinned rime-frost tree plus my overrides to ~/Library/Rime via
+    # Home Manager, then ask Squirrel to redeploy. Runs every switch.
     home-manager.users.${currentSystemUser} = {
       home.activation.rimeUserConfig = hmDag.entryAfter [ "writeBoundary" ] ''
-        echo "[rime] syncing MyRime-main into ~/Library/Rime"
-        run mkdir -p "${currentSystemUserHome}/Library/Rime"
+        rime_dir="${currentSystemUserHome}/Library/Rime"
+        echo "[rime] syncing rime-frost and ${rimeConfigSource} overrides into ~/Library/Rime"
+        run mkdir -p "$rime_dir"
 
         if [ ! -d "${rimeConfigSource}" ]; then
           echo "[rime] ERROR: config source not found: ${rimeConfigSource}" >&2
@@ -72,16 +83,36 @@ in
           exit 1
         fi
 
+        # Excluded paths are also protected from --delete: they hold learned
+        # words, Squirrel state, and my overrides, which the schema tree must not clobber.
         run ${pkgs.rsync}/bin/rsync -a --delete \
           --chmod=Du+rwx,Dgo+rx,Fu+rw,Fgo+r \
           --exclude '.DS_Store' \
           --exclude '.git' \
           --exclude 'build/' \
+          --exclude 'trash/' \
           --exclude '*.userdb/' \
           --exclude '*.userdb.txt' \
           --exclude 'sync/' \
+          --exclude 'installation.yaml' \
+          --exclude 'user.yaml' \
+          --exclude '*.custom.yaml' \
           --exclude 'squirrel.yaml' \
-          "${rimeConfigSource}/" "${currentSystemUserHome}/Library/Rime/"
+          "${cfg.schemaSource}/" "$rime_dir/"
+
+        for override in "${rimeConfigSource}"/*.custom.yaml "${rimeConfigSource}/squirrel.yaml"; do
+          if [ -f "$override" ]; then run install -m 0644 "$override" "$rime_dir/"; fi
+        done
+
+        ensure_sync_dir() {
+          installation="$rime_dir/installation.yaml"
+          if [ -f "$installation" ] && ! grep -q '^sync_dir:' "$installation"; then
+            echo "[rime] pointing Rime sync_dir at ${rimeConfigSource}/sync"
+            # installation.yaml may lack a trailing newline.
+            run sh -c 'printf "\nsync_dir: \"%s\"\n" "$1" >> "$2"' _ "${rimeConfigSource}/sync" "$installation"
+          fi
+        }
+        ensure_sync_dir
 
         if [ -x "/Library/Input Methods/Squirrel.app/Contents/MacOS/Squirrel" ]; then
           squirrel="/Library/Input Methods/Squirrel.app/Contents/MacOS/Squirrel"
@@ -90,6 +121,8 @@ in
           run "$squirrel" --enable-input-source || true
           run "$squirrel" --reload || true
         fi
+        # A fresh install only gets installation.yaml after the first deploy.
+        ensure_sync_dir
       '';
     };
   };

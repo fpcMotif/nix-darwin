@@ -26,7 +26,7 @@
     # GUI-managed outside Nix (ADR-0005, ADR-0011, ADR-0012, ADR-0013).
     rime = {
       enable = true;
-      config = "${currentSystemUserHome}/MyRime-main";
+      config = "${currentSystemUserHome}/devv/MyRime";
       # Keep nix-darwin from overwriting the local Liquid Glass Squirrel.app
       # fork (~/devv/squirrel) with the vanilla pkgs.martin.squirrel build.
       manageApp = false;
