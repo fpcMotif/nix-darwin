@@ -116,6 +116,11 @@ in
 
         if [ -x "/Library/Input Methods/Squirrel.app/Contents/MacOS/Squirrel" ]; then
           squirrel="/Library/Input Methods/Squirrel.app/Contents/MacOS/Squirrel"
+          # squirrel.yaml's glass_style only works with the fpcMotif/squirrel fork.
+          if ! grep -qa 'glass_style' "$squirrel"; then
+            echo "[rime] WARNING: installed Squirrel.app lacks Liquid Glass (glass_style) support." >&2
+            echo "[rime] Build the fork: cd ~/devv/squirrel && bash action-install.sh && make install-release" >&2
+          fi
           echo "[rime] registering and redeploying Squirrel"
           run "$squirrel" --register-input-source || true
           run "$squirrel" --enable-input-source || true
