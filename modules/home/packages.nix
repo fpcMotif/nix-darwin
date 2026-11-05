@@ -10,6 +10,10 @@ let
     eza
     fcp
     dust
+    # Disk usage TUIs: dua (Rust, interactive delete), ncdu (Zig), erdtree (Rust).
+    dua
+    ncdu
+    erdtree
     tree
     procs
     bottom
@@ -94,5 +98,11 @@ in
   programs.eza = {
     enable = true;
     enableZshIntegration = false;
+  };
+
+  # Rust tree navigator; the zsh integration adds `br`, which can cd on exit.
+  programs.broot = {
+    enable = true;
+    enableZshIntegration = true;
   };
 }
