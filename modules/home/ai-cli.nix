@@ -76,12 +76,6 @@
       fi
     }
 
-    opencode() {
-      case "''${1:-}" in
-        auth) (_unset_ai_env; command opencode "$@") ;;
-        *) _ai_run_with_optional_proxy opencode keep-env "$@" ;;
-      esac
-    }
 
     amp() {
       case "''${1:-}" in

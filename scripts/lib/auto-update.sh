@@ -122,7 +122,7 @@ au_vendored_drv_names() {
     grep -hoE '(pname|name) = "[^"]+"' "$dir"/*.nix 2>/dev/null \
       | cut -d'"' -f2
     # Packages imported from flake inputs have no pkgs/*.nix file.
-    printf '%s\n' agent-skill agent-skills claude-code crush oh-my-pi opencode pi
+    printf '%s\n' agent-skill agent-skills claude-code crush oh-my-pi pi
     printf '%s\n' codex droid sourcegraph-amp zed-nightly-bin
     printf '%s\n' direnv skill-router tmux
   } | sort -u

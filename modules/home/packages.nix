@@ -30,8 +30,7 @@ let
     # Omit nixpkgs bun here because martin.bun-canary-bin provides bin/bun on
     # Darwin. _26 is the floor; see scripts/update-flake-inputs.sh.
     nodejs-slim_26
-    # oxlint and language servers live in ./lsp.nix.
-    oxfmt
+    # Language servers live in ./lsp.nix.
     mkcert
     jwt-cli
     step-cli
@@ -69,7 +68,6 @@ let
     martin.bun-canary-bin
     martin.sourcegraph-amp
     martin.droid
-    martin.opencode
     # Prebuilt release because nixpkgs hunk crashes with SIGKILL on Darwin.
     martin.hunk-bin
     martin.mole

@@ -5,6 +5,7 @@ let
   shared = {
     workingContract = ./shared/working-contract.md;
     development = ./shared/development.md;
+    filesystemLookups = ./shared/filesystem-lookups.md;
     qualityAndStyle = ./shared/quality-and-style.md;
     humanDocuments = ./shared/human-documents.md;
     plainEnglish = ./shared/plain-english.md;
@@ -33,6 +34,7 @@ let
     , startupAdapter
     , developmentTarget
     , developmentAdapter ? null
+    , developmentExtras ? [ ]
     , humanDocumentsTarget ? null
     , plainEnglish ? true
     }:
@@ -44,7 +46,7 @@ let
             shared.qualityAndStyle
           ] ++ lib.optional plainEnglish shared.plainEnglish ++ startupSections);
           development = mkGuide "${name}-development.md" developmentTarget developmentAdapter
-            ([ shared.development ] ++ developmentSections);
+            ([ shared.development ] ++ developmentExtras ++ developmentSections);
           languages = lib.genAttrs languageNames (languageGuide (builtins.dirOf developmentTarget));
         }
         // lib.optionalAttrs (humanDocumentsTarget != null) {
@@ -66,6 +68,7 @@ let
       startupTarget = "AGENTS.md";
       startupAdapter = ./AGENTS.md;
       developmentTarget = ".config/agent-guidance/development.md";
+      developmentExtras = [ shared.filesystemLookups ];
       humanDocumentsTarget = ".config/agent-guidance/human-documents.md";
     };
     codex = mkHost {
@@ -82,6 +85,7 @@ let
       startupAdapter = ./omp/agent/AGENTS.md;
       developmentTarget = ".omp/agent/guidance/development.md";
       developmentAdapter = ./omp/agent/guidance/development.md;
+      developmentExtras = [ shared.filesystemLookups ];
       humanDocumentsTarget = ".omp/agent/guidance/human-documents.md";
     };
     claude = mkHost {

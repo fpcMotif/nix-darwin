@@ -36,21 +36,6 @@ let
       targets = [ "claude" "codex" "zed" ];
       zedName = "typescript-ls";
     };
-    oxlint = {
-      package = "oxlint";
-      command = "oxlint";
-      args = [ "--lsp" ];
-      extensions = jsExtensions // oxlintExtraExtensions;
-      isLinter = true;
-      targets = [ "claude" "codex" "zed" ];
-    };
-    oxfmt = {
-      package = "oxfmt";
-      command = "oxfmt";
-      args = [ "--lsp" ];
-      extensions = { };
-      targets = [ "zed" ];
-    };
     astro = {
       package = "astro-language-server";
       command = "astro-language-server";
@@ -128,7 +113,6 @@ let
 
   codexOrder = [
     "tsrs"
-    "oxlint"
     "astro"
     "svelte"
     "tailwindcss"

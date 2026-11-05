@@ -4,22 +4,22 @@
 }:
 
 let
-  version = "2.8.0";
+  version = "2.10.0";
 
   releaseBase = "https://github.com/jdx/hk/releases/download/v${version}";
 
   sources = {
     aarch64-darwin = {
       asset = "hk-aarch64-apple-darwin.tar.gz";
-      hash = "sha256-nwKQ/zy/qfa6/2QMhGvwf3jdKeICOwwjDT1SJsIzhco=";
+      hash = "sha256-q1SGLnJL1KHvkYDvU1z+739/+YrOkRvV6ja7QfpOvJQ=";
     };
     aarch64-linux = {
       asset = "hk-aarch64-unknown-linux-musl.tar.gz";
-      hash = "sha256-dciFdJhDgPOnareauJz32MNdFh47LYWKyfE7TpNhUKM=";
+      hash = "sha256-vE3UUtQJrk7T/FhpffvleXxRMMDQPLJpSi3e48vtibc=";
     };
     x86_64-linux = {
       asset = "hk-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-Wp8uT4/5RdGdpfTJFOx/6z9jaqOy6sAt4rHGz+dv44U=";
+      hash = "sha256-u1N7z+PZSTI/TI/v3WAR0s/zL9KiLW7QnsAut48YPgI=";
     };
   };
 

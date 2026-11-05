@@ -6,6 +6,7 @@ User: f.
 - **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `~/.config/agent-guidance/languages/typescript.md`, `python.md`, `go.md`, or `rust.md`.
 - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/.config/agent-guidance/human-documents.md`.
 - **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/.config/agent-guidance/development.md`.
+- **Code Mode**: Chain independent shell commands into one call with `;`, and use `&&` when a command needs the one before it. Gather all relevant context in one pass instead of one tool call per command.
 
 ## Search
 

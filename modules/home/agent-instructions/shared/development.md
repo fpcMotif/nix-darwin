@@ -48,6 +48,11 @@ Ranked results alone cannot prove absence.
 - Agent shells never run direnv's prompt hook. In a project with `.envrc`, run commands through `direnv exec . COMMAND`.
 - If direnv reports the `.envrc` is blocked, ask the user. `direnv allow` runs the file's code.
 
+## Shell
+
+- On the Mac, agent shells run zsh, which keeps an unquoted variable as one word. Pass an argument list as an array: `args=(audit --edition facsimile); cmd "${args[@]}"`.
+- `python -m cProfile` exits 0 when the profiled script fails. Run the command once without the profiler, or read the log for `error:`.
+
 ## mise
 
 - mise is not activated in agent shells. In a project with `mise.toml`, run its tools with `mise exec -- COMMAND` and its tasks with `mise run TASK`.

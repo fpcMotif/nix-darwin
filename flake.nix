@@ -69,6 +69,11 @@
       flake = false;
     };
 
+    ub-mode = {
+      url = "github:unclebob/ub-mode";
+      flake = false;
+    };
+
     # The trait engine behind the traits CLI and the jev-traits mod. Pinned by
     # rev so the node_modules hash in pkgs/traits.nix stays valid.
     traits = {
@@ -165,7 +170,7 @@
         {
           crush = pkgs.nur.repos.charmbracelet.crush;
           # Overlay override of nixpkgs' codex; exposed so update-codex.sh can build it.
-          inherit (pkgs) codex martin;
+          inherit (pkgs) codex martin typescript;
         };
     in
     {
