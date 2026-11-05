@@ -253,6 +253,16 @@ lib.fix (checks: {
     inputs = [ pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.coreutils ];
     args = [ ../modules/home/claude/hooks/search-guard.sh ];
   };
+  unit-context-handoff = shellTest "unit-context-handoff" {
+    script = ../modules/home/claude/hooks/context-handoff-test.sh;
+    inputs = [ pkgs.jq pkgs.coreutils ];
+    args = [ ../modules/home/claude/hooks/context-handoff.sh ];
+  };
+  unit-recall = shellTest "unit-recall" {
+    script = ../modules/home/recall/recall-test.sh;
+    inputs = [ pkgs.jq pkgs.coreutils ];
+    args = [ (lib.getExe pkgs.martin.recall) ];
+  };
   unit-doc-lock = shellTest "unit-doc-lock" {
     script = ../modules/home/doc-lock/doc-lock-test.sh;
     inputs = [ pkgs.jq pkgs.git pkgs.coreutils ];
@@ -439,10 +449,7 @@ lib.fix (checks: {
   smoke-build-toolchain = pkgs.runCommand "smoke-build-toolchain" { } (
     ''
       echo "Checking required Nix-only dotfiles toolchain commands..."
-      ${lib.getExe pkgs.prek} --version
-      ${lib.getExe pkgs.oxlint} --version
-      ${lib.getExe pkgs.oxfmt} --version
-      ${lib.getExe pkgs.tsgolint} --help >/dev/null
+      ${lib.getExe pkgs.zig} version
       ${lib.getExe pkgs.typescript} --version
       ${lib.getExe pkgs.martin.uv-bin} --version
       ${lib.getExe pkgs.ruff} --version

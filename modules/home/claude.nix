@@ -373,6 +373,8 @@ let
   claudeGuardHooks = [
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/search-guard.sh"; }
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/shell-guard.sh"; }
+    { event = "SessionEnd"; matcher = "clear"; command = "$HOME/.claude/hooks/context-handoff.sh save"; }
+    { event = "SessionStart"; matcher = "clear|compact"; command = "$HOME/.claude/hooks/context-handoff.sh resume"; }
   ] ++ claudeHooks.add;
   retiredClaudeHooks = [
     { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
@@ -497,6 +499,7 @@ in
       ".claude/pstack-models.md".source = pstackModelsSheet;
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
       ".claude/hooks/shell-guard.sh" = { source = ./claude/hooks/shell-guard.sh; executable = true; };
+      ".claude/hooks/context-handoff.sh" = { source = ./claude/hooks/context-handoff.sh; executable = true; };
       ".claude/mods/jev-traits".source = ./claude/mods/jev-traits;
       ".claude/mods/jev-report".source = ./claude/mods/jev-report;
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
@@ -668,11 +671,12 @@ in
         "^web-browser$";
       archify = mkSource "archify" "." null;
       better-github-skill = mkSource "better-github-skill" "." null;
+      ub-mode = mkSource "ub-mode" "." null;
       interfaces = mkSource "interfaces-skills" "skills" null;
     } // mpSources // effectSources;
 
     skills = {
-      enable = enabledMattpocockSkills ++ [ "archify" "better-github-skill" ] ++ interfacesSkillNames;
+      enable = enabledMattpocockSkills ++ [ "archify" "better-github-skill" "ub-mode" ] ++ interfacesSkillNames;
       enableAll = [ ];
       explicit = {
         web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];

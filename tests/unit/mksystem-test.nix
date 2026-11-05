@@ -43,10 +43,6 @@ let
       (hasPackage "git" homeConfig.home.packages)
       "common Home Manager packages should include git")
 
-    (helpers.assertTest "common-home-packages-include-oxfmt"
-      (hasPackage "oxfmt" homeConfig.home.packages)
-      "common Home Manager packages should include OXC formatter tooling")
-
     (helpers.assertTest "common-home-packages-include-go"
       (hasPackage "go" homeConfig.home.packages)
       "common Home Manager packages should include the Go toolchain")

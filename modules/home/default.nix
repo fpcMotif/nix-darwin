@@ -20,6 +20,7 @@
     ./git.nix
     ./hk.nix
     ./doc-lock
+    ./recall
     ./jujutsu.nix
     ./workspace-backend
     ./ghostty.nix
@@ -29,7 +30,6 @@
     ./claude.nix
     ./lsp.nix
     ./droid.nix
-    ./opencode.nix
     ./zed.nix
     ./crush.nix
     ./amp.nix
