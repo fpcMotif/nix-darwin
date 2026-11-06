@@ -128,6 +128,8 @@ while IFS= read -r seg; do
       case "${#words[@]}:${words[1]:-}" in
         1:) WORK_DIR=$HOME ;;
         2:-) WORK_DIR= ;;
+        2:*) WORK_DIR=$(resolve_dir "$WORK_DIR" "${words[1]}") || WORK_DIR=
+             [ -n "$WORK_DIR" ] || WORK_DIR=$(zoxide query -- "${words[1]}" 2>/dev/null) ;;
         *) WORK_DIR=$(zoxide query -- "${words[@]:1}" 2>/dev/null) ;;
       esac ;;
     git)
