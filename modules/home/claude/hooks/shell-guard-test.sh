@@ -161,6 +161,9 @@ if command -v zoxide >/dev/null 2>&1; then
   check allow "z plain && git commit -m x" "$JJ"
   check allow "z - && git commit -m x" "$JJ"
   check allow "z no-such-dir && git commit -m x" "$JJ"
+  check deny  "z $JJ/sub && git commit -m x" "$PLAIN"
+  check allow "z $PLAIN && git commit -m x" "$JJ"
+  check deny  "z sub && git restore a.md" "$JJ"
   HOME=$JJ check deny "z && git stash" "$PLAIN"
 else
   echo "skip: zoxide not on PATH, z rows not run"
