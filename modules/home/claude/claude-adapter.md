@@ -6,7 +6,7 @@
 - **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `~/.claude/guidance/languages/typescript.md`, `python.md`, `go.md`, or `rust.md`.
 - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/.claude/guidance/human-documents.md`.
 - **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/.claude/guidance/development.md`.
-- **Shell guard**: Read with the Read tool or `bat -pp`. Find files with `fd`. Run Python with `uv run`. Change files with Edit or Write. Hooks deny `sed`, `find`, and bare `python`, even in bypass mode. They also deny file writes through `echo >`, heredocs, and inline scripts.
+- **Shell guard**: Read with the Read tool or `bat -pp`. Find files with `fd`. Run Python with `uv run`. Change files with Edit or Write. Run a command elsewhere with `z DIR && CMD` or the tool's own directory flag. Hooks deny `cd`, `sed`, `find`, and bare `python`, even in bypass mode. They also deny file writes through `echo >`, heredocs, and inline scripts.
 - **Ask box**: In the desktop app, write What I need from you in the text before `wrap_up`. Set `ask` to item 1 as one question, `actions` to its answers, and `blocked` when work stops. With nothing pending, omit `ask`, `actions`, and the section. Write the report after the call.
 - **Reset**: When a task ends or the context grows large, suggest `/clear` over `/compact`. A hook hands the next session this transcript's path, so nothing is summarized away.
 - **Chat figures**: In chat, draw a flow as ASCII boxes and arrows in a `text` block, like so:

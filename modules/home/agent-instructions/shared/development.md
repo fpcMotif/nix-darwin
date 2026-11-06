@@ -9,7 +9,7 @@ Use a purpose-built tool before its shell equivalent. Confirm it is exposed; use
 | Find files outside FFF's root | `fd PATTERN DIR` |
 | Exhaustive text search | `rg -n PAT DIR` |
 | Copy files | `fcp SOURCE DESTINATION` |
-| Jump to a directory | `z NAME`, or `z NAME && COMMAND` in one call |
+| Run a command in another directory | `z DIR && COMMAND`, or the tool's own flag: `git -C DIR`, `make -C DIR`, `rg PAT DIR` |
 | Disk usage | `dust` |
 | Processes | `procs` |
 | CPU and memory | `btm` |
@@ -19,6 +19,15 @@ Use a purpose-built tool before its shell equivalent. Confirm it is exposed; use
 | Structural search | `sg -p 'PATTERN' --lang LANGUAGE` |
 
 Bound discovery output with `head -n 20`. Narrow a lookup that exceeds ten seconds.
+
+Read source code as a numbered span (the Read tool, or `bat -pp -r A:B`), so you can cite and edit `file:line`. Keep `head` and `tail` for command output.
+
+Read a long log as a verdict. A tail shows only the last step, and a chain joined with `;` exits 0 after an earlier step fails.
+
+1. Get every step's status and failure lines in one call: `rg -n -m 30 'error|FAIL|✘|\*\*\*|exited with code' LOG`.
+2. When one error repeats, count it per rule: `rg -o '\([a-zA-Z]+\)' LOG | sort | uniq -c`.
+3. Read passing output only when a count or a timing is the question.
+
 Use `ax` for HTTP. Use `curl` only after `ax` lacks the capability or returns a concrete failure.
 
 ## Waiting and background work
