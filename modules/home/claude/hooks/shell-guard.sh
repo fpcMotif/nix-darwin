@@ -106,6 +106,31 @@ in_jj_workspace() {
   return 1
 }
 
+read_too_long() {
+  local seg=$1 rest arg f n args
+  rest=${CMD_WITHOUT_HEREDOCS#*"$seg"}; rest=${rest#"${rest%%[![:space:]]*}"}
+  case $rest in '||'*) ;; '|'*) return 1 ;; esac
+  case $seg in *'>'*|*'<'*) return 1 ;; esac
+  read -r -a args <<<"$seg"
+  for arg in "${args[@]:1}"; do
+    case $arg in
+      -r*|--line-range*) return 1 ;;
+      -*) continue ;;
+    esac
+    f=${arg#[\"\']}; f=${f%[\"\']}
+    case $f in
+      '~/'*) f=$HOME/${f#\~/} ;;
+      *'$'*|*'*'*|*'?'*|*'`'*) continue ;;
+      /*) ;;
+      *) f=$WORK_DIR/$f ;;
+    esac
+    [ -f "$f" ] || continue
+    n=$(wc -l <"$f"); n=${n//[[:space:]]/}
+    [ "$n" -gt 300 ] && { long_file=$arg; long_lines=$n; return 0; }
+  done
+  return 1
+}
+
 while IFS= read -r seg; do
   case "${seg%%[[:space:]]*}" in
     python|python[23]|python[23].[0-9]*|*/python|*/python[23]|*/python[23].[0-9]*|pip|pip3|pip3.[0-9]*|virtualenv|pipenv|poetry)
@@ -118,6 +143,11 @@ while IFS= read -r seg; do
       [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: find is denied. Use 'fd PATTERN [DIR]' (-e EXT, -t f|d, -H for hidden, -i for -iname, -d N for -maxdepth, -E GLOB for -not -path)." ;;
     awk[[:space:]]-i*)
       [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: in-place awk is denied. A file change: the Edit tool; a rule across files: 'sg -p PAT -r REPL --lang X DIR' then -U." ;;
+  esac
+  case "${seg%%[[:space:]]*}" in
+    cat|bat)
+      [ -z "${TOOL_GUARD_OFF:-}" ] && read_too_long "$seg" \
+        && deny "shell-guard: $long_file has $long_lines lines, and a whole-file read was 19% of Bash output in past sessions. Read a span: 'bat -pp -r A:B $long_file', or the Read tool with offset and limit. Find the span first with 'rg -n PAT $long_file'. A pipe ('cat FILE | head') or a file of 300 lines or fewer is allowed." ;;
   esac
   [ -n "${JJ_GUARD_OFF:-}" ] && continue
   read -r -a words <<<"$seg"
