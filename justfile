@@ -112,8 +112,12 @@ build: _no-sudo _daemon _no-conflicts
     @darwin-rebuild build --flake . || { just _drift-hint; exit 1; }
 
 # Activate the working-tree configuration (system + home-manager).
-switch: _no-sudo _daemon _no-conflicts
+switch: _no-sudo _daemon _no-conflicts _unlanded
     @sudo darwin-rebuild switch --flake . || { just _drift-hint; exit 1; }
+
+_unlanded rev="@" base="main@origin":
+    @jj log --no-graph -r '::{{rev}} ~ ::{{base}} ~ empty()' -T 'commit_id.short() ++ " " ++ description.first_line() ++ "\n"' 2>/dev/null \
+        | awk 'NR == 1 { print "just: these commits go live but are not on main. The auto-switch job drops them when main next moves. Land them with jj pr --land:" > "/dev/stderr" } { print "    " $0 > "/dev/stderr" }'
 
 # Pull latest origin/main (rebase + autostash). Version/hash bumps that raced
 # an auto-update run resolve themselves to the newer side via the pkgnix
