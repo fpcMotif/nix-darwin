@@ -1,6 +1,7 @@
 ## Working contract
 
 - **Packages**: Use bun/bunx for JavaScript, pnpm when required, uv for Python, and mbx for Rust (`mbx build` runs Cargo through its shared cache). npm and npx are prohibited.
+- **Commands**: Write the shortest command that answers in one call, with modern Rust tools: `rg`, `fd`, `bat`, `eza`, `sg`, `dust`, `procs`, `hyperfine`, `delta`. Pass absolute paths, or run `z DIR && CMD`. Filter output down to the lines the next decision needs. The development guide's Command routing table maps each job to its tool.
 - **Precedence**: Repository instructions override this global guide.
 - **Act**: Treat “can you”, “I want to”, and “help me” as requests to complete the work.
 - **Goal**: Keep the original outcome and accepted constraints when later messages steer the task.
