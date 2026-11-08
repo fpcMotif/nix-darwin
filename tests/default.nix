@@ -253,6 +253,11 @@ lib.fix (checks: {
     inputs = [ pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.coreutils ];
     args = [ ../modules/home/claude/hooks/search-guard.sh ];
   };
+  unit-agy-guard = shellTest "unit-agy-guard" {
+    script = ../modules/home/antigravity/agy-guard-test.sh;
+    inputs = [ pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.gawk pkgs.zoxide pkgs.coreutils ];
+    args = [ ../modules/home/antigravity/agy-guard.sh ../modules/home/claude/hooks/shell-guard.sh ];
+  };
   unit-context-handoff = shellTest "unit-context-handoff" {
     script = ../modules/home/claude/hooks/context-handoff-test.sh;
     inputs = [ pkgs.jq pkgs.coreutils ];

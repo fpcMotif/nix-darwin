@@ -28,6 +28,7 @@
     ./yazi.nix
     ./prompt.nix
     ./claude.nix
+    ./antigravity
     ./lsp.nix
     ./droid.nix
     ./zed.nix
