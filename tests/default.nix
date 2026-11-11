@@ -456,6 +456,13 @@ lib.fix (checks: {
       touch $out
     '');
 
+  smoke-build-iets = onlyOn "darwin" "smoke-build-iets"
+    (pkgs.runCommand "smoke-build-iets" { } ''
+      echo "Building iets with pkgs/iets/host-system.patch applied..."
+      test -x ${self.darwinConfigurations."f".pkgs.martin.iets-classic}/bin/nix
+      touch $out
+    '');
+
   smoke-build-toolchain = pkgs.runCommand "smoke-build-toolchain" { } (
     ''
       echo "Checking required Nix-only dotfiles toolchain commands..."

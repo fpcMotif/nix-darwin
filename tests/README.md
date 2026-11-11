@@ -63,6 +63,7 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 |-------------------------------------|-------------------|
 | `smoke`                             | Test infrastructure itself builds. |
 | `smoke-build-oh-my-pi`              | Darwin-only Oh My Pi package exposes an executable `omp` wrapper and skips on Linux. |
+| `smoke-build-iets`                  | Darwin-only iets builds with `pkgs/iets/host-system.patch` applied and exposes the classic `nix` name. Fails when a pin bump breaks the patch. Skips on Linux. |
 | `smoke-build-toolchain`             | Required Prek, Oxlint/Oxfmt, Tsgolint, Tsgo, Uv, and Ruff commands exist, plus the shipped canary Bun (and its `bunx` symlink) on Darwin. |
 | `unit-auto-update`                  | Colored update summaries and the ownership-safe archived auto-switch source. |
 | `unit-zsh-vi-mode`                  | Loads the rendered zshrc (home-manager section order emulated) in a sandboxed zsh and asserts the post-load keymap tables: fzf ^R/^T/alt-c widgets in BOTH viins and vicmd, prefix-history Up/Down, fn-Delete/Home/End/PageUp/PageDown/Shift-Tab, the keepEmacsKeys set in viins, v -> edit-command-line in vicmd, plugin widgets present, autosuggestions still wired. The regression gate for "enabling vi mode ate fzf ^R" (#328). |
@@ -85,6 +86,10 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `unit-rolling-pins`                 | Every pin at a URL without a version has a hash-driven updater, and no `rolling_pins` entry is left for a package that moved to a versioned URL. |
 | `unit-shell-guard`                  | Runs the shell-guard hook against its deny and allow cases. |
 | `unit-search-guard`                 | Runs the search-guard hook against its uncapped-search, umbrella-root, and long-file-read cases. |
+| `unit-agy-guard`                    | The Antigravity shell guard applies the Claude shell-guard rules to agent shell commands. |
+| `unit-browser-file-guard`           | The browser file guard hook blocks `file://` URLs sent to the built-in browser pane and passes other URLs. |
+| `unit-context-handoff`              | The context-handoff hook passes the previous transcript path to the next session. |
+| `unit-recall`                       | `recall` reads earlier agent sessions for the current folder. |
 | `unit-doc-lock`                     | `doc-lock` blocks an agent's new comments at commit for Claude Code, Codex, pi, and omp, and passes a human commit or a granted session. |
 | `unit-doc-lock-extension`           | The pi doc-lock extension blocks a comment edit, a hashline comment, and a Markdown write, names the comment in its reason, and blocks when the checker cannot start. |
 | `unit-comment-lint`                 | Runs the comment-lint fixtures, then lints the comments in every flake `.nix` file. |
