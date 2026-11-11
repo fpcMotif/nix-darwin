@@ -373,6 +373,7 @@ let
   claudeGuardHooks = [
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/search-guard.sh"; }
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/shell-guard.sh"; }
+    { event = "PreToolUse"; matcher = "mcp__Claude_Browser__preview_start|mcp__Claude_Browser__navigate|mcp__Claude_Browser__browser_batch"; command = "$HOME/.claude/hooks/browser-file-guard.sh"; }
     { event = "SessionEnd"; matcher = "clear"; command = "$HOME/.claude/hooks/context-handoff.sh save"; }
     { event = "SessionStart"; matcher = "clear|compact"; command = "$HOME/.claude/hooks/context-handoff.sh resume"; }
   ] ++ claudeHooks.add;
@@ -499,6 +500,7 @@ in
       ".claude/pstack-models.md".source = pstackModelsSheet;
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
       ".claude/hooks/shell-guard.sh" = { source = ./claude/hooks/shell-guard.sh; executable = true; };
+      ".claude/hooks/browser-file-guard.sh" = { source = ./claude/hooks/browser-file-guard.sh; executable = true; };
       ".claude/hooks/context-handoff.sh" = { source = ./claude/hooks/context-handoff.sh; executable = true; };
       ".claude/mods/jev-traits".source = ./claude/mods/jev-traits;
       ".claude/mods/jev-report".source = ./claude/mods/jev-report;
