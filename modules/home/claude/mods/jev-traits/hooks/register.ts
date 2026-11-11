@@ -293,7 +293,7 @@ export const register: Register = (on, options: PluginOptions) => {
       name: 'traits',
       description: 'Show jev-traits status, or check changes against the repository traits',
       argumentHint: '[check [changed|staged|unstaged|untracked|<files…>]]',
-    })
+    }).catch((error: unknown) => report($, `jev: /traits not added (${errorText(error)}); check_traits still works`))
     await $.tool.register({
       name: 'check_traits',
       description:

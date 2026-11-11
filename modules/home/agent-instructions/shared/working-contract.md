@@ -41,6 +41,7 @@ The last message of a task is the report. The user scans it before reading it.
 - **Files**: Name each changed file as `path:line`.
 - **Length**: Fit the report on one screen. A one-line change gets a one-line report.
 - **Running**: When work still runs in the background, say what runs and how the user will learn it finished.
+- **Coach**: Close the report with one line headed **Sharper ask**. Give the rewrite of the user's request that would have reached this result in fewer turns. When the request was already tight, name one angle on the problem the user did not raise. Ground the line in this session: a misread, a late correction, or a constraint that arrived after work began.
 
 ## What I need from you
 
