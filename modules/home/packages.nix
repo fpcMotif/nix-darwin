@@ -76,7 +76,7 @@ let
     martin.hunk-bin
     martin.mole
     codex
-    nur.repos.charmbracelet.crush
+    martin.crush
     martin.pi-coding-agent
     martin.oh-my-pi
     martin.nub

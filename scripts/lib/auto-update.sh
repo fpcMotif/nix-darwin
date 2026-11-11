@@ -20,9 +20,8 @@ au_report_change() {
 }
 
 # A nixpkgs bump re-derives stdenv and rehashes the Darwin closure, so heavy
-# inputs move only on the cadence day (issue #336). `nur` is heavy to contain
-# lock churn, not build time, because Crush is a prebuilt-tarball repack.
-AU_HEAVY_INPUTS="nixpkgs nur"
+# inputs move only on the cadence day (issue #336).
+AU_HEAVY_INPUTS="nixpkgs"
 
 AU_CADENCE_DAY=1
 
@@ -177,7 +176,7 @@ au_guard_source_builds() {
       cat <<'EOF'
 Remedies:
   - wait for cache.nixos.org to gain darwin coverage for this revision, or
-  - hold the heavy inputs (nixpkgs, nur) on a revision with coverage:
+  - hold the heavy input (nixpkgs) on a revision with coverage:
       git checkout HEAD~1 -- flake.lock && just switch
 A routine `just switch` must never compile from source; this revision may
 not merge until the plan above is clean.
