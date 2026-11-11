@@ -65,21 +65,11 @@ const finish = (answer: string) =>
   ({ answer, durationMs: 1000, isAborted: false, turnId: 'turn-1', reason: 'answer' }) as const
 const typed = (text: string) => ({ text, wait: false, origin: { kind: 'composer' } }) as const
 
-const BAND = {
-  plugin: 'jev-report',
-  component: 'AbovePrompt',
-  surface: 'terminal',
-  props: { hasSurvey: false, isWorking: false, maxRows: 6, bodyColumns: 100, scroll: { offset: 0, bodyRows: 6 }, view: {} },
-} as const
-
 describe('parseAnswer', () => {
-  test('reads the numbered items under What I need from you', async () => {
-    const parsed = parseAnswer(ASKING)
-    expect(parsed.hasAskSection).toBe(true)
-    expect(parsed.asks).toEqual([
-      'Run `sudo darwin-rebuild switch --flake ~/nix-config` in your terminal, then reply "rebuilt".',
-      'Pick the default model in Settings.',
-    ])
+  test('sees a What I need from you section', async () => {
+    expect(parseAnswer(ASKING).hasAskSection).toBe(true)
+    expect(parseAnswer(EMPTY_ASK).hasAskSection).toBe(true)
+    expect(parseAnswer(DENSE).hasAskSection).toBe(false)
   })
 
   test('sees a Mermaid block or a table as a figure', async () => {
@@ -90,21 +80,20 @@ describe('parseAnswer', () => {
 })
 
 describe('turn.complete', () => {
-  test('pins each ask above the prompt when the report waits on the user', KEYED, async ($, on) => {
-    const { statuses , clock } = world(on, { waits: 0.95 })
+  test('shows nothing of its own when the report waits on the user', KEYED, async ($, on) => {
+    const { statuses, contexts, clock } = world(on, { waits: 0.95 })
     await $.turn.complete(finish(ASKING))
     await clock.settle()
-    expect(statuses.at(-1)).toContain('◆ 2 for you')
-    const ui = await $.ui.mount(BAND)
-    expect((await ui.find({ type: 'Text', text: /darwin-rebuild/ }))?.text).toContain('1. Run sudo darwin-rebuild')
-    await ui.unmount()
+    expect(statuses).toEqual([])
+    await $.prompt.submit(typed('rebuilt'))
+    expect(contexts[0]).toBeUndefined()
   })
 
   test('tells the model once that an ask section held nothing', KEYED, async ($, on) => {
     const { contexts, statuses , clock } = world(on, { waits: 0.05 })
     await $.turn.complete(finish(EMPTY_ASK))
     await clock.settle()
-    expect(statuses.at(-1)).toBeUndefined()
+    expect(statuses).toEqual([])
     await $.prompt.submit(typed('next task'))
     await $.prompt.submit(typed('and another'))
     expect(contexts[0]?.join('\n')).toContain('leave the section out')
@@ -132,11 +121,10 @@ describe('turn.complete', () => {
     expect(fetched).toEqual([])
   })
 
-  test('still pins the parsed asks when Jev fails', KEYED, async ($, on) => {
+  test('reports a Jev failure in the status line', KEYED, async ($, on) => {
     const { statuses , clock } = world(on, { status: 529 })
     await $.turn.complete(finish(ASKING))
     await clock.settle()
-    expect(statuses).toContain('jev-report: HTTP 529; report not read')
-    expect(statuses.at(-1)).toContain('◆ 2 for you')
+    expect(statuses).toEqual(['jev-report: HTTP 529; report not read'])
   })
 })

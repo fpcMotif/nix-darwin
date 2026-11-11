@@ -1,13 +1,10 @@
-import { atom, read, update } from 'claude-code'
 import type { EngineInterface, PluginOptions, Register } from 'claude-code'
 
-import type { Pinned } from '../types'
 import {
   answersFrom,
   API_URL,
   decide,
   DEFAULT_MODEL,
-  firstLine,
   KEYCHAIN_SERVICE,
   parseAnswer,
   requestBody,
@@ -15,8 +12,6 @@ import {
 } from './lens'
 
 const JEV_TIMEOUT_MS = 8_000
-
-const pinned = atom({ plugin: 'jev-report', key: 'pinned' } as const, null)
 
 let cachedKey: string | undefined
 let lastKeyMissAt = -Infinity
@@ -57,25 +52,15 @@ async function askJev($: EngineInterface, key: string, model: string, answer: st
   }
 }
 
-async function pin($: EngineInterface, asks: readonly string[]) {
-  const next: Pinned | null = asks.length > 0 ? { asks } : null
-  await update($, pinned, () => next)
-  $.ui.status(asks.length > 0 ? `◆ ${asks.length} for you · ${firstLine(asks[0] ?? '', 40)}` : undefined)
-}
-
 async function readReport($: EngineInterface, options: PluginOptions, model: string, answer: string) {
   const parsed = parseAnswer(answer)
-  if (!shouldJudge(answer, parsed)) return pin($, [])
+  if (!shouldJudge(answer, parsed)) return
   const key = await apiKey($, options)
-  if (!key) return pin($, parsed.asks)
+  if (!key) return
   const judged = await askJev($, key, model, answer)
-  if ('failure' in judged) {
-    $.ui.status(`jev-report: ${judged.failure}; report not read`)
-    return pin($, parsed.asks)
-  }
+  if ('failure' in judged) return $.ui.status(`jev-report: ${judged.failure}; report not read`)
   const lens = decide(parsed, judged.answers)
   pendingNudge = lens.nudge
-  await pin($, lens.asks)
   if (lens.suggestion) await $.prompt.suggest({ text: lens.suggestion })
 }
 
@@ -98,25 +83,5 @@ export const register: Register = (on, options: PluginOptions) => {
     pendingNudge = undefined
     if (e.command || !nudge) return next(e)
     return next({ ...e, context: [...(e.context ?? []), nudge] })
-  })
-
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const shown = await read($, pinned)
-    if (e.props.hasSurvey || shown === null) return next(e)
-    const { Box, Button, Text } = $.ui.resolve(e)
-    return (
-      <Box flexDirection="column">
-        {shown.asks.map((ask, index) => (
-          <Text key={`ask-${index}`}>
-            <Text color="yellow">◆ </Text>
-            {shown.asks.length > 1 ? `${index + 1}. ` : ''}
-            {firstLine(ask, 96)}
-          </Text>
-        ))}
-        <Box>
-          <Button key="done" label="Done" onPress={() => pin($, [])} />
-        </Box>
-      </Box>
-    )
   })
 }

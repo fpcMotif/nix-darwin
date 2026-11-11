@@ -165,8 +165,8 @@ _Avoid_: calling a JJ workspace a worktree, or treating dojjo as a replacement f
 ### Auto-update cadence
 
 **Heavy input**:
-A flake input whose bump rehashes a large share of the Darwin baseline closure. The set is `nixpkgs` and `nur` (the latter for lock-churn containment, not because it compiles anything — Crush is a prebuilt-tarball repack). Heavy inputs move only on the cadence day, enforced by `AU_HEAVY_INPUTS`/`au_inputs_to_bump` in `scripts/lib/auto-update.sh`.
-_Avoid_: justifying `nur`'s heaviness on compile grounds, or hand-listing heavy inputs outside the library.
+A flake input whose bump rehashes a large share of the Darwin baseline closure. The set is `nixpkgs`. Heavy inputs move only on the cadence day, enforced by `AU_HEAVY_INPUTS`/`au_inputs_to_bump` in `scripts/lib/auto-update.sh`.
+_Avoid_: hand-listing heavy inputs outside the library.
 
 **Light input**:
 Every other top-level flake input, bumped nightly by the auto-update workflow — chiefly the vendored agent CLIs the operator tracks daily.

@@ -14,9 +14,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nur = {
-      url = "github:nix-community/NUR";
-      inputs.nixpkgs.follows = "nixpkgs";
+    # Charm's own repo, not the NUR aggregate, which pins it as a GitHub .zip that iets cannot unpack.
+    charm-nur = {
+      url = "github:charmbracelet/nur";
+      flake = false;
     };
 
     claude-code = {
@@ -129,13 +130,13 @@
       };
 
       overlays = [
-        inputs.nur.overlays.default
         inputs.rust-overlay.overlays.default
         (import ./pkgs)
         (final: prev: {
           martin = prev.martin // {
             traits = final.callPackage ./pkgs/traits.nix { src = inputs.traits; };
             iets-classic = final.callPackage ./pkgs/iets { inherit (inputs) iets; };
+            inherit (import inputs.charm-nur { pkgs = final; }) crush;
           };
         })
         inputs.claude-code.overlays.default
@@ -168,7 +169,7 @@
           pkgs = pkgsFor s;
         in
         {
-          crush = pkgs.nur.repos.charmbracelet.crush;
+          crush = pkgs.martin.crush;
           # Overlay override of nixpkgs' codex; exposed so update-codex.sh can build it.
           inherit (pkgs) codex martin typescript;
         };

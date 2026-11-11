@@ -83,12 +83,12 @@ rm -rf "$sed_scratch"
 
 # Heavy inputs move only on the cadence day (issue #336).
 [ -n "${AU_HEAVY_INPUTS:-}" ] || fail "AU_HEAVY_INPUTS must be defined"
-for heavy in nixpkgs nur; do
+for heavy in nixpkgs; do
   case " $AU_HEAVY_INPUTS " in *" $heavy "*) ;; *) fail "heavy set must contain $heavy" ;; esac
 done
 case "$AU_CADENCE_DAY" in [1-7]) ;; *) fail "AU_CADENCE_DAY must be an ISO weekday 1-7, got '$AU_CADENCE_DAY'" ;; esac
 
-sample=(agent-skills darwin home-manager nixpkgs nur dotfiles)
+sample=(agent-skills darwin home-manager nixpkgs dotfiles)
 read -ra heavy_inputs <<<"$AU_HEAVY_INPUTS"
 heavy_list=$(printf '%s\n' "${heavy_inputs[@]}")
 other_day=$(( AU_CADENCE_DAY % 7 + 1 ))
@@ -224,8 +224,6 @@ if [ -n "$scripts_dir" ]; then
     || fail "update-flake-inputs.sh must enumerate inputs via nix flake metadata"
   grep -qF 'au_inputs_to_bump' "$scripts_dir/update-flake-inputs.sh" \
     || fail "update-flake-inputs.sh must route through au_inputs_to_bump"
-  grep -qF 'au_inputs_to_bump' "$scripts_dir/update-crush.sh" \
-    || fail "update-crush.sh must adopt the cadence gate for nur"
   # An unauthenticated call 403s at 60 calls/hr, and a failed updater only skips its bump.
   for s in "$scripts_dir"/update-*.sh; do
     raw=$(grep -n 'api\.github\.com' "$s" | grep -v 'au_github_api' || true)

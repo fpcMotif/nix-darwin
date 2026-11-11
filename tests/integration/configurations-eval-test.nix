@@ -725,7 +725,7 @@ let
 
     (helpers.assertTest "darwin-has-crush"
       (hasPackage "crush" darwinHome.home.packages)
-      "Darwin Home Manager packages should include Crush from Charm NUR")
+      "Darwin Home Manager packages should include Crush from Charm's NUR repo")
 
     (helpers.assertTest "darwin-has-oh-my-pi"
       (hasPackage "oh-my-pi" darwinHome.home.packages)

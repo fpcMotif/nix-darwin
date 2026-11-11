@@ -1,6 +1,6 @@
 ---
 name: drafts-jxa-batch-ops
-description: High-throughput batch manipulation of Drafts.app on macOS using JXA (JavaScript for Automation) and zero-lock SQLite snapshots
+description: Drafts bulk mutation — archive, trash, tag, flag, or rewrite hundreds of drafts at once through JXA. For listing, searching, or exporting drafts, use drafts-ledger.
 ---
 
 # High-Throughput Drafts.app Batch Operations via JXA
@@ -15,6 +15,8 @@ Never let any single draft or merge output exceed **300 KB (or ~5,000 lines)**. 
 - **Deduplicate and clean orphans**: Purge redundant single-URL capture duplicates and unprocessed orphaned changes before large merges to prevent CloudKit sync queue wedging.
 
 ## Core Architecture: Read-Only SQLite + JXA Mutation
+
+Record keys of every Drafts JSON file: the Data shapes table in `drafts-ledger/SKILL.md`. Probe a file's keys before parsing it.
 
 1. **Reads**: Always copy `DraftStore.sqlite` + `DraftStore.sqlite-wal` + `DraftStore.sqlite-shm` from `~/Library/Group Containers/GTFQ98J4YG.com.agiletortoise.Drafts/` to `/tmp/` before querying with SQLite. This provides instant, non-blocking zero-lock access across all columns (`ZUUID`, `ZCONTENT`, `ZCREATED_AT`, `ZFOLDER`, `ZCACHED_TAGS`). CoreData epoch offset: `978307200` seconds (2001-01-01).
 2. **Mutations**: Never write directly to SQLite while Drafts.app is running (risks in-memory CoreData cache corruption and CloudKit sync conflicts). Use JXA (`osascript -l JavaScript`) rather than AppleScript.
