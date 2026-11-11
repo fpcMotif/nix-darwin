@@ -258,6 +258,11 @@ lib.fix (checks: {
     inputs = [ pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.gawk pkgs.zoxide pkgs.coreutils ];
     args = [ ../modules/home/antigravity/agy-guard.sh ../modules/home/claude/hooks/shell-guard.sh ];
   };
+  unit-browser-file-guard = shellTest "unit-browser-file-guard" {
+    script = ../modules/home/claude/hooks/browser-file-guard-test.sh;
+    inputs = [ pkgs.jq pkgs.gnugrep ];
+    args = [ ../modules/home/claude/hooks/browser-file-guard.sh ];
+  };
   unit-context-handoff = shellTest "unit-context-handoff" {
     script = ../modules/home/claude/hooks/context-handoff-test.sh;
     inputs = [ pkgs.jq pkgs.coreutils ];
