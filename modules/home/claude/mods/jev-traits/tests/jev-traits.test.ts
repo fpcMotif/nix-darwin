@@ -113,6 +113,23 @@ const edit = (new_string: string, file_path = '/repo/src/api.ts') =>
 
 const flagValue = (argv: readonly string[], flag: string) => argv[argv.indexOf(flag) + 1]
 
+describe('session start', () => {
+  test('keeps check_traits when a project skill already owns /traits', KEYED, async ($, on) => {
+    const { statuses } = world(on)
+    const tools: string[] = []
+    on('command.register', () => ({ deny: 'it is the user\'s /traits' }))
+    on('tool.register', (_, e) => {
+      tools.push(e.name)
+      return { value: undefined }
+    })
+    on('session.start', (_, e) => e)
+    await $.session.start({ cwd: '/repo' })
+
+    expect(tools).toEqual(['check_traits'])
+    expect(statuses.some(line => line?.includes('/traits not added'))).toBe(true)
+  })
+})
+
 describe('per-edit check', () => {
   test('sends the edit to traits on stdin with the configured flags', KEYED, async ($, on) => {
     const { spawns } = world(on)

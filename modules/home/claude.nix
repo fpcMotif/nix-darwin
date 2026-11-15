@@ -71,7 +71,13 @@ let
     removedSkillIds harnessProvidedSkillIds interfacesSkillNames;
   excludedSkillIds = disabledMattpocockSkills ++ leanExcludedMattpocockSkills;
   # Park here (off but installed) to keep a plugin's cache and config.
-  disabledClaudePlugins = [ "typescript-lsp@claude-plugins-official" ];
+  # Code Mode refuses to start while a user mod hooks tool calls, as these two
+  # and the jev-traits mod do. jev-traits stays deployed but out of PLUGIN_DIRS.
+  disabledClaudePlugins = [
+    "typescript-lsp@claude-plugins-official"
+    "flightdeck@claude-flightdeck"
+    "review-watch@claude-code-mods"
+  ];
   # This module edits these plugins' caches, so it also owns their flag and
   # marketplace. Authors' marketplaces track upstream; claude-plugins-official
   # lags. Change one here, not via /plugin, or every skill lists twice.
@@ -351,7 +357,6 @@ let
   claudeSeedEnv = {
     API_TIMEOUT_MS = "3000000";
     ENABLE_LSP_TOOL = "1";
-    CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
     CLAUDE_CODE_NEW_INIT = "1";
     CLAUDE_CODE_NO_FLICKER = "1";
     CLAUDE_CODE_SIMPLE_SYSTEM_PROMPT = "1";
@@ -440,7 +445,8 @@ let
       { path = [ "permissions" "ask" ]; value = claudePermissions.ask; }
       { path = [ "permissions" "defaultMode" ]; value = claudePermissions.defaultMode; }
       { path = [ "effortLevel" ]; value = "medium"; }
-      { path = [ "env" "CLAUDE_CODE_PLUGIN_DIRS" ]; value = "${homeDir}/.claude/mods/jev-traits:${homeDir}/.claude/mods/jev-report"; }
+      { path = [ "env" "CLAUDE_CODE_EXPERIMENTAL_CODE_MODE" ]; value = "1"; }
+      { path = [ "env" "CLAUDE_CODE_PLUGIN_DIRS" ]; value = "${homeDir}/.claude/mods/jev-report"; }
     ]
     ++ lib.optional isDarwin { path = [ "env" "TRAITS_BIN" ]; value = lib.getExe pkgs.martin.traits; }
     ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeHiddenSkillIds
