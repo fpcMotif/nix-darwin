@@ -20,6 +20,7 @@
     "notebooklm"
     "nuclear-cqr"
     "obsidian-vault"
+    "prompt-coach"
     "qa"
     "request-refactor-plan"
     "review-diagrams"

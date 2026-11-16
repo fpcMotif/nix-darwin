@@ -230,6 +230,11 @@ lib.fix (checks: {
         count "## Plain English" hosts.${name}.startup.content == 1
         && lib.hasInfix "~/.agents/skills/ste80/SKILL.md" hosts.${name}.startup.content)
       [ "general" "codex" "omp" "antigravity" ];
+    assert lib.all
+      (host: lib.hasInfix "the `prompt-coach` skill" host.startup.content
+        && count "[archify explainer: on-demand]" host.startup.content == 1
+        && !(lib.hasInfix "skills/prompt-coach" host.startup.content))
+      (lib.attrValues hosts);
     assert hosts.antigravity.startup.target == ".gemini/config/AGENTS.md";
     assert hosts.antigravity.startup.content == hosts.general.startup.content;
     assert lib.all documentsTriggerNamesAdr
