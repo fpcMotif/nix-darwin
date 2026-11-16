@@ -10,6 +10,7 @@ Loaded schemas do not guarantee a ready server or current index. Use scoped `rg`
 
 - codedb: `codedb_explain` for a symbol; `codedb_context` for a task, only with `semantic=local` (the default sends snippets to a remote reranker). Outline and read are CLI only.
 - fff: `find_files` (fuzzy file names, frecency, git-dirty first; each extra word narrows), `grep` (one bare identifier, plain text, no regex), `multi_grep` (OR over literal patterns). `grep` marks the definition `[def]`. Read its header: `N/M matches`; `0 exact matches` means none in that indexed search scope, not absence from the whole checkout. The recorded setup caps replies at 50 hits; check the installed schema and result header rather than assuming this limit is universal. Use `rg -c` for matching-line counts, `rg -l` for matching-file lists, or untruncated `rg -n` for matching lines. fff honours `.ignore`. fff has no CLI on this machine: inside a subagent, load its MCP schema with ToolSearch or use rg.
+- vesalius: `usages` (resolved references with a completeness line), `feature_map`, `outline`. It resolves TypeScript and Swift. It analyses shell lexically and does not index Nix, so use fff there. The MCP server answers for the session repository only; the CLI takes `--repo DIR`.
 - zg: `zvec_grep_search` for word-only orientation on one TypeScript repo, `fts: SYM` when you know a name. It returns vector neighbours even when nothing matched lexically, so a zg hit never proves presence; confirm with rg.
 
 ## rg flags

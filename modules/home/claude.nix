@@ -648,7 +648,7 @@ in
       fi
       ${lib.optionalString isDarwin ''
         registerMcp drafts '{"type":"stdio","command":"${pkgs.martin.drafts-mcp-server}/bin/drafts-mcp-server","args":[]}'
-        registerMcp vesalius '{"type":"stdio","command":"${lib.getExe pkgs.martin.vesalius-bin}","args":["mcp"]}'
+        registerMcp vesalius '{"type":"stdio","command":"${lib.getExe pkgs.martin.vesalius-bin}","args":["mcp"],"alwaysLoad":true}'
       ''}
     fi
   '';
