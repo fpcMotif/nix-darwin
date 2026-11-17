@@ -387,6 +387,92 @@ if [ -n "$github_dir" ]; then
     || fail "source-build guard must run BEFORE the full system build (guard:$guard_line build:$sys_line)"
 fi
 
+if [ -n "$pkgs_dir" ] && [ -n "$scripts_dir" ]; then
+  nix_url=$(grep -oE 'releases/download/v?\$\{version\}' "$pkgs_dir/fff-mcp.nix" | head -1)
+  sh_url=$(grep -oE 'releases/download/v?\$\{latest\}' "$scripts_dir/update-fff-mcp.sh" | head -1)
+  [ -n "$nix_url" ] || fail "pkgs/fff-mcp.nix has no releases/download/\${version} URL"
+  [ -n "$sh_url" ] || fail "update-fff-mcp.sh has no releases/download/\${latest} URL"
+  [ "${nix_url%"\${version}"}" = "${sh_url%"\${latest}"}" ] \
+    || fail "update-fff-mcp.sh hashes '$sh_url' but pkgs/fff-mcp.nix fetches '$nix_url'"
+  if grep -qF 'au_latest_github_release' "$scripts_dir/update-fff-mcp.sh"; then
+    fail "update-fff-mcp.sh must pick a dated nightly tag, not au_latest_github_release"
+  fi
+
+  fff_dir=$(mktemp -d)
+  mkdir -p "$fff_dir/scripts/lib" "$fff_dir/pkgs" "$fff_dir/bin" "$fff_dir/urls"
+  cp "$scripts_dir/update-fff-mcp.sh" "$fff_dir/scripts/"
+  cp "$lib" "$fff_dir/scripts/lib/auto-update.sh"
+  cp "$pkgs_dir/fff-mcp.nix" "$fff_dir/pkgs/fff-mcp.nix"
+  au_set_version "$fff_dir/pkgs/fff-mcp.nix" "0.11.1-nightly.0ab67dc"
+  cp "$fff_dir/pkgs/fff-mcp.nix" "$fff_dir/before.nix"
+
+  write_stub() {
+    { printf '#!%s\n' "$BASH"; cat; } > "$fff_dir/bin/$1"
+    chmod +x "$fff_dir/bin/$1"
+  }
+  write_stub gh <<'EOF'
+exit 1
+EOF
+  write_stub ax <<'EOF'
+case "$1" in
+  */releases/latest) printf '%s\n' '{"tag_name":"v0.11.0"}' ;;
+  *) printf '%s\n' "$FFF_RELEASES_JSON" ;;
+esac
+EOF
+  write_stub nix-prefetch-url <<'EOF'
+for a in "$@"; do last=$a; done
+u=$(mktemp "$FFF_URL_DIR/url.XXXXXX")
+printf '%s\n' "$last" > "$u"
+printf '%s\n' 0000000000000000000000000000000000000000000000000000
+EOF
+  write_stub nix <<'EOF'
+case "$1 ${2:-}" in
+  "hash convert") printf '%s\n' "sha256-NEWFFFHASH=" ;;
+  "build "*) exit 0 ;;
+  *) exit 1 ;;
+esac
+EOF
+
+  fff_run() {
+    rm -rf "$fff_dir/urls"
+    mkdir -p "$fff_dir/urls"
+    PATH="$fff_dir/bin:$PATH" GITHUB_TOKEN="" GH_TOKEN="" NO_COLOR=1 \
+      FFF_URL_DIR="$fff_dir/urls" FFF_RELEASES_JSON="$1" \
+      bash "$fff_dir/scripts/update-fff-mcp.sh" 2>&1
+  }
+
+  fixture_releases='[
+    {"tag_name":"nightly","draft":false,"published_at":"2026-11-18T00:00:00Z"},
+    {"tag_name":"v0.11.0","draft":false,"published_at":"2026-11-17T00:00:00Z"},
+    {"tag_name":"0.11.1-nightly.deadbeef","draft":true,"published_at":"2026-11-19T00:00:00Z"},
+    {"tag_name":"0.11.1-nightly.ff00112","draft":false,"published_at":"2026-11-13T22:33:32Z"},
+    {"tag_name":"0.11.1-nightly.ab3002a","draft":false,"published_at":"2026-11-16T23:20:41Z"}
+  ]'
+  out=$(fff_run "$fixture_releases") || fail "fff-mcp fixture bump failed: $out"
+  case "$out" in
+    *"fff-mcp  0.11.1-nightly.0ab67dc --> 0.11.1-nightly.ab3002a") ;;
+    *) fail "fff-mcp picked wrong tag from fixture: $out" ;;
+  esac
+  grep -qF 'version = "0.11.1-nightly.ab3002a";' "$fff_dir/pkgs/fff-mcp.nix" \
+    || fail "fff-mcp did not write chosen nightly version"
+  got_urls=$(sort "$fff_dir/urls"/url.*)
+  want_urls='https://github.com/dmtrKovalenko/fff/releases/download/0.11.1-nightly.ab3002a/fff-mcp-aarch64-apple-darwin
+https://github.com/dmtrKovalenko/fff/releases/download/0.11.1-nightly.ab3002a/fff-mcp-aarch64-unknown-linux-gnu
+https://github.com/dmtrKovalenko/fff/releases/download/0.11.1-nightly.ab3002a/fff-mcp-x86_64-apple-darwin
+https://github.com/dmtrKovalenko/fff/releases/download/0.11.1-nightly.ab3002a/fff-mcp-x86_64-unknown-linux-gnu'
+  [ "$got_urls" = "$want_urls" ] || fail "fff-mcp prefetched wrong URLs: $got_urls"
+
+  cp "$fff_dir/before.nix" "$fff_dir/pkgs/fff-mcp.nix"
+  no_nightly='[{"tag_name":"nightly","draft":false,"published_at":"2026-11-18T00:00:00Z"},{"tag_name":"v0.11.0","draft":false,"published_at":"2026-11-17T00:00:00Z"}]'
+  if out=$(fff_run "$no_nightly"); then fail "fff-mcp without dated nightly passed: $out"; fi
+  case "$out" in *"no dated nightly release found"*) ;; *) fail "fff-mcp missing-nightly message wrong: $out" ;; esac
+  cmp -s "$fff_dir/before.nix" "$fff_dir/pkgs/fff-mcp.nix" \
+    || fail "fff-mcp missing-nightly changed the pin"
+
+  rm -rf "$fff_dir"
+  unset -f write_stub fff_run
+fi
+
 grep -qF 'archive --format=tar' "$auto_switch"
 grep -qF 'snapshot=$(mktemp -d' "$auto_switch"
 if grep -qF 'git+file://' "$auto_switch"; then
