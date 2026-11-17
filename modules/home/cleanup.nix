@@ -60,10 +60,8 @@ in
     done
     remove_legacy_path "$HOME/.claude/claude.md"
     remove_legacy_path "$HOME/.claude/statusline-command.sh"
-    # Code search routing files were hand-installed on 2026-09-08 before Nix
-    # owned them (claude.nix home.file). Same idiom: clear the flat copies so
-    # activation can place the store symlinks.
-    remove_legacy_path "$HOME/.claude/search-eval.md"
+    # Code search hooks were hand-installed before Nix owned them. Clear the
+    # flat copies so activation can place the store symlinks.
     remove_legacy_path "$HOME/.claude/hooks/search-guard.sh"
     remove_legacy_path "$HOME/.claude/hooks/read-guard.sh"
     remove_legacy_path "$HOME/.claude/hooks/search-warmup.sh"

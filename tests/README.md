@@ -70,7 +70,7 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `unit-mksystem`                     | `lib/mkSystem.nix` shape plus current user, host platform, Home Manager, host module, and skill-target wiring. |
 | `unit-overlay`                      | `pkgs/default.nix` is a valid overlay and exposes the expected `pkgs.martin.*` attributes, descriptions, and CLI main programs. Darwin-only package evaluation is skipped on Linux. |
 | `unit-format`                       | `formatter.<system>` is configured as `nixpkgs-fmt`, evaluates, and all flake Nix files are formatted. |
-| `unit-agent-guides`                 | Checks every catalog host's rendered guides for required sections and tools, banned terms, model ids, and complete cross-guide pointers. |
+| `unit-agent-guides`                 | Checks every catalog host's rendered guides for required sections and tools, banned terms, model ids, and complete cross-guide pointers. Each startup guide has one generated Guides section and one Search rules section, and no host adapter restates their lines. |
 | `unit-adr-files`                    | `docs/adr/` holds only `.md` files, so no rendered page or export sits beside an ADR as a second copy. |
 | `unit-adr-numbers`                  | Every ADR name starts with a four-digit number, and no two ADRs share one. |
 | `unit-doc-links`                    | Relative links and images in `docs/**/*.md`, `AGENTS.md`, `ARCHITECTURE.md`, and `GLOSSARY.md` resolve to existing paths. Skips URLs, anchors, fenced blocks, and inline code. |
@@ -96,7 +96,7 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `unit-jj-pr`                        | Drives `jj pr` against a stub `gh` and a bare remote: open, stack, update, retarget, path-limited commits, and `--land` keeping edits in `@`. |
 | `unit-workspace-backend-lifecycle`  | Drives `wt` and `djo` through create, switch, list, remove, hooks, and a backend switch in disposable repositories, with host "f"'s shipped config. |
 | `unit-tests-readme`                 | This table names every registered check, and no check that is not registered. |
-| `integration-configurations-eval`   | The flake's Darwin/NixOS configs evaluate and keep expected user, host, pure-Nix dotfile, activation dry-run, required/forbidden toolchain, and agent-skills settings, including one Claude settings reconciliation activation. |
+| `integration-configurations-eval`   | The flake's Darwin/NixOS configs evaluate and keep expected user, host, pure-Nix dotfile, activation dry-run, required/forbidden toolchain, and agent-skills settings, including one Claude settings reconciliation activation. Every catalog guide is installed and archived on each system, Skill visibility matches the Claude and Codex off settings, and every guide pointer resolves for its reader. |
 | `integration-home-linux-purity`     | Linux-only. The Linux homes carry no Darwin-only path or tool in their generated config, activation, or string surfaces. Skips on Darwin. |
 | `integration-darwin-settings`       | Darwin-only. Exact-value assertions for every `system.defaults` key plus sudo Touch ID, firewall, pmset power management, the skhd-stays-disabled guard (BetterMouse tap conflict), and the Gatekeeper guard; font-bundle membership + count; Rime/Squirrel agent wiring, plus the guards that BetterMouse and BetterDisplay stay GUI-managed. No-op skip on Linux. |
 

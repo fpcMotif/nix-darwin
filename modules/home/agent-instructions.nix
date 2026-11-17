@@ -33,8 +33,8 @@ lib.mkMerge [
     home.file = lib.mapAttrs (_: source: { inherit source; }) files;
   }
   (lib.mkIf isDarwin {
-    # qa and request-refactor-plan stay off to mirror the Windows Codex budget
-    # trim. review comes from ~/.skillshub, which Nix does not place.
+    # qa and request-refactor-plan stay off to keep Codex inside its context
+    # budget. review comes from ~/.skillshub, which Nix does not place.
     martin.agentSurface.foreignSkills.agents = [ "review" ];
     martin.agentSurface.skillsOff.codex = [ "qa" "request-refactor-plan" "review" ];
 

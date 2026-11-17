@@ -54,8 +54,8 @@ let
     sed -i '/^[[:space:]]*disable-model-invocation:[[:space:]]*true[[:space:]]*$/d' "$out/SKILL.md"
   '';
 
-  # The skill hosts each harness reads. A folder not confirmed for a harness
-  # counts as not read, so its skills are absent there.
+  # Each agent sees only its confirmed folders. An unconfirmed folder's
+  # skills count as absent for that agent.
   harnessReads = {
     claude = [ "claude" ];
     codex = [ "codex" "agents" ];

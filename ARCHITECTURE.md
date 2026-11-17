@@ -225,7 +225,7 @@ modules/home/
 ├── lsp.nix              # language-server packages and Claude/Neovim configuration
 ├── claude.nix           # Claude Code config + the agent-skills bundle
 ├── ai-cli.nix           # claude/cc/codex/amp shell wrappers (proxy and env handling)
-├── agent-instructions.nix # Codex profiles and personal harness instructions
+├── agent-instructions.nix # installs and archives every host's agent guides; Darwin-only Codex and omp files
 ├── ai-model-routing.nix # mutable Pi adapter for the shared routing policy
 ├── opencode.nix         # opencode CLI config
 ├── crush.nix            # crush CLI config
@@ -247,7 +247,7 @@ This section is the largest because the moving parts (sources, targets, discover
 `modules/home/claude.nix` imports `inputs.agent-skills.homeManagerModules.default` and uses the upstream `programs.agent-skills` DSL — no custom activation scripts. The module owns one declarative bundle of selected `SKILL.md` directories and links that bundle into each enabled target.
 
 Personal skill sources live in `modules/home/skills/personal/`. Their `placement.nix` assigns each one a skill audience or an explicit host list.
-`skill-placement.nix` links every placed skill to one source. `agent-instructions.nix` archives previous files before Home Manager links them.
+`skill-placement.nix` links every placed skill to one source. `agent-instructions.nix` installs the guide catalog's files on every system (ADR-0020) and archives previous files and skill links before Home Manager links them.
 OMP-specific skills retain their native scope. Codex system skills and native Codex/Claude plugin caches remain installer-owned exceptions.
 Durable Codex defaults belong in Nix. Personal model, reasoning, trust, plugin, and UI choices remain writable overrides.
 
