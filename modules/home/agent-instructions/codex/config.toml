@@ -9,11 +9,6 @@ service_tier = "default"
 notify = ["/Users/martinfan/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
-# Command allow/refuse lists live in ~/.codex/rules/default.rules (execpolicy
-# prefix_rule files — the official mechanism; config.toml has no allow/deny keys).
-# They mirror ~/.claude/settings.json permissions.allow/deny. decision="forbidden"
-# still hard-blocks under approval_policy="never"; decision="prompt" fails closed.
-# Validate: codex execpolicy check --pretty --rules ~/.codex/rules/default.rules -- <cmd>
 
 [agents]
 max_depth = 2

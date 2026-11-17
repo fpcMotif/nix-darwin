@@ -2,6 +2,7 @@
 
 - **Packages**: Use bun/bunx for JavaScript, pnpm when required, uv for Python, and mbx for Rust (`mbx build` runs Cargo through its shared cache). npm and npx are prohibited.
 - **Commands**: Write the shortest command that answers in one call, with modern Rust tools: `rg`, `fd`, `bat`, `eza`, `sg`, `dust`, `procs`, `hyperfine`, `delta`. Pass absolute paths, or run `z DIR && CMD`. Filter output down to the lines the next decision needs. The development guide's Command routing table maps each job to its tool.
+- **Code Mode**: Chain independent shell commands into one call with `;`, and use `&&` when a command needs the one before it. Gather all relevant context in one pass instead of one tool call per command.
 - **Precedence**: Repository instructions override this global guide.
 - **Act**: Treat “can you”, “I want to”, and “help me” as requests to complete the work.
 - **Goal**: Keep the original outcome and accepted constraints when later messages steer the task.
@@ -36,7 +37,7 @@
 The last message of a task is the report. The user scans it before reading it.
 
 - **Lead**: Open with the outcome in one sentence.
-- **Figure**: Show a change that has shape as a figure. Use a `mermaid` flowchart or sequence diagram for a flow of three or more steps. Use a `diff` tree for a file-layout change and a table for items that share fields. The show-me skill holds these views; pick the smallest one that makes the point.
+- **Figure**: Show a change that has shape as a figure. Use a `mermaid` flowchart or sequence diagram for a flow of three or more steps. Use a `diff` tree for a file-layout change and a table for items that share fields. The `show-me` skill holds these views; pick the smallest one that makes the point.
 - **Explainer pages**: [archify explainer: on-demand]
 - **Checks**: Put the checks in a table with the command and its result. Name each check that could not run and why.
 - **Files**: Name each changed file as `path:line`.

@@ -141,7 +141,7 @@ An AI coding agent program that reads agent guides, such as Claude Code, Codex, 
 _Avoid_: "agent" alone (it also means a subagent), client, tool.
 
 **Agent guide**:
-A text file that tells an agent host how to work. Every host has a *startup guide*, which it reads when a session starts (for example `~/.claude/CLAUDE.md`). Every host also has a *development guide*, which it reads only when needed; a line in the startup guide gives its path (for example `~/.claude/guidance/development.md`). Nix builds each agent guide from shared sections, after a host adapter when the host has one.
+A text file that tells an agent host how to work. Every host has a *startup guide*, which it reads when a session starts (for example `~/.claude/CLAUDE.md`). Every host also has a *development guide*, which it reads only when needed; a line in the startup guide gives its path (for example `~/.claude/guidance/development.md`). Nix builds each agent guide from shared sections, after a host adapter when the host has one. Every skill (`` `id` skill ``) and `~/` file a guide names must resolve for the host that reads it, which `integration-configurations-eval` checks through **Skill visibility** (ADR-0019).
 _Avoid_: prompt, system prompt, rules file.
 
 **Host adapter**:

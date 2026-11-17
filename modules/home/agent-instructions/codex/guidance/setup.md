@@ -26,7 +26,6 @@ Put durable machine defaults in Nix. Let Codex write personal overrides without 
 | Machine defaults and MCP launch configuration | `/etc/codex/config.toml` |
 | Model, reasoning, trust, plugin, and UI overrides | `~/.codex/config.toml` |
 | Named runtime overrides | `~/.codex/<name>.config.toml` |
-| Command permission rules | `~/.codex/rules/default.rules` |
 | Available actions and argument contracts | Tools exposed in the current session |
 
 AGENTS.md supplies policy; skills supply procedures; MCP tools perform actions.

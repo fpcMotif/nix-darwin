@@ -12,4 +12,4 @@
 - **Lifetime**: A foreground subagent's shell job stops at its final response. Under `claude -p`, background jobs end about five seconds after the final result. Finish required shell work before either point.
 - **Search**: The Search section of `~/.claude/CLAUDE.md` names the tool for each case.
 - **Spans**: An `rg` line hit drops an item's wrapped lines. Read the span it lands in.
-- **Review**: Use `code-review`, `better-github-skill`, and `hunk` for their named branches.
+- **Review**: Use the `code-review` skill, the `better-github-skill` skill, and the `hunk` CLI for their named branches.

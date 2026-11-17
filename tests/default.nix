@@ -235,6 +235,23 @@ lib.fix (checks: {
         && count "[archify explainer: on-demand]" host.startup.content == 1
         && !(lib.hasInfix "skills/prompt-coach" host.startup.content))
       (lib.attrValues hosts);
+    assert lib.all
+      (host: count "## Guides" host.startup.content == 1
+        && count "## Search rules" host.startup.content == 1
+        && count "**Code Mode**" host.startup.content == 1
+        && count "**Trust**" host.startup.content == 1
+        && count "**Develop**" host.startup.content == 1
+        && lib.hasInfix "## Filesystem and Nix lookups" host.development.content)
+      (lib.attrValues hosts);
+    assert lib.all
+      (adapter: lib.all (label: !(lib.hasInfix label (builtins.readFile adapter)))
+        [ "**Develop**" "**Languages**" "**Documents**" "**Workspaces**" "**Trust**" "**Coverage**" ])
+      [
+        ../modules/home/agent-instructions/AGENTS.md
+        ../modules/home/agent-instructions/codex/AGENTS.md
+        ../modules/home/agent-instructions/omp/agent/AGENTS.md
+        ../modules/home/claude/claude-adapter.md
+      ];
     assert hosts.antigravity.startup.target == ".gemini/config/AGENTS.md";
     assert hosts.antigravity.startup.content == hosts.general.startup.content;
     assert lib.all documentsTriggerNamesAdr

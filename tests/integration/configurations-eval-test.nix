@@ -79,13 +79,14 @@ let
           && (visibility.claude.notebooklm or null) == "off"
           && (visibility.antigravity.notebooklm or null) == "on"
           && (visibility.claude.show-me or null) == "on"
-          && (visibility.omp.jj or null) == "absent"
+          && (visibility.omp.jj or null) == "on"
+          && (visibility.claude.varlock-setup or null) == "absent"
           && lib.all
           (harness: lib.all (id: (visibility.${harness}.${id} or "absent") == "off")
             darwinHome.martin.agentSurface.skillsOff.${harness})
           (lib.attrNames darwinHome.martin.agentSurface.skillsOff)
       )
-      "Skill visibility should give each harness on, off, or absent: Codex turns qa off, only Claude turns notebooklm off, and omp cannot see the picker-only jj")
+      "Skill visibility should give each harness on, off, or absent: Codex turns qa off, only Claude turns notebooklm off, omp sees jj through ~/.agents/skills, and Claude cannot see the outside-claude varlock-setup")
 
     (helpers.assertTest "darwin-codex-skill-off-entries"
       (
@@ -117,6 +118,44 @@ let
         && lib.sort lib.lessThan (lib.unique manifest.claudeHidden) == lib.sort lib.lessThan claudeOff
       )
       "Claude's hidden list should be exactly the skills Skill visibility marks off for Claude")
+
+    (helpers.assertTest "darwin-guide-pointers-resolve"
+      (
+        let
+          placement = darwinHome.martin.agentSurface.skillPlacement;
+          manifest = builtins.fromJSON darwinHome.home.file.".config/agent-skills/manifest.json".source.text;
+          installed = lib.attrNames darwinHome.home.file;
+          userOwned = [ "devv" "nix-config" ".codex/config.toml" ];
+          readers = {
+            claude = { harness = "claude"; extras = [ ../../modules/home/claude/search-routing.md ]; };
+            codex = { harness = "codex"; extras = [ ../../modules/home/agent-instructions/codex/guidance/setup.md ]; };
+            omp = { harness = "omp"; extras = [ ]; };
+            antigravity = { harness = "antigravity"; extras = [ ]; };
+            general = { harness = null; extras = [ ]; };
+          };
+          matches = regex: text: lib.concatMap (m: if builtins.isList m then [ (builtins.head m) ] else [ ]) (builtins.split regex text);
+          under = prefix: path: path == prefix || lib.hasPrefix "${prefix}/" path;
+          fileResolves = pointer:
+            let path = lib.removeSuffix "/" (lib.removePrefix "~/" (lib.removeSuffix "." pointer));
+            in lib.any (key: under key path || under path key) installed || lib.any (owned: under owned path) userOwned;
+          skillResolves = harness: id:
+            if harness == null then builtins.elem id (placement.idsByHost.agents or [ ])
+            else (placement.visibility.${harness}.${id} or "absent") == "on"
+              || (harness == "claude" && builtins.elem id manifest.pluginProvided);
+          failures = lib.concatLists (lib.mapAttrsToList
+            (name: reader:
+              let
+                text = lib.concatMapStrings (guide: guide.content) guideCatalog.hosts.${name}.guides
+                  + lib.concatMapStrings builtins.readFile reader.extras;
+              in
+              map (p: "${name}: ${p}") (builtins.filter (p: !(fileResolves p)) (matches "(~/[A-Za-z0-9._/-]+)" text))
+              ++ map (id: "${name}: `${id}` skill") (builtins.filter (id: !(skillResolves reader.harness id)) (matches "`([a-z0-9-]+)` skill" text))
+              ++ map (p: "${name}: ${p}") (matches "(/Users/[A-Za-z0-9._/-]+)" text))
+            readers);
+        in
+        lib.warnIf (failures != [ ]) "unresolved guide pointers: ${lib.concatStringsSep ", " failures}" (failures == [ ])
+      )
+      "every skill and file a guide points to should be reachable by the harness that reads the guide")
   ];
 
   workspaceBackendChecks = [

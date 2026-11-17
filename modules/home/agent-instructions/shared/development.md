@@ -112,7 +112,7 @@ On the Mac, `nix`, `nix-build`, and `nix-shell` are iets, a faster Rust Nix clie
 4. Give Git-reading tools commit hashes. Resolve JJ revisions with `jj log --no-graph -r REV -T commit_id`.
 5. Keep views and evidence on the same revisions. Recheck hashes after edits; regenerate evidence when they differ.
 6. Report executed checks and limitations. Empty call graphs do not establish correctness; preserve human review notes.
-7. Use `better-github-skill` with explicit PR numbers and `-R owner/repo` under JJ. Posting requires user authorization.
+7. Use the `better-github-skill` skill with explicit PR numbers and `-R owner/repo` under JJ. Posting requires user authorization.
 
 Calldiff needs network access on first use. Its CLI version is pinned; Bun resolves transitive dependencies into its cache.
 

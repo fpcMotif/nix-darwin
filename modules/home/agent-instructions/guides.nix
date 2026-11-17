@@ -9,7 +9,22 @@ let
     qualityAndStyle = ./shared/quality-and-style.md;
     humanDocuments = ./shared/human-documents.md;
     plainEnglish = ./shared/plain-english.md;
+    searchRules = ./shared/search-rules.md;
   };
+  guidesSection = name: { developmentTarget, humanDocumentsTarget }:
+    let
+      languagesDir = "~/${builtins.dirOf developmentTarget}/languages";
+    in
+    builtins.toFile "${name}-guides.md" (''
+      ## Guides
+
+      - **Develop**: Before choosing a shell command, adding an environment variable, using version control, or setting up Git hooks, read `~/${developmentTarget}`.
+      - **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `${languagesDir}/typescript.md`, `python.md`, `go.md`, or `rust.md`.
+    '' + lib.optionalString (humanDocumentsTarget != null) ''
+      - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/${humanDocumentsTarget}`.
+    '' + ''
+      - **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/${developmentTarget}`.
+    '');
   languageNames = [ "typescript" "python" "go" "rust" ];
   languageGuide = guidanceDir: language:
     let
@@ -34,7 +49,6 @@ let
     , startupAdapter
     , developmentTarget
     , developmentAdapter ? null
-    , developmentExtras ? [ ]
     , humanDocumentsTarget ? null
     , plainEnglish ? true
     }:
@@ -42,11 +56,13 @@ let
       host =
         {
           startup = mkGuide "${name}-agents.md" startupTarget startupAdapter ([
+            (guidesSection name { inherit developmentTarget humanDocumentsTarget; })
+            shared.searchRules
             shared.workingContract
             shared.qualityAndStyle
           ] ++ lib.optional plainEnglish shared.plainEnglish ++ startupSections);
           development = mkGuide "${name}-development.md" developmentTarget developmentAdapter
-            ([ shared.development ] ++ developmentExtras ++ developmentSections);
+            ([ shared.development shared.filesystemLookups ] ++ developmentSections);
           languages = lib.genAttrs languageNames (languageGuide (builtins.dirOf developmentTarget));
         }
         // lib.optionalAttrs (humanDocumentsTarget != null) {
@@ -68,7 +84,6 @@ let
       startupTarget = "AGENTS.md";
       startupAdapter = ./AGENTS.md;
       developmentTarget = ".config/agent-guidance/development.md";
-      developmentExtras = [ shared.filesystemLookups ];
       humanDocumentsTarget = ".config/agent-guidance/human-documents.md";
     };
     codex = mkHost {
@@ -85,7 +100,6 @@ let
       startupAdapter = ./omp/agent/AGENTS.md;
       developmentTarget = ".omp/agent/guidance/development.md";
       developmentAdapter = ./omp/agent/guidance/development.md;
-      developmentExtras = [ shared.filesystemLookups ];
       humanDocumentsTarget = ".omp/agent/guidance/human-documents.md";
     };
     claude = mkHost {

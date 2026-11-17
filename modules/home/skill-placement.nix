@@ -61,7 +61,7 @@ let
     codex = [ "codex" "agents" ];
     droid = [ "factory" "agents" ];
     antigravity = [ "gemini" ];
-    omp = [ "omp" "omp-skills" ];
+    omp = [ "omp" "omp-skills" "agents" ];
     pi = [ "pi" ];
     opencode = [ "opencode" ];
     crush = [ "crush" ];
@@ -161,6 +161,7 @@ in
 
     martin.agentSurface.skillPlacement = {
       inherit hostDirs links harnessReads visibility offLinks;
+      idsByHost = hostIds;
       offIds = lib.mapAttrs (_: states: lib.attrNames (lib.filterAttrs (_: state: state == "off") states)) visibility;
       pickerDirs = lib.getAttrs audiences.pickers hostDirs;
       targetsById = lib.mapAttrs (id: dirsByHost: map (dir: "${dir}/${id}") (lib.attrValues dirsByHost)) placed;

@@ -11,7 +11,8 @@ Before this, Claude and Codex each turned off skills that placement had just ins
 
 ## Rules
 
-- A harness reads a fixed set of skill hosts (`harnessReads`). A folder not confirmed for a harness counts as not read, so its skills are `absent` there. Confirmed: Codex reads `.codex/skills` and `.agents/skills`, Droid reads `.factory/skills` and `.agents/skills`, and Antigravity and agy read `.gemini/config/skills`.
+- A harness reads a fixed set of skill hosts (`harnessReads`). A folder not confirmed for a harness counts as not read, so its skills are `absent` there. Confirmed: Codex reads `.codex/skills` and `.agents/skills`, Droid reads `.factory/skills` and `.agents/skills`, omp reads its two `.omp/agent` folders and `.agents/skills` (its loader names "user home" `.agents/skills`), and Antigravity and agy read `.gemini/config/skills`.
+- `integration-configurations-eval` also fails when a guide points at something its reader cannot reach. A skill pointer is written as `` `id` skill `` and resolves when its harness has the skill `on`, or when a Claude plugin supplies it. The shared `~/AGENTS.md` guide resolves against `~/.agents/skills`. A file pointer is a `~/` path that Home Manager installs or that the user owns (`~/devv`, `~/nix-config`, `~/.codex/config.toml`). Guides use `~/`, never `/Users/`.
 - Bundle skills are recorded, not linked: `bundleSkills` lists the ids and the audience that the `agent-skills` input links them into.
 - A skill that another tool installs, such as `review` from `~/.skillshub`, is declared per skill host in `foreignSkills`, so a harness can still turn it off.
 - Claude Code plugin skills and **Parked skills** stay outside the module. Only Claude has plugins.
