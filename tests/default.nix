@@ -198,7 +198,8 @@ lib.fix (checks: {
           content = contentForHost host;
           links = builtins.filter
             (guide: guide.target != host.startup.target
-              && !(builtins.elem guide (lib.attrValues host.languages)))
+              && !(builtins.elem guide (lib.attrValues host.languages))
+              && !(builtins.elem guide host.extras))
             host.guides;
           tools = requiredTools ++ lib.optional (name == "claude") "fff";
         in

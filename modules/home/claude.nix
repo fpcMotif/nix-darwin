@@ -13,7 +13,7 @@ let
 
   mkSkill = from: path: packages: { inherit from path packages; };
 
-  inherit (config.martin.agentSurface) guideCatalog skillTargetDirs claudeHooks;
+  inherit (config.martin.agentSurface) skillTargetDirs claudeHooks;
 
   # `link` points every target at the same store SKILL.md files. Pi de-dupes
   # skills by realpath, so the shared store paths collapse across picker dirs.
@@ -485,7 +485,6 @@ in
   martin.agentSurface.skillsOff.claude = claudeHiddenSkillIds;
 
   home.file =
-    lib.mapAttrs (_: source: { inherit source; }) (guideCatalog.filesFor [ "claude" ]) //
     {
       # Curation lists for scripts/verify-agent-skills.sh, so it never restates
       # them. Covers every picker dir; regenerated every switch.
@@ -506,10 +505,6 @@ in
         source = ./claude/statusline-command.sh;
         executable = true;
       };
-
-      ".claude/search-eval.md".source = ./claude/search-eval.md;
-      ".claude/search-routing.md".source = ./claude/search-routing.md;
-      ".claude/references/search-routing-examples.md".source = ./claude/references/search-routing-examples.md;
 
       ".claude/pstack-models.md".source = pstackModelsSheet;
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };

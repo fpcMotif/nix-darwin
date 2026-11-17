@@ -127,11 +127,11 @@ let
           installed = lib.attrNames darwinHome.home.file;
           userOwned = [ "devv" "nix-config" ".codex/config.toml" ];
           readers = {
-            claude = { harness = "claude"; extras = [ ../../modules/home/claude/search-routing.md ]; };
-            codex = { harness = "codex"; extras = [ ../../modules/home/agent-instructions/codex/guidance/setup.md ]; };
-            omp = { harness = "omp"; extras = [ ]; };
-            antigravity = { harness = "antigravity"; extras = [ ]; };
-            general = { harness = null; extras = [ ]; };
+            claude = "claude";
+            codex = "codex";
+            omp = "omp";
+            antigravity = "antigravity";
+            general = null;
           };
           matches = regex: text: lib.concatMap (m: if builtins.isList m then [ (builtins.head m) ] else [ ]) (builtins.split regex text);
           under = prefix: path: path == prefix || lib.hasPrefix "${prefix}/" path;
@@ -143,13 +143,15 @@ let
             else (placement.visibility.${harness}.${id} or "absent") == "on"
               || (harness == "claude" && builtins.elem id manifest.pluginProvided);
           failures = lib.concatLists (lib.mapAttrsToList
-            (name: reader:
+            (name: harness:
               let
-                text = lib.concatMapStrings (guide: guide.content) guideCatalog.hosts.${name}.guides
-                  + lib.concatMapStrings builtins.readFile reader.extras;
+                host = guideCatalog.hosts.${name};
+                linkedFromStartup = guide: !(builtins.elem guide host.extras)
+                  || lib.hasInfix "~/${guide.target}" host.startup.content;
+                text = lib.concatMapStrings (guide: guide.content) (builtins.filter linkedFromStartup host.guides);
               in
               map (p: "${name}: ${p}") (builtins.filter (p: !(fileResolves p)) (matches "(~/[A-Za-z0-9._/-]+)" text))
-              ++ map (id: "${name}: `${id}` skill") (builtins.filter (id: !(skillResolves reader.harness id)) (matches "`([a-z0-9-]+)` skill" text))
+              ++ map (id: "${name}: `${id}` skill") (builtins.filter (id: !(skillResolves harness id)) (matches "`([a-z0-9-]+)` skill" text))
               ++ map (p: "${name}: ${p}") (matches "(/Users/[A-Za-z0-9._/-]+)" text))
             readers);
         in
@@ -502,19 +504,29 @@ let
         "${prefix} Codex LSP must have no activation writer; desktop scaffolding must respect dry runs")
 
       (helpers.assertTest "${prefix}-agent-guide-files"
-        (prefix != "darwin" || lib.all
+        (lib.all
           (path: builtins.hasAttr path homeData.file && !homeData.file.${path}.force)
-          ([
+          (guideTargets ++ lib.optionals (prefix == "darwin") [
             ".codex/fast.config.toml"
             ".codex/fast-low.config.toml"
             ".codex/plan.config.toml"
             ".codex/deep.config.toml"
-            ".codex/guidance/setup.md"
             ".config/agent-routing/omp.yml"
             ".config/agent-routing/omp-economy.yml"
             ".config/agent-routing/README.md"
-          ] ++ guideTargets))
+          ]))
         "${prefix} catalog guides and agent profiles must use non-forced Home Manager files")
+
+      (helpers.assertTest "${prefix}-agent-guide-backup"
+        (lib.all
+          (path: lib.hasInfix (lib.escapeShellArg path) homeActivation.backupAgentInstructions.data)
+          (guideTargets ++ [
+            ".codex/guidance/setup.md"
+            ".claude/search-routing.md"
+            ".claude/references/search-routing-examples.md"
+            ".claude/search-eval.md"
+          ]))
+        "${prefix} must archive every catalog guide, extras included, before Home Manager links it")
 
       (helpers.assertTest "${prefix}-codex-user-config-writable"
         (prefix != "darwin" ||
