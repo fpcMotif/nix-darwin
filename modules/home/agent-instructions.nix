@@ -30,6 +30,11 @@ in
 lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
   home.file = lib.mapAttrs (_: source: { inherit source; }) files;
 
+  # qa and request-refactor-plan stay off to mirror the Windows Codex budget
+  # trim. review comes from ~/.skillshub, which Nix does not place.
+  martin.agentSurface.foreignSkills.agents = [ "review" ];
+  martin.agentSurface.skillsOff.codex = [ "qa" "request-refactor-plan" "review" ];
+
   # Codex writes model, reasoning, project-trust, and UI state here. Keep this
   # user layer writable while Nix supplies lower-precedence defaults in /etc.
   home.activation.ensureWritableCodexConfig = lib.hm.dag.entryAfter [ "linkGeneration" ] ''

@@ -73,8 +73,12 @@ A skill that is in this flake's bundle *and* declared by an enabled Claude Code 
 The drift checks over the curation lists: Tier 1 `unit-skill-hygiene` (hermetic — exclusion terms still name live upstream skills, no vendored fork shadows a promoted id, no `transform` returns to a mattpocock skill) and Tier 2 `just verify-skills` (live — every id advertised to Claude exactly once, every hidden id genuinely replaced by the plugin, every other agent still sees the full bundle). Deliberately not called a "health check": `martin.healthCheck` already owns that term for the macOS health report.
 
 **Skill placement**:
-The module in `modules/home/skill-placement.nix` that decides which host dirs link each skill. Callers declare `martin.agentSurface.skills.<id> = { source; audience; }`. The module returns the read-only `skillPlacement` record with the links, picker dirs, and targets per id. Personal skills declare their audiences in `modules/home/skills/personal/placement.nix`.
+The module in `modules/home/skill-placement.nix` that decides which host dirs link each skill. Callers declare `martin.agentSurface.skills.<id> = { source; audience; }`. The module returns the read-only `skillPlacement` record with the links, picker dirs, targets per id, and **Skill visibility**. Personal skills declare their audiences in `modules/home/skills/personal/placement.nix`.
 _Avoid_: manifest (the retired `manifest.json`).
+
+**Skill visibility**:
+The answer, per harness and skill, of whether the harness can use the skill: `on`, `off`, or `absent`. `absent` means no skill host the harness reads holds the skill. `off` means a host it reads holds the skill, and the harness's own settings turn it off (Claude's `skillOverrides`, Codex's `skills.config`). Skill placement computes it as `skillPlacement.visibility` from placed skills, the recorded `bundleSkills`, `foreignSkills`, and each harness's `skillsOff` list. Claude's and Codex's off settings are generated from it (ADR-0019). Plugin skills and parked skills are outside it.
+_Avoid_: health check (the macOS health report owns that term).
 
 **Skill audience**:
 A named set of skill hosts. `pickers` is every picker target except Droid. `everywhere` is agents, claude, codex, gemini, skillshub, and omp. `outside-claude` is agents, gemini, and omp. `codex-family` is agents, codex, and gemini. A skill that needs another set lists its hosts directly.

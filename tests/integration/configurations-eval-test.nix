@@ -69,6 +69,54 @@ let
         && builtins.elem ".gemini/config/skills" targetDirs
       )
       "cleanupLegacyDotfiles should sweep every skill picker dir from the Agent surface catalog, .gemini/config/skills included")
+
+    (helpers.assertTest "darwin-skill-visibility-states"
+      (
+        let visibility = darwinHome.martin.agentSurface.skillPlacement.visibility or { };
+        in (visibility.codex.qa or null) == "off"
+          && (visibility.codex.request-refactor-plan or null) == "off"
+          && (visibility.codex.show-me or null) == "on"
+          && (visibility.claude.notebooklm or null) == "off"
+          && (visibility.antigravity.notebooklm or null) == "on"
+          && (visibility.claude.show-me or null) == "on"
+          && (visibility.omp.jj or null) == "absent"
+          && lib.all
+          (harness: lib.all (id: (visibility.${harness}.${id} or "absent") == "off")
+            darwinHome.martin.agentSurface.skillsOff.${harness})
+          (lib.attrNames darwinHome.martin.agentSurface.skillsOff)
+      )
+      "Skill visibility should give each harness on, off, or absent: Codex turns qa off, only Claude turns notebooklm off, and omp cannot see the picker-only jj")
+
+    (helpers.assertTest "darwin-codex-skill-off-entries"
+      (
+        let
+          codexToml = darwinConfig.environment.etc."codex/config.toml".text;
+          offEntry = path: lib.hasInfix "path = \"/Users/${user}/${path}/SKILL.md\"\nenabled = false" codexToml;
+        in
+        lib.all offEntry [
+          ".agents/skills/qa"
+          ".codex/skills/qa"
+          ".agents/skills/request-refactor-plan"
+          ".codex/skills/request-refactor-plan"
+          ".agents/skills/review"
+        ]
+        && !(lib.hasInfix "migrate-to-shoehorn" codexToml)
+        && !(lib.hasInfix ".codex/skills/review/" codexToml)
+      )
+      "the Codex config should disable each Codex off skill in every folder Codex reads that holds it, and nothing that is not installed")
+
+    (helpers.assertTest "darwin-claude-hidden-matches-visibility"
+      (
+        let
+          manifest = builtins.fromJSON darwinHome.home.file.".config/agent-skills/manifest.json".source.text;
+          claudeOff = lib.attrNames (lib.filterAttrs (_: state: state == "off")
+            (darwinHome.martin.agentSurface.skillPlacement.visibility.claude or { }));
+        in
+        claudeOff != [ ]
+        && builtins.elem "notebooklm" claudeOff
+        && lib.sort lib.lessThan (lib.unique manifest.claudeHidden) == lib.sort lib.lessThan claudeOff
+      )
+      "Claude's hidden list should be exactly the skills Skill visibility marks off for Claude")
   ];
 
   workspaceBackendChecks = [

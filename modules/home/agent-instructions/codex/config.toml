@@ -467,30 +467,6 @@ global = "zed"
 [desktop.open-in-target-preferences.perPath]
 "/Users/martinfan/nix-config" = "zed"
 
-# Skills disabled to mirror the 2026-07-15 Windows skills-budget trim.
-# Only the skills that actually exist on this Mac are listed here — most of
-# the Windows-disabled set (lark-*, cloudflare-*, omx-setup, hud, help, etc.)
-# isn't installed on this machine at all, so there was nothing to mirror for those.
-[[skills.config]]
-path = "/Users/martinfan/.agents/skills/migrate-to-shoehorn/SKILL.md"
-enabled = false
-
-[[skills.config]]
-path = "/Users/martinfan/.agents/skills/qa/SKILL.md"
-enabled = false
-
-[[skills.config]]
-path = "/Users/martinfan/.agents/skills/request-refactor-plan/SKILL.md"
-enabled = false
-
-[[skills.config]]
-path = "/Users/martinfan/.agents/skills/review/SKILL.md"
-enabled = false
-
-[[skills.config]]
-path = "/Users/martinfan/.codex/skills/review/SKILL.md"
-enabled = false
-
 [marketplaces.openai-bundled]
 source_type = "local"
 source = "/Users/martinfan/.codex/.tmp/bundled-marketplaces/openai-bundled"
