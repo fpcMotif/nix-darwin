@@ -323,6 +323,16 @@ lib.fix (checks: {
     touch $out
   '';
   unit-claude-settings-ownership = callTest ./unit/claude-settings-ownership-test.nix { };
+  unit-cleanup-legacy-dotfiles = onlyOn "darwin" "unit-cleanup-legacy-dotfiles"
+    (shellTest "unit-cleanup-legacy-dotfiles" {
+      script = ./unit/cleanup-legacy-dotfiles-test.sh;
+      inputs = [ pkgs.coreutils pkgs.jq ];
+      args = [
+        (pkgs.writeText "cleanup-legacy-dotfiles.sh"
+          self.darwinConfigurations."f".config.home-manager.users.martinfan.home.activation.cleanupLegacyDotfiles.data)
+        "${pkgs.coreutils}/bin/true"
+      ];
+    });
 
   # Drives wt and djo through create, switch, list, remove, hooks, and a
   # backend switch in disposable repositories. It uses the config files and Zsh

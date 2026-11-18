@@ -5,10 +5,19 @@ let
 in
 {
   home.activation.cleanupLegacyDotfiles = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-    remove_legacy_path() {
+    remove_path() {
       if [ -e "$1" ] || [ -L "$1" ]; then
         rm -rf -- "$1"
       fi
+    }
+
+    remove_legacy_path() {
+      if [ -L "$1" ]; then
+        case "$(${pkgs.coreutils}/bin/readlink -f "$1" || true)" in
+          /nix/store/*) return 0 ;;
+        esac
+      fi
+      remove_path "$1"
     }
 
     remove_legacy_path "$HOME/.zshrc"
@@ -50,12 +59,12 @@ in
     fi
     # aily-md is a per-project skill (Feishu aily docs); it leaves the global pickers.
     for d in ${skillTargetDirs}; do
-      if [ -L "$HOME/$d/aily-md" ]; then remove_legacy_path "$HOME/$d/aily-md"; fi
+      if [ -L "$HOME/$d/aily-md" ]; then remove_path "$HOME/$d/aily-md"; fi
     done
     # hyperframes and related video skills are per-project; prune them from global pickers.
     for d in ${skillTargetDirs} .gemini/skills; do
       for skill in hyperframes hyperframes-cli faceless-explainer hyperframes-animation hyperframes-registry hyperframes-creative general-video hyperframes-core hyperframes-audio hyperframes-studio media-use hyperframes-keyframes; do
-        if [ -L "$HOME/$d/$skill" ] || [ -d "$HOME/$d/$skill" ]; then remove_legacy_path "$HOME/$d/$skill"; fi
+        if [ -L "$HOME/$d/$skill" ] || [ -d "$HOME/$d/$skill" ]; then remove_path "$HOME/$d/$skill"; fi
       done
     done
     remove_legacy_path "$HOME/.claude/claude.md"
