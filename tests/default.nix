@@ -501,7 +501,7 @@ lib.fix (checks: {
 
   smoke-build-agent-trace = pkgs.runCommand "smoke-build-agent-trace" { } ''
     echo "Building tools/agent-trace/go..."
-    test -x ${pkgs.martin.agent-trace}/bin/agent-trace
+    test -x ${lib.getExe pkgs.martin.agent-trace}
     touch $out
   '';
 

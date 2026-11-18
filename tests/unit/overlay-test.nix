@@ -12,6 +12,7 @@ let
   };
 
   expected = [
+    "agent-trace"
     "bun-canary-bin"
     "dojjo-bin"
     "hammerspoon"
@@ -21,6 +22,7 @@ let
   ];
 
   expectedMainPrograms = {
+    agent-trace = "agent-trace";
     bun-canary-bin = "bun";
     dojjo-bin = "djo";
     oh-my-pi = "omp";

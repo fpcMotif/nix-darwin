@@ -1,4 +1,4 @@
-# Claude Code Session Transcript Schema (contract for agent-trace implementations)
+# Claude Code Session Transcript Schema (contract for the agent-trace implementation)
 
 Source: `~/.claude/projects/<project-slug>/<session-uuid>.jsonl` — one JSON record per line. Tolerate malformed lines (skip, count them). Project slug = cwd path with `/` → `-`.
 

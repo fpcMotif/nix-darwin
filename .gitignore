@@ -27,8 +27,8 @@
 # Bun tool dependencies (skill-router uses bun run, not a Nix node_modules).
 /tools/skill-router/node_modules/
 
-# Compiled agent-trace binaries. The Go sources are checked in; the built
-# artifacts are host-specific and rebuildable (`go build`, `cargo build`).
+# Compiled agent-trace binary. The Go sources are checked in. The built
+# binary is host-specific and rebuildable with `go build`.
 /tools/agent-trace/go/agent-trace
 
 # macOS metadata.
