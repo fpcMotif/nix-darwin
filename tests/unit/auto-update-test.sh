@@ -379,6 +379,14 @@ if [ -n "$github_dir" ]; then
   # (tests/unit/build-workflow-test.sh), so only the nightly workflow names it.
   grep -qF 'unit-auto-update' "$github_dir/workflows/auto-update.yml" \
     || fail "auto-update.yml does not run the unit-auto-update check"
+  mode_literals=$(grep -oE "AU_BUMP_MODE == '[^']+'" "$github_dir/workflows/auto-update.yml" | cut -d"'" -f2 || true)
+  [ -n "$mode_literals" ] || fail "auto-update.yml has no AU_BUMP_MODE == '...' comparisons"
+  while IFS= read -r literal; do
+    case "$literal" in
+      full|light) ;;
+      *) fail "auto-update.yml compares AU_BUMP_MODE to '$literal', which au_bump_mode never prints" ;;
+    esac
+  done <<<"$mode_literals"
   guard_line=$(grep -nF 'guard-source-builds' "$github_dir/workflows/build.yml" | head -1 | cut -d: -f1)
   [ -n "$guard_line" ] || fail "build.yml lacks the source-build guard step"
   sys_line=$(grep -nF 'Build darwinConfigurations.f' "$github_dir/workflows/build.yml" | head -1 | cut -d: -f1)
