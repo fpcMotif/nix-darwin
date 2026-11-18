@@ -4,7 +4,7 @@ cd "$(au_repo_root)"
 
 weekday=$(au_today_weekday)
 # A hand-maintained input list would rot the first time an input is added.
-mapfile -t all_inputs < <(nix flake metadata --json | jq -r '.locks.nodes.root.inputs | keys[]')
+mapfile -t all_inputs < <(nix flake metadata --json | jq -r '.locks.nodes.root.inputs | keys[]' | au_without_dedicated_inputs)
 [ "${#all_inputs[@]}" -gt 0 ] || { echo "flake-inputs: no top-level inputs found" >&2; exit 1; }
 
 mapfile -t inputs_to_bump < <(au_inputs_to_bump "$weekday" "${all_inputs[@]}")

@@ -481,6 +481,42 @@ https://github.com/dmtrKovalenko/fff/releases/download/0.11.1-nightly.ab3002a/ff
   unset -f write_stub fff_run
 fi
 
+got=$(printf '%s\n' charm-nur darwin nixpkgs | au_without_dedicated_inputs | tr '\n' ' ')
+[ "$got" = "darwin nixpkgs " ] || fail "au_without_dedicated_inputs kept a dedicated input: $got"
+got=$(AU_DEDICATED_INPUTS="charm-nur foo" au_without_dedicated_inputs <<<$'charm-nur\ncharm\nnur\nfoo\ndarwin' | tr '\n' ' ')
+[ "$got" = "charm nur darwin " ] || fail "au_without_dedicated_inputs mishandled multiple or substring inputs: $got"
+[ -n "${AU_DEDICATED_INPUTS:-}" ] || fail "AU_DEDICATED_INPUTS must be defined"
+
+if [ -n "$scripts_dir" ]; then
+  read -ra dedicated_inputs <<<"$AU_DEDICATED_INPUTS"
+  dedicated_list=$(printf '%s\n' "${dedicated_inputs[@]}")
+  seen_targets=""
+  for s in "$scripts_dir"/update-*.sh; do
+    [ "$(basename "$s")" = "update-flake-inputs.sh" ] && continue
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      read -ra tokens <<<"${line#*nix flake update}"
+      bumping=()
+      for tok in "${tokens[@]}"; do
+        case "$tok" in '|'*|';'*|'&'*|'<'*|'>'*|[0-9]*'>'*) break ;; *) bumping+=("$tok") ;; esac
+      done
+      [ "${#bumping[@]}" -gt 0 ] \
+        || fail "$(basename "$s") runs bare 'nix flake update' alongside update-flake-inputs.sh"
+      for target in "${bumping[@]}"; do
+        has_word "$target" "$dedicated_list" \
+          || fail "$(basename "$s") bumps '$target' without listing it in AU_DEDICATED_INPUTS"
+        seen_targets+="$target"$'\n'
+      done
+    done < <(grep -v '^[[:space:]]*#' "$s" | grep -F 'nix flake update' || true)
+  done
+  for input in "${dedicated_inputs[@]}"; do
+    [ "$(printf '%s' "$seen_targets" | grep -cxF "$input" || true)" -eq 1 ] \
+      || fail "dedicated input '$input' needs exactly one updater that runs 'nix flake update $input'"
+  done
+  grep -qF 'au_without_dedicated_inputs' "$scripts_dir/update-flake-inputs.sh" \
+    || fail "update-flake-inputs.sh does not skip dedicated inputs"
+fi
+
 grep -qF 'archive --format=tar' "$auto_switch"
 grep -qF 'snapshot=$(mktemp -d' "$auto_switch"
 if grep -qF 'git+file://' "$auto_switch"; then
