@@ -81,6 +81,11 @@ lib.fix (checks: {
     inputs = [ pkgs.gnugrep ];
     args = [ ../pkgs ../scripts ];
   };
+  unit-git-merge-pkgnix = shellTest "unit-git-merge-pkgnix" {
+    script = ./unit/git-merge-pkgnix-test.sh;
+    inputs = [ pkgs.git pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.diffutils pkgs.coreutils ];
+    args = [ ../scripts ];
+  };
 
   # Current-state integrity for the maintained documents: file-level checks
   # fast enough to run on every change.

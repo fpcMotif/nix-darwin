@@ -84,6 +84,7 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `unit-pstack-hygiene`               | Every pstack id `claude.nix` installs exists upstream, no foreign spelling survives the transform, and `poteto-mode` keeps its required rewrites. |
 | `unit-justfile`                     | The `_daemon` probe uses one working socket check for both the repair and its verification, the recipes survive a wiped `/run`, and the check names come from the flake. |
 | `unit-rolling-pins`                 | Every pin at a URL without a version has a hash-driven updater, and no `rolling_pins` entry is left for a package that moved to a versioned URL. |
+| `unit-git-merge-pkgnix`             | Runs `scripts/git-merge-pkgnix.sh` on colliding pins for semver ordering, hash pairing, and build-metadata ties. Unparsable versions leave conflict markers. |
 | `unit-shell-guard`                  | Runs the shell-guard hook against its deny and allow cases. |
 | `unit-search-guard`                 | Runs the search-guard hook against its uncapped-search, umbrella-root, and long-file-read cases. |
 | `unit-agy-guard`                    | The Antigravity shell guard applies the Claude shell-guard rules to agent shell commands. |
