@@ -65,9 +65,6 @@ enabled = true
 [plugins."google-calendar@openai-curated"]
 enabled = true
 
-[plugins."git@frad-dotclaude"]
-enabled = true
-
 [plugins."codex-lsp-toolchain@local-lsp"]
 enabled = true
 
@@ -87,9 +84,6 @@ enabled = true
 enabled = true
 
 [plugins."supabase@openai-curated"]
-enabled = true
-
-[plugins."superpowers@openai-curated"]
 enabled = true
 
 [plugins."remotion@openai-curated"]
