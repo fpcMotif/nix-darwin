@@ -5,12 +5,12 @@
 }:
 
 let
-  version = "0.24.1";
+  version = "0.25.0";
 
   sources = {
     "aarch64-darwin" = {
       url = "https://github.com/modem-dev/hunk/releases/download/v${version}/hunkdiff-darwin-arm64.tar.gz";
-      hash = "sha256-X5r9Qdgl4vh5WLBwLneeUtOCB8C0LVMW7+VCGPNbTX0=";
+      hash = "sha256-Kld5CbR4JCvHWYK+MLwsXr+aAET8OKrZSxEat+mpkuA=";
     };
   };
 
