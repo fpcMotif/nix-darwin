@@ -77,6 +77,7 @@ let
       args = [ ];
       extensions = { ".swift" = "swift"; };
       targets = [ "claude" "codex" ];
+      darwinOnly = true;
     };
     pyright = {
       package = "basedpyright";
@@ -124,8 +125,11 @@ let
     "lua"
   ];
 
+  hostIsDarwin = pkgs != null && pkgs.stdenv.hostPlatform.isDarwin;
+  runsOnHost = s: !(s.darwinOnly or false) || hostIsDarwin;
+
   serversFor = target:
-    lib.filterAttrs (_: s: builtins.elem target s.targets) servers;
+    lib.filterAttrs (_: s: builtins.elem target s.targets && runsOnHost s) servers;
 
   tomlList = items:
     lib.concatMapStringsSep ", " (item: ''"${item}"'') items;
@@ -187,7 +191,7 @@ let
   packagesForTargets = targets:
     assert pkgs != null;
     lib.unique (lib.concatMap
-      (s: lib.optional (s.package != null && lib.any (t: builtins.elem t s.targets) targets) pkgs.${s.package})
+      (s: lib.optional (s.package != null && runsOnHost s && lib.any (t: builtins.elem t s.targets) targets) pkgs.${s.package})
       (lib.attrValues servers));
 in
 assert lib.all

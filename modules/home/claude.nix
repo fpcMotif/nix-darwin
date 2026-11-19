@@ -415,13 +415,6 @@ let
       "interfaces@interfaces" = true;
     } // claudeManagedPlugins;
     extraKnownMarketplaces = {
-      "frad-dotclaude" = {
-        source = {
-          source = "github";
-          repo = "FradSer/dotclaude";
-        };
-        autoUpdate = true;
-      };
       "interfaces" = {
         source = {
           source = "github";
