@@ -139,6 +139,10 @@ let
     (helpers.assertTest "darwin-home-packages-include-swiftlint"
       (hasPackage "swiftlint" homeConfig.home.packages)
       "Darwin Home Manager packages should include Swift/iOS lint tooling")
+
+    (helpers.assertTest "darwin-home-packages-include-sourcekit-lsp"
+      (hasPackage "sourcekit-lsp" homeConfig.home.packages)
+      "Darwin Home Manager packages should include the Swift language server")
   ];
 
   linuxChecks = lib.optionals (!isDarwin) [
