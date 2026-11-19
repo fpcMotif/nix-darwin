@@ -1,6 +1,6 @@
 { pkgs
 , lib
-, evalScope ? "auto"
+, evalScope
 , darwinConfigurationInput ? null
 , darwinDojjoConfigurationInput ? null
 , x230ConfigurationInput ? null
@@ -14,17 +14,13 @@ let
   guideTargets = guideCatalog.targets;
 
   user = "martinfan";
-  selectedScope =
-    if evalScope == "auto" then
-      (if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "nixos")
-    else evalScope;
 
-  darwinConfiguration = if selectedScope == "darwin" then darwinConfigurationInput else null;
+  darwinConfiguration = if evalScope == "darwin" then darwinConfigurationInput else null;
   darwinConfig = if darwinConfiguration != null then darwinConfiguration.config else null;
   darwinSystem = if darwinConfiguration != null then darwinConfiguration.system else null;
   darwinHome = if darwinConfig != null then darwinConfig.home-manager.users.${user} else null;
-  x230Configuration = if selectedScope == "nixos" then x230ConfigurationInput else null;
-  vmConfiguration = if selectedScope == "nixos" then vmConfigurationInput else null;
+  x230Configuration = if evalScope == "nixos" then x230ConfigurationInput else null;
+  vmConfiguration = if evalScope == "nixos" then vmConfigurationInput else null;
   x230Config = if x230Configuration != null then x230Configuration.config else null;
   vmConfig = if vmConfiguration != null then vmConfiguration.config else null;
   x230Home = if x230Config != null then x230Config.home-manager.users.${user} else null;
@@ -46,156 +42,19 @@ let
 
   # The real host with the experimental backend selected (tests/default.nix).
   # Only the default host is built by `just switch`.
-  darwinDojjo = if selectedScope == "darwin" then darwinDojjoConfigurationInput else null;
+  darwinDojjo = if evalScope == "darwin" then darwinDojjoConfigurationInput else null;
   darwinDojjoHome = darwinDojjo.config.home-manager.users.${user};
 
-  agentSurfaceChecks = [
-    (helpers.assertTest "darwin-doc-lock-adapters"
-      (darwinConfig.environment.etc ? "codex/requirements.toml"
-        && darwinHome.xdg.configFile ? "hk/config.pkl"
-        && darwinHome.home.file ? ".claude/hooks/doc-lock.sh"
-        && lib.hasInfix "## Docs lock" darwinHome.home.file.".claude/CLAUDE.md".source.text)
-      "host f should wire doc-lock into Codex, hk, Claude hooks, and the agent guides")
+  ctx = {
+    inherit pkgs lib helpers guideCatalog guideTargets user
+      darwinConfiguration darwinConfig darwinSystem darwinHome
+      x230Configuration vmConfiguration x230Config vmConfig x230Home vmHome
+      evalsOk toplevelEvaluatesOnNative hasPackage darwinDojjo darwinDojjoHome;
+  };
+  part = file: import file ctx;
 
-    (helpers.assertTest "darwin-cleanup-covers-every-skill-target"
-      (
-        let
-          targetDirs = lib.attrValues darwinHome.martin.agentSurface.skillTargetDirs;
-          purgeLine = lib.findFirst (lib.hasInfix "for skills_rel in ") ""
-            (lib.splitString "\n" darwinHome.home.activation.cleanupLegacyDotfiles.data);
-          purgedDirs = lib.splitString " " (lib.removeSuffix "; do" (lib.trim purgeLine));
-        in
-        lib.all (dir: builtins.elem dir purgedDirs) targetDirs
-        && builtins.elem ".gemini/config/skills" targetDirs
-      )
-      "cleanupLegacyDotfiles should sweep every skill picker dir from the Agent surface catalog, .gemini/config/skills included")
-
-    (helpers.assertTest "darwin-skill-visibility-states"
-      (
-        let visibility = darwinHome.martin.agentSurface.skillPlacement.visibility or { };
-        in (visibility.codex.qa or null) == "off"
-          && (visibility.codex.request-refactor-plan or null) == "off"
-          && (visibility.codex.show-me or null) == "on"
-          && (visibility.claude.notebooklm or null) == "off"
-          && (visibility.antigravity.notebooklm or null) == "on"
-          && (visibility.claude.show-me or null) == "on"
-          && (visibility.omp.jj or null) == "on"
-          && (visibility.claude.varlock-setup or null) == "absent"
-          && lib.all
-          (harness: lib.all (id: (visibility.${harness}.${id} or "absent") == "off")
-            darwinHome.martin.agentSurface.skillsOff.${harness})
-          (lib.attrNames darwinHome.martin.agentSurface.skillsOff)
-      )
-      "Skill visibility should give each harness on, off, or absent: Codex turns qa off, only Claude turns notebooklm off, omp sees jj through ~/.agents/skills, and Claude cannot see the outside-claude varlock-setup")
-
-    (helpers.assertTest "darwin-codex-skill-off-entries"
-      (
-        let
-          codexToml = darwinConfig.environment.etc."codex/config.toml".text;
-          offEntry = path: lib.hasInfix "path = \"/Users/${user}/${path}/SKILL.md\"\nenabled = false" codexToml;
-        in
-        lib.all offEntry [
-          ".agents/skills/qa"
-          ".codex/skills/qa"
-          ".agents/skills/request-refactor-plan"
-          ".codex/skills/request-refactor-plan"
-          ".agents/skills/review"
-        ]
-        && !(lib.hasInfix "migrate-to-shoehorn" codexToml)
-        && !(lib.hasInfix ".codex/skills/review/" codexToml)
-      )
-      "the Codex config should disable each Codex off skill in every folder Codex reads that holds it, and nothing that is not installed")
-
-    (helpers.assertTest "darwin-claude-hidden-matches-visibility"
-      (
-        let
-          manifest = builtins.fromJSON darwinHome.home.file.".config/agent-skills/manifest.json".source.text;
-          claudeOff = lib.attrNames (lib.filterAttrs (_: state: state == "off")
-            (darwinHome.martin.agentSurface.skillPlacement.visibility.claude or { }));
-        in
-        claudeOff != [ ]
-        && builtins.elem "notebooklm" claudeOff
-        && lib.sort lib.lessThan (lib.unique manifest.claudeHidden) == lib.sort lib.lessThan claudeOff
-      )
-      "Claude's hidden list should be exactly the skills Skill visibility marks off for Claude")
-
-    (helpers.assertTest "darwin-guide-pointers-resolve"
-      (
-        let
-          placement = darwinHome.martin.agentSurface.skillPlacement;
-          manifest = builtins.fromJSON darwinHome.home.file.".config/agent-skills/manifest.json".source.text;
-          installed = lib.attrNames darwinHome.home.file;
-          userOwned = [ "devv" "nix-config" ".codex/config.toml" ];
-          readers = {
-            claude = "claude";
-            codex = "codex";
-            omp = "omp";
-            antigravity = "antigravity";
-            general = null;
-          };
-          matches = regex: text: lib.concatMap (m: if builtins.isList m then [ (builtins.head m) ] else [ ]) (builtins.split regex text);
-          under = prefix: path: path == prefix || lib.hasPrefix "${prefix}/" path;
-          fileResolves = pointer:
-            let path = lib.removeSuffix "/" (lib.removePrefix "~/" (lib.removeSuffix "." pointer));
-            in lib.any (key: under key path || under path key) installed || lib.any (owned: under owned path) userOwned;
-          skillResolves = harness: id:
-            if harness == null then builtins.elem id (placement.idsByHost.agents or [ ])
-            else (placement.visibility.${harness}.${id} or "absent") == "on"
-              || (harness == "claude" && builtins.elem id manifest.pluginProvided);
-          failures = lib.concatLists (lib.mapAttrsToList
-            (name: harness:
-              let
-                host = guideCatalog.hosts.${name};
-                linkedFromStartup = guide: !(builtins.elem guide host.extras)
-                  || lib.hasInfix "~/${guide.target}" host.startup.content;
-                text = lib.concatMapStrings (guide: guide.content) (builtins.filter linkedFromStartup host.guides);
-              in
-              map (p: "${name}: ${p}") (builtins.filter (p: !(fileResolves p)) (matches "(~/[A-Za-z0-9._/-]+)" text))
-              ++ map (id: "${name}: `${id}` skill") (builtins.filter (id: !(skillResolves harness id)) (matches "`([a-z0-9-]+)` skill" text))
-              ++ map (p: "${name}: ${p}") (matches "(/Users/[A-Za-z0-9._/-]+)" text))
-            readers);
-        in
-        lib.warnIf (failures != [ ]) "unresolved guide pointers: ${lib.concatStringsSep ", " failures}" (failures == [ ])
-      )
-      "every skill and file a guide points to should be reachable by the harness that reads the guide")
-  ];
-
-  workspaceBackendChecks = [
-    (helpers.assertTest "darwin-dojjo-evaluates"
-      (evalsOk darwinDojjo.system)
-      "darwinConfigurations.f with workspaceBackend = dojjo should evaluate")
-
-    (helpers.assertTest "darwin-dojjo-replaces-worktrunk"
-      (darwinDojjoHome.martin.development.workspaceBackend == "dojjo"
-        && darwinDojjoHome.programs.worktrunk.enable == false
-        && !(darwinDojjoHome.xdg.configFile ? "worktrunk/config.toml")
-        && darwinDojjoHome.xdg.configFile ? "dojjo/config.toml"
-        && hasPackage "dojjo-bin" darwinDojjoHome.home.packages
-        && !(hasPackage "worktrunk" darwinDojjoHome.home.packages))
-      "dojjo backend should install djo and its config.toml, and drop wt and its config.toml")
-
-    (helpers.assertTest "darwin-dojjo-zsh-integration"
-      (lib.hasInfix "-dojjo-init.zsh" darwinDojjoHome.programs.zsh.initContent
-        && !(lib.hasInfix "-worktrunk-init.zsh" darwinDojjoHome.programs.zsh.initContent))
-      "dojjo backend should source the build-rendered djo wrapper and completion, not wt's")
-
-    (helpers.assertTest "darwin-dojjo-drops-worktrunk-markers"
-      (!(darwinDojjoHome.home.file ? ".claude/hooks/worktrunk-marker.sh")
-        && darwinDojjoHome.home.activation ? "claudeSettingsOwnership")
-      "dojjo backend should stop installing the Worktrunk marker script and keep the settings reconciler")
-
-    (helpers.assertTest "darwin-dojjo-agent-guidance"
-      (lib.all
-        (target:
-          let guide = darwinDojjoHome.home.file.${target}.source.text;
-          in lib.hasInfix "djo switch --create" guide && !(lib.hasInfix "wt switch" guide))
-        [ ".claude/guidance/development.md" ".codex/guidance/development.md" ".config/agent-guidance/development.md" ])
-      "dojjo backend should render dojjo guidance for every agent host")
-
-    (helpers.assertTest "darwin-default-agent-guidance"
-      (lib.hasInfix "wt switch --create" darwinHome.home.file.".claude/guidance/development.md".source.text)
-      "the default backend should keep Worktrunk guidance")
-  ];
+  agentSurfaceChecks = part ./configurations-eval/agent-surface.nix;
+  workspaceBackendChecks = part ./configurations-eval/workspace-backend.nix;
 
   homeChecks = prefix: homeConfig: expectedHomeDirectory:
     let
@@ -851,53 +710,10 @@ let
   ] ++ workspaceBackendChecks ++ agentSurfaceChecks
   ++ (homeChecks "darwin" darwinHome "/Users/${user}");
 
-  nixosChecks = [
-    (toplevelEvaluatesOnNative "x230" "x86_64-linux" x230Config)
-    (toplevelEvaluatesOnNative "vm-aarch64-utm" "aarch64-linux" vmConfig)
+  nixosChecks = part ./configurations-eval/nixos.nix
+    ++ (homeChecks "x230" x230Home "/home/${user}")
+    ++ (homeChecks "vm-aarch64-utm" vmHome "/home/${user}");
 
-    (helpers.assertTest "x230-host-name"
-      (x230Config.networking.hostName == "x230")
-      "x230 host name should remain x230")
-
-    (helpers.assertTest "x230-zsh-enabled"
-      (x230Config.programs.zsh.enable == true)
-      "x230/NixOS should enable zsh at the system level")
-
-    (helpers.assertTest "vm-aarch64-utm-host-name"
-      (vmConfig.networking.hostName == "vm-aarch64-utm")
-      "aarch64 UTM VM host name should remain vm-aarch64-utm")
-
-    (helpers.assertTest "vm-aarch64-utm-zsh-enabled"
-      (vmConfig.programs.zsh.enable == true)
-      "aarch64 UTM VM should enable zsh at the system level")
-
-    (helpers.assertTest "linux-excludes-darwin-only-agent-packages"
-      (!(hasPackage "sourcegraph-amp" x230Home.home.packages))
-      "Linux Home Manager packages should not include Darwin-only agent packages")
-
-    (helpers.assertTest "linux-excludes-drafts-mcp-activation"
-      (!(lib.hasInfix "drafts-mcp-server" x230Home.home.activation.claudeMcp.data))
-      "Linux Home Manager should not force the Darwin-only Drafts MCP server")
-
-    (helpers.assertTest "linux-zed-editor-disabled"
-      (
-        x230Home.programs.zed-editor.enable == false
-          && vmHome.programs.zed-editor.enable == false
-      )
-      "Linux Home Manager should leave programs.zed-editor off — zed-nightly-bin is Darwin-only")
-
-    (helpers.assertTest "linux-excludes-zed-nightly-bin-package"
-      (
-        !(hasPackage "zed-nightly-bin" x230Home.home.packages)
-          && !(hasPackage "zed-nightly-bin" vmHome.home.packages)
-      )
-      "Linux Home Manager package lists must never include the Darwin-only zed-nightly-bin")
-  ]
-  ++ (homeChecks "x230" x230Home "/home/${user}")
-  ++ (homeChecks "vm-aarch64-utm" vmHome "/home/${user}");
-
-  selectedChecks = if selectedScope == "darwin" then darwinChecks else
-  if selectedScope == "nixos" then nixosChecks
-  else darwinChecks ++ nixosChecks;
+  selectedChecks = if evalScope == "darwin" then darwinChecks else nixosChecks;
 in
 helpers.testSuite "configurations-eval" selectedChecks
