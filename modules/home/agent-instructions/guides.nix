@@ -24,7 +24,7 @@ let
     '' + lib.optionalString (humanDocumentsTarget != null) ''
       - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/${humanDocumentsTarget}`.
     '' + ''
-      - **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/${developmentTarget}`.
+      - **Workspaces**: Before creating a Git worktree or JJ workspace, or landing a subagent's checkout, read Parallel checkouts in `~/${developmentTarget}`.
     '');
   languageNames = [ "typescript" "python" "go" "rust" ];
   languageGuide = guidanceDir: language:

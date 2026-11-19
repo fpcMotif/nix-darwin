@@ -93,6 +93,7 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 | `unit-browser-file-guard`           | The browser file guard hook blocks `file://` URLs sent to the built-in browser pane and passes other URLs. |
 | `unit-context-handoff`              | The context-handoff hook passes the previous transcript path to the next session. |
 | `unit-recall`                       | `recall` reads earlier agent sessions for the current folder. |
+| `unit-agent-checkout`               | `agent-checkout` makes a fresh JJ workspace or Git worktree for a host agent, lands its commits under `@`, and removes it. |
 | `unit-doc-lock`                     | `doc-lock` blocks an agent's new comments at commit for Claude Code, Codex, pi, and omp, and passes a human commit or a granted session. |
 | `unit-doc-lock-extension`           | The pi doc-lock extension blocks a comment edit, a hashline comment, and a Markdown write, names the comment in its reason, and blocks when the checker cannot start. |
 | `unit-comment-lint`                 | Runs the comment-lint fixtures, then lints the comments in every flake `.nix` file. |

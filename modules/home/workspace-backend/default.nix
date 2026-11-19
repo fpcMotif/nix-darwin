@@ -21,7 +21,6 @@ let
   '';
 
   # Use a stable hook path so a wt bump does not strand a store path in settings.json.
-  # Keep worktree creation native so symlinkDirectories and .worktreeinclude still run.
   marker = state: "$HOME/.claude/hooks/worktrunk-marker.sh ${state}";
   markerHooks = [
     { event = "UserPromptSubmit"; matcher = ""; command = marker "working"; }
@@ -30,6 +29,13 @@ let
     { event = "PermissionRequest"; matcher = ""; command = marker "waiting"; }
     { event = "Stop"; matcher = ""; command = marker "waiting"; }
     { event = "SessionEnd"; matcher = ""; command = marker "clear"; }
+  ];
+  # Replaces Claude's built-in `git worktree add`, which ignores JJ and bases subagents on the default branch.
+  # The script links symlinkDirectories and copies .worktreeinclude, which a WorktreeCreate hook disables.
+  agentCheckout = pkgs.martin.agent-checkout;
+  checkoutHooks = [
+    { event = "WorktreeCreate"; matcher = ""; command = "$HOME/.claude/hooks/agent-checkout create"; }
+    { event = "WorktreeRemove"; matcher = ""; command = "$HOME/.claude/hooks/agent-checkout remove"; }
   ];
   markerScript = pkgs.writeShellApplication {
     name = "worktrunk-marker";
@@ -87,6 +93,12 @@ in
       # Under any other backend the reconciler removes these entries from
       # settings.json because only worktrunk installs the marker script.
       martin.agentSurface.claudeHooks.${if backend == "worktrunk" then "add" else "remove"} = markerHooks;
+    }
+
+    {
+      home.packages = [ agentCheckout ];
+      home.file.".claude/hooks/agent-checkout".source = lib.getExe agentCheckout;
+      martin.agentSurface.claudeHooks.add = checkoutHooks;
     }
 
     (lib.mkIf (backend == "worktrunk") {

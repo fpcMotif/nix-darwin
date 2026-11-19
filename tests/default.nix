@@ -301,6 +301,11 @@ lib.fix (checks: {
     inputs = [ pkgs.jq pkgs.coreutils ];
     args = [ (lib.getExe pkgs.martin.recall) ];
   };
+  unit-agent-checkout = shellTest "unit-agent-checkout" {
+    script = ../modules/home/workspace-backend/agent-checkout-test.sh;
+    inputs = [ pkgs.jq pkgs.git pkgs.jujutsu pkgs.coreutils pkgs.gawk pkgs.gnugrep ];
+    args = [ (lib.getExe pkgs.martin.agent-checkout) ];
+  };
   unit-doc-lock = shellTest "unit-doc-lock" {
     script = ../modules/home/doc-lock/doc-lock-test.sh;
     inputs = [ pkgs.jq pkgs.git pkgs.coreutils ];

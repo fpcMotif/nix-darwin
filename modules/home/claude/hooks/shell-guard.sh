@@ -178,6 +178,8 @@ while IFS= read -r seg; do
       case "${words[$i]:-}" in
         add|commit|checkout|switch|stash|reset|restore|rebase|merge|cherry-pick|revert|pull|am|rm|mv)
           in_jj_workspace "$git_dir" && deny "shell-guard: '$git_dir' is a jj workspace, and 'git ${words[$i]}' desyncs jj's working copy. Use jj: add -> nothing (jj tracks every file); commit -> 'jj commit -m MSG'; checkout/switch -> 'jj new REV' or 'jj edit REV'; stash -> 'jj new @-'; reset/restore -> 'jj restore'; rebase -> 'jj rebase'; merge -> 'jj new A B'; pull -> 'jj git fetch'. Read-only git (log, show, diff, blame) stays allowed. The jj skill has the rest." ;;
+        worktree)
+          [ "${words[$((i + 1))]:-}" = add ] && in_jj_workspace "$git_dir" && deny "shell-guard: '$git_dir' is a jj workspace, and a Git worktree is a checkout jj does not track. Run 'jj workspace add --name NAME -r REV ../REPO.NAME'. Bring a checkout's commits back under @ with 'agent-checkout land NAME'." ;;
       esac ;;
   esac
 done <<EOF
