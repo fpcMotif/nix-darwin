@@ -63,6 +63,7 @@ Replace `aarch64-darwin` with `x86_64-linux` on Linux hosts.
 |-------------------------------------|-------------------|
 | `smoke`                             | Test infrastructure itself builds. |
 | `smoke-build-oh-my-pi`              | Darwin-only Oh My Pi package exposes an executable `omp` wrapper and skips on Linux. |
+| `smoke-build-agent-trace`           | `tools/agent-trace/go` compiles and exposes an executable `agent-trace`. |
 | `smoke-build-iets`                  | Darwin-only iets builds with `pkgs/iets/host-system.patch` applied and exposes the classic `nix` name. Fails when a pin bump breaks the patch. Skips on Linux. |
 | `smoke-build-toolchain`             | Required Prek, Oxlint/Oxfmt, Tsgolint, Tsgo, Uv, and Ruff commands exist, plus the shipped canary Bun (and its `bunx` symlink) on Darwin. |
 | `unit-auto-update`                  | Colored update summaries and the ownership-safe archived auto-switch source. |

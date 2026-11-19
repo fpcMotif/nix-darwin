@@ -494,6 +494,12 @@ lib.fix (checks: {
       touch $out
     '');
 
+  smoke-build-agent-trace = pkgs.runCommand "smoke-build-agent-trace" { } ''
+    echo "Building tools/agent-trace/go..."
+    test -x ${pkgs.martin.agent-trace}/bin/agent-trace
+    touch $out
+  '';
+
   smoke-build-iets = onlyOn "darwin" "smoke-build-iets"
     (pkgs.runCommand "smoke-build-iets" { } ''
       echo "Building iets with pkgs/iets/host-system.patch applied..."

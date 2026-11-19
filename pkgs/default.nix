@@ -55,6 +55,7 @@ final: _prev:
       extensions = [ "clippy" "rustfmt" "rust-src" "rust-analyzer" ];
     };
 
+    agent-trace = final.callPackage ./agent-trace.nix { };
     bun-canary-bin = final.callPackage ./bun-canary-bin.nix { };
     calldiff = final.callPackage ./calldiff.nix { };
     doc-lock = final.callPackage ./doc-lock.nix { };
