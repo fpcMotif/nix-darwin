@@ -337,95 +337,40 @@ lib.fix (checks: {
   # Drives wt and djo through create, switch, list, remove, hooks, and a
   # backend switch in disposable repositories. It uses the config files and Zsh
   # lines host "f" ships under each backend, so it runs where "f" builds.
-  unit-workspace-backend-lifecycle =
-    if system == "aarch64-darwin" then
-      let
-        user = "martinfan";
-        worktrunkHome = self.darwinConfigurations.f.config.home-manager.users.${user};
-        dojjoHome = darwinDojjo.config.home-manager.users.${user};
-        zshSourceLines = home: marker: pkgs.writeText "${marker}-lines"
-          (lib.concatMapStrings (line: line + "\n")
-            (builtins.filter (lib.hasInfix marker) (lib.splitString "\n" home.programs.zsh.initContent)));
-      in
-      pkgs.runCommand "unit-workspace-backend-lifecycle"
-        {
-          nativeBuildInputs = [
-            pkgs.bash
-            pkgs.git
-            pkgs.jq
-            pkgs.zsh
-            worktrunkHome.programs.jujutsu.package
-            worktrunkHome.programs.worktrunk.package
-            pkgs.martin.dojjo-bin
-          ];
-        }
-        ''
-          bash ${./unit/workspace-backend-lifecycle-test.sh} \
-            ${worktrunkHome.xdg.configFile."worktrunk/config.toml".source} \
-            ${zshSourceLines worktrunkHome "-worktrunk-init.zsh"} \
-            ${dojjoHome.xdg.configFile."dojjo/config.toml".source} \
-            ${zshSourceLines dojjoHome "-dojjo-init.zsh"}
-          touch $out
-        ''
-    else
-      pkgs.runCommand "unit-workspace-backend-lifecycle-skipped" { } ''
-        echo "Skipping the workspace-backend lifecycle test on ${system}; host f is aarch64-darwin"
+  unit-workspace-backend-lifecycle = onlyOn "darwin" "unit-workspace-backend-lifecycle" (
+    let
+      user = "martinfan";
+      worktrunkHome = self.darwinConfigurations.f.config.home-manager.users.${user};
+      dojjoHome = darwinDojjo.config.home-manager.users.${user};
+      zshSourceLines = home: marker: pkgs.writeText "${marker}-lines"
+        (lib.concatMapStrings (line: line + "\n")
+          (builtins.filter (lib.hasInfix marker) (lib.splitString "\n" home.programs.zsh.initContent)));
+    in
+    pkgs.runCommand "unit-workspace-backend-lifecycle"
+      {
+        nativeBuildInputs = [
+          pkgs.bash
+          pkgs.git
+          pkgs.jq
+          pkgs.zsh
+          worktrunkHome.programs.jujutsu.package
+          worktrunkHome.programs.worktrunk.package
+          pkgs.martin.dojjo-bin
+        ];
+      }
+      ''
+        bash ${./unit/workspace-backend-lifecycle-test.sh} \
+          ${worktrunkHome.xdg.configFile."worktrunk/config.toml".source} \
+          ${zshSourceLines worktrunkHome "-worktrunk-init.zsh"} \
+          ${dojjoHome.xdg.configFile."dojjo/config.toml".source} \
+          ${zshSourceLines dojjoHome "-dojjo-init.zsh"}
         touch $out
-      '';
+      ''
+  );
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
   unit-pstack-hygiene = callTest ./unit/pstack-hygiene-test.nix { };
-  unit-ai-model-routing =
-    let
-      routing = import ../modules/shared/agent-model-routing.nix { inherit lib; };
-      policy = pkgs.writeText "agent-model-routing-test.json" (builtins.toJSON routing.policy);
-      omp = routing.adapters.omp;
-      roleModel = role: omp.normal.modelRoles.${role};
-      agentModel = agent:
-        let role = lib.removePrefix "@" omp.normal.task.agentModelOverrides.${agent};
-        in roleModel role;
-      fallbackChains = omp.normal.retry.fallbackChains;
-      inherit (omp) economy;
-      serializedAdapters = builtins.toJSON routing.adapters;
-      routingPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
-    in
-    assert agentModel "scout" == routing.selector "search";
-    assert agentModel "explore" == routing.selector "search";
-    assert agentModel "librarian" == routing.selector "search";
-    assert agentModel "reviewer" == routing.selector "check";
-    assert agentModel "security-reviewer" == routing.selector "check";
-    assert agentModel "task" == routing.selector "general";
-    assert agentModel "plan" == routing.selector "plan";
-    assert fallbackChains.${routing.bareSelector "general"} == [ (routing.bareSelector "economy") ];
-    assert fallbackChains.${routing.bareSelector "search"} == [ ];
-    assert fallbackChains.${routing.bareSelector "economy"} == [ ];
-    assert omp.normal.modelRoles.default == "google-antigravity/gemini-3.8-flash:high";
-    assert lib.all (lib.hasPrefix "openai-codex/") (lib.attrValues (builtins.removeAttrs omp.normal.modelRoles [ "default" ]));
-    assert lib.all
-      (model:
-        lib.hasPrefix "openai-codex/gpt-6-" model
-        || model == "google-antigravity/*"
-      )
-      omp.normal.enabledModels;
-    assert lib.elem "google-antigravity/*" omp.normal.enabledModels;
-    assert lib.all (model: lib.hasInfix model serializedAdapters) [
-      "gpt-6-astra"
-      "gpt-6-sol"
-      "gpt-6-luna"
-    ];
-    assert economy.modelRoles.default == routing.selector "economy";
-    assert economy.modelRoles.reviewer == routing.selector "check";
-    assert economy.modelRoles.plan == routing.selector "plan";
-    assert economy.task.agentModelOverrides == omp.normal.task.agentModelOverrides;
-    assert economy.retry == omp.normal.retry;
-    assert routing.adapters.codex.profiles.fast.model == routing.modelId "search";
-    assert routing.adapters.codex.profiles.plan.model == routing.modelId "plan";
-    assert !(lib.hasInfix "gpt-5." serializedAdapters);
-    pkgs.runCommand "unit-ai-model-routing" { } ''
-      ${routingPython}/bin/python3 ${./unit/ai-model-routing-test.py} \
-        ${../modules/home/ai-model-routing.py} ${policy}
-      touch $out
-    '';
+  unit-ai-model-routing = callTest ./unit/ai-model-routing-test.nix { };
 
   # Load the rendered zshrc in a sandboxed zsh to verify keymap tables across
   # default, null-dirjump, and disabled search scenarios.
