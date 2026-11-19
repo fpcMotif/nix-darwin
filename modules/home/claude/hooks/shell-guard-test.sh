@@ -183,6 +183,16 @@ check allow "make -C /tmp test"
 check allow "rg -n 'cd /tmp' docs/"
 check allow "echo \"run cd /tmp first\""
 
+check deny  "cp a.txt b.txt"
+check deny  "cp -R src/ dst/"
+check deny  "mkdir -p out && cp a out/"
+check deny  "sudo cp a /etc/b"
+check allow "fcp a.txt b.txt"
+check allow "fcp src/ dst/"
+check allow "rg -n 'cp -r' docs/"
+check allow "scp host:a b"
+TOOL_GUARD_OFF=1 check allow "cp a.txt b.txt"
+
 # Guards parity with the z function in shell/zoxide.nix.
 if command -v zoxide >/dev/null 2>&1; then
   export _ZO_DATA_DIR=$TMP/zoxide; mkdir -p "$_ZO_DATA_DIR"; zoxide add "$JJ" "$PLAIN"

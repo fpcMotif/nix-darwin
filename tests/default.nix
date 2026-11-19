@@ -296,6 +296,11 @@ lib.fix (checks: {
     inputs = [ pkgs.jq pkgs.coreutils ];
     args = [ ../modules/home/claude/hooks/context-handoff.sh ];
   };
+  unit-shell-routing = shellTest "unit-shell-routing" {
+    script = ../modules/home/claude/hooks/shell-routing-test.sh;
+    inputs = [ pkgs.jq pkgs.gnugrep ];
+    args = [ ../modules/home/claude/hooks/shell-routing.sh ../modules/home/claude/claude-adapter.md ];
+  };
   unit-recall = shellTest "unit-recall" {
     script = ../modules/home/recall/recall-test.sh;
     inputs = [ pkgs.jq pkgs.coreutils ];

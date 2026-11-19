@@ -2,7 +2,7 @@
 
 ## Claude
 
-- **Shell guard**: Read a known path with the Read tool or `bat -pp`. Find a file by name pattern with `fd`. Symbol and feature questions go to Search. Run Python with `uv run`. Change files with Edit or Write. Run a command elsewhere with `z DIR && CMD` or the tool's own directory flag. Hooks deny `cd`, `sed`, `find`, and bare `python`, even in bypass mode. They also deny file writes through `echo >`, heredocs, and inline scripts.
+- **Shell guard**: Run a command elsewhere with `z DIR && CMD` or the tool's own directory flag, such as `git -C DIR`. Copy with `fcp SRC DST`. Read a known path with the Read tool or `bat -pp -r A:B`. Find a file by name pattern with `fd`. Symbol and feature questions go to Search. Run Python with `uv run`. Change files with Edit or Write. A hook enforces each route, even in bypass mode.
 - **Ask box**: In the desktop app, call `wrap_up` before the report. Set `ask` to item 1 of What I need from you as one question, `actions` to its answers, and `blocked` when work stops. With nothing pending, omit `ask` and `actions`. The report, with its What I need from you section, follows the call.
 - **Reset**: When a task ends or the context grows large, suggest `/clear` over `/compact`. A hook hands the next session this transcript's path, so nothing is summarized away.
 - **Chat figures**: In chat, draw a flow as ASCII boxes and arrows in a `text` block, like so:

@@ -383,6 +383,7 @@ let
     { event = "PreToolUse"; matcher = "mcp__Claude_Browser__preview_start|mcp__Claude_Browser__navigate|mcp__Claude_Browser__browser_batch"; command = "$HOME/.claude/hooks/browser-file-guard.sh"; }
     { event = "SessionEnd"; matcher = "clear"; command = "$HOME/.claude/hooks/context-handoff.sh save"; }
     { event = "SessionStart"; matcher = "clear|compact"; command = "$HOME/.claude/hooks/context-handoff.sh resume"; }
+    { event = "SessionStart"; matcher = ""; command = "$HOME/.claude/hooks/shell-routing.sh"; }
   ] ++ claudeHooks.add;
   retiredClaudeHooks = [
     { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
@@ -504,6 +505,7 @@ in
       ".claude/hooks/shell-guard.sh" = { source = ./claude/hooks/shell-guard.sh; executable = true; };
       ".claude/hooks/browser-file-guard.sh" = { source = ./claude/hooks/browser-file-guard.sh; executable = true; };
       ".claude/hooks/context-handoff.sh" = { source = ./claude/hooks/context-handoff.sh; executable = true; };
+      ".claude/hooks/shell-routing.sh" = { source = ./claude/hooks/shell-routing.sh; executable = true; };
       ".claude/mods/jev-traits".source = ./claude/mods/jev-traits;
       ".claude/mods/jev-report".source = ./claude/mods/jev-report;
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
