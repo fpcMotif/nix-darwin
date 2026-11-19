@@ -30,7 +30,7 @@ Source: `~/.claude/projects/<project-slug>/<session-uuid>.jsonl` — one JSON re
 ## Subagents
 `isSidechain == true` records belong to a spawned agent (Task/Agent tool). The parent's `assistant` record contains a `tool_use` named `Agent`/`Task`/`Workflow`; the sidechain shares the same `sessionId`.
 
-## CLI contract (all three implementations)
+## CLI contract
 ```
 agent-trace [--root PATH] [--format json|table] <command>
 ```
