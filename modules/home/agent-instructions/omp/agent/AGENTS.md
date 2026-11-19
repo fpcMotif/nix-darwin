@@ -8,12 +8,8 @@
 - **Design**: Use `designer` for difficult visual decisions and the vision role for routine image work.
 - **Diagnose**: Use `oracle` for ambiguous architecture, uncertain diagnosis, or two failed fixes.
 - **Escalate**: Move a task to a stronger configured role when its current model cannot complete it.
-- **Code Mode**: For bulk inspection and multi-step tasks, use `eval` with Bun/JS (`Bun.$`) or Python. Gather all relevant context in one pass, and finish the actions in one or two calls instead of one tool call per step.
-- **Complete**: For bulk work or blocking advisor notes, load `/Users/martinfan/.omp/agent/managed-skills/omp-completion-and-advisor/SKILL.md`.
-- **Develop**: Before choosing a shell command, adding an environment variable, using version control, or setting up Git hooks, read `~/.omp/agent/guidance/development.md`.
-- **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `~/.omp/agent/guidance/languages/typescript.md`, `python.md`, `go.md`, or `rust.md`.
-- **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/.omp/agent/guidance/human-documents.md`.
-- **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/.omp/agent/guidance/development.md`.
+- **Eval**: For bulk inspection and multi-step tasks, use `eval` with Bun/JS (`Bun.$`) or Python. Gather all relevant context in one pass, and finish the actions in one or two calls instead of one tool call per step.
+- **Complete**: For bulk work or blocking advisor notes, load `~/.omp/agent/managed-skills/omp-completion-and-advisor/SKILL.md`.
 
 ## Search
 
@@ -26,6 +22,5 @@ Search with the `codedb` CLI first: one call returns a ranked, bounded answer.
 - **Task**: `codedb <repo> context --local TASK`.
 - **Identifier**: Native `grep` for one bare name; `lsp` for references CodeDB misses.
 - **Folder**: `eza --tree -L 2 DIR`.
-- **Trust**: Act on a result that answers the question.
-- **Coverage**: Scoped `rg` confirms a full listing, count, or absence. CodeDB skips node_modules and files over 2 MiB.
+- **CodeDB scope**: CodeDB skips node_modules and files over 2 MiB.
 - **Fallback**: After a `codedb` call fails, use scoped `rg`, `glob`, or direct reads, and name the failure.

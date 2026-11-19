@@ -2,12 +2,6 @@
 
 User: f.
 
-- **Develop**: Before choosing a shell command, adding an environment variable, using version control, or setting up Git hooks, read `~/.config/agent-guidance/development.md`.
-- **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `~/.config/agent-guidance/languages/typescript.md`, `python.md`, `go.md`, or `rust.md`.
-- **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/.config/agent-guidance/human-documents.md`.
-- **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/.config/agent-guidance/development.md`.
-- **Code Mode**: Chain independent shell commands into one call with `;`, and use `&&` when a command needs the one before it. Gather all relevant context in one pass instead of one tool call per command.
-
 ## Search
 
 Search with FFF and CodeDB first: one call returns a ranked, bounded answer. Without the servers, the `codedb` CLI answers the same: `codedb <repo> file NAME`, `explain SYM`, `callpath FROM TO`, `context --local TASK`.
@@ -20,6 +14,4 @@ Search with FFF and CodeDB first: one call returns a ranked, bounded answer. Wit
 - **Task**: CodeDB `codedb_context` with `semantic=local`.
 - **Folder**: CodeDB `codedb_list_dir` or `eza --tree -L 2 DIR`.
 - **Other repo**: Pass its path as `project`; confirm the checkout before editing.
-- **Trust**: Act on a result that answers the question.
-- **Coverage**: Scoped `rg` confirms a full listing, count, or absence; state the scope.
 - **Fallback**: After the servers and the CLI fail, use scoped `rg`, `fd`, or direct reads, and name the failure.

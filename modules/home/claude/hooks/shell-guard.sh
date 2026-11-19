@@ -146,7 +146,9 @@ while IFS= read -r seg; do
   esac
   case "${seg%%[[:space:]]*}" in
     cd)
-      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: cd is denied. Use 'z DIR && CMD' (DIR is a path or a zoxide name), or a tool's own directory argument: 'git -C DIR', 'make -C DIR', 'rg PAT DIR', 'fd PAT DIR', the Read tool with an absolute path." ;;
+      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: use 'z DIR && CMD' instead of cd. DIR is a path or a zoxide name. A tool's own directory flag also works: 'git -C DIR', 'make -C DIR', 'rg PAT DIR'." ;;
+    cp)
+      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: cp is denied. Use 'fcp SRC DST' or 'fcp SRC... DIR'. fcp takes no flags: it copies directories recursively and keeps file modes, so drop -r, -R, -p, and -a." ;;
     cat|bat)
       [ -z "${TOOL_GUARD_OFF:-}" ] && read_too_long "$seg" \
         && deny "shell-guard: $long_file has $long_lines lines, and a whole-file read was 19% of Bash output in past sessions. Read a span: 'bat -pp -r A:B $long_file', or the Read tool with offset and limit. Find the span first with 'rg -n PAT $long_file'. A pipe ('cat FILE | head') or a file of 300 lines or fewer is allowed." ;;
@@ -178,6 +180,8 @@ while IFS= read -r seg; do
       case "${words[$i]:-}" in
         add|commit|checkout|switch|stash|reset|restore|rebase|merge|cherry-pick|revert|pull|am|rm|mv)
           in_jj_workspace "$git_dir" && deny "shell-guard: '$git_dir' is a jj workspace, and 'git ${words[$i]}' desyncs jj's working copy. Use jj: add -> nothing (jj tracks every file); commit -> 'jj commit -m MSG'; checkout/switch -> 'jj new REV' or 'jj edit REV'; stash -> 'jj new @-'; reset/restore -> 'jj restore'; rebase -> 'jj rebase'; merge -> 'jj new A B'; pull -> 'jj git fetch'. Read-only git (log, show, diff, blame) stays allowed. The jj skill has the rest." ;;
+        worktree)
+          [ "${words[$((i + 1))]:-}" = add ] && in_jj_workspace "$git_dir" && deny "shell-guard: '$git_dir' is a jj workspace, and a Git worktree is a checkout jj does not track. Run 'jj workspace add --name NAME -r REV ../REPO.NAME'. Bring a checkout's commits back under @ with 'agent-checkout land NAME'." ;;
       esac ;;
   esac
 done <<EOF

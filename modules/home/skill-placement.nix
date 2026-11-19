@@ -54,7 +54,46 @@ let
     sed -i '/^[[:space:]]*disable-model-invocation:[[:space:]]*true[[:space:]]*$/d' "$out/SKILL.md"
   '';
 
+  # Each agent sees only its confirmed folders. An unconfirmed folder's
+  # skills count as absent for that agent.
+  harnessReads = {
+    claude = [ "claude" ];
+    codex = [ "codex" "agents" ];
+    droid = [ "factory" "agents" ];
+    antigravity = [ "gemini" ];
+    omp = [ "omp" "omp-skills" "agents" ];
+    pi = [ "pi" ];
+    opencode = [ "opencode" ];
+    crush = [ "crush" ];
+    cursor = [ "cursor" ];
+    amp = [ "xdg-agents" ];
+  };
+
   placed = lib.mapAttrs (id: skill: lib.genAttrs (hostsOf id skill.audience) (host: hostDirs.${host})) cfg.skills;
+
+  bundleHosts = hostsOf "bundle" cfg.bundleSkills.audience;
+  idsInHost = host:
+    lib.attrNames (lib.filterAttrs (_: dirsByHost: dirsByHost ? ${host}) placed)
+    ++ lib.optionals (builtins.elem host bundleHosts) cfg.bundleSkills.ids
+    ++ cfg.foreignSkills.${host} or [ ];
+  hostIds = lib.genAttrs (lib.attrNames hostDirs) idsInHost;
+  knownIds = lib.unique (lib.concatLists (lib.attrValues hostIds));
+
+  offFor = harness:
+    lib.throwIfNot (harnessReads ? ${harness}) "skillsOff: unknown harness '${harness}'"
+      (cfg.skillsOff.${harness} or [ ]);
+  visibility = lib.mapAttrs
+    (harness: reads: lib.genAttrs knownIds (id:
+      if !(lib.any (host: builtins.elem id hostIds.${host}) reads) then "absent"
+      else if builtins.elem id (offFor harness) then "off"
+      else "on"))
+    harnessReads;
+  offLinks = lib.mapAttrs
+    (harness: reads: lib.concatMap
+      (host: map (id: "${hostDirs.${host}}/${id}")
+        (lib.filter (id: builtins.elem id hostIds.${host}) (offFor harness)))
+      reads)
+    harnessReads;
   links = lib.listToAttrs (lib.concatLists (lib.mapAttrsToList
     (id: dirsByHost: lib.mapAttrsToList
       (host: dir: {
@@ -80,11 +119,40 @@ in
       description = "Skills linked by Home Manager. An audience is a name from skill-placement.nix or a list of host names.";
     };
 
+    bundleSkills = {
+      ids = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        internal = true;
+        description = "Bundle skill ids. The agent-skills input links them; Skill visibility only records where they land.";
+      };
+      audience = lib.mkOption {
+        type = lib.types.either lib.types.str (lib.types.listOf lib.types.str);
+        default = [ ];
+        internal = true;
+        description = "The audience the agent-skills input links the bundle into.";
+      };
+    };
+
+    foreignSkills = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf lib.types.str);
+      default = { };
+      internal = true;
+      description = "Per skill host, skill ids another tool installs there, so a harness can still turn them off.";
+    };
+
+    skillsOff = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.listOf lib.types.str);
+      default = { };
+      internal = true;
+      description = "Per harness, skill ids that the harness's own settings turn off.";
+    };
+
     skillPlacement = lib.mkOption {
       type = lib.types.raw;
       readOnly = true;
       internal = true;
-      description = "Resolved skill placement: host dirs, picker dirs, and the home-relative links of every skill.";
+      description = "Resolved skill placement: host dirs, picker dirs, the home-relative links of every skill, and Skill visibility per harness.";
     };
   };
 
@@ -92,7 +160,9 @@ in
     martin.agentSurface.skills = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin personalSkills;
 
     martin.agentSurface.skillPlacement = {
-      inherit hostDirs links;
+      inherit hostDirs links harnessReads visibility offLinks;
+      idsByHost = hostIds;
+      offIds = lib.mapAttrs (_: states: lib.attrNames (lib.filterAttrs (_: state: state == "off") states)) visibility;
       pickerDirs = lib.getAttrs audiences.pickers hostDirs;
       targetsById = lib.mapAttrs (id: dirsByHost: map (dir: "${dir}/${id}") (lib.attrValues dirsByHost)) placed;
     };

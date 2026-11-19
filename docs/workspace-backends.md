@@ -130,8 +130,18 @@ Under dojjo, activation removes exactly those six hook entries from `~/.claude/s
 It matches event, matcher, and full command, so user hooks in the same events and groups remain.
 Switching back adds them again. dojjo gets no replacement marker.
 
-Claude Code's built-in worktree feature is unchanged and still creates Git worktrees.
-It sits outside the JJ workspace workflow, and the dojjo guidance tells agents not to use it in a `.jj` repository.
+Under both backends, `WorktreeCreate` and `WorktreeRemove` hooks route Claude Code's own checkouts through `agent-checkout`.
+That covers `isolation: "worktree"`, `EnterWorktree`, `claude --worktree`, and background sessions.
+
+- In a `.jj` repository, `agent-checkout create` copies `@` into a base commit named `agent-base: NAME`, then runs `jj workspace add` on that base at `../REPO.NAME`.
+  A workspace stacked on the parent's `@` would go stale on every parent edit, so the base is a sibling of `@`, not a child.
+- In a Git-only repository, it runs `wt switch --create NAME --base HEAD` when `wt` is installed, and `git worktree add` otherwise.
+- A hook replaces Claude's `symlinkDirectories` and `.worktreeinclude` handling, so the script does both.
+  In a JJ workspace it also drops each linked name from `snapshot.auto-track`, because a `node_modules/` ignore rule matches directories only and jj would commit the symlink.
+
+Claude Code never runs `WorktreeRemove` for a subagent's checkout.
+`agent-checkout land NAME` moves that checkout's commits under `@`, forgets the workspace, abandons its base, and deletes the directory.
+It also lands a Git branch, such as the one an Antigravity subagent leaves, because Antigravity has no hook that replaces its own Git worktree.
 
 ## Rollback
 

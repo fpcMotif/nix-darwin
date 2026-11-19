@@ -13,7 +13,7 @@ let
 
   mkSkill = from: path: packages: { inherit from path packages; };
 
-  inherit (config.martin.agentSurface) guideCatalog skillTargetDirs claudeHooks;
+  inherit (config.martin.agentSurface) skillTargetDirs claudeHooks;
 
   # `link` points every target at the same store SKILL.md files. Pi de-dupes
   # skills by realpath, so the shared store paths collapse across picker dirs.
@@ -313,6 +313,8 @@ let
   pluginProvidedSkillIds = enabledMattpocockSkills;
   pstackPluginSkillIds = builtins.attrNames pstackDrvs;
   claudeHiddenSkillIds = pluginProvidedSkillIds ++ pstackPluginSkillIds ++ harnessProvidedSkillIds ++ interfacesSkillNames;
+  claudeOffSkillIds = config.martin.agentSurface.skillPlacement.offIds.claude;
+  bundleSkillIds = enabledMattpocockSkills ++ [ "archify" "better-github-skill" "ub-mode" ] ++ interfacesSkillNames;
 
   # Plugin skills to block outright. skillOverrides ignores plugin skills, so
   # claudePrunePluginSkills unlists them every switch and a deny rule refuses
@@ -381,6 +383,7 @@ let
     { event = "PreToolUse"; matcher = "mcp__Claude_Browser__preview_start|mcp__Claude_Browser__navigate|mcp__Claude_Browser__browser_batch"; command = "$HOME/.claude/hooks/browser-file-guard.sh"; }
     { event = "SessionEnd"; matcher = "clear"; command = "$HOME/.claude/hooks/context-handoff.sh save"; }
     { event = "SessionStart"; matcher = "clear|compact"; command = "$HOME/.claude/hooks/context-handoff.sh resume"; }
+    { event = "SessionStart"; matcher = ""; command = "$HOME/.claude/hooks/shell-routing.sh"; }
   ] ++ claudeHooks.add;
   retiredClaudeHooks = [
     { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
@@ -415,13 +418,6 @@ let
       "interfaces@interfaces" = true;
     } // claudeManagedPlugins;
     extraKnownMarketplaces = {
-      "frad-dotclaude" = {
-        source = {
-          source = "github";
-          repo = "FradSer/dotclaude";
-        };
-        autoUpdate = true;
-      };
       "interfaces" = {
         source = {
           source = "github";
@@ -449,7 +445,7 @@ let
       { path = [ "env" "CLAUDE_CODE_PLUGIN_DIRS" ]; value = "${homeDir}/.claude/mods/jev-report"; }
     ]
     ++ lib.optional isDarwin { path = [ "env" "TRAITS_BIN" ]; value = lib.getExe pkgs.martin.traits; }
-    ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeHiddenSkillIds
+    ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeOffSkillIds
     ++ map (id: { path = [ "enabledPlugins" id ]; value = false; }) disabledClaudePlugins
     ++ lib.mapAttrsToList (id: value: { path = [ "enabledPlugins" id ]; inherit value; }) claudeManagedPlugins
     ++ lib.mapAttrsToList (name: value: { path = [ "extraKnownMarketplaces" name ]; inherit value; }) claudeManagedMarketplaces
@@ -476,8 +472,13 @@ in
     lib.genAttrs localSkillIds (id: { source = ./skills + "/${id}"; audience = "pickers"; })
     // lib.mapAttrs (_: drv: { source = drv; audience = "pickers"; }) pstackDrvs;
 
+  martin.agentSurface.bundleSkills = {
+    ids = bundleSkillIds ++ [ "web-browser" ];
+    audience = "pickers";
+  };
+  martin.agentSurface.skillsOff.claude = claudeHiddenSkillIds;
+
   home.file =
-    lib.mapAttrs (_: source: { inherit source; }) (guideCatalog.filesFor [ "claude" ]) //
     {
       # Curation lists for scripts/verify-agent-skills.sh, so it never restates
       # them. Covers every picker dir; regenerated every switch.
@@ -486,7 +487,7 @@ in
           targetDirs = lib.attrValues skillTargetDirs;
           bundled = enabledMattpocockSkills;
           localSkills = localSkillIds;
-          claudeHidden = claudeHiddenSkillIds;
+          claudeHidden = claudeOffSkillIds;
           pluginProvided = pluginProvidedSkillIds;
           excluded = lib.unique (excludedSkillIds ++ removedSkillIds);
           deniedPluginSkills = disabledMattpocockSkills;
@@ -499,15 +500,12 @@ in
         executable = true;
       };
 
-      ".claude/search-eval.md".source = ./claude/search-eval.md;
-      ".claude/search-routing.md".source = ./claude/search-routing.md;
-      ".claude/references/search-routing-examples.md".source = ./claude/references/search-routing-examples.md;
-
       ".claude/pstack-models.md".source = pstackModelsSheet;
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
       ".claude/hooks/shell-guard.sh" = { source = ./claude/hooks/shell-guard.sh; executable = true; };
       ".claude/hooks/browser-file-guard.sh" = { source = ./claude/hooks/browser-file-guard.sh; executable = true; };
       ".claude/hooks/context-handoff.sh" = { source = ./claude/hooks/context-handoff.sh; executable = true; };
+      ".claude/hooks/shell-routing.sh" = { source = ./claude/hooks/shell-routing.sh; executable = true; };
       ".claude/mods/jev-traits".source = ./claude/mods/jev-traits;
       ".claude/mods/jev-report".source = ./claude/mods/jev-report;
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
@@ -684,7 +682,7 @@ in
     } // mpSources // effectSources;
 
     skills = {
-      enable = enabledMattpocockSkills ++ [ "archify" "better-github-skill" "ub-mode" ] ++ interfacesSkillNames;
+      enable = bundleSkillIds;
       enableAll = [ ];
       explicit = {
         web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];

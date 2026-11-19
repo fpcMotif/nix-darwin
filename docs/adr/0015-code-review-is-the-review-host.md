@@ -12,7 +12,7 @@ An architecture pass over the git, GitHub, jj, and review skills (2026-09-09) fo
 2. The dotfiles-pi `review` is retired from `skills.explicit`. The plugin `/code-review` command stays as the only posting path, user-invoked only.
 3. Routing lives in the Git section of CLAUDE.md, one line per branch: jj first, the review host and its fixed point, better-github-skill for reads, diff shape before lines, hunk for human review. The jj skill carries the command tables and the **colocated contract** (GLOSSARY.md). No router skill.
 4. The host reads committed history (`git diff <point>...HEAD`), so the rule is commit first (`jj new` in jj). The default fixed point is trunk (`main`).
-5. The settings seed drops the seven plugins no machine has installed (`ralph-loop` and the six `frad-dotclaude` entries), so a fresh machine matches this one.
+5. The settings seed drops the seven plugins no machine has installed (`ralph-loop` and the six `frad-dotclaude` entries), and the `frad-dotclaude` marketplace itself, so a fresh machine matches this one.
 
 ## Consequences
 
@@ -20,7 +20,7 @@ An architecture pass over the git, GitHub, jj, and review skills (2026-09-09) fo
 - CLAUDE.md pays one line per branch; the hunk and jj command duplicates leave it.
 - `skills.explicit` keeps only `web-browser`, and no entry carries a CLI-deps list.
 - Known gap left in the host: its description promises work-in-progress review while its diff excludes the working tree (verified 2026-09-09 on this repo; upstream mattpocock/skills #511 and #958 track it). The commit-first rule covers it here.
-- The `frad-dotclaude` marketplace registration stays; it now enables nothing.
+- No `frad-dotclaude` marketplace is registered for Claude or enabled for Codex.
 
 ## What would change this decision
 

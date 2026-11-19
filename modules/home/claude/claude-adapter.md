@@ -2,12 +2,8 @@
 
 ## Claude
 
-- **Develop**: Before choosing a shell command, adding an environment variable, using version control, or setting up Git hooks, read `~/.claude/guidance/development.md`.
-- **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `~/.claude/guidance/languages/typescript.md`, `python.md`, `go.md`, or `rust.md`.
-- **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/.claude/guidance/human-documents.md`.
-- **Workspaces**: Before creating a Git worktree or JJ workspace, read Parallel checkouts in `~/.claude/guidance/development.md`.
-- **Shell guard**: Read a known path with the Read tool or `bat -pp`. Find a file by name pattern with `fd`. Symbol and feature questions go to Search. Run Python with `uv run`. Change files with Edit or Write. Run a command elsewhere with `z DIR && CMD` or the tool's own directory flag. Hooks deny `cd`, `sed`, `find`, and bare `python`, even in bypass mode. They also deny file writes through `echo >`, heredocs, and inline scripts.
-- **Ask box**: In the desktop app, write What I need from you in the text before `wrap_up`. Set `ask` to item 1 as one question, `actions` to its answers, and `blocked` when work stops. With nothing pending, omit `ask`, `actions`, and the section. Write the report after the call.
+- **Shell guard**: Run a command elsewhere with `z DIR && CMD` or the tool's own directory flag, such as `git -C DIR`. Copy with `fcp SRC DST`. Read a known path with the Read tool or `bat -pp -r A:B`. Find a file by name pattern with `fd`. Symbol and feature questions go to Search. Run Python with `uv run`. Change files with Edit or Write. A hook enforces each route, even in bypass mode.
+- **Ask box**: In the desktop app, call `wrap_up` before the report. Set `ask` to item 1 of What I need from you as one question, `actions` to its answers, and `blocked` when work stops. With nothing pending, omit `ask` and `actions`. The report, with its What I need from you section, follows the call.
 - **Reset**: When a task ends or the context grows large, suggest `/clear` over `/compact`. A hook hands the next session this transcript's path, so nothing is summarized away.
 - **Chat figures**: In chat, draw a flow as ASCII boxes and arrows in a `text` block, like so:
 
@@ -33,8 +29,6 @@ Search with fff, codedb, and vesalius first: one call returns a ranked, bounded 
 - **Folder**: `mcp__codedb__codedb_list_dir` or `eza --tree -L 2 DIR`.
 - **Other repo**: Pass its path as `project` to codedb, or run `vesalius usages X --repo DIR`; confirm the checkout before editing.
 - **Unindexed**: Nix, shell, and Markdown have no symbol index. Use fff for those files.
-- **Trust**: Act on a result that answers the question.
-- **Coverage**: Scoped `rg` confirms a full listing, count, or absence; state the scope.
 - **Fallback**: After an MCP call fails, use scoped `rg`, `fd`, or Read, and name the failure.
 - **Detail**: `~/.claude/search-routing.md` for unclear routing.
 

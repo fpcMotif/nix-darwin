@@ -81,6 +81,11 @@ lib.fix (checks: {
     inputs = [ pkgs.gnugrep ];
     args = [ ../pkgs ../scripts ];
   };
+  unit-git-merge-pkgnix = shellTest "unit-git-merge-pkgnix" {
+    script = ./unit/git-merge-pkgnix-test.sh;
+    inputs = [ pkgs.git pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.diffutils pkgs.coreutils ];
+    args = [ ../scripts ];
+  };
 
   # Current-state integrity for the maintained documents: file-level checks
   # fast enough to run on every change.
@@ -198,7 +203,8 @@ lib.fix (checks: {
           content = contentForHost host;
           links = builtins.filter
             (guide: guide.target != host.startup.target
-              && !(builtins.elem guide (lib.attrValues host.languages)))
+              && !(builtins.elem guide (lib.attrValues host.languages))
+              && !(builtins.elem guide host.extras))
             host.guides;
           tools = requiredTools ++ lib.optional (name == "claude") "fff";
         in
@@ -230,6 +236,28 @@ lib.fix (checks: {
         count "## Plain English" hosts.${name}.startup.content == 1
         && lib.hasInfix "~/.agents/skills/ste80/SKILL.md" hosts.${name}.startup.content)
       [ "general" "codex" "omp" "antigravity" ];
+    assert lib.all
+      (host: lib.hasInfix "the `prompt-coach` skill" host.startup.content
+        && count "[archify explainer: on-demand]" host.startup.content == 1
+        && !(lib.hasInfix "skills/prompt-coach" host.startup.content))
+      (lib.attrValues hosts);
+    assert lib.all
+      (host: count "## Guides" host.startup.content == 1
+        && count "## Search rules" host.startup.content == 1
+        && count "**Code Mode**" host.startup.content == 1
+        && count "**Trust**" host.startup.content == 1
+        && count "**Develop**" host.startup.content == 1
+        && lib.hasInfix "## Filesystem and Nix lookups" host.development.content)
+      (lib.attrValues hosts);
+    assert lib.all
+      (adapter: lib.all (label: !(lib.hasInfix label (builtins.readFile adapter)))
+        [ "**Develop**" "**Languages**" "**Documents**" "**Workspaces**" "**Trust**" "**Coverage**" ])
+      [
+        ../modules/home/agent-instructions/AGENTS.md
+        ../modules/home/agent-instructions/codex/AGENTS.md
+        ../modules/home/agent-instructions/omp/agent/AGENTS.md
+        ../modules/home/claude/claude-adapter.md
+      ];
     assert hosts.antigravity.startup.target == ".gemini/config/AGENTS.md";
     assert hosts.antigravity.startup.content == hosts.general.startup.content;
     assert lib.all documentsTriggerNamesAdr
@@ -268,10 +296,20 @@ lib.fix (checks: {
     inputs = [ pkgs.jq pkgs.coreutils ];
     args = [ ../modules/home/claude/hooks/context-handoff.sh ];
   };
+  unit-shell-routing = shellTest "unit-shell-routing" {
+    script = ../modules/home/claude/hooks/shell-routing-test.sh;
+    inputs = [ pkgs.jq pkgs.gnugrep ];
+    args = [ ../modules/home/claude/hooks/shell-routing.sh ../modules/home/claude/claude-adapter.md ];
+  };
   unit-recall = shellTest "unit-recall" {
     script = ../modules/home/recall/recall-test.sh;
     inputs = [ pkgs.jq pkgs.coreutils ];
     args = [ (lib.getExe pkgs.martin.recall) ];
+  };
+  unit-agent-checkout = shellTest "unit-agent-checkout" {
+    script = ../modules/home/workspace-backend/agent-checkout-test.sh;
+    inputs = [ pkgs.jq pkgs.git pkgs.jujutsu pkgs.coreutils pkgs.gawk pkgs.gnugrep ];
+    args = [ (lib.getExe pkgs.martin.agent-checkout) ];
   };
   unit-doc-lock = shellTest "unit-doc-lock" {
     script = ../modules/home/doc-lock/doc-lock-test.sh;
@@ -295,6 +333,16 @@ lib.fix (checks: {
     touch $out
   '';
   unit-claude-settings-ownership = callTest ./unit/claude-settings-ownership-test.nix { };
+  unit-cleanup-legacy-dotfiles = onlyOn "darwin" "unit-cleanup-legacy-dotfiles"
+    (shellTest "unit-cleanup-legacy-dotfiles" {
+      script = ./unit/cleanup-legacy-dotfiles-test.sh;
+      inputs = [ pkgs.coreutils pkgs.jq ];
+      args = [
+        (pkgs.writeText "cleanup-legacy-dotfiles.sh"
+          self.darwinConfigurations."f".config.home-manager.users.martinfan.home.activation.cleanupLegacyDotfiles.data)
+        "${pkgs.coreutils}/bin/true"
+      ];
+    });
 
   # Drives wt and djo through create, switch, list, remove, hooks, and a
   # backend switch in disposable repositories. It uses the config files and Zsh
@@ -455,6 +503,12 @@ lib.fix (checks: {
       test -x ${pkgs.martin.oh-my-pi}/bin/omp
       touch $out
     '');
+
+  smoke-build-agent-trace = pkgs.runCommand "smoke-build-agent-trace" { } ''
+    echo "Building tools/agent-trace/go..."
+    test -x ${lib.getExe pkgs.martin.agent-trace}
+    touch $out
+  '';
 
   smoke-build-iets = onlyOn "darwin" "smoke-build-iets"
     (pkgs.runCommand "smoke-build-iets" { } ''

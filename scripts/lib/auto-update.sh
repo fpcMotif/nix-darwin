@@ -37,6 +37,19 @@ au_is_heavy_input() {
   return 1
 }
 
+AU_DEDICATED_INPUTS="charm-nur"
+
+au_without_dedicated_inputs() {
+  local input dedicated skip
+  while IFS= read -r input; do
+    skip=0
+    for dedicated in $AU_DEDICATED_INPUTS; do
+      [ "$input" = "$dedicated" ] && skip=1
+    done
+    [ "$skip" -eq 1 ] || printf '%s\n' "$input"
+  done
+}
+
 # A deny-list of heavy inputs, not an allow-list of light ones, so a newly
 # added flake input never silently falls out of the nightly.
 au_inputs_to_bump() {

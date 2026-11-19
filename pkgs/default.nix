@@ -55,6 +55,7 @@ final: _prev:
       extensions = [ "clippy" "rustfmt" "rust-src" "rust-analyzer" ];
     };
 
+    agent-trace = final.callPackage ./agent-trace.nix { };
     bun-canary-bin = final.callPackage ./bun-canary-bin.nix { };
     calldiff = final.callPackage ./calldiff.nix { };
     doc-lock = final.callPackage ./doc-lock.nix { };
@@ -70,6 +71,7 @@ final: _prev:
     nub = final.callPackage ./nub.nix { };
     oh-my-pi = final.callPackage ./oh-my-pi.nix { };
     pi-coding-agent = final.callPackage ./pi-coding-agent.nix { };
+    agent-checkout = final.callPackage ./agent-checkout.nix { };
     recall = final.callPackage ./recall.nix { };
     sourcegraph-amp = final.callPackage ./sourcegraph-amp.nix { };
     droid = final.callPackage ./droid.nix { };

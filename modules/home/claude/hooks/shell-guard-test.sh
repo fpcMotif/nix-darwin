@@ -166,6 +166,11 @@ check allow "git add a.md" "$WORKTREE"
 check allow "git commit -m x" "$WORKTREE/sub"
 check allow "z $WORKTREE && git commit -m x" "$COLOCATED"
 check allow "git -C $WORKTREE/sub add a.md" "$COLOCATED"
+check deny  "git worktree add -b feat ../repo.feat" "$JJ"
+check deny  "git -C $COLOCATED worktree add ../x HEAD" "$PLAIN"
+check allow "git worktree list" "$JJ"
+check allow "git worktree remove ../repo.feat" "$JJ"
+check allow "git worktree add -b feat ../repo.feat" "$PLAIN"
 TOOL_GUARD_OFF=1 check deny  "cd $JJ && git rebase main" "$PLAIN"
 TOOL_GUARD_OFF=1 check allow "cd $PLAIN && git commit -m x" "$JJ"
 
@@ -177,6 +182,16 @@ check allow "z /tmp && make test"
 check allow "make -C /tmp test"
 check allow "rg -n 'cd /tmp' docs/"
 check allow "echo \"run cd /tmp first\""
+
+check deny  "cp a.txt b.txt"
+check deny  "cp -R src/ dst/"
+check deny  "mkdir -p out && cp a out/"
+check deny  "sudo cp a /etc/b"
+check allow "fcp a.txt b.txt"
+check allow "fcp src/ dst/"
+check allow "rg -n 'cp -r' docs/"
+check allow "scp host:a b"
+TOOL_GUARD_OFF=1 check allow "cp a.txt b.txt"
 
 # Guards parity with the z function in shell/zoxide.nix.
 if command -v zoxide >/dev/null 2>&1; then

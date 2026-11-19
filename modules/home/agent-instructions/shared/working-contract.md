@@ -2,6 +2,7 @@
 
 - **Packages**: Use bun/bunx for JavaScript, pnpm when required, uv for Python, and mbx for Rust (`mbx build` runs Cargo through its shared cache). npm and npx are prohibited.
 - **Commands**: Write the shortest command that answers in one call, with modern Rust tools: `rg`, `fd`, `bat`, `eza`, `sg`, `dust`, `procs`, `hyperfine`, `delta`. Pass absolute paths, or run `z DIR && CMD`. Filter output down to the lines the next decision needs. The development guide's Command routing table maps each job to its tool.
+- **Code Mode**: Chain independent shell commands into one call with `;`, and use `&&` when a command needs the one before it. Gather all relevant context in one pass instead of one tool call per command.
 - **Precedence**: Repository instructions override this global guide.
 - **Act**: Treat “can you”, “I want to”, and “help me” as requests to complete the work.
 - **Goal**: Keep the original outcome and accepted constraints when later messages steer the task.
@@ -36,12 +37,13 @@
 The last message of a task is the report. The user scans it before reading it.
 
 - **Lead**: Open with the outcome in one sentence.
-- **Figure**: Show a change that has shape as a figure. Use a `mermaid` flowchart or sequence diagram for a flow of three or more steps. Use a `diff` tree for a file-layout change and a table for items that share fields. The show-me skill holds these views; pick the smallest one that makes the point.
+- **Figure**: Show a change that has shape as a figure. Use a `mermaid` flowchart or sequence diagram for a flow of three or more steps. Use a `diff` tree for a file-layout change and a table for items that share fields. The `show-me` skill holds these views; pick the smallest one that makes the point.
+- **Explainer pages**: [archify explainer: on-demand]
 - **Checks**: Put the checks in a table with the command and its result. Name each check that could not run and why.
 - **Files**: Name each changed file as `path:line`.
 - **Length**: Fit the report on one screen. A one-line change gets a one-line report.
 - **Running**: When work still runs in the background, say what runs and how the user will learn it finished.
-- **Coach**: Close the report with one line headed **Sharper ask**. Give the rewrite of the user's request that would have reached this result in fewer turns. When the request was already tight, name one angle on the problem the user did not raise. Ground the line in this session: a misread, a late correction, or a constraint that arrived after work began.
+- **Coach**: Before each report, judge the thinking and knowledge behind the user's request, not its spelling. When it shows a gap that will recur (a missing outcome, a symptom-level framing, a wrong assumption, or a missing concept), load the `prompt-coach` skill from this harness's own skill list and end the report with its card. A request with no recurring gap gets no card.
 
 ## What I need from you
 

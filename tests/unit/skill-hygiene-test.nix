@@ -15,7 +15,8 @@ let
   disabled = curation.disabledMattpocockSkills;
   leanExcluded = curation.leanExcludedMattpocockSkills;
 
-  # RESTATED, not imported — must match modules/home/claude.nix by hand.
+  # Restated on purpose: claude.nix derives its list with readDir, so each new
+  # directory under modules/home/skills must also be named here.
   vendored = [ "browser-checks" "jj" "setup-ts-deep-modules" ];
 
   claudeNix = builtins.readFile (self + "/modules/home/claude.nix");
@@ -63,9 +64,12 @@ helpers.testSuite "skill-hygiene" (
       && lib.all (hosts: hosts != [ ]) (builtins.attrValues personalPlacement.hosts))
       "every personal skill dir must have a nonempty SKILL.md and appear in placement.nix")
 
+    (helpers.assertTest "skill-hygiene-prompt-coach-everywhere"
+      (builtins.elem "prompt-coach" personalPlacement.everywhere)
+      "prompt-coach must reach every harness, Claude Code included")
     (helpers.assertTest "skill-hygiene-ste80-targets"
       (builtins.elem "ste80" personalPlacement.outside-claude)
-      "ste80 needs its .agents copy, which the non-Claude guides load by path. It needs no Claude copy, because Claude's Writing section already covers it.")
+      "ste80 needs its .agents copy, which the non-Claude guides load by path. It needs no Claude copy, because Claude's guide omits the Plain English section that loads it.")
 
     # 3. claude.nix derives localSkillIds from readDir, so this checks that a
     #    new modules/home/skills/<id> directory is added deliberately.
