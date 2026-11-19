@@ -3,7 +3,7 @@
 let
   pkgs = import inputs.nixpkgs {
     inherit system;
-    overlays = [ (import ../pkgs) ];
+    overlays = (import ../lib/overlays.nix { inherit inputs; }).all;
     config.allowUnfree = true;
   };
   inherit (pkgs) lib;
@@ -503,7 +503,7 @@ lib.fix (checks: {
   smoke-build-iets = onlyOn "darwin" "smoke-build-iets"
     (pkgs.runCommand "smoke-build-iets" { } ''
       echo "Building iets with pkgs/iets/host-system.patch applied..."
-      test -x ${self.darwinConfigurations."f".pkgs.martin.iets-classic}/bin/nix
+      test -x ${pkgs.martin.iets-classic}/bin/nix
       touch $out
     '');
 
