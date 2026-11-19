@@ -350,7 +350,7 @@ let
   effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 
   pstack = import ./claude/pstack.nix {
-    inherit lib pkgs inputs mkSource mkSkill;
+    inherit lib pkgs inputs;
     inherit (config.martin.development) docLock;
   };
   inherit (pstack) pstackModelsSheet pstackDrvs;
