@@ -7,15 +7,12 @@ expect() { if [ "$2" != "$3" ]; then fail=$((fail + 1)); printf 'FAIL %s\n  got:
 
 out=$(printf '{}' | SHELL_ROUTING_GUIDE=$GUIDE bash "$HOOK")
 expect "event name" "$(printf '%s' "$out" | jq -r .hookSpecificOutput.hookEventName)" "SessionStart"
-ctx=$(printf '%s' "$out" | jq -r .hookSpecificOutput.additionalContext)
-case $ctx in *'z DIR && CMD'*'fcp SRC DST'*) ok=yes ;; *) ok=no ;; esac
-expect "context carries the z and fcp routes" "$ok" yes
-case $ctx in *'**Shell guard**'*) bare=no ;; *) bare=yes ;; esac
-expect "context drops the bullet label" "$bare" yes
+expect "context carries the z and fcp routes without the bullet label" \
+  "$(printf '%s' "$out" | jq -r '.hookSpecificOutput.additionalContext | contains("z DIR && CMD") and contains("fcp SRC DST") and (contains("**Shell guard**") | not)')" true
 
 expect "missing guide emits nothing" "$(printf '{}' | SHELL_ROUTING_GUIDE=$TMP/none bash "$HOOK")" ""
 printf '# x\n- **Other**: y\n' >"$TMP/g.md"
 expect "guide without the line emits nothing" "$(printf '{}' | SHELL_ROUTING_GUIDE=$TMP/g.md bash "$HOOK")" ""
 
-[ "$fail" -eq 0 ] && echo "shell-routing: all checks passed"
-[ "$fail" -eq 0 ]
+[ "$fail" -eq 0 ] || exit 1
+echo "shell-routing: all checks passed"

@@ -383,7 +383,7 @@ let
     { event = "PreToolUse"; matcher = "mcp__Claude_Browser__preview_start|mcp__Claude_Browser__navigate|mcp__Claude_Browser__browser_batch"; command = "$HOME/.claude/hooks/browser-file-guard.sh"; }
     { event = "SessionEnd"; matcher = "clear"; command = "$HOME/.claude/hooks/context-handoff.sh save"; }
     { event = "SessionStart"; matcher = "clear|compact"; command = "$HOME/.claude/hooks/context-handoff.sh resume"; }
-    { event = "SessionStart"; matcher = ""; command = "$HOME/.claude/hooks/shell-routing.sh"; }
+    { event = "SessionStart"; matcher = "startup|clear|compact"; command = "$HOME/.claude/hooks/shell-routing.sh"; }
   ] ++ claudeHooks.add;
   retiredClaudeHooks = [
     { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
