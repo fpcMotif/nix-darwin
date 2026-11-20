@@ -1,8 +1,8 @@
 { lib, pkgs, inputs, docLock ? true }:
 
 let
-  # Installed as plain skills, not a plugin, so pstackTransform rewrites
-  # plugin-only names. Skills with an installed equivalent are left out.
+  # Non-Claude agents get these as plain skills, not a plugin, so pstackTransform
+  # rewrites plugin-only names. Skills with an installed equivalent are left out.
   pstackSkillsRoot = inputs.pstack-claude + "/plugins/pstack/skills";
   pstackPrinciples = builtins.filter (lib.hasPrefix "principle-")
     (builtins.attrNames (builtins.readDir pstackSkillsRoot));
