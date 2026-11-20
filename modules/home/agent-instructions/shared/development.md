@@ -101,7 +101,7 @@ On the Mac, `nix`, `nix-build`, and `nix-shell` are iets, a faster Rust Nix clie
 - Run `jj diff --stat` before `jj squash`. Pass explicit paths (`jj squash PATH...`) when another session or editor can write to the working copy.
 - When merge conflicts resolve to one side, list each merged pull request the other side loses, and ask first.
 - Use `gh` for GitHub when no host-specific GitHub tool applies.
-- Open, update, or land a pull request from JJ with `jj pr` (pass `--land` to merge and advance trunk in one flight), as the `jj` skill describes. Check `jj pr --help` first, because an older installed build lacks `-m` and `--land`. The `pr` skill writes the body.
+- Open, update, or land a pull request from JJ with `jj pr` (pass `--land` to merge and advance trunk in one flight), as the `jj` skill describes. Add `--wait` when the change must pass CI before it merges. Check `jj pr --help` first, because an older installed build lacks `-m`, `--land`, and `--wait`. The `pr` skill writes the body.
 - Inspect diff shape first, then read path-scoped changes.
 - Search history with merge diffs included: `jj log -r '::@ & files(PATH)'` or `git log -m -S TEXT`. Plain `git log -S` and `git log -- PATH` can miss a merge that dropped text.
 

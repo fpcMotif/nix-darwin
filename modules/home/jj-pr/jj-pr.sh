@@ -1,6 +1,6 @@
 usage() {
   cat <<'EOF'
-Usage: jj pr [NAME] [-r REV] [-m MSG] [-F FILE] [-t TITLE] [-B BASE] [--draft] [--land] [-n] [-- PATHS...]
+Usage: jj pr [NAME] [-r REV] [-m MSG] [-F FILE] [-t TITLE] [-B BASE] [--draft] [--land [--wait]] [-n] [-- PATHS...]
 
 Push REV under bookmark NAME, then open its GitHub pull request or update the
 open one. Rerun it after every rewrite; it pushes and updates again.
@@ -17,6 +17,8 @@ open one. Rerun it after every rewrite; it pushes and updates again.
   --draft        Open as a draft.
   --land         Merge the PR into BASE, fetch, and advance @ onto BASE. Edits
                  left in @ move onto BASE with it.
+  --wait         With --land, merge only after the PR's checks pass. A failed
+                 check leaves the PR open.
   -n, --dry-run  Print the plan and the diff to read. Push nothing.
 EOF
 }
@@ -63,7 +65,7 @@ nearest_pushed_bookmark_below() {
     -T 'local_bookmarks.map(|b| b.name()).join(" ") ++ "\n"')
 }
 
-name="" rev="" body="" title="" base="" msg="" rev_set=false title_set=false draft=false land=false dry_run=false
+name="" rev="" body="" title="" base="" msg="" rev_set=false title_set=false draft=false land=false wait=false dry_run=false
 paths=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -81,6 +83,7 @@ while [ "$#" -gt 0 ]; do
       ;;
     --draft) draft=true; shift ;;
     --land | --merge) land=true; shift ;;
+    --wait) wait=true; shift ;;
     -n | --dry-run) dry_run=true; shift ;;
     -h | --help) usage; exit 0 ;;
     -*) usage >&2; exit 2 ;;
@@ -94,6 +97,9 @@ done
 [ -z "$body" ] || [ -f "$body" ] || die "no body file at $body"
 if $land && $draft; then
   die "cannot land a draft PR"
+fi
+if $wait && ! $land; then
+  die "--wait needs --land"
 fi
 [ "${#paths[@]}" -eq 0 ] || [ -n "$msg" ] || die "paths need -m MSG"
 
@@ -215,6 +221,9 @@ fi
 if $land; then
   printf 'land     merge into %s, fetch, and advance @\n' "$base"
 fi
+if $wait; then
+  printf 'wait     merge only after the checks pass\n'
+fi
 if $dry_run; then
   exit 0
 fi
@@ -260,6 +269,18 @@ else
   fi
 fi
 
+if $wait; then
+  # GitHub registers a new PR's checks a few seconds after it opens.
+  registered=0
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    registered=$(gh pr checks "$name" -R "$repo" --json name -q length 2>/dev/null || echo 0)
+    [ "$registered" -eq 0 ] || break
+    sleep 5
+  done
+  [ "$registered" -gt 0 ] || die "no checks appeared on $name; the PR stays open. Land it with --land alone"
+  gh pr checks "$name" -R "$repo" --watch --fail-fast ||
+    die "checks failed on $name; the PR stays open"
+fi
 if $land; then
   gh pr merge "$name" -R "$repo" --merge
   j git fetch --remote "$remote"

@@ -65,6 +65,20 @@ case "$1 $2" in
     fi
     echo "https://github.com/acme/widget/pull/$name"
     ;;
+  "pr checks")
+    mode=$(cat "$GH_STATE/checks-mode" 2>/dev/null || echo pass)
+    case "$*" in
+      *--json*)
+        if [ "$mode" = late ] && [ ! -f "$GH_STATE/checks-asked" ]; then
+          touch "$GH_STATE/checks-asked"
+          echo 0
+        else
+          echo 1
+        fi
+        ;;
+      *) [ "$mode" != fail ] ;;
+    esac
+    ;;
   *) echo "gh stub: unexpected $*" >&2; exit 1 ;;
 esac
 EOF
@@ -236,3 +250,34 @@ expect_output "$work/out" "base     main" "a merged branch left on trunk was pic
 [ "$(commit_id 'trunk()')" = "$(commit_id @-)" ] || fail "trunk not advanced after landing from an empty @"
 [ -z "$(j diff -r @ --name-only)" ] || fail "@ is not a fresh empty change on trunk"
 pass "--land from an empty @ starts a fresh change on trunk"
+
+expect_failure "$work/out" "$jj_pr" feat/i --wait -F "$body"
+expect_output "$work/out" "--wait needs --land" "--wait without --land is not refused"
+pass "--wait without --land is refused"
+
+: >"$GH_LOG"
+j new 'trunk()' >/dev/null 2>&1
+write k.txt k
+j commit -m "feat(k): add k" >/dev/null 2>&1
+main_before=$(remote_at main)
+echo fail >"$GH_STATE/checks-mode"
+expect_failure "$work/out" "$jj_pr" feat/k -F "$body" --land --wait
+expect_output "$work/out" "checks failed" "failed checks are not reported"
+expect_output "$GH_LOG" "pr checks feat/k -R acme/widget --watch --fail-fast" "checks were not watched"
+if grep -qF "pr merge" "$GH_LOG"; then fail "PR merged although its checks failed"; fi
+[ "$(remote_at main)" = "$main_before" ] || fail "remote main moved although checks failed"
+pass "--land --wait leaves the PR open when its checks fail"
+
+"$jj_pr" feat/k -n --land --wait >"$work/out" 2>&1
+expect_output "$work/out" "wait     merge only after the checks pass" "dry run does not report the wait step"
+pass "dry run reports the wait plan"
+
+: >"$GH_LOG"
+echo late >"$GH_STATE/checks-mode"
+"$jj_pr" feat/k --land --wait >"$work/out" 2>&1
+[ "$(grep -cF -- "--json name" "$GH_LOG")" -eq 2 ] || fail "did not ask again for checks that register late"
+watch_line=$(grep -nF "pr checks feat/k -R acme/widget --watch" "$GH_LOG" | cut -d: -f1)
+merge_line=$(grep -nF "pr merge feat/k" "$GH_LOG" | cut -d: -f1)
+[ -n "$watch_line" ] && [ -n "$merge_line" ] && [ "$watch_line" -lt "$merge_line" ] || fail "merge did not follow the watched checks"
+[ "$(remote_at main)" = "$(commit_id @-)" ] || fail "remote main not updated after checks passed"
+pass "--land --wait merges after late checks pass"
