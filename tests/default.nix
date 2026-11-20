@@ -180,7 +180,7 @@ lib.fix (checks: {
   unit-cleanup-legacy-dotfiles = onlyOn "darwin" "unit-cleanup-legacy-dotfiles"
     (shellTest "unit-cleanup-legacy-dotfiles" {
       script = ./unit/cleanup-legacy-dotfiles-test.sh;
-      inputs = [ pkgs.coreutils pkgs.jq ];
+      inputs = [ pkgs.coreutils ];
       args = [
         (pkgs.writeText "cleanup-legacy-dotfiles.sh"
           self.darwinConfigurations."f".config.home-manager.users.martinfan.home.activation.cleanupLegacyDotfiles.data)

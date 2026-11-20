@@ -314,7 +314,7 @@ let
   pstackPluginSkillIds = builtins.attrNames pstackDrvs;
   claudeHiddenSkillIds = pluginProvidedSkillIds ++ pstackPluginSkillIds ++ harnessProvidedSkillIds ++ interfacesSkillNames;
   claudeOffSkillIds = config.martin.agentSurface.skillPlacement.offIds.claude;
-  bundleSkillIds = enabledMattpocockSkills ++ [ "archify" "better-github-skill" "ub-mode" ] ++ interfacesSkillNames;
+  bundleSkillIds = enabledMattpocockSkills ++ [ "archify" "better-github-skill" "ub-mode" "impeccable" ] ++ interfacesSkillNames;
 
   # Plugin skills to block outright. skillOverrides ignores plugin skills, so
   # claudePrunePluginSkills unlists them every switch and a deny rule refuses
@@ -433,6 +433,7 @@ let
     effortLevel = "medium";
     inputNeededNotifEnabled = true;
     agentPushNotifEnabled = true;
+    disableDeepLinkRegistration = "disable";
   });
   claudeOwnedSettings = {
     own = [
@@ -441,6 +442,7 @@ let
       { path = [ "permissions" "ask" ]; value = claudePermissions.ask; }
       { path = [ "permissions" "defaultMode" ]; value = claudePermissions.defaultMode; }
       { path = [ "effortLevel" ]; value = "medium"; }
+      { path = [ "disableDeepLinkRegistration" ]; value = "disable"; }
       { path = [ "env" "CLAUDE_CODE_EXPERIMENTAL_CODE_MODE" ]; value = "1"; }
       { path = [ "env" "CLAUDE_CODE_PLUGIN_DIRS" ]; value = "${homeDir}/.claude/mods/jev-report"; }
     ]
@@ -678,6 +680,7 @@ in
       archify = mkSource "archify" "." null;
       better-github-skill = mkSource "better-github-skill" "." null;
       ub-mode = mkSource "ub-mode" "." null;
+      impeccable = mkSource "impeccable" ".agents/skills" null;
       interfaces = mkSource "interfaces-skills" "skills" null;
     } // mpSources // effectSources;
 

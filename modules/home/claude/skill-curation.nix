@@ -11,7 +11,7 @@
   removedSkillIds = [ "git-workflow" "lazygit" "ralph-loop" "unslop" ];
   # Ids the Claude harness already ships (e.g. anthropic-skills:notebooklm);
   # the local copy is hidden in Claude but stays visible to other agents.
-  harnessProvidedSkillIds = [ "notebooklm" ];
+  harnessProvidedSkillIds = [ "notebooklm" "impeccable" ];
   interfacesSkillNames = [
     "better-accessibility"
     "better-colors"

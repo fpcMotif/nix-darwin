@@ -75,6 +75,11 @@
       flake = false;
     };
 
+    impeccable = {
+      url = "github:pbakaus/impeccable";
+      flake = false;
+    };
+
     # The trait engine behind the traits CLI and the jev-traits mod. Pinned by
     # rev so the node_modules hash in pkgs/traits.nix stays valid.
     traits = {

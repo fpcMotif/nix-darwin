@@ -37,21 +37,10 @@ nix run .#martin.jj-pr -- <name> -m "type(scope): msg" -t "PR title" -F /path/to
 
 - **Flag check**: an older installed `jj pr` lacks `-m`, `--land`, or paths. Run `jj pr --help` first. Without them, run `jj commit -m MSG [PATHS]`, then `jj pr <name> -F FILE`, then `gh pr merge`.
 
+- **Gate on CI**: `--land` merges at once. Use `--land --wait` to merge only after the PR's checks pass. A failed check leaves the PR open.
 - **Dry-run plan**: `jj pr <name> -n` prints the base, commits, and diff without pushing.
 - **Update open PR**: `jj pr <name> -F FILE` (pass `-r @-` if new commits were added).
-- **Draft PR body**:
-  ```markdown
-  ## Summary
-  <shallow file tree, diff sketch, or 1-2 sentence core outcome>
-
-  ## Evidence
-  - **Before**: <failing command / error output>
-  - **After**: <passing test command / verified output>
-
-  ## Merge Danger
-  **Door**: two-way | one-way
-  **Blast Radius**: contained | broad
-  ```
+- **PR body**: write the `-F` file with the `pr` skill. It owns the template (Summary, Evidence, Merge Danger).
 - **Completion criterion**: `jj status` shows clean empty `@` on `trunk()`.
 
 ## Interactive hunk curation

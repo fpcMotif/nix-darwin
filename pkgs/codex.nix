@@ -8,32 +8,32 @@
 }:
 
 let
-  version = "0.166.0";
+  version = "0.171.0-alpha.5";
 
   sources = {
     aarch64-darwin = {
       asset = "codex-aarch64-apple-darwin";
-      hash = "sha256-xIgkRi/FdoHq+wkl2XsRtYkBBHVhOQT1cLQv6lPiQNU=";
+      hash = "sha256-GTKcJV05HR8EnsMy7TCUAIn5z46iSHbnhX9ScpV6RyE=";
       host.asset = "codex-code-mode-host-aarch64-apple-darwin";
-      host.hash = "sha256-er1Q/l8DNJWntpPEX7gtxXCToY8cS6PoBDV33kbFx8U=";
+      host.hash = "sha256-mbzxONGa2pT+qnJJcMzU7Ui2ScLFuBoxcDG2FVr8QO0=";
     };
     x86_64-darwin = {
       asset = "codex-x86_64-apple-darwin";
-      hash = "sha256-2ww4cTw2GZsS58jRYpOGw1pM6PmeHJznLxclp032e1c=";
+      hash = "sha256-G8MYtQPeWPA2qHM8RJDztGHU9W3nEfBDrYf8iJtHXgg=";
       host.asset = "codex-code-mode-host-x86_64-apple-darwin";
-      host.hash = "sha256-s1x3XV5fjWDQXg3nFU5bu/MgttDiijI31CzIp0LMr2U=";
+      host.hash = "sha256-PuvLMy+GnZIG1LIxcuxIsKHFRdT42qUHAzRVV0eb+cQ=";
     };
     aarch64-linux = {
       asset = "codex-aarch64-unknown-linux-musl";
-      hash = "sha256-lOtwdgXsJkay4Ft+33xOezzPArFiN8NK6b64z7f4EKk=";
+      hash = "sha256-hVjqqkshT9nziTiQJ6TTdVgee5MxGMkUxlFdTbA2LFc=";
       host.asset = "codex-code-mode-host-aarch64-unknown-linux-musl";
-      host.hash = "sha256-rJjR+HjjU6FsunEf1Hv+8vbIFBCb3YGe4ra21qGXAec=";
+      host.hash = "sha256-gInBIKNYZk+W5irYwFOyzrCdsMLm1vV3H1v2pDIpV2I=";
     };
     x86_64-linux = {
       asset = "codex-x86_64-unknown-linux-musl";
-      hash = "sha256-oL9XLS+T8FbGcSpto0jpYHjchPOIX9e+Z4B+84nLOXg=";
+      hash = "sha256-wIlzMtE5WXnrKtgtl1nvoDEKp+RMlE0PDcp/q6JdEN0=";
       host.asset = "codex-code-mode-host-x86_64-unknown-linux-musl";
-      host.hash = "sha256-dYgzT9R7xAA9lwtw39TR5FeEkbHpuqcpdqTC1+l1kNo=";
+      host.hash = "sha256-hPaSOCSzmoM8IyyAHR+lV4qAIF0tTL85MrJ3Cu9OSU4=";
     };
   };
 
