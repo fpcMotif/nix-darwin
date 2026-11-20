@@ -85,7 +85,6 @@ let
       extensions = pythonExtensions;
       targets = [ "claude" "codex" "zed" ];
       zedName = "basedpyright";
-      zedArgs = [ ];
     };
     ruff = {
       package = "ruff";
@@ -101,6 +100,20 @@ let
       args = [ ];
       extensions = { ".lua" = "lua"; };
       targets = [ "claude" "codex" ];
+    };
+    oxfmt = {
+      package = "oxfmt";
+      command = "oxfmt";
+      args = [ "--lsp" ];
+      extensions = { };
+      targets = [ "zed" ];
+    };
+    oxlint = {
+      package = "oxlint";
+      command = "oxlint";
+      args = [ "--lsp" ];
+      extensions = { };
+      targets = [ "zed" ];
     };
     nixd = {
       package = "nixd";
