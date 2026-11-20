@@ -188,7 +188,7 @@
 
   hosts = {
     clean = [ "agents" "claude" "codex" "gemini" ];
-    drafts-ledger = [ "agents" "claude" "codex" "gemini" "omp-skills" "skillshub" ];
+    drafts-ledger = [ "agents" "codex" "gemini" "omp-skills" "skillshub" ];
     manage-taskboard = [ "agents" "gemini" ];
     qmd = [ "agents" "claude" "gemini" "omp-skills" ];
     seeded-landing-direction = [ "agents" "codex" "gemini" "skillshub" ];
