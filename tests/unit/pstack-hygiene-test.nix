@@ -3,12 +3,7 @@
 let
   helpers = import ../lib/assertions.nix { inherit pkgs; };
 
-  mkSource = input: subdir: nameRegex: {
-    inherit input subdir;
-    filter = { maxDepth = 1; } // lib.optionalAttrs (nameRegex != null) { inherit nameRegex; };
-  };
-  mkSkill = from: path: packages: { inherit from path packages; };
-  pstack = import (self + "/modules/home/claude/pstack.nix") { inherit lib pkgs inputs mkSource mkSkill; };
+  pstack = import (self + "/modules/home/claude/pstack.nix") { inherit lib pkgs inputs; };
 
   root = inputs.pstack-claude + "/plugins/pstack/skills";
   built = id: pstack.pstackTransform id {

@@ -3,7 +3,7 @@
 let
   pkgs = import inputs.nixpkgs {
     inherit system;
-    overlays = [ (import ../pkgs) ];
+    overlays = (import ../lib/overlays.nix { inherit inputs; }).all;
     config.allowUnfree = true;
   };
   inherit (pkgs) lib;
@@ -111,166 +111,7 @@ lib.fix (checks: {
     inputs = [ pkgs.findutils pkgs.gnugrep pkgs.gawk ];
     args = [ ./unit/adr-files-test.sh ./unit/adr-numbers-test.sh ./unit/doc-links-test.sh ];
   };
-  unit-agent-guides =
-    let
-      docLockGuide = ../modules/home/doc-lock/guide.md;
-      guideHosts = startupSections: workspaceGuide: (import ../modules/home/agent-instructions/guides.nix {
-        inherit lib pkgs startupSections;
-        developmentSections = [ workspaceGuide ];
-      }).hosts;
-      hosts = guideHosts [ docLockGuide ] ../modules/home/workspace-backend/guide-worktrunk.md;
-      dojjoHosts = guideHosts [ docLockGuide ] ../modules/home/workspace-backend/guide-dojjo.md;
-      unlockedHosts = guideHosts [ ] ../modules/home/workspace-backend/guide-worktrunk.md;
-      # Each backend's guide names only its own isolation commands.
-      workspaceGuideFits = backendHosts: required: forbidden:
-        lib.all
-          (host:
-            lib.all (text: lib.hasInfix text host.development.content) required
-            && lib.all (text: !(lib.hasInfix text host.development.content)) forbidden)
-          (lib.attrValues backendHosts);
-      hasWord = word: text:
-        lib.any
-          (line:
-            builtins.match ".*(^|[^A-Za-z0-9_])${word}($|[^A-Za-z0-9_]).*" line != null)
-          (lib.splitString "\n" text);
-      contentForHost = host:
-        lib.concatStringsSep "\n" (map (guide: guide.content) ([
-          host.startup
-          host.development
-        ] ++ lib.attrValues host.languages));
-      count = marker: text: builtins.length (lib.splitString marker text) - 1;
-      requiredSections = [
-        "## Working contract"
-        "## Completion"
-        "## What I need from you"
-        "## Command routing"
-        "## Code search"
-        "## Python"
-        "## Go"
-        "## Version control"
-        "## Git hooks"
-        "## Parallel checkouts"
-        "## Code quality"
-        "## Current-state integrity"
-        "## Writing"
-        "## Docs lock"
-      ];
-      onceSections = [
-        "## Working contract"
-        "## Code quality"
-        "## Current-state integrity"
-        "## Command routing"
-        "## Parallel checkouts"
-        "## Docs lock"
-        "## JavaScript and TypeScript"
-        "## Python"
-        "## Go"
-        "## Rust"
-      ];
-      # The adapter line that links human-documents.md must name ADRs, or an
-      # agent writing one never loads the ADR rules.
-      documentsTriggerNamesAdr = host:
-        lib.any
-          (line: lib.hasInfix "~/${host.humanDocuments.target}" line && lib.hasInfix "ADR" line)
-          (lib.splitString "\n" host.startup.content);
-      # The adapter line that links development.md must name JJ workspaces, or
-      # an agent reaches for a Git worktree before it loads Parallel checkouts.
-      workspacesTriggerNamesJj = host:
-        lib.any
-          (line: lib.hasInfix "~/${host.development.target}" line && lib.hasInfix "JJ workspace" line)
-          (lib.splitString "\n" host.startup.content);
-      # The adapter line that links the language files must name each language,
-      # or an agent writing Go never connects its task to go.md.
-      languagesTriggerNamesEach = host:
-        lib.any
-          (line:
-            lib.hasInfix "~/${host.languages.typescript.target}" line
-            && lib.all (language: lib.hasInfix "${language}.md" line) (lib.attrNames host.languages)
-            && lib.all (name: lib.hasInfix name line) [ "TypeScript" "Python" "Go" "Rust" ])
-          (lib.splitString "\n" host.startup.content);
-      bannedTerms = [ "gemini" "deepwiki" "mgrep" "lazygit" "deep-research" "chezmoi" ];
-      requiredTools = [ "fd" "rg" "bat" "eza" "dust" "procs" "btm" "ax" "delta" "hyperfine" ];
-      noModelCache = text: lib.all (term: !(lib.hasInfix term text)) [
-        "gpt-"
-        "Gemini"
-        "Astra"
-        "Sol"
-        "Terra"
-        "Luna"
-      ];
-      checkHost = name: host:
-        let
-          content = contentForHost host;
-          links = builtins.filter
-            (guide: guide.target != host.startup.target
-              && !(builtins.elem guide (lib.attrValues host.languages))
-              && !(builtins.elem guide host.extras))
-            host.guides;
-          tools = requiredTools ++ lib.optional (name == "claude") "fff";
-        in
-        assert lib.all (section: lib.hasInfix section content) requiredSections;
-        assert lib.all (section: count section content == 1) onceSections;
-        assert lib.all
-          (term: !(lib.hasInfix (lib.toLower term) (lib.toLower content)))
-          bannedTerms;
-        assert noModelCache content;
-        assert lib.all (tool: hasWord tool content) tools;
-        assert lib.all
-          (guide: lib.hasInfix "~/${guide.target}" host.startup.content)
-          links;
-        true;
-      hostChecks = lib.mapAttrsToList checkHost hosts;
-    in
-    assert !(hasWord "bat" "batch");
-    assert lib.all (passed: passed) hostChecks;
-    assert workspaceGuideFits hosts [ "wt switch --create" ] [ "djo" ];
-    assert workspaceGuideFits dojjoHosts
-      [ "djo switch --create" "jj workspace forget" "never a Git worktree" ]
-      [ "wt switch" "wt remove" ];
-    assert lib.hasInfix "The document is done when" hosts.claude.humanDocuments.content;
-    assert lib.hasInfix "## ADRs and domain documents" hosts.claude.humanDocuments.content;
-    assert !(lib.hasInfix "## Plain English" hosts.claude.startup.content);
-    assert !(lib.hasInfix "ste80" (contentForHost hosts.claude));
-    assert lib.all
-      (name:
-        count "## Plain English" hosts.${name}.startup.content == 1
-        && lib.hasInfix "~/.agents/skills/ste80/SKILL.md" hosts.${name}.startup.content)
-      [ "general" "codex" "omp" "antigravity" ];
-    assert lib.all
-      (host: lib.hasInfix "the `prompt-coach` skill" host.startup.content
-        && count "[archify explainer: on-demand]" host.startup.content == 1
-        && !(lib.hasInfix "skills/prompt-coach" host.startup.content))
-      (lib.attrValues hosts);
-    assert lib.all
-      (host: count "## Guides" host.startup.content == 1
-        && count "## Search rules" host.startup.content == 1
-        && count "**Code Mode**" host.startup.content == 1
-        && count "**Trust**" host.startup.content == 1
-        && count "**Develop**" host.startup.content == 1
-        && lib.hasInfix "## Filesystem and Nix lookups" host.development.content)
-      (lib.attrValues hosts);
-    assert lib.all
-      (adapter: lib.all (label: !(lib.hasInfix label (builtins.readFile adapter)))
-        [ "**Develop**" "**Languages**" "**Documents**" "**Workspaces**" "**Trust**" "**Coverage**" ])
-      [
-        ../modules/home/agent-instructions/AGENTS.md
-        ../modules/home/agent-instructions/codex/AGENTS.md
-        ../modules/home/agent-instructions/omp/agent/AGENTS.md
-        ../modules/home/claude/claude-adapter.md
-      ];
-    assert hosts.antigravity.startup.target == ".gemini/config/AGENTS.md";
-    assert hosts.antigravity.startup.content == hosts.general.startup.content;
-    assert lib.all documentsTriggerNamesAdr
-      (builtins.filter (host: host ? humanDocuments) (lib.attrValues hosts));
-    assert lib.all workspacesTriggerNamesJj (lib.attrValues hosts ++ lib.attrValues dojjoHosts);
-    assert lib.all languagesTriggerNamesEach (lib.attrValues hosts);
-    assert lib.all
-      (name: hosts.${name}.startup.content
-        == unlockedHosts.${name}.startup.content + "\n" + builtins.readFile docLockGuide)
-      (builtins.attrNames hosts);
-    pkgs.runCommand "unit-agent-guides" { } ''
-      touch $out
-    '';
+  unit-agent-guides = callTest ./unit/agent-guides-test.nix { };
   unit-shell-guard = shellTest "unit-shell-guard" {
     script = ../modules/home/claude/hooks/shell-guard-test.sh;
     inputs = [ pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.gawk pkgs.zoxide ];
@@ -347,95 +188,40 @@ lib.fix (checks: {
   # Drives wt and djo through create, switch, list, remove, hooks, and a
   # backend switch in disposable repositories. It uses the config files and Zsh
   # lines host "f" ships under each backend, so it runs where "f" builds.
-  unit-workspace-backend-lifecycle =
-    if system == "aarch64-darwin" then
-      let
-        user = "martinfan";
-        worktrunkHome = self.darwinConfigurations.f.config.home-manager.users.${user};
-        dojjoHome = darwinDojjo.config.home-manager.users.${user};
-        zshSourceLines = home: marker: pkgs.writeText "${marker}-lines"
-          (lib.concatMapStrings (line: line + "\n")
-            (builtins.filter (lib.hasInfix marker) (lib.splitString "\n" home.programs.zsh.initContent)));
-      in
-      pkgs.runCommand "unit-workspace-backend-lifecycle"
-        {
-          nativeBuildInputs = [
-            pkgs.bash
-            pkgs.git
-            pkgs.jq
-            pkgs.zsh
-            worktrunkHome.programs.jujutsu.package
-            worktrunkHome.programs.worktrunk.package
-            pkgs.martin.dojjo-bin
-          ];
-        }
-        ''
-          bash ${./unit/workspace-backend-lifecycle-test.sh} \
-            ${worktrunkHome.xdg.configFile."worktrunk/config.toml".source} \
-            ${zshSourceLines worktrunkHome "-worktrunk-init.zsh"} \
-            ${dojjoHome.xdg.configFile."dojjo/config.toml".source} \
-            ${zshSourceLines dojjoHome "-dojjo-init.zsh"}
-          touch $out
-        ''
-    else
-      pkgs.runCommand "unit-workspace-backend-lifecycle-skipped" { } ''
-        echo "Skipping the workspace-backend lifecycle test on ${system}; host f is aarch64-darwin"
+  unit-workspace-backend-lifecycle = onlyOn "darwin" "unit-workspace-backend-lifecycle" (
+    let
+      user = "martinfan";
+      worktrunkHome = self.darwinConfigurations.f.config.home-manager.users.${user};
+      dojjoHome = darwinDojjo.config.home-manager.users.${user};
+      zshSourceLines = home: marker: pkgs.writeText "${marker}-lines"
+        (lib.concatMapStrings (line: line + "\n")
+          (builtins.filter (lib.hasInfix marker) (lib.splitString "\n" home.programs.zsh.initContent)));
+    in
+    pkgs.runCommand "unit-workspace-backend-lifecycle"
+      {
+        nativeBuildInputs = [
+          pkgs.bash
+          pkgs.git
+          pkgs.jq
+          pkgs.zsh
+          worktrunkHome.programs.jujutsu.package
+          worktrunkHome.programs.worktrunk.package
+          pkgs.martin.dojjo-bin
+        ];
+      }
+      ''
+        bash ${./unit/workspace-backend-lifecycle-test.sh} \
+          ${worktrunkHome.xdg.configFile."worktrunk/config.toml".source} \
+          ${zshSourceLines worktrunkHome "-worktrunk-init.zsh"} \
+          ${dojjoHome.xdg.configFile."dojjo/config.toml".source} \
+          ${zshSourceLines dojjoHome "-dojjo-init.zsh"}
         touch $out
-      '';
+      ''
+  );
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
   unit-pstack-hygiene = callTest ./unit/pstack-hygiene-test.nix { };
-  unit-ai-model-routing =
-    let
-      routing = import ../modules/shared/agent-model-routing.nix { inherit lib; };
-      policy = pkgs.writeText "agent-model-routing-test.json" (builtins.toJSON routing.policy);
-      omp = routing.adapters.omp;
-      roleModel = role: omp.normal.modelRoles.${role};
-      agentModel = agent:
-        let role = lib.removePrefix "@" omp.normal.task.agentModelOverrides.${agent};
-        in roleModel role;
-      fallbackChains = omp.normal.retry.fallbackChains;
-      inherit (omp) economy;
-      serializedAdapters = builtins.toJSON routing.adapters;
-      routingPython = pkgs.python3.withPackages (pythonPackages: [ pythonPackages.pyyaml ]);
-    in
-    assert agentModel "scout" == routing.selector "search";
-    assert agentModel "explore" == routing.selector "search";
-    assert agentModel "librarian" == routing.selector "search";
-    assert agentModel "reviewer" == routing.selector "check";
-    assert agentModel "security-reviewer" == routing.selector "check";
-    assert agentModel "task" == routing.selector "general";
-    assert agentModel "plan" == routing.selector "plan";
-    assert fallbackChains.${routing.bareSelector "general"} == [ (routing.bareSelector "economy") ];
-    assert fallbackChains.${routing.bareSelector "search"} == [ ];
-    assert fallbackChains.${routing.bareSelector "economy"} == [ ];
-    assert omp.normal.modelRoles.default == "google-antigravity/gemini-3.8-flash:high";
-    assert lib.all (lib.hasPrefix "openai-codex/") (lib.attrValues (builtins.removeAttrs omp.normal.modelRoles [ "default" ]));
-    assert lib.all
-      (model:
-        lib.hasPrefix "openai-codex/gpt-6-" model
-        || model == "google-antigravity/*"
-      )
-      omp.normal.enabledModels;
-    assert lib.elem "google-antigravity/*" omp.normal.enabledModels;
-    assert lib.all (model: lib.hasInfix model serializedAdapters) [
-      "gpt-6-astra"
-      "gpt-6-sol"
-      "gpt-6-luna"
-    ];
-    assert economy.modelRoles.default == routing.selector "economy";
-    assert economy.modelRoles.reviewer == routing.selector "check";
-    assert economy.modelRoles.plan == routing.selector "plan";
-    assert economy.task.agentModelOverrides == omp.normal.task.agentModelOverrides;
-    assert economy.retry == omp.normal.retry;
-    assert routing.adapters.codex.profiles.fast.model == routing.modelId "search";
-    assert routing.adapters.codex.profiles.plan.model == routing.modelId "plan";
-    assert !(lib.hasInfix "gpt-5." serializedAdapters);
-    pkgs.runCommand "unit-ai-model-routing" { } ''
-      ${routingPython}/bin/python3 ${./unit/ai-model-routing-test.py} \
-        ${../modules/home/ai-model-routing.py} ${policy}
-      touch $out
-    '';
+  unit-ai-model-routing = callTest ./unit/ai-model-routing-test.nix { };
 
   # Load the rendered zshrc in a sandboxed zsh to verify keymap tables across
   # default, null-dirjump, and disabled search scenarios.
@@ -513,7 +299,7 @@ lib.fix (checks: {
   smoke-build-iets = onlyOn "darwin" "smoke-build-iets"
     (pkgs.runCommand "smoke-build-iets" { } ''
       echo "Building iets with pkgs/iets/host-system.patch applied..."
-      test -x ${self.darwinConfigurations."f".pkgs.martin.iets-classic}/bin/nix
+      test -x ${pkgs.martin.iets-classic}/bin/nix
       touch $out
     '');
 

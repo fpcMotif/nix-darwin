@@ -129,18 +129,8 @@
         };
       };
 
-      overlays = [
-        inputs.rust-overlay.overlays.default
-        (import ./pkgs)
-        (final: prev: {
-          martin = prev.martin // {
-            traits = final.callPackage ./pkgs/traits.nix { src = inputs.traits; };
-            iets-classic = final.callPackage ./pkgs/iets { inherit (inputs) iets; };
-            inherit (import inputs.charm-nur { pkgs = final; }) crush;
-          };
-        })
-        inputs.claude-code.overlays.default
-      ];
+      repoOverlays = import ./lib/overlays.nix { inherit inputs; };
+      overlays = repoOverlays.all;
 
       mkSystem = import ./lib/mkSystem.nix {
         inherit inputs overlays;
@@ -180,7 +170,7 @@
 
       # The repo's own overlay (pkgs.martin.* and friends), reusable by other
       # flakes without re-importing ./pkgs by path.
-      overlays.default = import ./pkgs;
+      overlays.default = repoOverlays.default;
 
       legacyPackages = lib.genAttrs supportedSystems legacyPackagesFor;
 
