@@ -13,6 +13,7 @@ esac
 
 HOME=$(mktemp -d)
 export HOME
+trap 'rm -rf -- "$HOME"' EXIT
 unset newGenPath
 
 mkdir -p "$HOME/.local/bin" "$HOME/.claude/hooks" "$HOME/.claude/skills" "$HOME/outside"
