@@ -14,9 +14,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nur = {
-      url = "github:nix-community/NUR";
-      inputs.nixpkgs.follows = "nixpkgs";
+    # Charm's own repo, not the NUR aggregate, which pins it as a GitHub .zip that iets cannot unpack.
+    charm-nur = {
+      url = "github:charmbracelet/nur";
+      flake = false;
     };
 
     claude-code = {
@@ -68,11 +69,28 @@
       url = "github:michael-denyer/pstack-claude";
       flake = false;
     };
+
+    ub-mode = {
+      url = "github:unclebob/ub-mode";
+      flake = false;
+    };
+
+    # The trait engine behind the traits CLI and the jev-traits mod. Pinned by
+    # rev so the node_modules hash in pkgs/traits.nix stays valid.
+    traits = {
+      url = "github:fpcMotif/traits/37a5705588600d6b42402dec511489512db9be50";
+      flake = false;
+    };
+
+    # iets, a Rust Nix client, under the classic nix names on the Mac
+    # (modules/home/iets.nix). Pinned by rev so pkgs/iets/host-system.patch
+    # applies. No nixpkgs follows: its crane build stays as upstream tests it.
+    iets.url = "github:numtide/iets/0fba531c064e818701b02590bb647e83ee0f74a0";
   };
 
   outputs = inputs@{ self, nixpkgs, ... }:
     let
-      lib = nixpkgs.lib;
+      inherit (nixpkgs) lib;
       systemUser = "martinfan";
 
       supportedSystems = [
@@ -111,12 +129,8 @@
         };
       };
 
-      overlays = [
-        inputs.nur.overlays.default
-        inputs.rust-overlay.overlays.default
-        (import ./pkgs)
-        inputs.claude-code.overlays.default
-      ];
+      repoOverlays = import ./lib/overlays.nix { inherit inputs; };
+      overlays = repoOverlays.all;
 
       mkSystem = import ./lib/mkSystem.nix {
         inherit inputs overlays;
@@ -145,10 +159,9 @@
           pkgs = pkgsFor s;
         in
         {
-          crush = pkgs.nur.repos.charmbracelet.crush;
+          crush = pkgs.martin.crush;
           # Overlay override of nixpkgs' codex; exposed so update-codex.sh can build it.
-          codex = pkgs.codex;
-          martin = pkgs.martin;
+          inherit (pkgs) codex martin typescript;
         };
     in
     {
@@ -157,7 +170,7 @@
 
       # The repo's own overlay (pkgs.martin.* and friends), reusable by other
       # flakes without re-importing ./pkgs by path.
-      overlays.default = import ./pkgs;
+      overlays.default = repoOverlays.default;
 
       legacyPackages = lib.genAttrs supportedSystems legacyPackagesFor;
 

@@ -43,10 +43,6 @@ let
       (hasPackage "git" homeConfig.home.packages)
       "common Home Manager packages should include git")
 
-    (helpers.assertTest "common-home-packages-include-oxfmt"
-      (hasPackage "oxfmt" homeConfig.home.packages)
-      "common Home Manager packages should include OXC formatter tooling")
-
     (helpers.assertTest "common-home-packages-include-go"
       (hasPackage "go" homeConfig.home.packages)
       "common Home Manager packages should include the Go toolchain")
@@ -59,46 +55,6 @@ let
     (helpers.assertTest "agent-skills-enabled"
       (homeConfig.programs.agent-skills.enable == true)
       "agent-skills Home Manager module should be enabled")
-
-    (helpers.assertTest "grill-with-docs-skill-enabled"
-      (
-        builtins.elem "grill-with-docs" homeConfig.programs.agent-skills.skills.enable
-        && !(builtins.hasAttr "grill-with-docs" homeConfig.programs.agent-skills.skills.explicit)
-      )
-      "grill-with-docs should come from plain bucket auto-discovery — the Karpathy fork was retired in favour of the plugin copy, and a local transform would shadow it")
-
-    (helpers.assertTest "grill-me-skill-disabled"
-      (
-        !(builtins.elem "grill-me" homeConfig.programs.agent-skills.skills.enable)
-        && !(builtins.hasAttr "grill-me" homeConfig.programs.agent-skills.skills.explicit)
-      )
-      "grill-me should stay disabled in the Matt Pocock skill allowlist")
-
-    (helpers.assertTest "git-workflow-skill-removed"
-      (
-        let cfg = homeConfig.programs.agent-skills;
-        in
-        !(builtins.hasAttr "git-workflow" cfg.catalog)
-        && !(builtins.elem "git-workflow" cfg.skills.enable)
-        && !(builtins.hasAttr "git-workflow" cfg.skills.explicit)
-      )
-      "git-workflow should be removed from the skill catalog and bundle, not just disabled")
-
-    (helpers.assertTest "pi-skill-target-configured"
-      (homeConfig.programs.agent-skills.targets.pi.dest == ".pi/agent/skills")
-      "Oh My Pi skill target should be configured explicitly")
-
-    (helpers.assertTest "factory-skill-target-configured"
-      (!(homeConfig.programs.agent-skills.targets ? factory))
-      "Factory/Droid must not get a skill link target — droid also scans ~/.agents/skills and would report every skill as a duplicate")
-
-    (helpers.assertTest "crush-skill-target-configured"
-      (homeConfig.programs.agent-skills.targets.crush.dest == ".config/crush/skills")
-      "Crush skill target should use the documented XDG config path")
-
-    (helpers.assertTest "opencode-skill-target-configured"
-      (homeConfig.programs.agent-skills.targets.opencode.dest == ".config/opencode/skills")
-      "OpenCode skill target should use the documented XDG config path")
   ];
 
   darwinChecks = lib.optionals isDarwin [

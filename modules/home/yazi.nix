@@ -1,4 +1,4 @@
-{ ... }:
+_:
 
 {
   programs.yazi = {
@@ -8,6 +8,11 @@
 
     settings = {
       mgr = {
+        ratio = [
+          1
+          3
+          5
+        ];
         show_hidden = true;
         sort_by = "natural";
         sort_dir_first = true;

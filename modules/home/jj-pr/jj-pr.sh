@@ -1,6 +1,6 @@
 usage() {
   cat <<'EOF'
-Usage: jj pr [NAME] [-r REV] [-m MSG] [-F FILE] [-t TITLE] [-B BASE] [--draft] [--land] [-n]
+Usage: jj pr [NAME] [-r REV] [-m MSG] [-F FILE] [-t TITLE] [-B BASE] [--draft] [--land] [-n] [-- PATHS...]
 
 Push REV under bookmark NAME, then open its GitHub pull request or update the
 open one. Rerun it after every rewrite; it pushes and updates again.
@@ -8,13 +8,15 @@ open one. Rerun it after every rewrite; it pushes and updates again.
   NAME           PR bookmark. Defaults to the one bookmark already on REV.
   -r REV         Head commit of the PR. Defaults to NAME's bookmark when it
                  exists, else @-. Pass -r to move an existing bookmark forward.
-  -m MSG         Commit working copy @ before opening the PR.
+  -m MSG         Commit working copy @ before opening the PR. With PATHS, commit
+                 only those paths and leave the rest in @.
   -F FILE        PR body. Required to open; replaces the body on update.
   -t TITLE       PR title. Defaults to REV's subject when the PR has one commit.
   -B BASE        Base branch. Defaults to the nearest pushed bookmark below REV,
                  else trunk. An open PR is retargeted to it.
   --draft        Open as a draft.
-  --land         Merge the PR into BASE, fetch, and advance @ onto BASE.
+  --land         Merge the PR into BASE, fetch, and advance @ onto BASE. Edits
+                 left in @ move onto BASE with it.
   -n, --dry-run  Print the plan and the diff to read. Push nothing.
 EOF
 }
@@ -62,8 +64,10 @@ nearest_pushed_bookmark_below() {
 }
 
 name="" rev="" body="" title="" base="" msg="" rev_set=false title_set=false draft=false land=false dry_run=false
+paths=()
 while [ "$#" -gt 0 ]; do
   case "$1" in
+    --) shift; paths=("$@"); break ;;
     -r | -F | -t | -B | -m)
       [ "$#" -ge 2 ] || die "$1 needs a value"
       case "$1" in
@@ -91,10 +95,11 @@ done
 if $land && $draft; then
   die "cannot land a draft PR"
 fi
+[ "${#paths[@]}" -eq 0 ] || [ -n "$msg" ] || die "paths need -m MSG"
 
 if [ -n "$msg" ]; then
   if [ -n "$(commit_ids "@ & ~empty()")" ]; then
-    j commit -m "$msg"
+    j commit -m "$msg" "${paths[@]}"
   elif [ -n "$(commit_ids "@- & ~trunk()")" ]; then
     j describe -r @- -m "$msg"
   fi
@@ -116,6 +121,12 @@ head_id=$(commit_ids "$rev") || die "cannot resolve $rev"
 trunk_id=$(commit_ids 'trunk()')
 trunk_name=$(j log -r 'trunk()' --no-graph \
   -T "remote_bookmarks.filter(|b| b.remote() == \"$remote\").map(|b| b.name()).join(\" \")")
+for candidate in main master trunk; do
+  if [[ " $trunk_name " == *" $candidate "* ]]; then
+    trunk_name=$candidate
+    break
+  fi
+done
 trunk_name=${trunk_name%% *}
 
 [ -n "$(commit_ids "trunk()..$head_id")" ] ||
@@ -255,6 +266,10 @@ if $land; then
   if [ -n "$(commit_ids "remote_bookmarks(exact:\"$base\", exact:\"$remote\")")" ]; then
     j bookmark move "exact:$base" --to "exact:$base@$remote" --allow-backwards 2>/dev/null || true
   fi
-  j new "$base"
+  if [ -n "$(commit_ids "@ & ~empty() & ~::$head_id")" ]; then
+    j rebase -r @ -d "$base"
+  else
+    j new "$base"
+  fi
   j bookmark forget "exact:$name" 2>/dev/null || true
 fi

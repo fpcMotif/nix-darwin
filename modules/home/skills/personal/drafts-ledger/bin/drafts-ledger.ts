@@ -40,6 +40,7 @@ function normDomain(u: string): string {
   try { d = new URL(u).hostname.toLowerCase(); } catch { return ""; }
   for (const p of ["www.", "mobile.", "m."]) if (d.startsWith(p)) d = d.slice(p.length);
   if (["twitter.com", "fxtwitter.com", "vxtwitter.com"].includes(d)) d = "x.com";
+  if (d === "threads.net") d = "threads.com";
   return d;
 }
 function bucketOf(d: string, rules?: Record<string, string[]>): Bucket {
@@ -56,14 +57,16 @@ function bucketOf(d: string, rules?: Record<string, string[]>): Bucket {
   if (d === "apps.apple.com" || d === "testflight.apple.com") return "appstore";
   return "web";
 }
-const TRACKING = new Set(["si", "s", "ref", "ref_src", "feature", "fbclid", "gclid", "igshid", "mc_cid", "mc_eid", "spm", "from", "share_token", "xhsshare"]);
+const TRACKING = new Set(["si", "s", "ref", "ref_src", "feature", "fbclid", "gclid", "igshid", "igsh", "mdxt", "cplk", "dlrf", "xtok", "obrf", "psln", "exln", "vrfl", "srtk", "rpxt", "smid", "mc_cid", "mc_eid", "spm", "from", "share_token", "xhsshare"]);
 /** Same page ⇒ same key: drop hash and tracking params, keep the params that identify content (youtube v=, list=). */
 function canonical(u: string): string {
   try {
     const x = new URL(u);
     if (!/^#(\/|!|narrow)/.test(x.hash)) x.hash = ""; // keep SPA-style route fragments (Zulip #narrow, #/path, #!)
-    for (const k of [...x.searchParams.keys()]) if (TRACKING.has(k) || k.startsWith("utm_")) x.searchParams.delete(k);
-    x.hostname = normDomain(u) || x.hostname;
+    const dom = normDomain(u) || x.hostname;
+    if (dom === "instagram.com" || dom === "threads.com") x.search = "";
+    else for (const k of [...x.searchParams.keys()]) if (TRACKING.has(k) || k.startsWith("utm_")) x.searchParams.delete(k);
+    x.hostname = dom;
     return x.toString().replace(/\/$/, "");
   } catch { return u; }
 }
@@ -101,7 +104,8 @@ async function getText(url: string, ms = 12000, maxBytes = 250_000): Promise<str
 }
 function decodeEntities(s: string): string {
   return s.replace(/&(amp|lt|gt|quot|#39|#x27|nbsp);/g, m => ({ "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quot;": '"', "&#39;": "'", "&#x27;": "'", "&nbsp;": " " }[m] ?? m))
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n));
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)));
 }
 
 // ---------- store ----------
@@ -144,8 +148,9 @@ function loadItems(db: Database, f: Filters, rules?: Record<string, string[]>): 
       if (parts.length >= 2 && !["orgs", "topics", "features", "settings", "search", "marketplace", "sponsors", "apps", "trending", "explore", "collections", "login", "events", "notifications"].includes(parts[0])) { it.repo = `${parts[0]}/${parts[1]}`; it.repo_path = parts.slice(2).join("/").slice(0, 80); }
     }
     if (it.bucket === "x" && url) {
-      const m = /x\.com\/([^/]+)\/status\/(\d+)/.exec(url.replace("twitter.com", "x.com"));
-      if (m) { it.x_user = m[1]; it.x_id = m[2]; } else { const m2 = /x\.com\/([^/?#]+)/.exec(url.replace("twitter.com", "x.com")); if (m2) it.x_user = m2[1]; }
+      const uNorm = url.replace("twitter.com", "x.com");
+      const m = /x\.com\/([^/]+)\/(?:status|article)\/(\d+)/.exec(uNorm);
+      if (m) { it.x_user = m[1]; it.x_id = m[2]; } else { const m2 = /x\.com\/([^/?#]+)/.exec(uNorm); if (m2) it.x_user = m2[1]; }
     }
     const key = url ? canonical(url) : content.slice(0, 200);
     const prev = f.dedupe === false ? undefined : seen.get(key);
@@ -156,8 +161,8 @@ function loadItems(db: Database, f: Filters, rules?: Record<string, string[]>): 
 }
 
 // ---------- enrichment ----------
-type Kind = "repos" | "tweets" | "youtube" | "arxiv" | "web";
-const ALL_KINDS: Kind[] = ["repos", "tweets", "youtube", "arxiv", "web"];
+type Kind = "repos" | "tweets" | "social" | "youtube" | "arxiv" | "web";
+const ALL_KINDS: Kind[] = ["repos", "tweets", "social", "youtube", "arxiv", "web"];
 function cacheLoad(kind: Kind): Map<string, any> {
   const p = join(CACHE_DIR, `${kind}.jsonl`); const m = new Map();
   if (existsSync(p)) for (const l of readFileSync(p, "utf8").split("\n")) { if (!l) continue; try { const o = JSON.parse(l); if (o.key) m.set(o.key, o); } catch {} }
@@ -167,10 +172,27 @@ function cacheAppend(kind: Kind, o: any) { mkdirSync(CACHE_DIR, { recursive: tru
 function keyFor(kind: Kind, it: Item): string | null {
   if (kind === "repos") return it.repo ?? null;
   if (kind === "tweets") return it.x_id ? `${it.x_user}/status/${it.x_id}` : null;
+  if (kind === "social") return (it.domain === "instagram.com" || it.domain === "threads.com") && it.url ? canonical(it.url) : null;
   if (kind === "youtube") return it.bucket === "youtube" && it.url ? it.url : null;
   if (kind === "arxiv") { const m = it.bucket === "arxiv" ? /(\d{4}\.\d{4,5})/.exec(it.url ?? "") : null; return m ? m[1] : null; }
   if (kind === "web") return ["web", "substack", "hn", "reddit", "cn-social"].includes(it.bucket) && it.url && !WEB_SKIP.has(it.domain) ? it.url : null;
   return null;
+}
+async function fetchSocialMeta(url: string): Promise<{ title: string; desc: string }> {
+  const grab = async (ua: string) => {
+    const r = await fetch(url, { headers: { "User-Agent": ua, "Accept-Language": "en-US,en;q=0.9,zh-TW;q=0.8" }, signal: AbortSignal.timeout(12000), redirect: "follow" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const h = await r.text();
+    const og = /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["']/i.exec(h)?.[1] ?? /<title[^>]*>([\s\S]*?)<\/title>/i.exec(h)?.[1] ?? "";
+    const dm = /<meta[^>]+(?:property|name)=["'](?:og:description|description)["'][^>]*content=["']([^"']+)["']/i.exec(h) ?? /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:description|description)["']/i.exec(h);
+    return { title: decodeEntities(og).replace(/\s+/g, " ").trim().slice(0, 220), desc: dm ? decodeEntities(dm[1]).replace(/\s+/g, " ").trim().slice(0, 500) : "" };
+  };
+  const first = await grab("TelegramBot (like TwitterBot)");
+  if (first.desc || !url.includes("threads.com")) return first;
+  try {
+    const second = await grab("facebookexternalhit/1.1");
+    return { title: second.title || first.title, desc: second.desc || first.desc };
+  } catch { return first; }
 }
 async function fetchKind(kind: Kind, keys: string[], concurrency: number, onDone: (k: string, o: any) => void) {
   if (kind === "repos") {
@@ -204,9 +226,16 @@ async function fetchKind(kind: Kind, keys: string[], concurrency: number, onDone
       try {
         if (kind === "tweets") {
           const d = await (await fetch(`https://api.fxtwitter.com/${k}`, { signal: AbortSignal.timeout(20000) })).json() as any;
-          const t = d.tweet ?? {}, a = t.author ?? {}, q = t.quote ?? {};
-          onDone(k, { key: k, user: a.screen_name, name: a.name, bio: (a.description ?? "").slice(0, 160), followers: a.followers, text: t.text, likes: t.likes, views: t.views, created: t.created_at, quote_user: q.author?.screen_name, quote_text: (q.text ?? "").slice(0, 500), code: d.code });
+          const t = d.tweet ?? {}, a = t.author ?? {}, q = t.quote ?? {}, art = t.article ?? null;
+          const artBlocks = Array.isArray(art?.content?.blocks) ? art.content.blocks.map((b: any) => b?.text ?? "").filter(Boolean).join(" ") : "";
+          const entUrls = Array.isArray(art?.content?.entityMap) ? art.content.entityMap.map((e: any) => e?.value?.data?.url).filter(Boolean) : [];
+          const facetUrls = Array.isArray(t.raw_text?.facets) ? t.raw_text.facets.map((f: any) => f?.replacement).filter((u: any) => typeof u === "string" && u.startsWith("http")) : [];
+          const expanded_urls = [...new Set([...facetUrls, ...entUrls])].slice(0, 10);
+          onDone(k, { key: k, user: a.screen_name, name: a.name, bio: (a.description ?? "").slice(0, 160), followers: a.followers, text: t.text, likes: t.likes, views: t.views, created: t.created_at, quote_user: q.author?.screen_name, quote_text: (q.text ?? "").slice(0, 500), article_title: art?.title ?? undefined, article_text: (art?.preview_text || artBlocks).slice(0, 1200) || undefined, expanded_urls: expanded_urls.length ? expanded_urls : undefined, code: d.code });
           await Bun.sleep(250);
+        } else if (kind === "social") {
+          const { title, desc } = await fetchSocialMeta(k);
+          onDone(k, { key: k, title, desc });
         } else if (kind === "youtube") {
           const d = await (await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(k)}&format=json`, { signal: AbortSignal.timeout(15000) })).json() as any;
           onDone(k, { key: k, title: d.title, author: d.author_name });
@@ -224,10 +253,11 @@ async function fetchKind(kind: Kind, keys: string[], concurrency: number, onDone
 function metaLine(it: Item, caches: Record<Kind, Map<string, any>>): string {
   const k = (kind: Kind) => { const key = keyFor(kind, it); return key ? caches[kind].get(key) : undefined; };
   let meta = "";
-  const r = k("repos"), a = k("arxiv"), t = k("tweets"), y = k("youtube"), w = k("web");
+  const r = k("repos"), a = k("arxiv"), t = k("tweets"), s = k("social"), y = k("youtube"), w = k("web");
   if (r && !r.error) { meta = `[${r.stars}★ ${r.lang ?? "-"}] ${r.desc}` + (r.topics?.length ? ` topics=${r.topics.join(",")}` : "") + (r.archived ? " ARCHIVED" : "") + (it.repo_path ? ` path=${it.repo_path}` : ""); }
   else if (a && !a.error) meta = `[${a.cat} ${a.published}] ${a.title} — ${(a.summary ?? "").slice(0, 220)}`;
-  else if (t && !t.error) { meta = `@${t.user} (${t.name}; ${(t.bio ?? "").slice(0, 80)}) [${t.likes}♥]: ${(t.text ?? "").slice(0, 600)}` + (t.quote_text ? ` || QT @${t.quote_user}: ${t.quote_text.slice(0, 250)}` : ""); }
+  else if (t && !t.error) { meta = `@${t.user} (${t.name}; ${(t.bio ?? "").slice(0, 80)}) [${t.likes}♥]: ${(t.text ?? "").slice(0, 600)}` + (t.article_title ? ` || ARTICLE: ${t.article_title} — ${(t.article_text ?? "").slice(0, 500)}` : "") + (t.quote_text ? ` || QT @${t.quote_user}: ${t.quote_text.slice(0, 250)}` : "") + (t.expanded_urls?.length ? ` || URLS: ${t.expanded_urls.join(" ")}` : ""); }
+  else if (s && !s.error && (s.title || s.desc)) meta = `[Social] ${s.title}` + (s.desc ? ` — ${s.desc}` : "");
   else if (y && !y.error) meta = `${y.author} — ${y.title}`;
   else if (w && !w.error) meta = `${w.title}` + (w.desc ? ` — ${w.desc}` : "");
   return meta.replace(/\s+/g, " ").trim();
@@ -364,13 +394,14 @@ COMMANDS
   export                   items as jsonl | json | md | urls | csv   (--out FILE)
   search <text>            drafts whose content contains <text> (case-insensitive LIKE)
   get <uuid>               print one draft (content + tags + dates)
-  enrich <items.jsonl>     add metadata: repos (gh graphql), tweets (fxtwitter), youtube (oembed), arxiv (export api), web (title/description). Cached in ${CACHE_DIR}
+  enrich <items.jsonl>     add metadata: repos (gh graphql), tweets (fxtwitter + articles), social (instagram/threads), youtube (oembed), arxiv (export api), web (title/description). Cached in ${CACHE_DIR}
   chunk <items.jsonl>      write agent-sized chunk files + manifest.json into --out DIR
   render <digest.json>     render a digest (workflow output) to --out FILE.html and FILE.md
   create                   new draft from --file | --text | stdin, via drafts:// URL scheme
   append <uuid>            append --file | --text to a draft   (prepend: same, at the top)
   prepend <uuid>
   open <uuid>              open a draft in the app
+  clean                    move matching drafts to --target trash|archive via JXA (--tag, --since, --until, --match, --all, --empty-trash)
 
 FILTERS (stats, export, search)
   --since 2m|6w|30d|YYYY-MM-DD   default 2m       --until YYYY-MM-DD
@@ -383,9 +414,10 @@ FILTERS (stats, export, search)
 OPTIONS
   --store PATH     Drafts sqlite store (default: Group Container)   --in-place  open the live store read-only instead of copying
   --format F       export: jsonl|json|md|urls|csv (default jsonl)  --out PATH   file or dir
-  --kinds a,b      enrich: repos,tweets,youtube,arxiv,web (default all)   --concurrency N (default 8)   --no-cache
+  --kinds a,b      enrich: repos,tweets,social,youtube,arxiv,web (default all)   --concurrency N (default 8)   --no-cache
   --size N         chunk size (default 120)   --group bucket|week|none (default bucket)
   --title T --sub S   render header text   --tag T (repeatable, create)   --dry-run   --json   -h, --help
+  --target F       clean target folder: trash|archive (default trash)   --all   --empty-trash
 
 DRY RUN
   enrich: report cache hits and requests per kind, no network.  create/append/prepend/open: print the drafts:// call, do not open.
@@ -398,7 +430,10 @@ EXAMPLES
   drafts-ledger chunk enriched.jsonl --out chunks/ --size 120
   drafts-ledger render digest.json --out digest.html --title "Capture Ledger, July–August 2026"
   drafts-ledger create --file digest.md --tag summary --tag github --dry-run
-  drafts-ledger search "hashline" --since 3m`;
+  drafts-ledger search "hashline" --since 3m
+  drafts-ledger clean --tag nsfw-media --empty-trash --dry-run
+  drafts-ledger clean --since 2026-11-05 --until 2026-11-07 --dry-run
+  drafts-ledger clean --all --empty-trash --dry-run`;
 
 const { values: v, positionals: pos } = parseArgs({
   args: Bun.argv.slice(2), allowPositionals: true, strict: false,
@@ -408,6 +443,7 @@ const { values: v, positionals: pos } = parseArgs({
     store: { type: "string", default: DEFAULT_STORE }, "in-place": { type: "boolean", default: false }, format: { type: "string", default: "jsonl" }, out: { type: "string" },
     kinds: { type: "string" }, concurrency: { type: "string", default: "8" }, "no-cache": { type: "boolean", default: false }, size: { type: "string", default: "120" }, group: { type: "string", default: "bucket" },
     title: { type: "string" }, sub: { type: "string" }, file: { type: "string" }, text: { type: "string" }, "no-dedupe": { type: "boolean", default: false }, "dry-run": { type: "boolean", default: false }, json: { type: "boolean", default: false }, help: { type: "boolean", short: "h", default: false },
+    target: { type: "string", default: "trash" }, all: { type: "boolean", default: false }, "empty-trash": { type: "boolean", default: false },
   },
 });
 const cmd = pos[0];
@@ -541,6 +577,92 @@ switch (cmd) {
   case "open": {
     const uuid = pos[1] ?? die("open needs <uuid>");
     openUrl(draftsUrl("open", { uuid }), dry, uuid);
+    break;
+  }
+  case "clean": {
+    const target = ((v.target as string) ?? "trash").toLowerCase();
+    if (target !== "trash" && target !== "archive") die(`bad --target '${target}': trash | archive`);
+    const tagFilter = (v.tag as string[] | undefined)?.[0];
+    const sinceIso = v.since ? parseSince(v.since as string, "") + "T00:00:00.000Z" : "";
+    const untilIso = v.until ? parseSince(v.until as string, "") + "T23:59:59.999Z" : "";
+    const matchStr = (v.match as string | undefined) ?? "";
+    const folderFilter = (v.folder as string) ?? "all";
+    const dateMode = (v.date as string) ?? "either";
+    const cleanAll = !!v.all;
+    const emptyTrash = !!v["empty-trash"];
+    if (!cleanAll && !tagFilter && !sinceIso && !untilIso && !matchStr && !emptyTrash) {
+      die("clean requires at least one selector (--tag NAME, --since DATE, --until DATE, --match TEXT, --all, or --empty-trash)");
+    }
+    const cfg = JSON.stringify({ target, tagFilter: tagFilter ?? "", sinceIso, untilIso, matchStr, folderFilter, dateMode, cleanAll, emptyTrash, dry });
+    const jxa = `
+      const cfg = ${cfg};
+      const app = Application("Drafts");
+      const ds = app.drafts;
+      const ids = ds.id();
+      const folders = ds.folder();
+      const tags = ds.tagList();
+      const cDates = ds.creationDate();
+      const mDates = ds.modificationDate();
+      const contents = cfg.matchStr ? ds.content() : [];
+      const hits = [];
+      if (cfg.cleanAll || cfg.tagFilter || cfg.sinceIso || cfg.untilIso || cfg.matchStr) {
+        for (let i = 0; i < ids.length; i++) {
+          const f = String(folders[i] || "inbox").toLowerCase();
+          if (f === cfg.target) continue;
+          if (cfg.folderFilter !== "all" && f !== cfg.folderFilter) continue;
+          if (cfg.tagFilter) {
+            const tList = (tags[i] || []).map(x => String(x).toLowerCase());
+            if (!tList.includes(cfg.tagFilter.toLowerCase())) continue;
+          }
+          if (cfg.sinceIso || cfg.untilIso) {
+            const cIso = cDates[i] ? cDates[i].toISOString() : "";
+            const mIso = mDates[i] ? mDates[i].toISOString() : cIso;
+            const inRange = (iso) => (!cfg.sinceIso || iso >= cfg.sinceIso) && (!cfg.untilIso || iso <= cfg.untilIso);
+            const ok = cfg.dateMode === "created" ? inRange(cIso) : cfg.dateMode === "modified" ? inRange(mIso) : (inRange(cIso) || inRange(mIso));
+            if (!ok) continue;
+          }
+          if (cfg.matchStr) {
+            const c = String(contents[i] || "").toLowerCase();
+            if (!c.includes(cfg.matchStr.toLowerCase())) continue;
+          }
+          hits.push({ idx: i, uuid: ids[i], created: cDates[i] ? cDates[i].toISOString().slice(0, 10) : "", folder: f });
+        }
+      }
+      let moved = 0;
+      if (!cfg.dry && hits.length > 0) {
+        for (const h of hits) {
+          ds[h.idx].folder = cfg.target;
+          moved++;
+        }
+      }
+      let emptied = false;
+      if (!cfg.dry && cfg.emptyTrash) {
+        app.activate();
+        delay(0.3);
+        const se = Application("System Events");
+        const proc = se.processes["Drafts"];
+        try {
+          proc.menuBars[0].menuBarItems["Drafts"].menus[0].menuItems["Empty Trash"].click();
+          delay(0.6);
+          for (let w = 0; w < proc.windows.length; w++) {
+            const sheets = proc.windows[w].sheets();
+            for (const s of sheets) {
+              for (const b of s.buttons()) {
+                if (/empty|delete/i.test(String(b.name() || ""))) { b.click(); emptied = true; }
+              }
+            }
+          }
+          delay(0.5);
+        } catch (e) {}
+      }
+      JSON.stringify({ matched: hits.length, moved, emptied, dry: cfg.dry, samples: hits.slice(0, 5) });
+    `;
+    const p = Bun.spawnSync(["osascript", "-l", "JavaScript", "-e", jxa]);
+    if (p.exitCode !== 0) die(`JXA clean failed: ${p.stderr.toString()}`);
+    const res = JSON.parse(p.stdout.toString().trim() || "{}");
+    if (v.json) { out(JSON.stringify(res, null, 1)); break; }
+    out(`${dry ? "[dry-run] would move" : "moved"} ${res.matched} drafts → ${target}` + (emptyTrash ? (dry ? " and would empty Trash" : ` (Empty Trash triggered: ${res.emptied})`) : ""));
+    if (res.samples?.length) out("samples: " + res.samples.map((s: any) => `${s.uuid.slice(0, 8)}(${s.created})`).join("  "));
     break;
   }
   default: die(`unknown command '${cmd}'\n\n${HELP}`);

@@ -1,0 +1,87 @@
+import type { EngineInterface, PluginOptions, Register } from 'claude-code'
+
+import {
+  answersFrom,
+  API_URL,
+  decide,
+  DEFAULT_MODEL,
+  KEYCHAIN_SERVICE,
+  parseAnswer,
+  requestBody,
+  shouldJudge,
+} from './lens'
+
+const JEV_TIMEOUT_MS = 8_000
+
+let cachedKey: string | undefined
+let lastKeyMissAt = -Infinity
+let pendingNudge: string | undefined
+
+async function apiKey($: EngineInterface, options: PluginOptions): Promise<string | undefined> {
+  const option = typeof options.typesafe_api_key === 'string' ? options.typesafe_api_key.trim() : ''
+  if (option) return option
+  if (cachedKey) return cachedKey
+  if (Date.now() - lastKeyMissAt < 30_000) return undefined
+  const keychain = await $.process
+    .run(['security', 'find-generic-password', '-s', KEYCHAIN_SERVICE, '-w'], { timeoutMs: 3000 })
+    .catch(() => undefined)
+  const fromKeychain = keychain?.exitCode === 0 ? keychain.stdout.trim() : ''
+  // The Keychain wins so a key loaded from a plaintext .env cannot override it.
+  const key = fromKeychain || (await $.env.get('TYPESAFE_API_KEY'))?.trim()
+  if (key) return (cachedKey = key)
+  lastKeyMissAt = Date.now()
+  return undefined
+}
+
+async function askJev($: EngineInterface, key: string, model: string, answer: string) {
+  const call = $.http.fetch(API_URL, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+    body: JSON.stringify(requestBody(model, answer)),
+  })
+  const timeout = $.clock.sleep(JEV_TIMEOUT_MS).then(() => undefined)
+  const response = await Promise.race([call, timeout]).catch(() => undefined)
+  if (!response) return { failure: `no answer within ${JEV_TIMEOUT_MS / 1000} s` }
+  if (response.status === 401) cachedKey = undefined
+  if (!response.ok) return { failure: `HTTP ${response.status}` }
+  try {
+    const answers = answersFrom(JSON.parse(response.text))
+    return answers ? { answers } : { failure: 'an answer without the expected fields' }
+  } catch {
+    return { failure: 'a reply that was not JSON' }
+  }
+}
+
+async function readReport($: EngineInterface, options: PluginOptions, model: string, answer: string) {
+  const parsed = parseAnswer(answer)
+  if (!shouldJudge(answer, parsed)) return
+  const key = await apiKey($, options)
+  if (!key) return
+  const judged = await askJev($, key, model, answer)
+  if ('failure' in judged) return $.ui.status(`jev-report: ${judged.failure}; report not read`)
+  const lens = decide(parsed, judged.answers)
+  pendingNudge = lens.nudge
+  if (lens.suggestion) await $.prompt.suggest({ text: lens.suggestion })
+}
+
+export const register: Register = (on, options: PluginOptions) => {
+  const model = typeof options.model === 'string' && options.model.trim() ? options.model.trim() : DEFAULT_MODEL
+
+  // Jev answers in about a second; a timer reads the report after the turn
+  // has ended, so that second never holds up the prompt.
+  on('turn.complete', async ($, e, next) => {
+    const result = await next(e)
+    if (e.agentId === undefined && e.reason === 'answer')
+      $.clock.after(0, () => {
+        readReport($, options, model, e.answer).catch(() => $.ui.status('jev-report: report not read'))
+      })
+    return result
+  })
+
+  on('prompt.submit', async ($, e, next) => {
+    const nudge = pendingNudge
+    pendingNudge = undefined
+    if (e.command || !nudge) return next(e)
+    return next({ ...e, context: [...(e.context ?? []), nudge] })
+  })
+}

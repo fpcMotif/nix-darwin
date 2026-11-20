@@ -72,6 +72,20 @@ A skill that is in this flake's bundle *and* declared by an enabled Claude Code 
 **Skill hygiene**:
 The drift checks over the curation lists: Tier 1 `unit-skill-hygiene` (hermetic — exclusion terms still name live upstream skills, no vendored fork shadows a promoted id, no `transform` returns to a mattpocock skill) and Tier 2 `just verify-skills` (live — every id advertised to Claude exactly once, every hidden id genuinely replaced by the plugin, every other agent still sees the full bundle). Deliberately not called a "health check": `martin.healthCheck` already owns that term for the macOS health report.
 
+**Skill placement**:
+The module in `modules/home/skill-placement.nix` that decides which host dirs link each skill. Callers declare `martin.agentSurface.skills.<id> = { source; audience; }`. The module returns the read-only `skillPlacement` record with the links, picker dirs, targets per id, and **Skill visibility**. Personal skills declare their audiences in `modules/home/skills/personal/placement.nix`.
+_Avoid_: manifest (the retired `manifest.json`).
+
+**Skill visibility**:
+The answer, per harness and skill, of whether the harness can use the skill: `on`, `off`, or `absent`. `absent` means no skill host the harness reads holds the skill. `off` means a host it reads holds the skill, and the harness's own settings turn it off (Claude's `skillOverrides`, Codex's `skills.config`). Skill placement computes it as `skillPlacement.visibility` from placed skills, the recorded `bundleSkills`, `foreignSkills`, and each harness's `skillsOff` list. Claude's and Codex's off settings are generated from it (ADR-0019). Plugin skills and parked skills are outside it.
+_Avoid_: health check (the macOS health report owns that term).
+
+**Skill audience**:
+A named set of skill hosts. `pickers` is every picker target except Droid. `everywhere` is agents, claude, codex, gemini, skillshub, and omp. `outside-claude` is agents, gemini, and omp. `codex-family` is agents, codex, and gemini. A skill that needs another set lists its hosts directly.
+
+**Skill host**:
+One dir that a skill placement can link into, such as `.agents/skills` or `.omp/agent/managed-skills`. Picker targets are hosts. `.skillshub` and the two omp dirs are hosts only: another tool writes real dirs into `~/.skillshub`, so the name-based picker sweeps never touch these dirs.
+
 **Enabled skill** vs **Discovered skill**:
 A *discovered* skill exists in the catalog (its source is wired up) but is not placed in any picker. An *enabled* skill is additionally surfaced into the picker target dirs and is selectable. Wiring a source discovers its skills; it does not enable them.
 Rejected workflow skills should be removed from source filters instead of left discovered-but-disabled.
@@ -127,11 +141,11 @@ An AI coding agent program that reads agent guides, such as Claude Code, Codex, 
 _Avoid_: "agent" alone (it also means a subagent), client, tool.
 
 **Agent guide**:
-A text file that tells an agent host how to work. Every host has a *startup guide*, which it reads when a session starts (for example `~/.claude/CLAUDE.md`). Every host also has a *development guide*, which it reads only when needed; a line in the startup guide gives its path (for example `~/.claude/guidance/development.md`). Nix builds each agent guide from shared sections, after a host adapter when the host has one.
+A text file that tells an agent host how to work. Every host has a *startup guide*, which it reads when a session starts (for example `~/.claude/CLAUDE.md`). Every host also has a *development guide*, which it reads only when needed; a line in the startup guide gives its path (for example `~/.claude/guidance/development.md`). Nix builds each agent guide from shared sections, after a host adapter when the host has one. The guide catalog (`guides.nix`) lists every host's guide files, including *extras* such as `~/.claude/search-routing.md`, and installs and archives them on every system (ADR-0020). Every skill (`` `id` skill ``) and `~/` file a guide names must resolve for the host that reads it, which `integration-configurations-eval` checks through **Skill visibility** (ADR-0019).
 _Avoid_: prompt, system prompt, rules file.
 
 **Host adapter**:
-The first part of an agent guide. It has only the text that one host needs: its tool names, its file paths, and the lines that point to its other guides. Text that is correct for every host goes in a shared section, not in a host adapter.
+The first part of an agent guide. It has only the text that one host needs, such as its tool names and its search routes. The catalog writes the lines that point to the host's other guides. Text that is correct for every host goes in a shared section, not in a host adapter.
 _Avoid_: host override, per-agent config.
 
 **API-only model access**:
@@ -155,8 +169,8 @@ _Avoid_: calling a JJ workspace a worktree, or treating dojjo as a replacement f
 ### Auto-update cadence
 
 **Heavy input**:
-A flake input whose bump rehashes a large share of the Darwin baseline closure. The set is `nixpkgs` and `nur` (the latter for lock-churn containment, not because it compiles anything — Crush is a prebuilt-tarball repack). Heavy inputs move only on the cadence day, enforced by `AU_HEAVY_INPUTS`/`au_inputs_to_bump` in `scripts/lib/auto-update.sh`.
-_Avoid_: justifying `nur`'s heaviness on compile grounds, or hand-listing heavy inputs outside the library.
+A flake input whose bump rehashes a large share of the Darwin baseline closure. The set is `nixpkgs`. Heavy inputs move only on the cadence day, enforced by `AU_HEAVY_INPUTS`/`au_inputs_to_bump` in `scripts/lib/auto-update.sh`.
+_Avoid_: hand-listing heavy inputs outside the library.
 
 **Light input**:
 Every other top-level flake input, bumped nightly by the auto-update workflow — chiefly the vendored agent CLIs the operator tracks daily.

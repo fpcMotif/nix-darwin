@@ -166,9 +166,6 @@ in
         gstl = "git stash list";
 
         sg = "ast-grep";
-        oxl = "oxlint";
-        oxf = "oxfmt";
-        oxfix = "oxlint --fix";
         gsp = "ghostty-split";
         gpn = "ghostty-pane";
         pymobiledevice3 = "source ~/.venv/bin/activate && python -m pymobiledevice3";

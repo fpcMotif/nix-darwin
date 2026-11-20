@@ -43,7 +43,7 @@ in
 
       config = {
         virtualisation = {
-          cores = cfg.cores;
+          inherit (cfg) cores;
           darwin-builder.memorySize = cfg.memoryGb * 1024;
         };
       };

@@ -110,7 +110,7 @@ let
   # Sonnet offerings, with Gemini 3.8 Flash (high) as the default session role.
   ompDefaultModel = "google-antigravity/gemini-3.8-flash:high";
   ompManualModels = [ "google-antigravity/*" ];
-  ompModelRoles = (lib.mapAttrs (_: job: selector job) ompRoleJobs) // {
+  ompModelRoles = (lib.mapAttrs (_: selector) ompRoleJobs) // {
     default = ompDefaultModel;
   };
   ompAgentOverrides = lib.mapAttrs (_: role: "@${role}") ompAgentRoles;
@@ -201,9 +201,6 @@ let
       inherit pi;
       omp.normal = ompNormal;
     };
-  };
-  serialized = builtins.toJSON {
-    inherit models jobs adapters;
   };
 in
 assert routes.search.id == "gpt-6-sol";

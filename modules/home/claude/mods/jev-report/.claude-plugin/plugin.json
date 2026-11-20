@@ -1,0 +1,21 @@
+{
+  "name": "jev-report",
+  "version": "0.1.0",
+  "description": "Reads each final report with TypeSafe Jev: pins what waits on you above the prompt, and proposes the figure that would make a dense report clear",
+  "author": { "name": "f" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "typesafe_api_key": {
+      "type": "string",
+      "title": "TypeSafe API key",
+      "description": "Kept in secure storage. Leave empty to use the macOS Keychain item typesafe-api-key, then TYPESAFE_API_KEY as a fallback for machines without the item. Do not keep the key in a .env file.",
+      "sensitive": true
+    },
+    "model": {
+      "type": "string",
+      "title": "Jev model",
+      "description": "The System One model that reads each report.",
+      "default": "jev-latest"
+    }
+  }
+}

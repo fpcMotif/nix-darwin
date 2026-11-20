@@ -37,7 +37,8 @@ final: _prev:
 
   codex = final.callPackage ./codex.nix { };
   typescript = final.callPackage ./typescript.nix { };
-
+  tsrs = final.callPackage ./tsrs-bin.nix { };
+  zig = final.callPackage ./zig-dev-bin.nix { };
 
   martin = {
     mkAppFromZip = final.callPackage ./lib/mk-app-from-zip.nix { };
@@ -48,13 +49,13 @@ final: _prev:
     sf-symbols = final.callPackage ./sf-symbols.nix { };
     squirrel = final.callPackage ./squirrel.nix { };
 
-    # rust-lang's prebuilt stable via rust-overlay, which carries a release
-    # within a day while nixpkgs trails by weeks. One bundle keeps cargo,
-    # rustc, clippy, rustfmt, and rust-analyzer on the same version.
-    rust-toolchain = final.rust-bin.stable.latest.minimal.override {
+    # rust-lang's prebuilt nightly via rust-overlay.
+    # One bundle keeps cargo, rustc, clippy, rustfmt, and rust-analyzer on the same version.
+    rust-toolchain = final.rust-bin.nightly.latest.minimal.override {
       extensions = [ "clippy" "rustfmt" "rust-src" "rust-analyzer" ];
     };
 
+    agent-trace = final.callPackage ./agent-trace.nix { };
     bun-canary-bin = final.callPackage ./bun-canary-bin.nix { };
     calldiff = final.callPackage ./calldiff.nix { };
     doc-lock = final.callPackage ./doc-lock.nix { };
@@ -66,14 +67,16 @@ final: _prev:
     fff-mcp = final.callPackage ./fff-mcp.nix { };
     hk-bin = final.callPackage ./hk-bin.nix { };
     hunk-bin = final.callPackage ./hunk-bin.nix { };
-    jev-traits = final.callPackage ./jev-traits.nix { };
     jj-pr = final.callPackage ./jj-pr.nix { };
     nub = final.callPackage ./nub.nix { };
     oh-my-pi = final.callPackage ./oh-my-pi.nix { };
     pi-coding-agent = final.callPackage ./pi-coding-agent.nix { };
+    agent-checkout = final.callPackage ./agent-checkout.nix { };
+    recall = final.callPackage ./recall.nix { };
     sourcegraph-amp = final.callPackage ./sourcegraph-amp.nix { };
     droid = final.callPackage ./droid.nix { };
-    opencode = final.callPackage ./opencode.nix { };
+    uv-bin = final.callPackage ./uv-bin.nix { };
+    vesalius-bin = final.callPackage ./vesalius-bin.nix { };
     zed-nightly-bin = final.callPackage ./zed-nightly-bin.nix { };
   };
 }

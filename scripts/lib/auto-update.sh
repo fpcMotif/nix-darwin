@@ -20,9 +20,8 @@ au_report_change() {
 }
 
 # A nixpkgs bump re-derives stdenv and rehashes the Darwin closure, so heavy
-# inputs move only on the cadence day (issue #336). `nur` is heavy to contain
-# lock churn, not build time, because Crush is a prebuilt-tarball repack.
-AU_HEAVY_INPUTS="nixpkgs nur"
+# inputs move only on the cadence day (issue #336).
+AU_HEAVY_INPUTS="nixpkgs"
 
 AU_CADENCE_DAY=1
 
@@ -36,6 +35,19 @@ au_is_heavy_input() {
     [ "$input" = "$heavy" ] && return 0
   done
   return 1
+}
+
+AU_DEDICATED_INPUTS="charm-nur"
+
+au_without_dedicated_inputs() {
+  local input dedicated skip
+  while IFS= read -r input; do
+    skip=0
+    for dedicated in $AU_DEDICATED_INPUTS; do
+      [ "$input" = "$dedicated" ] && skip=1
+    done
+    [ "$skip" -eq 1 ] || printf '%s\n' "$input"
+  done
 }
 
 # A deny-list of heavy inputs, not an allow-list of light ones, so a newly
@@ -122,7 +134,7 @@ au_vendored_drv_names() {
     grep -hoE '(pname|name) = "[^"]+"' "$dir"/*.nix 2>/dev/null \
       | cut -d'"' -f2
     # Packages imported from flake inputs have no pkgs/*.nix file.
-    printf '%s\n' agent-skill agent-skills claude-code crush oh-my-pi opencode pi
+    printf '%s\n' agent-skill agent-skills claude-code crush oh-my-pi pi
     printf '%s\n' codex droid sourcegraph-amp zed-nightly-bin
     printf '%s\n' direnv skill-router tmux
   } | sort -u
@@ -177,7 +189,7 @@ au_guard_source_builds() {
       cat <<'EOF'
 Remedies:
   - wait for cache.nixos.org to gain darwin coverage for this revision, or
-  - hold the heavy inputs (nixpkgs, nur) on a revision with coverage:
+  - hold the heavy input (nixpkgs) on a revision with coverage:
       git checkout HEAD~1 -- flake.lock && just switch
 A routine `just switch` must never compile from source; this revision may
 not merge until the plan above is clean.

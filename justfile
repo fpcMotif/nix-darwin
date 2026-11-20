@@ -112,8 +112,12 @@ build: _no-sudo _daemon _no-conflicts
     @darwin-rebuild build --flake . || { just _drift-hint; exit 1; }
 
 # Activate the working-tree configuration (system + home-manager).
-switch: _no-sudo _daemon _no-conflicts
+switch: _no-sudo _daemon _no-conflicts _unlanded
     @sudo darwin-rebuild switch --flake . || { just _drift-hint; exit 1; }
+
+_unlanded rev="@" base="main@origin":
+    @jj log --no-graph -r '::{{rev}} ~ ::{{base}} ~ empty()' -T 'commit_id.short() ++ " " ++ description.first_line() ++ "\n"' 2>/dev/null \
+        | awk 'NR == 1 { print "just: these commits go live but are not on main. The nightly 04:30 auto-switch replaces them with origin/main. Land them with jj pr --land:" > "/dev/stderr" } { print "    " $0 > "/dev/stderr" }'
 
 # Pull latest origin/main (rebase + autostash). Version/hash bumps that raced
 # an auto-update run resolve themselves to the newer side via the pkgnix
@@ -145,7 +149,7 @@ bump-and-switch: _no-sudo _daemon
 # Show drift between binaries currently on PATH and the versions pinned
 # in the flake. Useful when a CLI prints "newer version available".
 drift:
-    @for b in amp opencode droid codex pi omp; do \
+    @for b in amp droid codex pi omp; do \
         printf '%-10s %s\n' "$b" "$(readlink -f ~/.nix-profile/bin/$b 2>/dev/null | sed -E 's|.*-([0-9][^/]*)/bin.*|\1|')"; \
     done
 
@@ -182,9 +186,9 @@ test-router:
     nix build --no-link --print-build-logs \
         '.#checks.aarch64-darwin.unit-skill-router'
 
-# Lint Nix sources: statix (antipatterns) + deadnix (dead code). Advisory —
-# not yet a CI gate (see ARCHITECTURE.md). Tools come pinned from the repo
-# dev shell; statix.toml scopes both away from references/.
+# Lint Nix sources: statix (antipatterns) + deadnix (dead code). hk runs both
+# before each commit, but CI does not (see ARCHITECTURE.md). Tools come pinned
+# from the repo dev shell. statix.toml scopes both away from references/.
 lint:
     nix develop --command statix check .
     nix develop --command deadnix --fail . --exclude ./references

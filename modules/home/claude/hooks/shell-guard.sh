@@ -106,6 +106,31 @@ in_jj_workspace() {
   return 1
 }
 
+read_too_long() {
+  local seg=$1 rest arg f n args
+  rest=${CMD_WITHOUT_HEREDOCS#*"$seg"}; rest=${rest#"${rest%%[![:space:]]*}"}
+  case $rest in '||'*) ;; '|'*) return 1 ;; esac
+  case $seg in *'>'*|*'<'*) return 1 ;; esac
+  read -r -a args <<<"$seg"
+  for arg in "${args[@]:1}"; do
+    case $arg in
+      -r*|--line-range*) return 1 ;;
+      -*) continue ;;
+    esac
+    f=${arg#[\"\']}; f=${f%[\"\']}
+    case $f in
+      '~/'*) f=$HOME/${f#\~/} ;;
+      *'$'*|*'*'*|*'?'*|*'`'*) continue ;;
+      /*) ;;
+      *) f=$WORK_DIR/$f ;;
+    esac
+    [ -f "$f" ] || continue
+    n=$(wc -l <"$f"); n=${n//[[:space:]]/}
+    [ "$n" -gt 300 ] && { long_file=$arg; long_lines=$n; return 0; }
+  done
+  return 1
+}
+
 while IFS= read -r seg; do
   case "${seg%%[[:space:]]*}" in
     python|python[23]|python[23].[0-9]*|*/python|*/python[23]|*/python[23].[0-9]*|pip|pip3|pip3.[0-9]*|virtualenv|pipenv|poetry)
@@ -119,6 +144,15 @@ while IFS= read -r seg; do
     awk[[:space:]]-i*)
       [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: in-place awk is denied. A file change: the Edit tool; a rule across files: 'sg -p PAT -r REPL --lang X DIR' then -U." ;;
   esac
+  case "${seg%%[[:space:]]*}" in
+    cd)
+      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: use 'z DIR && CMD' instead of cd. DIR is a path or a zoxide name. A tool's own directory flag also works: 'git -C DIR', 'make -C DIR', 'rg PAT DIR'." ;;
+    cp)
+      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: cp is denied. Use 'fcp SRC DST' or 'fcp SRC... DIR'. fcp takes no flags: it copies directories recursively and keeps file modes, so drop -r, -R, -p, and -a." ;;
+    cat|bat)
+      [ -z "${TOOL_GUARD_OFF:-}" ] && read_too_long "$seg" \
+        && deny "shell-guard: $long_file has $long_lines lines, and a whole-file read was 19% of Bash output in past sessions. Read a span: 'bat -pp -r A:B $long_file', or the Read tool with offset and limit. Find the span first with 'rg -n PAT $long_file'. A pipe ('cat FILE | head') or a file of 300 lines or fewer is allowed." ;;
+  esac
   [ -n "${JJ_GUARD_OFF:-}" ] && continue
   read -r -a words <<<"$seg"
   case "${words[0]}" in
@@ -128,7 +162,10 @@ while IFS= read -r seg; do
       case "${#words[@]}:${words[1]:-}" in
         1:) WORK_DIR=$HOME ;;
         2:-) WORK_DIR= ;;
-        *) WORK_DIR=$(zoxide query -- "${words[@]:1}" 2>/dev/null) ;;
+        2:*) z_dir=$(resolve_dir "$WORK_DIR" "${words[1]}")
+             [ -n "$z_dir" ] || z_dir=$(zoxide query --exclude "$WORK_DIR" -- "${words[1]}" 2>/dev/null)
+             WORK_DIR=$z_dir ;;
+        *) WORK_DIR=$(zoxide query --exclude "$WORK_DIR" -- "${words[@]:1}" 2>/dev/null) ;;
       esac ;;
     git)
       git_dir=$WORK_DIR; i=1
@@ -143,6 +180,8 @@ while IFS= read -r seg; do
       case "${words[$i]:-}" in
         add|commit|checkout|switch|stash|reset|restore|rebase|merge|cherry-pick|revert|pull|am|rm|mv)
           in_jj_workspace "$git_dir" && deny "shell-guard: '$git_dir' is a jj workspace, and 'git ${words[$i]}' desyncs jj's working copy. Use jj: add -> nothing (jj tracks every file); commit -> 'jj commit -m MSG'; checkout/switch -> 'jj new REV' or 'jj edit REV'; stash -> 'jj new @-'; reset/restore -> 'jj restore'; rebase -> 'jj rebase'; merge -> 'jj new A B'; pull -> 'jj git fetch'. Read-only git (log, show, diff, blame) stays allowed. The jj skill has the rest." ;;
+        worktree)
+          [ "${words[$((i + 1))]:-}" = add ] && in_jj_workspace "$git_dir" && deny "shell-guard: '$git_dir' is a jj workspace, and a Git worktree is a checkout jj does not track. Run 'jj workspace add --name NAME -r REV ../REPO.NAME'. Bring a checkout's commits back under @ with 'agent-checkout land NAME'." ;;
       esac ;;
   esac
 done <<EOF

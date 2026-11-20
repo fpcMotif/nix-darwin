@@ -29,6 +29,6 @@ Use Code Mode (`eval` with Bun/JS or Python in OMP, or compound programmatic scr
 - **Single-flight actions**: Execute multi-step operations in 1–2 dense invocations. Parse and filter data in-memory; do not spend agent turns on intermediate terminal output.
 - **Deterministic VCS**: For committing, opening PRs, and landing on main, run in a single flight:
   ```bash
-  bun run scripts/jj-ship.ts ship -n <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
+  nix run .#martin.jj-pr -- <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land -- <paths>
   ```
-  `jj-ship.ts` runs the checkout's `modules/home/jj-pr/jj-pr.sh`, so it works before a rebuild. The installed `jj pr` takes `-m` and `--land` only after `darwin-rebuild switch` installs that script. Check `jj pr --help` before you call it with those flags.
+  `nix run .#martin.jj-pr` builds the checkout's `jj pr`, so it works before a rebuild. Paths after the final `--` limit the commit to those paths and leave the rest in `@`. Omit them to commit all of `@`. `--land` moves edits left in `@` onto `main`.

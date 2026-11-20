@@ -1,4 +1,4 @@
-{ lib, pkgs, inputs, mkSource, mkSkill, docLock ? true }:
+{ lib, pkgs, inputs, docLock ? true }:
 
 let
   # Installed as plain skills, not a plugin, so pstackTransform rewrites
@@ -54,7 +54,7 @@ let
     then "Comments change only in docs work, per the Docs lock in CLAUDE.md. There, keep a comment only for a non-obvious *why* the code can't show."
     else "Keep a comment only for a non-obvious *why* the code can't show.";
   pstackModelsIntro = "Role defaults. The Agent tool's `model` parameter takes an alias: `fable` is Fable 5.1, `opus` is Opus 5, `sonnet` is Sonnet 5, `haiku` is Haiku 4.5. `~/.claude/pstack-models.md` is installed by nix with every role and overrides each line below; change a model there, not here.";
-  pstackTransform = id: { original, dependencies }:
+  pstackTransform = id: { original, ... }:
     let
       body = lib.replaceStrings
         [
@@ -172,22 +172,11 @@ let
   pstackModelsSheetText = ''
     # pstack model configuration
 
-    Nix-owned: modules/home/claude.nix, pstackModelRoles. One line per pstack role; each overrides the default the skill's Models section states. Values are the Agent tool's aliases: fable is Fable 5.1, opus is Opus 5, sonnet is Sonnet 5, haiku is Haiku 4.5. The hardest changes in any role go to the strongest judgment model.
+    Nix-owned: modules/home/claude/pstack.nix, pstackModelRoles. One line per pstack role; each overrides the default the skill's Models section states. Values are the Agent tool's aliases: fable is Fable 5.1, opus is Opus 5, sonnet is Sonnet 5, haiku is Haiku 4.5. The hardest changes in any role go to the strongest judgment model.
 
   '' + lib.concatMapStringsSep "\n" (r: "${r.role}: ${r.models}") pstackModelRoles + "\n";
   pstackModelsSheet = pkgs.writeText "pstack-models.md" pstackModelsSheetText;
 
-  pstackSources = {
-    pstack = mkSource "pstack-claude" "plugins/pstack/skills"
-      "^(${lib.concatStringsSep "|" pstackSkills})$";
-  };
-  pstackExplicit = lib.listToAttrs
-    (map
-      (id: { name = id; value = mkSkill "pstack" id [ ] // { transform = pstackTransform id; }; })
-      pstackSkills) // {
-    pstack-principles = mkSkill "pstack" "principle-laziness-protocol" [ ]
-      // { transform = { original, dependencies }: pstackPrinciplesSkill; };
-  };
   pstackSkillDrv = id: pkgs.runCommand "pstack-skill-${id}" { preferLocalBuild = true; } ''
     mkdir -p "$out"
     shopt -s nullglob
@@ -224,10 +213,9 @@ let
       "Read the matching section of the `pstack-principles` skill whenever you apply a principle."
     ]
     (builtins.readFile (inputs.pstack-claude + "/plugins/pstack/agents/${name}"));
-  pstackAgentFile = name: pkgs.writeText name (pstackAgentText name);
 in
 {
   inherit pstackSkillsRoot pstackPrinciples pstackSkills pstackAliases
     pstackTransform pstackPrinciplesSkill pstackModelRoles pstackModelsSheetText
-    pstackModelsSheet pstackSources pstackExplicit pstackDrvs pstackAgentText pstackAgentFile;
+    pstackModelsSheet pstackDrvs pstackAgentText;
 }

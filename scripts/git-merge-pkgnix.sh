@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+. "$(dirname "${BASH_SOURCE[0]}")/lib/auto-update.sh"
+
 # Local scripts/update-*.sh runs and the nightly auto-update PR rewrite the same version and hash
 # lines. rerere cannot replay those conflicts because the strings differ each time.
 base=$1 ours=$2 theirs=$3 marker=${4:-7} path=${5:-unknown-file}
@@ -61,7 +63,13 @@ fi
 # A tie keeps "ours", which during rebase or stash apply is the CI-verified upstream.
 # A side that is itself mispaired is trusted. The updater scripts re-prefetch its hash.
 ours_semver=${ours_version%%+*} theirs_semver=${theirs_version%%+*}
-newer_semver=$(printf '%s\n%s\n' "$ours_semver" "$theirs_semver" | sort -V | tail -n1)
+newer_semver=""
+if [ -n "$ours_semver" ] && [ -n "$theirs_semver" ]; then
+  newer_semver=$(printf '%s\n%s\n' "$ours_semver" "$theirs_semver" | au_latest_semver 2>/dev/null) || newer_semver=""
+fi
+if [ -z "$newer_semver" ]; then
+  exit_with_conflict_markers "has versions that could not be compared"
+fi
 if [ "$ours_semver" != "$theirs_semver" ] && [ "$newer_semver" = "$theirs_semver" ]; then
   cat "$theirs" >"$ours"
   note "$path auto-resolved to version $theirs_version (dropped $ours_version)"

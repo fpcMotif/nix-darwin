@@ -4,26 +4,26 @@
 }:
 
 let
-  version = "0.11.0";
+  version = "0.11.1-nightly.ab3002a";
 
-  releaseBase = "https://github.com/dmtrKovalenko/fff/releases/download/v${version}";
+  releaseBase = "https://github.com/dmtrKovalenko/fff/releases/download/${version}";
 
   sources = {
     aarch64-darwin = {
       asset = "fff-mcp-aarch64-apple-darwin";
-      hash = "sha256-zGBtlBjPp3ZDdtzXsyoz5kWabLmkcYvjZrAk3Kbp/q0=";
+      hash = "sha256-v8DEQ3sVtqvfoZ52rtUjqvr3Fz4RHAEtsHWn2XqXmC4=";
     };
     x86_64-darwin = {
       asset = "fff-mcp-x86_64-apple-darwin";
-      hash = "sha256-Mzd6j5ZELryLBtO9KGPPZqUg+XozcA4PuFoJ3XmI6GI=";
+      hash = "sha256-fIrMdH+ievzx2M4cSqFPGYWOkQcBhx0dTMrtwA7CJZ0=";
     };
     aarch64-linux = {
       asset = "fff-mcp-aarch64-unknown-linux-gnu";
-      hash = "sha256-9BP9GAnxj3ukRSQBAZLSlWLWuldF4zkmvhi5nKtu24k=";
+      hash = "sha256-IRAI82AZgorD1E8/J+MRy/jDfwImmVO8iv5zVoGMcvc=";
     };
     x86_64-linux = {
       asset = "fff-mcp-x86_64-unknown-linux-gnu";
-      hash = "sha256-G2RZR8+ghvgIDNZBmJnjLLLFMbEiYYwRQdkVXkSc5kc=";
+      hash = "sha256-TFTNjbaKQWOrpFUyTUS1kdGYSaFEFNgNFaWWJT/JUqA=";
     };
   };
 
@@ -51,7 +51,7 @@ stdenvNoCC.mkDerivation {
   meta = {
     description = "Frecency-ranked, git-aware file search MCP server for AI agents (fff)";
     homepage = "https://github.com/dmtrKovalenko/fff";
-    changelog = "https://github.com/dmtrKovalenko/fff/releases/tag/v${version}";
+    changelog = "https://github.com/dmtrKovalenko/fff/releases/tag/${version}";
     license = lib.licenses.mit;
     mainProgram = "fff-mcp";
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];

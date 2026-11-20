@@ -1,6 +1,6 @@
 ---
 name: macos-drafts-query-and-sync
-description: "Query, extract, and non-blockingly sync notes from Agile Tortoise Drafts on macOS via read-only CoreData SQLite and URL schemes"
+description: "Drafts store internals — CoreData timestamps, ZFOLDER constants, and non-blocking drafts:// note creation. For listing, searching, or exporting drafts, use drafts-ledger."
 ---
 
 # macOS Drafts App Query, Extraction & Non-Blocking Sync

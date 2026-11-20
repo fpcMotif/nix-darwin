@@ -19,6 +19,17 @@ Never let any single draft or merge output exceed 300 KB (or ~5,000 lines). If c
 - **Never touch `Changes.sqlite`**: Do not delete rows from `Changes.sqlite` or equate `ZPROCESSED = 0` with orphans. `ZPROCESSED = 0` represents the active, healthy CloudKit sync backlog draining in background batches.
 - **Deduplicate and clean orphans**: Purge redundant single-URL capture duplicates before or after large consolidations. Keep the single richest annotation per canonical URL.
 
+## Data shapes
+
+Every Drafts JSON on this machine is a **bare array or JSONL stream of records**; none has a `records`, `rows` or `data` wrapper.
+
+| Producer | File shape | Record keys |
+|---|---|---|
+| `drafts-ledger get --json`, `drafts-intelligence extract`, inbox/rollback dumps | JSON array (`get`: one object) | `uuid, created, modified, folder` ("inbox"/"archive"/"trash"), `flagged` (bool), `tags` (string[]), `content` |
+| `drafts-ledger export` (`jsonl` default, `json`), `search --json` | JSONL / JSON array | `uuid, date` (YYYY-MM-DD), `modified, folder` (0 inbox, 1 archive, 10000 trash), `flagged` (0/1), `tags, url, domain, bucket, extra, n_urls`, optional `repo, x_user, x_id, dup_count, meta` |
+
+**Probe before you parse.** Print the shape of a file before writing any code that reads it: `jq 'type, (if type=="array" then .[0] else . end | keys)' FILE` (JSONL: `head -1 FILE | jq keys`). Write the parser against the keys the probe printed.
+
 ## Branches
 
 ### Search or look up
@@ -46,4 +57,4 @@ The full pipeline; each step's output is the next step's input, so keep one work
 - **dup×N is intent.** The exporter folds repeat saves of one URL into a count; a second save is a stronger vote than any like count. Keep it visible in highlights and skill gaps.
 - **Bursts are imports.** A hundred-plus YouTube saves on one day is a watch-later import, not a day's viewing; read early-window volume as backlog, late-window volume as current interest.
 - **Refute against the chunk line, not memory.** Verifiers grep the chunk files; a claim that embellishes the captured title or description is a refutation even when the URL is real, so the critic must re-check drops before they are final.
-- **SQLite `immutable=1` reads are stale** (the WAL is ignored). The CLI copies the store; do the same for any ad-hoc query.
+- **SQLite `immutable=1` reads are stale** (the WAL is ignored). The CLI copies DB + WAL + SHM itself. For an ad-hoc read, run `export --format json --out FILE` and parse that file. A hand-rolled `cp … 2>/dev/null || <fallback>` hides the copy failure and runs the fallback on guessed data.

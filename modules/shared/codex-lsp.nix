@@ -28,28 +28,13 @@ let
   validTargets = [ "claude" "codex" "zed" ];
 
   servers = {
-    tsc = {
-      package = "typescript";
-      command = "tsc";
+    tsrs = {
+      package = "tsrs";
+      command = "tsrs";
       args = [ "--lsp" "--stdio" ];
       extensions = jsExtensions;
       targets = [ "claude" "codex" "zed" ];
       zedName = "typescript-ls";
-    };
-    oxlint = {
-      package = "oxlint";
-      command = "oxlint";
-      args = [ "--lsp" ];
-      extensions = jsExtensions // oxlintExtraExtensions;
-      isLinter = true;
-      targets = [ "claude" "codex" "zed" ];
-    };
-    oxfmt = {
-      package = "oxfmt";
-      command = "oxfmt";
-      args = [ "--lsp" ];
-      extensions = { };
-      targets = [ "zed" ];
     };
     astro = {
       package = "astro-language-server";
@@ -127,8 +112,7 @@ let
   };
 
   codexOrder = [
-    "tsc"
-    "oxlint"
+    "tsrs"
     "astro"
     "svelte"
     "tailwindcss"
@@ -224,6 +208,7 @@ assert lib.all (name: builtins.elem "codex" servers.${name}.targets) codexOrder;
   packages =
     if pkgs == null then [ ]
     else packagesForTargets [ "claude" "codex" ] ++ [
+      pkgs.typescript
       pkgs.emmet-language-server
       pkgs.mcp-language-server
     ];

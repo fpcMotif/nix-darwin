@@ -10,6 +10,10 @@ let
     eza
     fcp
     dust
+    # Disk usage TUIs: dua (Rust, interactive delete), ncdu (Zig), erdtree (Rust).
+    dua
+    ncdu
+    erdtree
     tree
     procs
     bottom
@@ -30,8 +34,7 @@ let
     # Omit nixpkgs bun here because martin.bun-canary-bin provides bin/bun on
     # Darwin. _26 is the floor; see scripts/update-flake-inputs.sh.
     nodejs-slim_26
-    # oxlint and language servers live in ./lsp.nix.
-    oxfmt
+    # Language servers live in ./lsp.nix.
     mkcert
     jwt-cli
     step-cli
@@ -49,7 +52,7 @@ let
     go
     gofumpt
     golangci-lint
-    uv
+    martin.uv-bin
     cmake
     tree-sitter
     wget
@@ -69,17 +72,17 @@ let
     martin.bun-canary-bin
     martin.sourcegraph-amp
     martin.droid
-    martin.opencode
     # Prebuilt release because nixpkgs hunk crashes with SIGKILL on Darwin.
     martin.hunk-bin
     martin.mole
     codex
-    nur.repos.charmbracelet.crush
+    martin.crush
     martin.pi-coding-agent
     martin.oh-my-pi
     martin.nub
     martin.drafts-mcp-server
-    martin.jev-traits
+    martin.traits
+    martin.vesalius-bin
   ];
 in
 {
@@ -95,5 +98,11 @@ in
   programs.eza = {
     enable = true;
     enableZshIntegration = false;
+  };
+
+  # Rust tree navigator; the zsh integration adds `br`, which can cd on exit.
+  programs.broot = {
+    enable = true;
+    enableZshIntegration = true;
   };
 }

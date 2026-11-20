@@ -1,8 +1,8 @@
 # Personal skill sources
 
 These directories preserve the personal skills installed on the active Mac on 2026-09-12.
-`manifest.json` maps each source to its existing discovery and installer paths.
-`agent-instructions.nix` links every listed path to the same immutable source.
+`placement.nix` assigns each source a skill audience, or lists its hosts under `hosts`.
+`../../skill-placement.nix` links every resulting path to the same immutable source.
 
 Edit skills here, then rebuild. Do not edit their generated home-directory symlinks.
 The migration archives existing directories and links under `~/.local/state/nix-agent-backups/`.
@@ -15,7 +15,7 @@ Plugin-specific skills are not copied into this source tree.
 Installer updates that replace a managed link must be reviewed and imported here before rebuilding.
 
 `simplify` ports Claude Code's built-in `/simplify` to Codex, Amp, agy, and OMP.
-Its manifest entry omits `.claude/skills`, so Claude Code keeps its built-in.
+Its `hosts` entry omits `claude`, so Claude Code keeps its built-in.
 Claude Code does not scan `~/.agents/skills`, so the shared link never reaches it.
 Hiding it through `skillOverrides` would match by name and could hide the built-in too.
 

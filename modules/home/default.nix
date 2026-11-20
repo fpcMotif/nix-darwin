@@ -13,12 +13,14 @@
     ./pi.nix
     ./ai-model-routing.nix
     ./agent-surface.nix
+    ./skill-placement.nix
     ./agent-instructions.nix
     ./obsidian.nix
     ./tmux.nix
     ./git.nix
     ./hk.nix
     ./doc-lock
+    ./recall
     ./jujutsu.nix
     ./workspace-backend
     ./ghostty.nix
@@ -26,15 +28,16 @@
     ./yazi.nix
     ./prompt.nix
     ./claude.nix
+    ./antigravity
     ./lsp.nix
     ./droid.nix
-    ./opencode.nix
     ./zed.nix
     ./crush.nix
     ./amp.nix
     ./ssh.nix
     ./cursor.nix
     ./skill-router.nix
+    ./iets.nix
   ];
 
   home = {

@@ -1,4 +1,4 @@
-{ config, lib, pkgs, ... }:
+{ lib, pkgs, ... }:
 
 let
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
@@ -57,7 +57,6 @@ in
     AGENT_BROWSER_CDP_URL = "http://localhost:9222";
     BUN_INSTALL = "$HOME/.bun";
 
-    CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
     CLAUDE_CODE_NO_FLICKER = "1";
     # Baseline effort floor for every `claude` launched from a shell, the
     # ai-cli.nix `claude`/`cc` wrappers included: medium (Claude's recommended default).

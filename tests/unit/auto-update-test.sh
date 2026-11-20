@@ -83,12 +83,12 @@ rm -rf "$sed_scratch"
 
 # Heavy inputs move only on the cadence day (issue #336).
 [ -n "${AU_HEAVY_INPUTS:-}" ] || fail "AU_HEAVY_INPUTS must be defined"
-for heavy in nixpkgs nur; do
+for heavy in nixpkgs; do
   case " $AU_HEAVY_INPUTS " in *" $heavy "*) ;; *) fail "heavy set must contain $heavy" ;; esac
 done
 case "$AU_CADENCE_DAY" in [1-7]) ;; *) fail "AU_CADENCE_DAY must be an ISO weekday 1-7, got '$AU_CADENCE_DAY'" ;; esac
 
-sample=(agent-skills darwin home-manager nixpkgs nur dotfiles)
+sample=(agent-skills darwin home-manager nixpkgs dotfiles)
 read -ra heavy_inputs <<<"$AU_HEAVY_INPUTS"
 heavy_list=$(printf '%s\n' "${heavy_inputs[@]}")
 other_day=$(( AU_CADENCE_DAY % 7 + 1 ))
@@ -224,8 +224,6 @@ if [ -n "$scripts_dir" ]; then
     || fail "update-flake-inputs.sh must enumerate inputs via nix flake metadata"
   grep -qF 'au_inputs_to_bump' "$scripts_dir/update-flake-inputs.sh" \
     || fail "update-flake-inputs.sh must route through au_inputs_to_bump"
-  grep -qF 'au_inputs_to_bump' "$scripts_dir/update-crush.sh" \
-    || fail "update-crush.sh must adopt the cadence gate for nur"
   # An unauthenticated call 403s at 60 calls/hr, and a failed updater only skips its bump.
   for s in "$scripts_dir"/update-*.sh; do
     raw=$(grep -n 'api\.github\.com' "$s" | grep -v 'au_github_api' || true)
@@ -381,12 +379,142 @@ if [ -n "$github_dir" ]; then
   # (tests/unit/build-workflow-test.sh), so only the nightly workflow names it.
   grep -qF 'unit-auto-update' "$github_dir/workflows/auto-update.yml" \
     || fail "auto-update.yml does not run the unit-auto-update check"
+  mode_literals=$(grep -oE "AU_BUMP_MODE == '[^']+'" "$github_dir/workflows/auto-update.yml" | cut -d"'" -f2 || true)
+  [ -n "$mode_literals" ] || fail "auto-update.yml has no AU_BUMP_MODE == '...' comparisons"
+  while IFS= read -r literal; do
+    case "$literal" in
+      full|light) ;;
+      *) fail "auto-update.yml compares AU_BUMP_MODE to '$literal', which au_bump_mode never prints" ;;
+    esac
+  done <<<"$mode_literals"
   guard_line=$(grep -nF 'guard-source-builds' "$github_dir/workflows/build.yml" | head -1 | cut -d: -f1)
   [ -n "$guard_line" ] || fail "build.yml lacks the source-build guard step"
   sys_line=$(grep -nF 'Build darwinConfigurations.f' "$github_dir/workflows/build.yml" | head -1 | cut -d: -f1)
   [ -n "$sys_line" ] || fail "build.yml lacks the darwinConfigurations.f build step"
   [ "$guard_line" -lt "$sys_line" ] \
     || fail "source-build guard must run BEFORE the full system build (guard:$guard_line build:$sys_line)"
+fi
+
+if [ -n "$pkgs_dir" ] && [ -n "$scripts_dir" ]; then
+  nix_url=$(grep -oE 'releases/download/v?\$\{version\}' "$pkgs_dir/fff-mcp.nix" | head -1)
+  sh_url=$(grep -oE 'releases/download/v?\$\{latest\}' "$scripts_dir/update-fff-mcp.sh" | head -1)
+  [ -n "$nix_url" ] || fail "pkgs/fff-mcp.nix has no releases/download/\${version} URL"
+  [ -n "$sh_url" ] || fail "update-fff-mcp.sh has no releases/download/\${latest} URL"
+  [ "${nix_url%"\${version}"}" = "${sh_url%"\${latest}"}" ] \
+    || fail "update-fff-mcp.sh hashes '$sh_url' but pkgs/fff-mcp.nix fetches '$nix_url'"
+  if grep -qF 'au_latest_github_release' "$scripts_dir/update-fff-mcp.sh"; then
+    fail "update-fff-mcp.sh must pick a dated nightly tag, not au_latest_github_release"
+  fi
+
+  fff_dir=$(mktemp -d)
+  mkdir -p "$fff_dir/scripts/lib" "$fff_dir/pkgs" "$fff_dir/bin" "$fff_dir/urls"
+  cp "$scripts_dir/update-fff-mcp.sh" "$fff_dir/scripts/"
+  cp "$lib" "$fff_dir/scripts/lib/auto-update.sh"
+  cp "$pkgs_dir/fff-mcp.nix" "$fff_dir/pkgs/fff-mcp.nix"
+  au_set_version "$fff_dir/pkgs/fff-mcp.nix" "0.11.1-nightly.0ab67dc"
+  cp "$fff_dir/pkgs/fff-mcp.nix" "$fff_dir/before.nix"
+
+  write_stub() {
+    { printf '#!%s\n' "$BASH"; cat; } > "$fff_dir/bin/$1"
+    chmod +x "$fff_dir/bin/$1"
+  }
+  write_stub gh <<'EOF'
+exit 1
+EOF
+  write_stub ax <<'EOF'
+case "$1" in
+  */releases/latest) printf '%s\n' '{"tag_name":"v0.11.0"}' ;;
+  *) printf '%s\n' "$FFF_RELEASES_JSON" ;;
+esac
+EOF
+  write_stub nix-prefetch-url <<'EOF'
+for a in "$@"; do last=$a; done
+u=$(mktemp "$FFF_URL_DIR/url.XXXXXX")
+printf '%s\n' "$last" > "$u"
+printf '%s\n' 0000000000000000000000000000000000000000000000000000
+EOF
+  write_stub nix <<'EOF'
+case "$1 ${2:-}" in
+  "hash convert") printf '%s\n' "sha256-NEWFFFHASH=" ;;
+  "build "*) exit 0 ;;
+  *) exit 1 ;;
+esac
+EOF
+
+  fff_run() {
+    rm -rf "$fff_dir/urls"
+    mkdir -p "$fff_dir/urls"
+    PATH="$fff_dir/bin:$PATH" GITHUB_TOKEN="" GH_TOKEN="" NO_COLOR=1 \
+      FFF_URL_DIR="$fff_dir/urls" FFF_RELEASES_JSON="$1" \
+      bash "$fff_dir/scripts/update-fff-mcp.sh" 2>&1
+  }
+
+  fixture_releases='[
+    {"tag_name":"nightly","draft":false,"published_at":"2026-11-18T00:00:00Z"},
+    {"tag_name":"v0.11.0","draft":false,"published_at":"2026-11-17T00:00:00Z"},
+    {"tag_name":"0.11.1-nightly.deadbeef","draft":true,"published_at":"2026-11-19T00:00:00Z"},
+    {"tag_name":"0.11.1-nightly.ff00112","draft":false,"published_at":"2026-11-13T22:33:32Z"},
+    {"tag_name":"0.11.1-nightly.ab3002a","draft":false,"published_at":"2026-11-16T23:20:41Z"}
+  ]'
+  out=$(fff_run "$fixture_releases") || fail "fff-mcp fixture bump failed: $out"
+  case "$out" in
+    *"fff-mcp  0.11.1-nightly.0ab67dc --> 0.11.1-nightly.ab3002a") ;;
+    *) fail "fff-mcp picked wrong tag from fixture: $out" ;;
+  esac
+  grep -qF 'version = "0.11.1-nightly.ab3002a";' "$fff_dir/pkgs/fff-mcp.nix" \
+    || fail "fff-mcp did not write chosen nightly version"
+  got_urls=$(sort "$fff_dir/urls"/url.*)
+  want_urls='https://github.com/dmtrKovalenko/fff/releases/download/0.11.1-nightly.ab3002a/fff-mcp-aarch64-apple-darwin
+https://github.com/dmtrKovalenko/fff/releases/download/0.11.1-nightly.ab3002a/fff-mcp-aarch64-unknown-linux-gnu
+https://github.com/dmtrKovalenko/fff/releases/download/0.11.1-nightly.ab3002a/fff-mcp-x86_64-apple-darwin
+https://github.com/dmtrKovalenko/fff/releases/download/0.11.1-nightly.ab3002a/fff-mcp-x86_64-unknown-linux-gnu'
+  [ "$got_urls" = "$want_urls" ] || fail "fff-mcp prefetched wrong URLs: $got_urls"
+
+  cp "$fff_dir/before.nix" "$fff_dir/pkgs/fff-mcp.nix"
+  no_nightly='[{"tag_name":"nightly","draft":false,"published_at":"2026-11-18T00:00:00Z"},{"tag_name":"v0.11.0","draft":false,"published_at":"2026-11-17T00:00:00Z"}]'
+  if out=$(fff_run "$no_nightly"); then fail "fff-mcp without dated nightly passed: $out"; fi
+  case "$out" in *"no dated nightly release found"*) ;; *) fail "fff-mcp missing-nightly message wrong: $out" ;; esac
+  cmp -s "$fff_dir/before.nix" "$fff_dir/pkgs/fff-mcp.nix" \
+    || fail "fff-mcp missing-nightly changed the pin"
+
+  rm -rf "$fff_dir"
+  unset -f write_stub fff_run
+fi
+
+got=$(printf '%s\n' charm-nur darwin nixpkgs | au_without_dedicated_inputs | tr '\n' ' ')
+[ "$got" = "darwin nixpkgs " ] || fail "au_without_dedicated_inputs kept a dedicated input: $got"
+got=$(AU_DEDICATED_INPUTS="charm-nur foo" au_without_dedicated_inputs <<<$'charm-nur\ncharm\nnur\nfoo\ndarwin' | tr '\n' ' ')
+[ "$got" = "charm nur darwin " ] || fail "au_without_dedicated_inputs mishandled multiple or substring inputs: $got"
+[ -n "${AU_DEDICATED_INPUTS:-}" ] || fail "AU_DEDICATED_INPUTS must be defined"
+
+if [ -n "$scripts_dir" ]; then
+  read -ra dedicated_inputs <<<"$AU_DEDICATED_INPUTS"
+  dedicated_list=$(printf '%s\n' "${dedicated_inputs[@]}")
+  seen_targets=""
+  for s in "$scripts_dir"/update-*.sh; do
+    [ "$(basename "$s")" = "update-flake-inputs.sh" ] && continue
+    while IFS= read -r line; do
+      [ -n "$line" ] || continue
+      read -ra tokens <<<"${line#*nix flake update}"
+      bumping=()
+      for tok in "${tokens[@]}"; do
+        case "$tok" in '|'*|';'*|'&'*|'<'*|'>'*|[0-9]*'>'*) break ;; *) bumping+=("$tok") ;; esac
+      done
+      [ "${#bumping[@]}" -gt 0 ] \
+        || fail "$(basename "$s") runs bare 'nix flake update' alongside update-flake-inputs.sh"
+      for target in "${bumping[@]}"; do
+        has_word "$target" "$dedicated_list" \
+          || fail "$(basename "$s") bumps '$target' without listing it in AU_DEDICATED_INPUTS"
+        seen_targets+="$target"$'\n'
+      done
+    done < <(grep -v '^[[:space:]]*#' "$s" | grep -F 'nix flake update' || true)
+  done
+  for input in "${dedicated_inputs[@]}"; do
+    [ "$(printf '%s' "$seen_targets" | grep -cxF "$input" || true)" -eq 1 ] \
+      || fail "dedicated input '$input' needs exactly one updater that runs 'nix flake update $input'"
+  done
+  grep -qF 'au_without_dedicated_inputs' "$scripts_dir/update-flake-inputs.sh" \
+    || fail "update-flake-inputs.sh does not skip dedicated inputs"
 fi
 
 grep -qF 'archive --format=tar' "$auto_switch"

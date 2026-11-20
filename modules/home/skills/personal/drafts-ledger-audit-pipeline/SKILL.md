@@ -1,6 +1,6 @@
 ---
 name: drafts-ledger-audit-pipeline
-description: Repeatable procedure for running the drafts-ledger pipeline over large historical windows with recursive primary-source auditing and safe MCP draft creation.
+description: Drafts multi-month ledger — run the drafts-ledger digest over a window of several months or more, with primary-source auditing and MCP writes for digests over 50 KB.
 ---
 
 # Drafts Ledger Pipeline Execution & Snapshot Audit

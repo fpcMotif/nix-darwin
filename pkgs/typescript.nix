@@ -14,8 +14,8 @@ buildGo127Module (finalAttrs: {
   src = fetchFromGitHub {
     owner = "microsoft";
     repo = "typescript";
-    rev = "257e87406c6a8be277cb8cd5ef8d7b458a650390";
-    hash = "sha256-2CiApXxxOVo1RZu9U/FjtCftzbIzNjh25QW861CAoxM=";
+    rev = "0b0aeb31e416c280bcbef7d7734aa21e7d999cdd";
+    hash = "sha256-BCXBsswVjPO2LytAm+937h2k/q2I/a7R/6UNivl0MSQ=";
   };
 
   modRoot = "tsc";

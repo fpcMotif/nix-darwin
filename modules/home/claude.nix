@@ -13,7 +13,7 @@ let
 
   mkSkill = from: path: packages: { inherit from path packages; };
 
-  inherit (config.martin.agentSurface) guideCatalog skillTargetDirs claudeHooks;
+  inherit (config.martin.agentSurface) skillTargetDirs claudeHooks;
 
   # `link` points every target at the same store SKILL.md files. Pi de-dupes
   # skills by realpath, so the shared store paths collapse across picker dirs.
@@ -23,10 +23,15 @@ let
   skillTargetDirsSh = lib.concatMapStringsSep " " (d: ''"${homeDir}/${d}"'')
     (lib.attrValues skillTargetDirs);
 
-  # Droid scans both ~/.factory/skills and ~/.agents/skills and flags
-  # duplicate names, so it gets skills only via ~/.agents/skills. The factory
-  # dir stays in skillTargetDirs so sweeps still prune it.
-  skillLinkDirs = removeAttrs skillTargetDirs [ "factory" ];
+  skillLinkDirs = config.martin.agentSurface.skillPlacement.pickerDirs;
+
+  # An agent-skills `path` source uses IFD and breaks cross-platform
+  # `nix flake check`, so local skills go through Skill placement instead.
+  # Read from disk so no new skill dir is missed.
+  localSkillIds = builtins.attrNames (lib.filterAttrs
+    (name: type:
+      type == "directory" && builtins.pathExists (./skills + "/${name}/SKILL.md"))
+    (builtins.readDir ./skills));
 
   mkSkillTargetRm = ids: ''
     for dir in ${skillTargetDirsSh}; do
@@ -61,31 +66,33 @@ let
     fi
   '';
 
-  # Only the buckets upstream's CLAUDE.md promotes.
-  mattpocockBuckets = [ "engineering" "productivity" ];
-  disabledMattpocockSkills = [
-    "grill-me" # the `grilling` + `grill-with-docs` pairing is the tradeoff we want
-  ];
-  # Niche skills trimmed to keep the auto-loaded catalog small. Handled like
-  # disabledMattpocockSkills, listed apart because the reason is noise, not
-  # breakage.
-  leanExcludedMattpocockSkills = [ ];
+  inherit (import ./claude/skill-curation.nix)
+    mattpocockBuckets disabledMattpocockSkills leanExcludedMattpocockSkills
+    removedSkillIds harnessProvidedSkillIds interfacesSkillNames;
   excludedSkillIds = disabledMattpocockSkills ++ leanExcludedMattpocockSkills;
-  removedSkillIds = [ "git-workflow" "lazygit" "ralph-loop" "unslop" ];
   # Park here (off but installed) to keep a plugin's cache and config.
-  disabledClaudePlugins = [ "typescript-lsp@claude-plugins-official" ];
+  # Code Mode refuses to start while a user mod hooks tool calls, as these two
+  # and the jev-traits mod do. jev-traits stays deployed but out of PLUGIN_DIRS.
+  disabledClaudePlugins = [
+    "typescript-lsp@claude-plugins-official"
+    "flightdeck@claude-flightdeck"
+    "review-watch@claude-code-mods"
+  ];
   # This module edits these plugins' caches, so it also owns their flag and
   # marketplace. Authors' marketplaces track upstream; claude-plugins-official
   # lags. Change one here, not via /plugin, or every skill lists twice.
   mattpocockPluginId = "mattpocock-skills@mattpocock";
   convexPluginId = "convex@convex";
+  pstackPluginId = "pstack@cursor-plugins";
   claudeManagedPlugins = {
     ${mattpocockPluginId} = true;
     ${convexPluginId} = true;
+    ${pstackPluginId} = true;
   };
   claudeManagedMarketplaces = {
     mattpocock = { source = { source = "github"; repo = "mattpocock/skills"; }; autoUpdate = true; };
     convex = { source = { source = "github"; repo = "get-convex/convex-backend-skill"; }; autoUpdate = true; };
+    cursor-plugins = { source = { source = "github"; repo = "cursor/plugins"; }; autoUpdate = true; };
   };
   # ~/.claude/plugins/cache keys each install as <marketplace>/<plugin>/<version>.
   pluginCacheDir = id:
@@ -141,6 +148,7 @@ let
     "Bash(node:*)"
     "Bash(tsx:*)"
     "Bash(tsc:*)"
+    "Bash(tsrs:*)"
     "Bash(deno:*)"
     "Bash(biome:*)"
     "Bash(prettier:*)"
@@ -185,6 +193,8 @@ let
     "mcp__fff__find_files"
     "mcp__fff__grep"
     "mcp__fff__multi_grep"
+    "mcp__vesalius__*"
+    "Bash(vesalius:*)"
 
     # Allowed by choice; a stricter config would deny these.
     "Bash(rm -rf /)"
@@ -301,42 +311,10 @@ let
   # plugin copy wins, so skillOverrides hides the bundle copy in Claude only;
   # other agents keep the bundle. verify-agent-skills.sh checks the plugin has each.
   pluginProvidedSkillIds = enabledMattpocockSkills;
-  # Ids the Claude harness already ships (e.g. anthropic-skills:notebooklm);
-  # the local copy is hidden in Claude but stays visible to other agents.
-  harnessProvidedSkillIds = [ "notebooklm" ];
-  idleClaudeSkillIds = [
-    "animation-vocabulary"
-    "autoresearch"
-    "chronicle"
-    "claude-handoff"
-    "edit-article"
-    "eli5"
-    "ground-truth-audit"
-    "loop-me"
-    "pick-ui-library"
-    "pixel-clone-landing-page"
-    "review-animations"
-    "ubiquitous-language"
-    "writing-beats"
-    "writing-fragments"
-    "writing-shape"
-  ];
-  interfacesSkillNames = [
-    "better-accessibility"
-    "better-colors"
-    "better-interface"
-    "better-layout"
-    "better-typography"
-    "better-ui"
-    "better-writing"
-    "break"
-    "build-design"
-    "explain-interface"
-    "interface-review"
-    "state-machine"
-    "variant"
-  ];
-  claudeHiddenSkillIds = pluginProvidedSkillIds ++ harnessProvidedSkillIds ++ idleClaudeSkillIds ++ interfacesSkillNames;
+  pstackPluginSkillIds = builtins.attrNames pstackDrvs;
+  claudeHiddenSkillIds = pluginProvidedSkillIds ++ pstackPluginSkillIds ++ harnessProvidedSkillIds ++ interfacesSkillNames;
+  claudeOffSkillIds = config.martin.agentSurface.skillPlacement.offIds.claude;
+  bundleSkillIds = enabledMattpocockSkills ++ [ "archify" "better-github-skill" "ub-mode" ] ++ interfacesSkillNames;
 
   # Plugin skills to block outright. skillOverrides ignores plugin skills, so
   # claudePrunePluginSkills unlists them every switch and a deny rule refuses
@@ -372,16 +350,15 @@ let
   effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 
   pstack = import ./claude/pstack.nix {
-    inherit lib pkgs inputs mkSource mkSkill;
+    inherit lib pkgs inputs;
     inherit (config.martin.development) docLock;
   };
-  inherit (pstack) pstackSources pstackExplicit pstackAgentFile pstackModelsSheet pstackDrvs;
+  inherit (pstack) pstackModelsSheet pstackDrvs;
 
   # Defaults only: a value already in settings.json wins.
   claudeSeedEnv = {
     API_TIMEOUT_MS = "3000000";
     ENABLE_LSP_TOOL = "1";
-    CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
     CLAUDE_CODE_NEW_INIT = "1";
     CLAUDE_CODE_NO_FLICKER = "1";
     CLAUDE_CODE_SIMPLE_SYSTEM_PROMPT = "1";
@@ -403,6 +380,10 @@ let
   claudeGuardHooks = [
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/search-guard.sh"; }
     { event = "PreToolUse"; matcher = "Bash"; command = "$HOME/.claude/hooks/shell-guard.sh"; }
+    { event = "PreToolUse"; matcher = "mcp__Claude_Browser__preview_start|mcp__Claude_Browser__navigate|mcp__Claude_Browser__browser_batch"; command = "$HOME/.claude/hooks/browser-file-guard.sh"; }
+    { event = "SessionEnd"; matcher = "clear"; command = "$HOME/.claude/hooks/context-handoff.sh save"; }
+    { event = "SessionStart"; matcher = "clear|compact"; command = "$HOME/.claude/hooks/context-handoff.sh resume"; }
+    { event = "SessionStart"; matcher = "startup|clear|compact"; command = "$HOME/.claude/hooks/shell-routing.sh"; }
   ] ++ claudeHooks.add;
   retiredClaudeHooks = [
     { event = "PostToolUse"; matcher = "Edit"; command = "$HOME/.claude/hooks/edit-batch-nudge.sh"; }
@@ -437,13 +418,6 @@ let
       "interfaces@interfaces" = true;
     } // claudeManagedPlugins;
     extraKnownMarketplaces = {
-      "frad-dotclaude" = {
-        source = {
-          source = "github";
-          repo = "FradSer/dotclaude";
-        };
-        autoUpdate = true;
-      };
       "interfaces" = {
         source = {
           source = "github";
@@ -467,9 +441,11 @@ let
       { path = [ "permissions" "ask" ]; value = claudePermissions.ask; }
       { path = [ "permissions" "defaultMode" ]; value = claudePermissions.defaultMode; }
       { path = [ "effortLevel" ]; value = "medium"; }
-      { path = [ "env" "CLAUDE_CODE_PLUGIN_DIRS" ]; value = "${homeDir}/.claude/mods/jev-traits"; }
+      { path = [ "env" "CLAUDE_CODE_EXPERIMENTAL_CODE_MODE" ]; value = "1"; }
+      { path = [ "env" "CLAUDE_CODE_PLUGIN_DIRS" ]; value = "${homeDir}/.claude/mods/jev-report"; }
     ]
-    ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeHiddenSkillIds
+    ++ lib.optional isDarwin { path = [ "env" "TRAITS_BIN" ]; value = lib.getExe pkgs.martin.traits; }
+    ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeOffSkillIds
     ++ map (id: { path = [ "enabledPlugins" id ]; value = false; }) disabledClaudePlugins
     ++ lib.mapAttrsToList (id: value: { path = [ "enabledPlugins" id ]; inherit value; }) claudeManagedPlugins
     ++ lib.mapAttrsToList (name: value: { path = [ "extraKnownMarketplaces" name ]; inherit value; }) claudeManagedMarketplaces
@@ -492,27 +468,17 @@ in
 
   # `.local/bin/claude` is a stable user-PATH binary that survives store-path
   # churn so macOS TCC and editor integrations don't re-prompt every switch.
+  martin.agentSurface.skills =
+    lib.genAttrs localSkillIds (id: { source = ./skills + "/${id}"; audience = "pickers"; })
+    // lib.mapAttrs (_: drv: { source = drv; audience = "pickers"; }) pstackDrvs;
+
+  martin.agentSurface.bundleSkills = {
+    ids = bundleSkillIds ++ [ "web-browser" ];
+    audience = "pickers";
+  };
+  martin.agentSurface.skillsOff.claude = claudeHiddenSkillIds;
+
   home.file =
-    let
-      # Local skills from modules/home/skills, linked with plain home.file:
-      # an agent-skills `path` source uses IFD and breaks cross-platform
-      # `nix flake check`. Read from disk so no new skill dir is missed.
-      localSkillIds = builtins.attrNames (lib.filterAttrs
-        (name: type:
-          type == "directory" && builtins.pathExists (./skills + "/${name}/SKILL.md"))
-        (builtins.readDir ./skills));
-      localSkillFiles = listToAttrs (lib.concatMap
-        (dir: map
-          (skill: { name = "${dir}/${skill}"; value = { source = ./skills + "/${skill}"; }; })
-          localSkillIds)
-        (lib.attrValues skillLinkDirs));
-      pstackSkillFiles = listToAttrs (lib.concatMap
-        (dir: lib.mapAttrsToList
-          (skill: drv: { name = "${dir}/${skill}"; value = { source = drv; }; })
-          pstackDrvs)
-        (lib.attrValues skillLinkDirs));
-    in
-    lib.mapAttrs (_: source: { inherit source; }) (guideCatalog.filesFor [ "claude" ]) //
     {
       # Curation lists for scripts/verify-agent-skills.sh, so it never restates
       # them. Covers every picker dir; regenerated every switch.
@@ -521,7 +487,7 @@ in
           targetDirs = lib.attrValues skillTargetDirs;
           bundled = enabledMattpocockSkills;
           localSkills = localSkillIds;
-          claudeHidden = claudeHiddenSkillIds;
+          claudeHidden = claudeOffSkillIds;
           pluginProvided = pluginProvidedSkillIds;
           excluded = lib.unique (excludedSkillIds ++ removedSkillIds);
           deniedPluginSkills = disabledMattpocockSkills;
@@ -534,19 +500,16 @@ in
         executable = true;
       };
 
-      ".claude/search-eval.md".source = ./claude/search-eval.md;
-      ".claude/search-routing.md".source = ./claude/search-routing.md;
-      ".claude/references/search-routing-examples.md".source = ./claude/references/search-routing-examples.md;
-
-      # pstack subagent (see pstackSkills). A skills tree carries no agents;
-      # Claude Code reads user agents from ~/.claude/agents by bare name.
-      ".claude/agents/poteto-agent.md".source = pstackAgentFile "poteto-agent.md";
       ".claude/pstack-models.md".source = pstackModelsSheet;
       ".claude/hooks/search-guard.sh" = { source = ./claude/hooks/search-guard.sh; executable = true; };
       ".claude/hooks/shell-guard.sh" = { source = ./claude/hooks/shell-guard.sh; executable = true; };
+      ".claude/hooks/browser-file-guard.sh" = { source = ./claude/hooks/browser-file-guard.sh; executable = true; };
+      ".claude/hooks/context-handoff.sh" = { source = ./claude/hooks/context-handoff.sh; executable = true; };
+      ".claude/hooks/shell-routing.sh" = { source = ./claude/hooks/shell-routing.sh; executable = true; };
       ".claude/mods/jev-traits".source = ./claude/mods/jev-traits;
+      ".claude/mods/jev-report".source = ./claude/mods/jev-report;
       ".config/ripgrep/agent-config".source = ./claude/ripgrep/agent-config;
-    } // localSkillFiles // pstackSkillFiles;
+    };
 
   home.activation.claudePruneRemovedSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     if [ -n "''${DRY_RUN:-}" ]; then
@@ -683,6 +646,7 @@ in
       fi
       ${lib.optionalString isDarwin ''
         registerMcp drafts '{"type":"stdio","command":"${pkgs.martin.drafts-mcp-server}/bin/drafts-mcp-server","args":[]}'
+        registerMcp vesalius '{"type":"stdio","command":"${lib.getExe pkgs.martin.vesalius-bin}","args":["mcp"],"alwaysLoad":true}'
       ''}
     fi
   '';
@@ -713,11 +677,12 @@ in
         "^web-browser$";
       archify = mkSource "archify" "." null;
       better-github-skill = mkSource "better-github-skill" "." null;
+      ub-mode = mkSource "ub-mode" "." null;
       interfaces = mkSource "interfaces-skills" "skills" null;
     } // mpSources // effectSources;
 
     skills = {
-      enable = enabledMattpocockSkills ++ [ "archify" "better-github-skill" ] ++ interfacesSkillNames;
+      enable = bundleSkillIds;
       enableAll = [ ];
       explicit = {
         web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];

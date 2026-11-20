@@ -9,7 +9,7 @@ Use a purpose-built tool before its shell equivalent. Confirm it is exposed; use
 | Find files outside FFF's root | `fd PATTERN DIR` |
 | Exhaustive text search | `rg -n PAT DIR` |
 | Copy files | `fcp SOURCE DESTINATION` |
-| Jump to a directory | `z NAME`, or `z NAME && COMMAND` in one call |
+| Run a command in another directory | `z DIR && COMMAND`, or the tool's own flag: `git -C DIR`, `make -C DIR`, `rg PAT DIR` |
 | Disk usage | `dust` |
 | Processes | `procs` |
 | CPU and memory | `btm` |
@@ -19,6 +19,15 @@ Use a purpose-built tool before its shell equivalent. Confirm it is exposed; use
 | Structural search | `sg -p 'PATTERN' --lang LANGUAGE` |
 
 Bound discovery output with `head -n 20`. Narrow a lookup that exceeds ten seconds.
+
+Read source code as a numbered span (the Read tool, or `bat -pp -r A:B`), so you can cite and edit `file:line`. Keep `head` and `tail` for command output.
+
+Read a long log as a verdict. A tail shows only the last step, and a chain joined with `;` exits 0 after an earlier step fails.
+
+1. Get every step's status and failure lines in one call: `rg -n -m 30 'error|FAIL|✘|\*\*\*|exited with code' LOG`.
+2. When one error repeats, count it per rule: `rg -o '\([a-zA-Z]+\)' LOG | sort | uniq -c`.
+3. Read passing output only when a count or a timing is the question.
+
 Use `ax` for HTTP. Use `curl` only after `ax` lacks the capability or returns a concrete failure.
 
 ## Waiting and background work
@@ -48,11 +57,24 @@ Ranked results alone cannot prove absence.
 - Agent shells never run direnv's prompt hook. In a project with `.envrc`, run commands through `direnv exec . COMMAND`.
 - If direnv reports the `.envrc` is blocked, ask the user. `direnv allow` runs the file's code.
 
+## Shell
+
+- On the Mac, agent shells run zsh, which keeps an unquoted variable as one word. Pass an argument list as an array: `args=(audit --edition facsimile); cmd "${args[@]}"`.
+- `python -m cProfile` exits 0 when the profiled script fails. Run the command once without the profiler, or read the log for `error:`.
+
 ## mise
 
 - mise is not activated in agent shells. In a project with `mise.toml`, run its tools with `mise exec -- COMMAND` and its tasks with `mise run TASK`.
 - Run `mise install` once to fetch the versions the project pins.
 - Pin a new tool in the project with `mise use TOOL@VERSION`. The global mise config belongs to the user.
+
+## Nix
+
+On the Mac, `nix`, `nix-build`, and `nix-shell` are iets, a faster Rust Nix client. Linux hosts, `sudo darwin-rebuild`, and the daemon run the real Nix.
+
+- **Use**: Run `nix` as usual. iets runs what it implements and hands the rest to the real Nix. A stderr line `iets: falling back to nix: REASON` marks a handoff, not an error.
+- **Check a change**: Run `nix eval --raw .#ATTR.drvPath` before a build. iets caches evaluations, so a repeat eval of unchanged files returns in milliseconds.
+- **Doubt**: When iets fails or an answer looks wrong, rerun the same command with `/run/current-system/sw/bin/nix`. If the two differ, report both outputs as an iets bug. The pin is the `iets` input in `~/nix-config/flake.nix`.
 
 ## Environment variables
 
@@ -67,13 +89,14 @@ Ranked results alone cannot prove absence.
 
 - **Code Mode**: Use programmatic execution (`eval` with Bun/JS or Python in OMP, or compound scripts) to run bulk inspections, filter in memory, and take deterministic multi-step actions in one or two calls.
 - **Bulk gathering**: Retrieve status, diffs, logs, and branch state in a single pass instead of calling inspection tools one by one across multiple turns.
-- **Single-flight VCS**: Run deterministic commit, push, PR, merge, and sync sequences in one command (`jj pr ... --land` or `bun run scripts/jj-ship.ts`) rather than stepping turn-by-turn.
+- **Single-flight VCS**: Run deterministic commit, push, PR, merge, and sync sequences in one command (`jj pr ... --land`) rather than stepping turn-by-turn.
 
 ## Version control
 
 - **Commit intent**: Commands like `jj commit`, `git commit`, `push`, and `land` are VCS operations, not test requests. Execute them directly. Do not run full test suites or build targets (`just check`, `bun build`, `test`) unless explicitly requested. Run at most `hk check`. Chain deterministic VCS operations in one command (`jj pr ... --land` or compound `&&` pipelines) instead of calling one command per turn.
 - Detect a `.jj` workspace before the first version-control operation.
 - Use `jj` in a Jujutsu workspace and Git in a Git-only checkout.
+- When a skill or plugin names a Git or GitHub command in a Jujutsu workspace, run its JJ equivalent from the `jj` skill's "Skills written for Git" table. Keep Git and `gh` for what that table lists as not covered by JJ.
 - Read the diff before every commit. Use `type(scope): message`.
 - Run `jj diff --stat` before `jj squash`. Pass explicit paths (`jj squash PATH...`) when another session or editor can write to the working copy.
 - When merge conflicts resolve to one side, list each merged pull request the other side loses, and ask first.
@@ -90,7 +113,7 @@ Ranked results alone cannot prove absence.
 4. Give Git-reading tools commit hashes. Resolve JJ revisions with `jj log --no-graph -r REV -T commit_id`.
 5. Keep views and evidence on the same revisions. Recheck hashes after edits; regenerate evidence when they differ.
 6. Report executed checks and limitations. Empty call graphs do not establish correctness; preserve human review notes.
-7. Use `better-github-skill` with explicit PR numbers and `-R owner/repo` under JJ. Posting requires user authorization.
+7. Use the `better-github-skill` skill with explicit PR numbers and `-R owner/repo` under JJ. Posting requires user authorization.
 
 Calldiff needs network access on first use. Its CLI version is pinned; Bun resolves transitive dependencies into its cache.
 

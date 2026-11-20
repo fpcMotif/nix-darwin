@@ -1,14 +1,31 @@
 { lib, pkgs, startupSections ? [ ], developmentSections ? [ ] }:
 
 let
-  renderAgentGuide = import ./render-agent-guide.nix { inherit lib; };
+  renderAgentGuide = parts: lib.concatStringsSep "\n\n"
+    (map (path: lib.removeSuffix "\n" (builtins.readFile path)) parts) + "\n";
   shared = {
     workingContract = ./shared/working-contract.md;
     development = ./shared/development.md;
+    filesystemLookups = ./shared/filesystem-lookups.md;
     qualityAndStyle = ./shared/quality-and-style.md;
     humanDocuments = ./shared/human-documents.md;
     plainEnglish = ./shared/plain-english.md;
+    searchRules = ./shared/search-rules.md;
   };
+  guidesSection = name: { developmentTarget, humanDocumentsTarget }:
+    let
+      languagesDir = "~/${builtins.dirOf developmentTarget}/languages";
+    in
+    builtins.toFile "${name}-guides.md" (''
+      ## Guides
+
+      - **Develop**: Before choosing a shell command, adding an environment variable, using version control, or setting up Git hooks, read `~/${developmentTarget}`.
+      - **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `${languagesDir}/typescript.md`, `python.md`, `go.md`, or `rust.md`.
+    '' + lib.optionalString (humanDocumentsTarget != null) ''
+      - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/${humanDocumentsTarget}`.
+    '' + ''
+      - **Workspaces**: Before creating a Git worktree or JJ workspace, or landing a subagent's checkout, read Parallel checkouts in `~/${developmentTarget}`.
+    '');
   languageNames = [ "typescript" "python" "go" "rust" ];
   languageGuide = guidanceDir: language:
     let
@@ -35,16 +52,22 @@ let
     , developmentAdapter ? null
     , humanDocumentsTarget ? null
     , plainEnglish ? true
+    , extras ? { }
     }:
     let
+      extraGuides = lib.mapAttrsToList
+        (target: source: { inherit target source; content = builtins.readFile source; })
+        extras;
       host =
         {
           startup = mkGuide "${name}-agents.md" startupTarget startupAdapter ([
+            (guidesSection name { inherit developmentTarget humanDocumentsTarget; })
+            shared.searchRules
             shared.workingContract
             shared.qualityAndStyle
           ] ++ lib.optional plainEnglish shared.plainEnglish ++ startupSections);
           development = mkGuide "${name}-development.md" developmentTarget developmentAdapter
-            ([ shared.development ] ++ developmentSections);
+            ([ shared.development shared.filesystemLookups ] ++ developmentSections);
           languages = lib.genAttrs languageNames (languageGuide (builtins.dirOf developmentTarget));
         }
         // lib.optionalAttrs (humanDocumentsTarget != null) {
@@ -58,7 +81,9 @@ let
     host // {
       guides = [ host.startup host.development ]
       ++ lib.attrValues host.languages
-      ++ lib.optionals (host ? humanDocuments) [ host.humanDocuments ];
+      ++ lib.optionals (host ? humanDocuments) [ host.humanDocuments ]
+      ++ extraGuides;
+      extras = extraGuides;
     };
   hosts = {
     general = mkHost {
@@ -75,6 +100,7 @@ let
       developmentTarget = ".codex/guidance/development.md";
       developmentAdapter = ./codex/guidance/development.md;
       humanDocumentsTarget = ".codex/guidance/human-documents.md";
+      extras.".codex/guidance/setup.md" = ./codex/guidance/setup.md;
     };
     omp = mkHost {
       name = "omp";
@@ -92,6 +118,11 @@ let
       developmentAdapter = ../claude/development.md;
       humanDocumentsTarget = ".claude/guidance/human-documents.md";
       plainEnglish = false;
+      extras = {
+        ".claude/search-routing.md" = ../claude/search-routing.md;
+        ".claude/references/search-routing-examples.md" = ../claude/references/search-routing-examples.md;
+        ".claude/search-eval.md" = ../claude/search-eval.md;
+      };
     };
     # Antigravity Desktop and agy share this global rules file. It points at
     # the general host's guidance, so only the startup file is new.
@@ -110,7 +141,7 @@ let
 in
 {
   inherit hosts targets;
-  filesFor = names: builtins.listToAttrs (lib.concatMap
-    (name: map (guide: lib.nameValuePair guide.target guide.source) hosts.${name}.guides)
-    names);
+  files = builtins.listToAttrs (lib.concatLists (lib.mapAttrsToList
+    (_: host: map (guide: lib.nameValuePair guide.target guide.source) host.guides)
+    hosts));
 }

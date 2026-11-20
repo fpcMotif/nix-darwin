@@ -10,19 +10,15 @@ let
     effort = routing.effort job;
   };
 
-  # oxfmt formats through the oxc extension's `oxfmt` server. Prettier stays
-  # off so Zed never tries to npm-install it (npm is the bun shim here).
-  oxfmtFormatted = {
-    formatter.language_server.name = "oxfmt";
+  defaultFormatted = {
     prettier.allowed = false;
     format_on_save = "on";
   };
 
   # A list without "..." replaces Zed's defaults (vtsls, eslint, tailwind),
   # so only these servers run.
-  jsLanguage = oxfmtFormatted // {
-    language_servers = [ "typescript-ls" "oxlint" "oxfmt" ];
-    code_actions_on_format."source.fixAll.oxc" = true;
+  jsLanguage = defaultFormatted // {
+    language_servers = [ "typescript-ls" ];
   };
 in
 {
@@ -239,21 +235,21 @@ in
 
         # No vscode-langservers-extracted: Zed installs them via `npm`, the bun
         # shim here, which fails. "..." keeps the other servers.
-        HTML = oxfmtFormatted // {
+        HTML = defaultFormatted // {
           language_servers = [ "!vscode-html-language-server" "..." ];
         };
-        CSS = oxfmtFormatted // {
+        CSS = defaultFormatted // {
           language_servers = [ "!vscode-css-language-server" "..." ];
         };
-        JSON = oxfmtFormatted // {
+        JSON = defaultFormatted // {
           language_servers = [ "!json-language-server" "..." ];
         };
-        JSONC = oxfmtFormatted // {
+        JSONC = defaultFormatted // {
           language_servers = [ "!json-language-server" "..." ];
         };
-        Markdown = oxfmtFormatted;
-        YAML = oxfmtFormatted;
-        TOML = oxfmtFormatted;
+        Markdown = defaultFormatted;
+        YAML = defaultFormatted;
+        TOML = defaultFormatted;
       };
 
 

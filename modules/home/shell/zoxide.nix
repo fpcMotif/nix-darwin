@@ -14,7 +14,8 @@
     z() {
       if [ $# -eq 0 ]; then cd ~; return; fi
       if [ "$1" = - ]; then cd -; return; fi
-      local d; d=$(zoxide query -- "$@") && cd -- "$d"
+      if [ $# -eq 1 ] && [ -d "$1" ]; then cd -- "$1"; return; fi
+      local d; d=$(zoxide query --exclude "$PWD" -- "$@") && cd -- "$d"
     }
   '';
 }
