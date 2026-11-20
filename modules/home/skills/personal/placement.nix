@@ -4,7 +4,6 @@
     "animate-expo"
     "annotated-screenshot"
     "apple-design"
-    "ask-sonner"
     "break-ui"
     "claude-md-improver"
     "design"
@@ -28,7 +27,6 @@
     "skill-creator"
     "term-radar"
     "verified-architecture-review"
-    "write-swift"
   ];
 
   outside-claude = [
@@ -37,7 +35,6 @@
     "aily-figure-anchoring"
     "aily-runon-splitting"
     "animation-vocabulary"
-    "archify-workflow-recipes"
     "ast-grep-boundary-checker"
     "autoresearch"
     "axe-core-cdp-audit"
@@ -187,6 +184,7 @@
   ];
 
   hosts = {
+    ask-sonner = [ "agents" "codex" "gemini" "skillshub" "omp" ];
     clean = [ "agents" "claude" "codex" "gemini" ];
     drafts-ledger = [ "agents" "codex" "gemini" "omp-skills" "skillshub" ];
     manage-taskboard = [ "agents" "gemini" ];
@@ -195,6 +193,7 @@
     seedmux-team = [ "agents" "claude" "gemini" ];
     simplify = [ "agents" "codex" "gemini" "omp-skills" ];
     surge = [ "agents" "claude" "codex" "gemini" ];
-    tailwind-to-stylex = [ "agents" "claude" "gemini" "omp-skills" ];
+    tailwind-to-stylex = [ "agents" "gemini" "omp-skills" ];
+    write-swift = [ "agents" "codex" "gemini" "skillshub" "omp" ];
   };
 }

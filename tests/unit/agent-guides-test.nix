@@ -126,7 +126,7 @@ assert lib.all
   [ "general" "codex" "omp" "antigravity" ];
 assert lib.all
   (host: lib.hasInfix "the `prompt-coach` skill" host.startup.content
-    && count "[archify explainer: on-demand]" host.startup.content == 1
+    && !(lib.hasInfix "archify" host.startup.content)
     && !(lib.hasInfix "skills/prompt-coach" host.startup.content))
   (lib.attrValues hosts);
 assert lib.all

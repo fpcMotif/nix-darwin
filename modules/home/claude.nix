@@ -77,6 +77,7 @@ let
     "typescript-lsp@claude-plugins-official"
     "flightdeck@claude-flightdeck"
     "review-watch@claude-code-mods"
+    "cowork-plugin-management@synced"
   ];
   # This module edits these plugins' caches, so it also owns their flag and
   # marketplace. Authors' marketplaces track upstream; claude-plugins-official
@@ -314,7 +315,7 @@ let
   pstackPluginSkillIds = builtins.attrNames pstackDrvs;
   claudeHiddenSkillIds = pluginProvidedSkillIds ++ pstackPluginSkillIds ++ harnessProvidedSkillIds ++ interfacesSkillNames;
   claudeOffSkillIds = config.martin.agentSurface.skillPlacement.offIds.claude;
-  bundleSkillIds = enabledMattpocockSkills ++ [ "archify" "better-github-skill" "ub-mode" "impeccable" ] ++ interfacesSkillNames;
+  bundleSkillIds = enabledMattpocockSkills ++ [ "better-github-skill" "ub-mode" "impeccable" ] ++ interfacesSkillNames;
 
   # Plugin skills to block outright. skillOverrides ignores plugin skills, so
   # claudePrunePluginSkills unlists them every switch and a deny rule refuses
@@ -677,7 +678,6 @@ in
     sources = {
       dotfiles-pi = mkSource "dotfiles" "dot_pi/agent/skills"
         "^web-browser$";
-      archify = mkSource "archify" "." null;
       better-github-skill = mkSource "better-github-skill" "." null;
       ub-mode = mkSource "ub-mode" "." null;
       impeccable = mkSource "impeccable" ".agents/skills" null;
