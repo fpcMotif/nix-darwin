@@ -35,7 +35,6 @@ The check script reads this layout. The headline becomes the page title for the 
 | PR body, review comment, spec file | Paste the Markdown layout as it is. |
 | A colleague who wants a page | In Claude Code, run the check with `--html OUT.html --artifact`, publish `OUT.html` with the Artifact tool, and share the link. Elsewhere, run it with `--html OUT.html` and send the file. |
 | The user, in chat, for a quick point | Use the show-me skill. Reuse the checked block. |
-| A polished, explorable diagram with motion or image export | Use the archify skill. Give it the checked block as its Mermaid input. |
 | A subagent | Paste the block into the brief as the shared model. Ask the agent to report each edge that the code contradicts, with `file:line`. |
 
 The `--html` page is self-contained. Pele renders every SVG at build time, so the page loads no scripts. An Artifact renders a plain `mermaid` fence with its own Mermaid.js, but only this page adds the walker, the findings, and the evidence. The page gives each diagram:

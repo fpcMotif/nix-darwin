@@ -21,22 +21,6 @@
         "type": "github"
       }
     },
-    "archify": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1794734770,
-        "narHash": "sha256-BFDm8AbQyvBkEtth5tTpVMZxmdcPjXw7JwnL7v5PZ2Q=",
-        "owner": "tt-a1i",
-        "repo": "archify",
-        "rev": "a7ed6fd6657da90414831d1d42cf95987188750c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "tt-a1i",
-        "repo": "archify",
-        "type": "github"
-      }
-    },
     "better-github-skill": {
       "flake": false,
       "locked": {
@@ -299,7 +283,6 @@
     "root": {
       "inputs": {
         "agent-skills": "agent-skills",
-        "archify": "archify",
         "better-github-skill": "better-github-skill",
         "charm-nur": "charm-nur",
         "claude-code": "claude-code",

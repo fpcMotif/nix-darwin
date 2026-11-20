@@ -50,11 +50,6 @@
       flake = false;
     };
 
-    archify = {
-      url = "github:tt-a1i/archify";
-      flake = false;
-    };
-
     better-github-skill = {
       url = "github:AVGVSTVS96/better-github-skill";
       flake = false;

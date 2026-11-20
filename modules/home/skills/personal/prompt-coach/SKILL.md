@@ -78,7 +78,7 @@ recall grep 'Learn\*\*: \*\*IDEA' | rg -c 'Learn'
 | --- | --- | --- |
 | Sketch | The idea has parts that move: an order, a flow, or a state. | Automatic. One ASCII sketch of at most eight lines under the **Learn** line, in a `text` block. |
 | Diagram | The idea is a system of four or more parts, such as an architecture, a data flow, or a lifecycle. | Automatic. One `mermaid` diagram under the **Learn** line. |
-| Page offer | The idea comes back after an inline picture, so the picture did not stick. | One line at the end of the card that offers a page: `eli5` for a basic idea, `archify` for a system. Make it only on the user's yes. |
+| Page offer | The idea comes back after an inline picture, so the picture did not stick. | One line at the end of the card that offers an `eli5` page. Make it only on the user's yes. |
 
 The `show-me` skill holds the sketch and diagram views. An idea that is a single term with no moving parts stays on the **Learn** line alone.
 
