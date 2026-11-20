@@ -61,9 +61,16 @@ const TRACKING = new Set(["si", "s", "ref", "ref_src", "feature", "fbclid", "gcl
 /** Same page ⇒ same key: drop hash and tracking params, keep the params that identify content (youtube v=, list=). */
 function canonical(u: string): string {
   try {
-    const x = new URL(u);
+    let x = new URL(u);
+    if (x.hostname.includes("bloomberg.com") && x.pathname === "/tosv.html") {
+      const b64 = x.searchParams.get("url");
+      if (b64) {
+        const dec = Buffer.from(b64, "base64").toString("utf8");
+        if (dec.startsWith("/")) x = new URL("https://www.bloomberg.com" + dec);
+      }
+    }
     if (!/^#(\/|!|narrow)/.test(x.hash)) x.hash = ""; // keep SPA-style route fragments (Zulip #narrow, #/path, #!)
-    const dom = normDomain(u) || x.hostname;
+    const dom = normDomain(x.toString()) || x.hostname;
     if (dom === "instagram.com" || dom === "threads.com") x.search = "";
     else for (const k of [...x.searchParams.keys()]) if (TRACKING.has(k) || k.startsWith("utm_")) x.searchParams.delete(k);
     x.hostname = dom;
@@ -109,15 +116,72 @@ function decodeEntities(s: string): string {
 }
 
 // ---------- store ----------
+function populateStoreFromJxa(dst: string): Database {
+  const jxaOut = dst + ".jxa.json";
+  const jxa = `
+    const app = Application("Drafts");
+    const ds = app.drafts;
+    const ids = ds.id();
+    const cDates = ds.creationDate();
+    const mDates = ds.modificationDate();
+    const folders = ds.folder();
+    const flaggeds = ds.flagged();
+    const tags = ds.tagList();
+    const contents = ds.content();
+    const rows = [];
+    for (let i = 0; i < ids.length; i++) {
+      rows.push({
+        u: ids[i],
+        c: cDates[i] ? cDates[i].getTime() / 1000 - ${CORE_DATA_EPOCH} : 0,
+        m: mDates[i] ? mDates[i].getTime() / 1000 - ${CORE_DATA_EPOCH} : 0,
+        f: String(folders[i] || "inbox").toLowerCase(),
+        fl: flaggeds[i] ? 1 : 0,
+        t: tags[i] || [],
+        co: String(contents[i] || "")
+      });
+    }
+    ObjC.import("Foundation");
+    $.NSString.stringWithString(JSON.stringify(rows)).writeToFileAtomicallyEncodingError(${JSON.stringify(jxaOut)}, true, $.NSUTF8StringEncoding, null);
+    rows.length;
+  `;
+  const p = Bun.spawnSync(["osascript", "-l", "JavaScript", "-e", jxa]);
+  if (p.exitCode !== 0) die(`JXA fallback store failed: ${p.stderr.toString()}`);
+  const rows = JSON.parse(readFileSync(jxaOut, "utf8")) as any[];
+  const db = new Database(dst);
+  db.exec(`CREATE TABLE ZMANAGEDDRAFT (ZUUID TEXT PRIMARY KEY, ZCREATED_AT REAL, ZMODIFIED_AT REAL, ZFOLDER INTEGER, ZFLAGGED INTEGER, ZCACHED_TAGS TEXT, ZCONTENT TEXT);`);
+  const ins = db.prepare(`INSERT INTO ZMANAGEDDRAFT (ZUUID, ZCREATED_AT, ZMODIFIED_AT, ZFOLDER, ZFLAGGED, ZCACHED_TAGS, ZCONTENT) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+  const tx = db.transaction((items: any[]) => {
+    for (const r of items) {
+      const fo = FOLDERS[r.f] ?? 0;
+      const tg = r.t.length ? `ZZZ${r.t.join("ZZZ")}ZZZ` : "";
+      ins.run(r.u, r.c, r.m, fo, r.fl, tg, r.co);
+    }
+  });
+  tx(rows);
+  return db;
+}
 function openStore(storePath: string, inPlace: boolean): { db: Database; cleanup: () => void; copied: boolean } {
-  if (!existsSync(storePath)) die(`store not found: ${storePath}`);
-  if (inPlace) return { db: new Database(storePath, { readonly: true }), cleanup: () => {}, copied: false };
   const dir = mkdtempSync(join(tmpdir(), "drafts-ledger-"));
   const dst = join(dir, "DraftStore.sqlite");
-  copyFileSync(storePath, dst);
-  for (const sfx of ["-wal", "-shm"]) if (existsSync(storePath + sfx)) copyFileSync(storePath + sfx, dst + sfx);
-  const db = new Database(dst); // default read/write flags so the copied WAL replays
-  return { db, cleanup: () => { try { db.close(); rmSync(dir, { recursive: true, force: true }); } catch {} }, copied: true };
+  let db: Database;
+  const cleanup = () => { try { db.close(); rmSync(dir, { recursive: true, force: true }); } catch {} };
+  if (inPlace && existsSync(storePath)) {
+    try {
+      db = new Database(storePath, { readonly: true });
+      db.query("SELECT 1 FROM ZMANAGEDDRAFT LIMIT 1").get();
+      rmSync(dir, { recursive: true, force: true });
+      return { db, cleanup: () => { try { db.close(); } catch {} }, copied: false };
+    } catch {}
+  }
+  try {
+    if (!existsSync(storePath)) throw new Error("missing");
+    copyFileSync(storePath, dst);
+    for (const sfx of ["-wal", "-shm"]) if (existsSync(storePath + sfx)) copyFileSync(storePath + sfx, dst + sfx);
+    db = new Database(dst); // default read/write flags so the copied WAL replays
+  } catch {
+    db = populateStoreFromJxa(dst);
+  }
+  return { db, cleanup, copied: true };
 }
 
 interface Filters { since: string; until?: string; folder: string; tag?: string; match?: string; minLinks?: number; maxLinks?: number; dateField: "created" | "modified" | "either"; dedupe?: boolean; }
@@ -139,7 +203,8 @@ function loadItems(db: Database, f: Filters, rules?: Record<string, string[]>): 
     const urls = content.match(URL_RE) ?? [];
     const n = urls.length;
     if ((f.minLinks !== undefined && n < f.minLinks) || (f.maxLinks !== undefined && n > f.maxLinks)) { excluded++; continue; }
-    const url = urls[0]?.replace(/[.,;:]+$/, "") ?? null;
+    const rawUrl = urls[0]?.replace(/[.,;:]+$/, "") ?? null;
+    const url = rawUrl && rawUrl.includes("bloomberg.com/tosv.html") ? canonical(rawUrl) : rawUrl;
     const extra = content.replace(URL_RE, "").replace(/^> ?/gm, "").replace(/\n{2,}/g, "\n").trim().slice(0, 700);
     const d = url ? normDomain(url) : "";
     const it: Item = { uuid: r.uuid, date: fromCoreData(r.c).slice(0, 10), modified: fromCoreData(r.m).slice(0, 10), folder: r.folder, flagged: r.flagged, tags: parseTags(r.tags), url, domain: d, bucket: bucketOf(d, rules), extra, n_urls: n };
@@ -174,25 +239,35 @@ function keyFor(kind: Kind, it: Item): string | null {
   if (kind === "tweets") return it.x_id ? `${it.x_user}/status/${it.x_id}` : null;
   if (kind === "social") return (it.domain === "instagram.com" || it.domain === "threads.com") && it.url ? canonical(it.url) : null;
   if (kind === "youtube") return it.bucket === "youtube" && it.url ? it.url : null;
-  if (kind === "arxiv") { const m = it.bucket === "arxiv" ? /(\d{4}\.\d{4,5})/.exec(it.url ?? "") : null; return m ? m[1] : null; }
+  if (kind === "arxiv") { const m = it.bucket === "arxiv" ? /(\d{4}\.\d{4,5})/.exec(`${it.url ?? ""} ${it.extra}`) : null; return m ? m[1] : null; }
   if (kind === "web") return ["web", "substack", "hn", "reddit", "cn-social"].includes(it.bucket) && it.url && !WEB_SKIP.has(it.domain) ? it.url : null;
   return null;
 }
 async function fetchSocialMeta(url: string): Promise<{ title: string; desc: string }> {
   const grab = async (ua: string) => {
-    const r = await fetch(url, { headers: { "User-Agent": ua, "Accept-Language": "en-US,en;q=0.9,zh-TW;q=0.8" }, signal: AbortSignal.timeout(12000), redirect: "follow" });
+    const r = await fetch(url, { headers: { "User-Agent": ua, "Accept-Language": "en-US,en;q=0.9,zh-TW;q=0.8" }, signal: AbortSignal.timeout(10000), redirect: "follow" });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const h = await r.text();
-    const og = /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']+)["']/i.exec(h)?.[1] ?? /<title[^>]*>([\s\S]*?)<\/title>/i.exec(h)?.[1] ?? "";
-    const dm = /<meta[^>]+(?:property|name)=["'](?:og:description|description)["'][^>]*content=["']([^"']+)["']/i.exec(h) ?? /<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["'](?:og:description|description)["']/i.exec(h);
-    return { title: decodeEntities(og).replace(/\s+/g, " ").trim().slice(0, 220), desc: dm ? decodeEntities(dm[1]).replace(/\s+/g, " ").trim().slice(0, 500) : "" };
+    const meta = (attr: string) =>
+      new RegExp(`<meta[^>]+(?:property|name)=["']${attr}["'][^>]*content=["']([^"']+)["']`, "i").exec(h)?.[1] ??
+      new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${attr}["']`, "i").exec(h)?.[1] ?? "";
+    const og = meta("og:title") || meta("twitter:title") || (/<title[^>]*>([\s\S]*?)<\/title>/i.exec(h)?.[1] ?? "");
+    const dm = meta("og:description") || meta("description");
+    const ogUrl = meta("og:url");
+    const handle = /instagram\.com\/([a-zA-Z0-9_.-]+)\/(?:reel|p)\//.exec(ogUrl)?.[1] ?? /threads\.(?:com|net)\/@([a-zA-Z0-9_.-]+)/.exec(ogUrl || url)?.[1] ?? "";
+    let title = decodeEntities(og).replace(/\s+/g, " ").trim().slice(0, 220);
+    if (handle && !title.toLowerCase().includes(handle.toLowerCase())) title = `@${handle}${title ? " · " + title : ""}`;
+    return { title, desc: decodeEntities(dm).replace(/\s+/g, " ").trim().slice(0, 500) };
   };
-  const first = await grab("TelegramBot (like TwitterBot)");
-  if (first.desc || !url.includes("threads.com")) return first;
   try {
+    const first = await grab("TelegramBot (like TwitterBot)");
+    if (first.desc && first.title) return first;
     const second = await grab("facebookexternalhit/1.1");
     return { title: second.title || first.title, desc: second.desc || first.desc };
-  } catch { return first; }
+  } catch {
+    const second = await grab("facebookexternalhit/1.1");
+    return second;
+  }
 }
 async function fetchKind(kind: Kind, keys: string[], concurrency: number, onDone: (k: string, o: any) => void) {
   if (kind === "repos") {
@@ -203,45 +278,49 @@ async function fetchKind(kind: Kind, keys: string[], concurrency: number, onDone
       let data: any = {};
       try { data = JSON.parse(p.stdout.toString() || "{}").data ?? {}; } catch { batch.forEach(k => onDone(k, { key: k, error: (p.stderr.toString() || "gh failed").slice(0, 200) })); continue; }
       batch.forEach((k, n) => { const v = data[`r${n}`]; onDone(k, v ? { key: k, desc: (v.description ?? "").slice(0, 300), stars: v.stargazerCount, forks: v.forkCount, lang: v.primaryLanguage?.name ?? null, pushed: (v.pushedAt ?? "").slice(0, 10), archived: v.isArchived, topics: (v.repositoryTopics?.nodes ?? []).map((t: any) => t.topic.name) } : { key: k, error: "not found" }); });
-      await Bun.sleep(1000);
+      if (b + 100 < keys.length) await Bun.sleep(200);
     }
   } else if (kind === "arxiv") {
-    for (let b = 0; b < keys.length; b += 50) {
-      const batch = keys.slice(b, b + 50);
+    await pool(keys, Math.min(concurrency, 10), async k => {
       try {
-        const x = await getText(`http://export.arxiv.org/api/query?id_list=${batch.join(",")}&max_results=50`, 40000, 5_000_000);
-        for (const e of x.split("<entry>").slice(1)) {
-          const g = (tag: string) => { const m = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`).exec(e); return m ? decodeEntities(m[1]).replace(/\s+/g, " ").trim() : ""; };
-          const id = g("id").split("/abs/").pop()!.replace(/v\d+$/, "");
-          const cat = /<arxiv:primary_category[^>]*term="([^"]+)"/.exec(e)?.[1] ?? "";
-          const authors = [...e.matchAll(/<author>\s*<name>([^<]+)<\/name>/g)].map(m => m[1]).slice(0, 4);
-          if (batch.includes(id)) onDone(id, { key: id, title: g("title"), summary: g("summary").slice(0, 400), cat, published: g("published").slice(0, 10), authors });
-        }
-        batch.forEach(k => onDone(k, undefined)); // mark missing ones as failed if not delivered
-      } catch (ex: any) { batch.forEach(k => onDone(k, { key: k, error: String(ex).slice(0, 120) })); }
-      await Bun.sleep(3000);
-    }
+        const h = await getText(`https://arxiv.org/abs/${k}`, 8000, 300_000);
+        const meta = (attr: string) =>
+          new RegExp(`<meta[^>]+(?:name|property)=["']${attr}["'][^>]*content=["']([\\s\\S]*?)["']`, "i").exec(h)?.[1] ??
+          new RegExp(`<meta[^>]+content=["']([\\s\\S]*?)["'][^>]+(?:name|property)=["']${attr}["']`, "i").exec(h)?.[1] ?? "";
+        const title = decodeEntities(meta("citation_title") || meta("og:title")).replace(/\s+/g, " ").trim();
+        if (!title) { onDone(k, { key: k, error: "no title" }); return; }
+        const summary = decodeEntities(meta("citation_abstract") || meta("og:description")).replace(/\s+/g, " ").trim().slice(0, 400);
+        const published = (meta("citation_date") || meta("citation_online_date")).replace(/\//g, "-").slice(0, 10);
+        const cat = /class="primary-subject"[^>]*>[^<(]*\(([^)]+)\)/.exec(h)?.[1] ?? "";
+        const authors = [...h.matchAll(/<meta[^>]+name=["']citation_author["'][^>]*content=["']([^"']+)["']/gi)].map(m => decodeEntities(m[1]).trim()).slice(0, 4);
+        onDone(k, { key: k, title, summary, cat, published, authors });
+      } catch (ex: any) { onDone(k, { key: k, error: String(ex?.message ?? ex).slice(0, 120) }); }
+    });
   } else {
-    await pool(keys, concurrency, async k => {
+    const effConc = kind === "social" ? Math.min(concurrency, 4) : concurrency;
+    await pool(keys, effConc, async k => {
       try {
         if (kind === "tweets") {
-          const d = await (await fetch(`https://api.fxtwitter.com/${k}`, { signal: AbortSignal.timeout(20000) })).json() as any;
+          const d = await (await fetch(`https://api.fxtwitter.com/${k}`, { signal: AbortSignal.timeout(12000) })).json() as any;
           const t = d.tweet ?? {}, a = t.author ?? {}, q = t.quote ?? {}, art = t.article ?? null;
           const artBlocks = Array.isArray(art?.content?.blocks) ? art.content.blocks.map((b: any) => b?.text ?? "").filter(Boolean).join(" ") : "";
           const entUrls = Array.isArray(art?.content?.entityMap) ? art.content.entityMap.map((e: any) => e?.value?.data?.url).filter(Boolean) : [];
+          const qEntUrls = Array.isArray(q.article?.content?.entityMap) ? q.article.content.entityMap.map((e: any) => e?.value?.data?.url).filter(Boolean) : [];
           const facetUrls = Array.isArray(t.raw_text?.facets) ? t.raw_text.facets.map((f: any) => f?.replacement).filter((u: any) => typeof u === "string" && u.startsWith("http")) : [];
-          const expanded_urls = [...new Set([...facetUrls, ...entUrls])].slice(0, 10);
-          onDone(k, { key: k, user: a.screen_name, name: a.name, bio: (a.description ?? "").slice(0, 160), followers: a.followers, text: t.text, likes: t.likes, views: t.views, created: t.created_at, quote_user: q.author?.screen_name, quote_text: (q.text ?? "").slice(0, 500), article_title: art?.title ?? undefined, article_text: (art?.preview_text || artBlocks).slice(0, 1200) || undefined, expanded_urls: expanded_urls.length ? expanded_urls : undefined, code: d.code });
-          await Bun.sleep(250);
+          const qFacetUrls = Array.isArray(q.raw_text?.facets) ? q.raw_text.facets.map((f: any) => f?.replacement).filter((u: any) => typeof u === "string" && u.startsWith("http")) : [];
+          const inlineUrls = `${t.text ?? ""} ${q.text ?? ""} ${artBlocks}`.match(URL_RE) ?? [];
+          const expanded_urls = [...new Set([...facetUrls, ...qFacetUrls, ...entUrls, ...qEntUrls, ...inlineUrls.map((u: string) => u.replace(/[.,;:)\]}>]+$/, ""))])].slice(0, 25);
+          const videos = Array.isArray(t.media?.videos) ? t.media.videos.map((v: any) => ({ duration: v.duration, width: v.width, height: v.height, url: v.url })) : undefined;
+          onDone(k, { key: k, user: a.screen_name, name: a.name, bio: (a.description ?? "").slice(0, 160), followers: a.followers, text: t.text, likes: t.likes, views: t.views, created: t.created_at, quote_user: q.author?.screen_name, quote_text: (q.text ?? "").slice(0, 500), article_title: art?.title ?? undefined, article_text: (art?.preview_text || artBlocks).slice(0, 1200) || undefined, expanded_urls: expanded_urls.length ? expanded_urls : undefined, videos: videos?.length ? videos : undefined, code: d.code });
         } else if (kind === "social") {
           const { title, desc } = await fetchSocialMeta(k);
           onDone(k, { key: k, title, desc });
         } else if (kind === "youtube") {
-          const d = await (await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(k)}&format=json`, { signal: AbortSignal.timeout(15000) })).json() as any;
+          const d = await (await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(k)}&format=json`, { signal: AbortSignal.timeout(12000) })).json() as any;
           onDone(k, { key: k, title: d.title, author: d.author_name });
         } else {
-          const h = await getText(k, 10000);
-          const og = /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']{3,200})/i.exec(h)?.[1];
+          const h = await getText(k, 8000);
+          const og = /<meta[^>]+property=["']og:title["'][^>]*content=["']([^"']{3,200})/i.exec(h)?.[1] ?? /<meta[^>]+content=["']([^"']{3,200})["'][^>]+property=["']og:title["']/i.exec(h)?.[1];
           const t = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(h)?.[1] ?? "";
           const m = /<meta[^>]+(?:property|name)=["'](?:og:description|description|twitter:description)["'][^>]*content=["']([^"']{10,400})/i.exec(h) ?? /<meta[^>]+content=["']([^"']{10,400})["'][^>]+(?:property|name)=["'](?:og:description|description)["']/i.exec(h);
           onDone(k, { key: k, title: decodeEntities(og ?? t).replace(/\s+/g, " ").trim().slice(0, 160), desc: m ? decodeEntities(m[1]).replace(/\s+/g, " ").trim().slice(0, 320) : "" });
@@ -519,12 +598,11 @@ switch (cmd) {
     out(plan.map(p => `${p.kind.padEnd(8)} ${String(p.total).padStart(5)} keys  ${String(p.cached).padStart(5)} cached  ${String(p.need.length).padStart(5)} to fetch${p.kind === "repos" ? ` (${Math.ceil(p.need.length / 100)} graphql batches)` : p.kind === "arxiv" ? ` (${Math.ceil(p.need.length / 50)} api batches)` : ""}`).join("\n"));
     if (dry) { out(`[dry-run] no requests made. Samples: ` + plan.filter(p => p.need.length).map(p => `${p.kind}: ${p.need.slice(0, 2).join(", ")}`).join(" | ")); break; }
     const conc = +(v.concurrency as string);
-    for (const p of plan) {
-      if (!p.need.length) continue;
+    await Promise.all(plan.filter(p => p.need.length > 0).map(async p => {
       let done = 0; const errs: string[] = [];
-      await fetchKind(p.kind, p.need, p.kind === "tweets" ? Math.min(conc, 4) : conc, (k, o) => { if (o === undefined) { if (!caches[p.kind].has(k)) { caches[p.kind].set(k, { key: k, error: "not returned" }); } return; } caches[p.kind].set(k, o); if (!o.error) cacheAppend(p.kind, o); else errs.push(`${k}: ${o.error}`); done++; if (done % 100 === 0) err(`  ${p.kind} ${done}/${p.need.length}`); });
+      await fetchKind(p.kind, p.need, p.kind === "tweets" ? Math.min(conc, 16) : conc, (k, o) => { if (o === undefined) { if (!caches[p.kind].has(k)) { caches[p.kind].set(k, { key: k, error: "not returned" }); } return; } caches[p.kind].set(k, o); if (!o.error) cacheAppend(p.kind, o); else errs.push(`${k}: ${o.error}`); done++; if (done % 100 === 0) err(`  ${p.kind} ${done}/${p.need.length}`); });
       err(`${p.kind}: fetched ${done}, errors ${errs.length}${errs.length ? " (first: " + errs.slice(0, 2).join("; ") + ")" : ""}`);
-    }
+    }));
     for (const it of items) it.meta = metaLine(it, caches);
     const body = items.map(i => JSON.stringify(i)).join("\n") + "\n";
     const hit = items.filter(i => i.meta).length;
