@@ -68,7 +68,8 @@ let
 
   inherit (import ./claude/skill-curation.nix)
     mattpocockBuckets disabledMattpocockSkills leanExcludedMattpocockSkills
-    removedSkillIds harnessProvidedSkillIds convexPluginProvidedSkillIds interfacesSkillNames;
+    removedSkillIds harnessProvidedSkillIds convexPluginProvidedSkillIds interfacesSkillNames
+    coworkSyncedSkills;
   excludedSkillIds = disabledMattpocockSkills ++ leanExcludedMattpocockSkills;
   # Park here (off but installed) to keep a plugin's cache and config.
   # Code Mode refuses to start while a user mod hooks tool calls, as these two
@@ -77,8 +78,7 @@ let
     "typescript-lsp@claude-plugins-official"
     "flightdeck@claude-flightdeck"
     "review-watch@claude-code-mods"
-    "cowork-plugin-management@synced"
-  ];
+  ] ++ lib.optional (!coworkSyncedSkills.enable) "cowork-plugin-management@synced";
   # This module edits these plugins' caches, so it also owns their flag and
   # marketplace. Authors' marketplaces track upstream; claude-plugins-official
   # lags. Change one here, not via /plugin, or every skill lists twice.
@@ -340,6 +340,7 @@ let
       "workflow"
     ];
     "claude-community/html-plan" = [ "html-plan" ];
+    ${pluginCacheDir pstackPluginId} = [ "teach" ];
   };
   deniedPluginSkills = map (id: "Skill(mattpocock-skills:${id})") disabledMattpocockSkills
     ++ lib.concatLists (lib.mapAttrsToList
@@ -450,6 +451,12 @@ let
     ]
     ++ lib.optional isDarwin { path = [ "env" "TRAITS_BIN" ]; value = lib.getExe pkgs.martin.traits; }
     ++ map (id: { path = [ "skillOverrides" id ]; value = "off"; }) claudeOffSkillIds
+    ++ map
+      (id: {
+        path = [ "skillOverrides" "${coworkSyncedSkills.namespace}:${id}" ];
+        value = if coworkSyncedSkills.enable then "on" else "off";
+      })
+      coworkSyncedSkills.ids
     ++ map (id: { path = [ "enabledPlugins" id ]; value = false; }) disabledClaudePlugins
     ++ lib.mapAttrsToList (id: value: { path = [ "enabledPlugins" id ]; inherit value; }) claudeManagedPlugins
     ++ lib.mapAttrsToList (name: value: { path = [ "extraKnownMarketplaces" name ]; inherit value; }) claudeManagedMarketplaces
