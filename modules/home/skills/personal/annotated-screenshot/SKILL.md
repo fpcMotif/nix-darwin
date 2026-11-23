@@ -1,6 +1,6 @@
 ---
 name: annotated-screenshot
-description: Capture annotated screenshots of a live page through Chrome DevTools Protocol — drive a gesture (hover, modifier keys, scroll, click), draw numbered callouts/boxes/arrows from live DOM reads, save PNG frames and console traces, then host them on a git branch and embed them in a GitHub issue or PR. Use when a bug report, PR, issue, or showcase needs "show, don't tell" evidence from a real page, when a hover/keyboard gesture must be reproduced exactly, or when a diagnosis needs before/after frames of the same scene.
+description: "Capture annotated screenshots of a live page over CDP. Drive a gesture, draw numbered callouts from live DOM reads, save PNG frames, and embed them in a GitHub issue or PR. Use when a bug report or PR needs visual evidence, an exact hover or keyboard gesture, or before/after frames."
 ---
 
 # annotated-screenshot

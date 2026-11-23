@@ -12,6 +12,7 @@
   # Ids the Claude harness already ships (e.g. anthropic-skills:notebooklm);
   # the local copy is hidden in Claude but stays visible to other agents.
   harnessProvidedSkillIds = [ "notebooklm" "impeccable" ];
+  convexPluginProvidedSkillIds = [ "design" ];
   interfacesSkillNames = [
     "better-accessibility"
     "better-colors"

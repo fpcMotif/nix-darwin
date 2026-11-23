@@ -1,12 +1,10 @@
 ---
 name: ground-truth-audit
 description: >-
-  Ground-truth audit of a bulk extraction: render each source unit beside the
-  artefacts taken from it and judge the pair — PDF to image, OCR to text, scrape
-  to records. Use when checking extractor output at scale with a vision or judge
-  model, when a proposed filter change needs its blast radius measured, when
-  artefact and source counts disagree, or when assembling a side-by-side pack for
-  the calls a human must make.
+  Ground-truth audit of a bulk extraction. Render each source unit beside its
+  artefacts and judge the pair (PDF to image, OCR to text, scrape to records).
+  Use to check extractor output at scale, measure a filter change's blast
+  radius, or explain a mismatch between artefact and source counts.
 ---
 
 # Ground-truth audit

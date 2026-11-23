@@ -1,6 +1,6 @@
 ---
 name: tailwind-to-stylex
-description: Migrate any web frontend (React, Preact, Solid, Vue, Svelte, Qwik; Vite, Next.js, webpack, Rspack, esbuild; SPA, SSR, static site, Electron, browser extension; Tailwind v3 or v4; any headless component library) from Tailwind CSS to StyleX with exact rendering parity, or prove two builds of any web UI render identically (computed styles in every state, both colour schemes, pixels). Use when porting utility classes to StyleX, or when a styling refactor must be verified as pixel-for-pixel unchanged.
+description: "Migrate any web frontend from Tailwind CSS (v3 or v4) to StyleX with exact rendering parity, or prove two builds of a web UI render identically (computed styles, states, colour schemes, pixels). Use when porting utility classes to StyleX or verifying a styling refactor is pixel-identical."
 ---
 
 # Tailwind → StyleX, exact parity

@@ -1,6 +1,6 @@
 ---
 name: write-swift
-description: How to write modern Swift well — modeling with value types, Swift 6 data-race safety and approachable concurrency (@concurrent, main-actor-by-default, actors, task groups), protocols and generics (some vs any), API design, performance and ARC, Swift Testing, macros, and the modern language features agents don't know about yet. Use when writing, reviewing, or migrating Swift, or when a concurrency error, a hang, a data race, a retain cycle, or a performance problem needs fixing.
+description: "Write modern Swift well, covering value types, Swift 6 data-race safety and concurrency, protocols and generics, API design, performance and ARC, Swift Testing, and macros. Use when writing, reviewing, or migrating Swift, or fixing a concurrency error, hang, data race, retain cycle, or slow code."
 ---
 
 # Write Swift

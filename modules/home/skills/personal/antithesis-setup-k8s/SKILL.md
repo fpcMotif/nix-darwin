@@ -1,7 +1,7 @@
 ---
 name: antithesis-setup-k8s
 description: >
-  Scaffold the Antithesis harness for customers running Kubernetes:  Convert helm charts, kustomize templates, or raw Kubernetes manifests into a minimized set of manifests for Antithesis. Verify the Kubernetes manifests are in the correct shape with snouty validate and a local cluster deploy. Hands it off to antithesis-launch if the user wants to submit a run. At the end, the user is ready to run antithesis-workload to build tests. If the desired setup is docker-compose, defer to the antithesis-setup skill.
+  Scaffold the Antithesis harness for Kubernetes. Convert helm charts, kustomize templates, or raw manifests into minimal manifests, then verify them with snouty validate and a local cluster deploy. Hands off to antithesis-launch and antithesis-workload. For docker-compose use antithesis-setup.
 compatibility: Requires snouty (https://github.com/antithesishq/snouty).
 metadata:
   version: "2026-09-08 2e4a837"

@@ -1,6 +1,6 @@
 ---
 name: jj-colocated-git-workflow
-description: Repeatable Jujutsu (jj) colocated Git workflows: initialization, sideways bookmark moves, revisions, and single-flight landing.
+description: "Repeatable Jujutsu (jj) colocated Git workflows: initialization, sideways bookmark moves, revisions, and single-flight landing."
 ---
 
 # Jujutsu (jj) Colocated Git Workflows

@@ -1,11 +1,9 @@
 ---
 name: antithesis-launch
 description: >
-  Launch an Antithesis run with snouty by discovering the harness layout,
-  building the right Docker Compose config, running `snouty validate`,
-  bailing on validation failure, and then submitting `snouty launch` with sane
-  metadata. Use when the user wants to send, submit, or launch an Antithesis
-  run. This skill takes duration in minutes as input.
+  Launch an Antithesis run with snouty. Discover the harness layout, build the
+  Docker Compose config, run `snouty validate`, then `snouty launch`. Use to
+  send, submit, or launch a run. Takes duration in minutes as input.
 compatibility: Requires Docker Compose v2, a container engine (docker or podman), and snouty (https://github.com/antithesishq/snouty).
 metadata:
   version: "2026-09-08 2e4a837"
