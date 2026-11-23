@@ -1,4 +1,4 @@
-{ lib, pkgs, currentSystemUserHome, ... }:
+{ config, lib, pkgs, currentSystemUserHome, ... }:
 
 let
   updater = pkgs.writeShellApplication {
@@ -20,7 +20,10 @@ let
   };
 in
 {
-  config = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
+  options.martin.piOmp.enable = lib.mkEnableOption "the pi and omp agents, their shell wrappers, and the daily pi extension update";
+
+  config = lib.mkIf (config.martin.piOmp.enable && pkgs.stdenv.hostPlatform.isDarwin) {
+    home.packages = [ pkgs.martin.pi-coding-agent pkgs.martin.oh-my-pi ];
     launchd.agents.pi-extension-update = {
       enable = true;
       config = {

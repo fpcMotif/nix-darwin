@@ -1,4 +1,4 @@
-{ lib, ... }:
+{ config, lib, ... }:
 
 {
   home.sessionVariables = {
@@ -6,7 +6,7 @@
     CLIPROXY_CONFIG = "$HOME/CLIProxyAPI/config.yaml";
   };
 
-  programs.zsh.initContent = lib.mkAfter ''
+  programs.zsh.initContent = lib.mkAfter (''
     _unset_ai_env() {
       unset ANTHROPIC_API_KEY ANTHROPIC_API_URL ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN \
             OPENAI_API_KEY OPENAI_API_KEY_ID OPENAI_BASE_URL OPENAI_API_BASE OPENAI_ENDPOINT \
@@ -92,6 +92,7 @@
         *) _ai_run_with_optional_proxy droid keep-env "$@" ;;
       esac
     }
+  '' + lib.optionalString config.martin.piOmp.enable ''
 
     pi() {
       case "''${1:-}" in
@@ -99,5 +100,5 @@
         *) _ai_run_with_optional_proxy pi clear-env "$@" ;;
       esac
     }
-  '';
+  '');
 }
