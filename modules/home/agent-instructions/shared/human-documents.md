@@ -12,10 +12,28 @@ Open with **At a glance**: three sentences that state the problem and cause, the
 
 Quote exact evidence and label estimates. Put working cases beside failures.
 Add a visual only when it answers one review question better than prose.
-When the mechanism stays subtle, including in a spec `to-spec` just published, load `eli5` for the picture version and link its artifact at the foot.
+In a document that is not an issue, when the mechanism stays subtle, load `eli5` for the picture version and link its artifact at the foot.
 When later evidence changes the analysis, update the body and attach that evidence to the comment.
 
 The document is done when a reviewer can name the cause, change, and unchanged behavior from **At a glance** alone, without reconstructing the author's reasoning.
+
+## Issues
+
+These steps cover every issue you raise: one finding, a batch of findings, or a spec that `to-spec` publishes.
+
+1. **Vet**: Open the code behind each finding before you write it up. Drop a finding that the code contradicts. Done when every surviving claim cites a `file:line` you read in this session.
+2. **Write**: Give each surviving finding its own issue with these parts, in this order:
+   - **At a glance**, as above.
+   - **Background**: what a reader new to this code must know, then how to make the change. Keep only what the reader needs to act.
+   - **Diagram**: one flowchart or sequence diagram from the `review-diagrams` skill, checked, with its `file:line` evidence list under it. In a `to-spec` spec, that list is the one place that names file paths.
+   - **Related issues**: a link to each issue this one touches, with one clause on how. Write "None" when it touches none.
+
+   A `to-spec` spec keeps its own template between **Background** and **Diagram**.
+3. **Label**: Apply exactly one of `ready-for-agent`, `ready-for-human`, or `needs-triage`, by the project's triage label document.
+4. **Explain**: Make one page per issue with the `eli5` skill: big pictures, few words, one key idea. Link the page at the foot of its issue.
+5. **Link**: In a batch, create every issue first, then fill each **Related issues** section with the real numbers.
+
+Done when each issue carries its four parts, one label, and its ELI5 link, and your reply lists each dropped finding with the reason.
 
 ## ADRs and domain documents
 
