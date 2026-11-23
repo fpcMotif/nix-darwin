@@ -31,7 +31,7 @@ let
     { name = "the bundled `babysit` skill"; use = "the Babysit playbook; no babysit skill is installed"; }
     { name = "`/tdd`"; use = "the mattpocock **tdd** skill: red-green slices, tests at seams"; }
     { name = "`plugin-dev:skill-development`, `skill-creator`"; use = "the **writing-for-agents** skill"; }
-    { name = "`thermo-nuclear-code-quality-review`"; use = "the **nuclear-cqr** skill (`/nuclear-cqr`)"; }
+    { name = "`thermo-nuclear-code-quality-review`"; use = "the mattpocock **code-review** skill; the `thermos` plugin that ships the original is not installed"; }
     { name = "`~/.claude/pstack-models.md`"; use = "installed by nix; the role sheet every Models section defers to, and the one place to change a model"; }
     { name = "a leaf `principle-*` skill"; use = "the matching section of the **pstack-principles** skill"; }
   ];

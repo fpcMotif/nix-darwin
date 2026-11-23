@@ -11,13 +11,11 @@
     "emil-design-eng"
     "emil-prototype"
     "find-animation-opportunities"
-    "find-skills"
     "improve-animations"
     "installer"
     "make-interfaces-feel-better"
     "mobile-native"
     "notebooklm"
-    "nuclear-cqr"
     "obsidian-vault"
     "prompt-coach"
     "qa"
@@ -53,7 +51,6 @@
     "floodlight-ci-diagnosis"
     "gemini-vision-fidelity-reviewer"
     "ground-truth-audit"
-    "jj-colocated-git-workflow"
     "land-autoresearch-work-to-main"
     "lark-cli-setup"
     "loop-me"
@@ -91,7 +88,6 @@
     "writing-fragments"
     "writing-shape"
     "yt-takeout-pipeline"
-    "zvec-grep-guide"
   ];
 
   codex-family = [
