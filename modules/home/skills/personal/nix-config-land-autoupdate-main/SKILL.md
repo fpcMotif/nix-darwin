@@ -18,17 +18,7 @@ just verify-skills    # only when agent-skill files changed
 
 ## 2. Single-flight landing
 
-Execute the entire commit → PR → merge → sync pipeline in one command:
-
-```sh
-# Builds the checkout's jj pr, so it works before a rebuild
-nix run .#martin.jj-pr -- <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
-
-# Same flight through the installed alias, after darwin-rebuild switch
-jj pr <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land
-```
-
-Run `jj pr --help` before the second form. An installed `jj pr` that predates this repo's `jj-pr.sh` lacks `-m` and `--land`.
+Land with the single-flight `jj pr … --land` command from the `jj` skill. In this checkout, run it as `nix run .#martin.jj-pr -- …` so it works before a rebuild.
 
 If integrating conflicting branches locally before pushing:
 ```sh

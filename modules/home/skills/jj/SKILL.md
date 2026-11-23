@@ -85,6 +85,7 @@ Git and `gh` stay for what JJ does not cover:
 
 Colocated repository shares `.git` directly. Tools reading Git see `@-` automatically.
 
+- **Initialize**: `jj git init --colocate` in an existing Git checkout.
 - **Create / Advance**: `jj bookmark create <name> -r <rev>` · `jj bookmark move <name> --to <rev> --allow-backwards`
 - **Push / Sync**: `jj git push --bookmark <name>` · `jj git fetch`
 - **External Git sync**: run `jj git import` after direct Git commands; align Git HEAD with `git checkout <branch>`.
