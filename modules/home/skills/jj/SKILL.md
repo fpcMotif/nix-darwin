@@ -76,7 +76,7 @@ The work in progress is the commit `@`, not uncommitted files. Where a skill say
 
 Git and `gh` stay for what JJ does not cover:
 
-- **GitHub objects**: `gh issue`, `gh pr view`, `gh pr checks`, review comments, and `gh api`. Pass the PR number and `-R owner/repo`.
+- **GitHub objects**: `gh issue`, `gh pr view`, `gh pr checks`, review comments, and `gh api`. Pass the PR number and `-R owner/repo`. The `better-github-skill` skill owns PR snapshots, review threads, and CI failures.
 - **Pickaxe search**: `git log -m -S TEXT`.
 - **Git-only tools**: give them commit hashes (the `git rev-parse` row). A tool that reads Git state itself, such as `impeccable signals`, needs no change: Git shows the content of `@` as uncommitted changes.
 - **Read-only Git** (`git show`, `git diff A B`, `git log`) is safe on commit hashes. Route every write (`commit`, `rebase`, `stash`, `push`) through the table. After a direct Git write, follow External Git sync below.
