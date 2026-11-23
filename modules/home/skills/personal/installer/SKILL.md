@@ -1,6 +1,6 @@
 ---
 name: installer
-description: Audit and execute remote shell installers safely via ax and bashka without curl. Triggers: install.sh, curl-to-shell URLs, bashka package management.
+description: "Audit and execute remote shell installers safely via ax and bashka without curl. Triggers: install.sh, curl-to-shell URLs, bashka package management."
 ---
 
 # Remote Installer Execution

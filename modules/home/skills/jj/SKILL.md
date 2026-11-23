@@ -1,6 +1,6 @@
 ---
 name: jj
-description: JJ workflows: inspect status/log/diff, atomic commits, hunk curation, bookmarks, and single-flight PR landing via jj pr. Use also when another skill names a Git or GitHub step (git diff, git commit, git push, gh pr create) in a JJ workspace; it maps each one to JJ.
+description: "JJ workflows: inspect status/log/diff, atomic commits, hunk curation, bookmarks, and single-flight PR landing via jj pr. Use also when another skill names a Git or GitHub step (git diff, git commit, git push, gh pr create) in a JJ workspace; it maps each one to JJ."
 ---
 
 # Jujutsu (jj)

@@ -68,7 +68,7 @@ let
 
   inherit (import ./claude/skill-curation.nix)
     mattpocockBuckets disabledMattpocockSkills leanExcludedMattpocockSkills
-    removedSkillIds harnessProvidedSkillIds interfacesSkillNames;
+    removedSkillIds harnessProvidedSkillIds convexPluginProvidedSkillIds interfacesSkillNames;
   excludedSkillIds = disabledMattpocockSkills ++ leanExcludedMattpocockSkills;
   # Park here (off but installed) to keep a plugin's cache and config.
   # Code Mode refuses to start while a user mod hooks tool calls, as these two
@@ -313,7 +313,8 @@ let
   # other agents keep the bundle. verify-agent-skills.sh checks the plugin has each.
   pluginProvidedSkillIds = enabledMattpocockSkills;
   pstackPluginSkillIds = builtins.attrNames pstackDrvs;
-  claudeHiddenSkillIds = pluginProvidedSkillIds ++ pstackPluginSkillIds ++ harnessProvidedSkillIds ++ interfacesSkillNames;
+  claudeHiddenSkillIds = pluginProvidedSkillIds ++ pstackPluginSkillIds ++ harnessProvidedSkillIds
+    ++ convexPluginProvidedSkillIds ++ interfacesSkillNames;
   claudeOffSkillIds = config.martin.agentSurface.skillPlacement.offIds.claude;
   bundleSkillIds = enabledMattpocockSkills ++ [ "better-github-skill" "ub-mode" "impeccable" ] ++ interfacesSkillNames;
 
