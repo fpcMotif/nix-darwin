@@ -26,8 +26,7 @@ let
   plainStyle = color:
     if cfg.palette.enable then "fg:${color}" else "bold";
 
-  gitWhen = "! jj root >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1";
-  noVcsWhen = "! jj root >/dev/null 2>&1 && ! git rev-parse --is-inside-work-tree >/dev/null 2>&1";
+  noVcsWhen = ''d=$PWD; while [ -n "$d" ]; do [ -e "$d/.jj" ] || [ -e "$d/.git" ] && exit 1; d=''${d%/*}; done; exit 0'';
 
   pathBg = palette.orange;
   vcsBg = palette.yellow;
@@ -36,7 +35,7 @@ let
   powerStart = bg: "[](fg:${bg})";
   powerJoin = from: to: "[](fg:${from} bg:${to})";
   powerEnd = bg: "[](fg:${bg}) ";
-  customShell = [ "sh" ];
+  customShell = [ "/bin/sh" ];
 
   promptSuccess = "[❯](fg:${palette.cyan}) ";
 
@@ -61,7 +60,7 @@ let
   directoryEndCustom = lib.optionalAttrs cfg.segments.path.enable {
     directory_end = {
       description = "Close the connected directory bar outside VCS repos.";
-      command = "printf ''";
+      command = ":";
       when = noVcsWhen;
       shell = customShell;
       format =
@@ -89,50 +88,63 @@ let
   jjCustom = lib.optionalAttrs cfg.segments.jj.enable {
     jj = {
       description = "Minimal Jujutsu segment rendered directly by jj.";
-      command = ''jj log --ignore-working-copy --no-graph -r @ -T 'separate(" ", bookmarks, change_id.shortest(4))' '';
-      when = "jj root >/dev/null 2>&1";
+      command = ''d=$PWD; while [ -n "$d" ]; do if [ -e "$d/.jj" ]; then exec jj log --ignore-working-copy --no-graph -r @ -T 'separate(" ", bookmarks, change_id.shortest(4))'; fi; d=''${d%/*}; done; exit 1'';
+      when = true;
       shell = customShell;
       format =
         if cfg.palette.enable && cfg.powerline.enable then
-          "${powerJoin pathBg jjBg}[ jj $output ](fg:${palette.light} bg:${jjBg})${powerEnd jjBg}"
+          "(${powerJoin pathBg jjBg}[ jj $output ](fg:${palette.light} bg:${jjBg})${powerEnd jjBg})"
         else
-          pill {
+          "(${pill {
             bg = jjBg;
             fg = palette.light;
             content = " jj $output ";
-          };
+          }})";
     };
   };
 
   gitCustom = lib.optionalAttrs cfg.segments.git.enable {
     git_branch = {
-      description = "Compact Git branch chip, hidden inside Jujutsu repos.";
+      description = "Compact Git branch and status chip, hidden inside Jujutsu repos.";
+      require_repo = true;
+      when = true;
       command = ''
-        git symbolic-ref --quiet --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null
+        d=$PWD; g=; while [ -n "$d" ]; do [ -e "$d/.jj" ] && exit 1; [ -e "$d/.git" ] && g=1; d=''${d%/*}; done; [ -n "$g" ] || exit 1
+        git --no-optional-locks status --porcelain=v2 --branch -uno 2>/dev/null | awk '
+          /^# branch\.oid / { oid = substr($3, 1, 7) }
+          /^# branch\.head / { head = $3 }
+          /^# branch\.ab / { a = substr($3, 2) + 0; b = substr($4, 2) + 0 }
+          /^u / { u++ }
+          /^[12] / {
+            c = substr($2, 1, 1); w = substr($2, 2, 1)
+            if (c != ".") s++
+            if (w == "D") x++
+            else if (w != ".") m++
+          }
+          END {
+            br = (head == "(detached)" || head == "") ? ((oid == "(initial)" || oid == "") ? "HEAD" : oid) : head
+            st = ""
+            if (u) st = st "=" u
+            if (s) st = st "+" s
+            if (m) st = st "!" m
+            if (x) st = st "✘" x
+            if (a) st = st "⇡" a
+            if (b) st = st "⇣" b
+            if (st != "") printf "%s %s", br, st
+            else if (br != "") printf "%s", br
+          }
+        '
       '';
-      when = gitWhen;
       shell = customShell;
       format =
         if cfg.palette.enable && cfg.powerline.enable then
-          "${powerJoin pathBg vcsBg}[  $output ](fg:${palette.dark} bg:${vcsBg})"
+          "(${powerJoin pathBg vcsBg}[  $output ](fg:${palette.dark} bg:${vcsBg})${powerEnd vcsBg})"
         else
-          pill {
+          "(${pill {
             bg = vcsBg;
             fg = palette.dark;
             content = "  $output ";
-          };
-    };
-
-    git_end = {
-      description = "Close the connected Git bar.";
-      command = "printf ''";
-      when = gitWhen;
-      shell = customShell;
-      format =
-        if cfg.palette.enable && cfg.powerline.enable then
-          powerEnd vcsBg
-        else
-          "";
+          }})";
     };
   };
 
@@ -143,7 +155,7 @@ let
   formatString =
     "$directory"
     + (lib.optionalString cfg.segments.path.enable "\${custom.directory_end}")
-    + (lib.optionalString cfg.segments.git.enable "\${custom.git_branch}$git_status\${custom.git_end}")
+    + (lib.optionalString cfg.segments.git.enable "\${custom.git_branch}")
     + (lib.optionalString cfg.segments.jj.enable "\${custom.jj}")
     + (lib.optionalString cfg.segments.shell.enable "\${custom.shell_name}")
     + (lib.optionalString cfg.segments.rootIndicator.enable "\${custom.root_indicator}")
@@ -167,11 +179,14 @@ in
       git.enable = lib.mkEnableOption "Git branch/status chips, with the branch hidden inside Jujutsu repos";
       jj.enable = lib.mkEnableOption "Jujutsu chip rendered directly by jj";
       status.enable = lib.mkEnableOption "Red X-mark on non-zero exit via [character] error_symbol";
+      runtimes.enable = lib.mkEnableOption "Right-prompt language runtime version chips";
       rPromptTime.enable = lib.mkEnableOption "Right-prompt tool/runtime chips and compact time";
     };
   };
 
   config = lib.mkIf cfg.enable {
+    home.sessionVariables.STARSHIP_LOG = "error";
+
     programs.starship = {
       enable = true;
       enableZshIntegration = true;
@@ -180,8 +195,11 @@ in
       settings = {
         add_newline = false;
         command_timeout = 2000;
+        scan_timeout = 30;
         format = formatString;
-        right_format = "$nodejs$python$golang$rust$nix_shell$time";
+        right_format =
+          (lib.optionalString cfg.segments.runtimes.enable "$nodejs$python$golang$rust")
+            + "$nix_shell$time";
 
         cmd_duration = {
           min_time = 1000;
@@ -231,31 +249,7 @@ in
             };
 
         git_branch.disabled = true;
-        git_status =
-          if cfg.segments.git.enable then
-            {
-              style = plainStyle palette.dark;
-              format =
-                if cfg.palette.enable && cfg.powerline.enable then
-                  "([ $all_status$ahead_behind ](fg:${palette.dark} bg:${vcsBg}))"
-                else if cfg.palette.enable then
-                  "([ $all_status$ahead_behind ](fg:${palette.dark} bg:${vcsBg}) )"
-                else
-                  "([$all_status$ahead_behind](bold) )";
-              conflicted = "=\${count}";
-              ahead = "⇡\${count}";
-              behind = "⇣\${count}";
-              diverged = "⇕⇡\${ahead_count}⇣\${behind_count}";
-              up_to_date = "";
-              untracked = "?\${count}";
-              stashed = "\\$\${count}";
-              modified = "!\${count}";
-              staged = "+\${count}";
-              renamed = "»\${count}";
-              deleted = "✘\${count}";
-            }
-          else
-            { disabled = true; };
+        git_status.disabled = true;
 
         dotnet = {
           detect_files = [
@@ -266,14 +260,18 @@ in
           ];
         };
 
-        golang = {
-          symbol = " ";
-          format = pill {
-            bg = palette.cyan;
-            fg = palette.dark;
-            content = " $symbol$version ";
-          };
-        };
+        golang =
+          if cfg.segments.runtimes.enable then
+            {
+              symbol = " ";
+              format = pill {
+                bg = palette.cyan;
+                fg = palette.dark;
+                content = " $symbol$version ";
+              };
+            }
+          else
+            { disabled = true; };
 
         lua.symbol = " ";
         nix_shell = {
@@ -285,42 +283,58 @@ in
           };
         };
 
-        nodejs = {
-          symbol = " ";
-          detect_extensions = [ ];
-          detect_files = [
-            "package.json"
-            ".node-version"
-            ".nvmrc"
-            ".tool-versions"
-          ];
-          detect_folders = [
-            "node_modules"
-          ];
-          format = pill {
-            bg = palette.green;
-            fg = palette.dark;
-            content = " $symbol$version ";
-          };
-        };
+        nodejs =
+          if cfg.segments.runtimes.enable then
+            {
+              symbol = " ";
+              detect_extensions = [ ];
+              detect_files = [
+                "package.json"
+                ".node-version"
+                ".nvmrc"
+                ".tool-versions"
+              ];
+              detect_folders = [
+                "node_modules"
+              ];
+              format = pill {
+                bg = palette.green;
+                fg = palette.dark;
+                content = " $symbol$version ";
+              };
+            }
+          else
+            { disabled = true; };
 
-        python = {
-          symbol = " ";
-          format = pill {
-            bg = palette.blue;
-            fg = palette.light;
-            content = " $symbol$version$virtualenv ";
-          };
-        };
+        python =
+          if cfg.segments.runtimes.enable then
+            {
+              python_binary = [
+                "./.venv/bin/python"
+                "./.venv/bin/python3"
+              ];
+              symbol = " ";
+              format = pill {
+                bg = palette.blue;
+                fg = palette.light;
+                content = " $symbol($version )($virtualenv )";
+              };
+            }
+          else
+            { disabled = true; };
 
-        rust = {
-          symbol = " ";
-          format = pill {
-            bg = palette.orange;
-            fg = palette.dark;
-            content = " $symbol$version ";
-          };
-        };
+        rust =
+          if cfg.segments.runtimes.enable then
+            {
+              symbol = " ";
+              format = pill {
+                bg = palette.orange;
+                fg = palette.dark;
+                content = " $symbol$version ";
+              };
+            }
+          else
+            { disabled = true; };
 
         package.disabled = true;
         buf.disabled = true;

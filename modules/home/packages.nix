@@ -77,8 +77,6 @@ let
     martin.mole
     codex
     martin.crush
-    martin.pi-coding-agent
-    martin.oh-my-pi
     martin.nub
     martin.drafts-mcp-server
     martin.traits

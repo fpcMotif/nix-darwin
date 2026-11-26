@@ -30,6 +30,7 @@ stdenvNoCC.mkDerivation {
   inherit version src;
 
   nativeBuildInputs = [ makeWrapper ];
+  buildInputs = [ bash ];
 
   dontConfigure = true;
   dontBuild = true;
@@ -50,8 +51,10 @@ stdenvNoCC.mkDerivation {
     # Wrappers exec into share/, so $BASH_SOURCE inside the script resolves to
     # share/mole and $SCRIPT_DIR finds bin/, lib/, scripts/ as siblings.
     makeWrapper "$share/mole" "$out/bin/mole" \
+      --prefix PATH : "${lib.makeBinPath [ bash ]}" \
       --set BASH "${bash}/bin/bash"
     makeWrapper "$share/mo"   "$out/bin/mo" \
+      --prefix PATH : "${lib.makeBinPath [ bash ]}" \
       --set BASH "${bash}/bin/bash"
 
     runHook postInstall

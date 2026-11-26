@@ -7,6 +7,11 @@ INPUT=$(cat 2>/dev/null) || allow
 CMD=$(printf '%s' "$INPUT" | jq -r '.toolCall.args.CommandLine // empty' 2>/dev/null)
 [ -z "$CMD" ] && allow
 CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // .toolCall.args.Cwd // .workspacePaths[0] // empty' 2>/dev/null)
+# Antigravity's terminal has no one to press q, so a full-screen program never exits.
+if printf '%s' "$CMD" | grep -Eq '(^|[;&|(]|&&|\|\|)[[:space:]]*(btm|top|htop|less|more|watch|vi|vim|nvim)([[:space:]]|$)'; then
+  jq -cn '{decision:"deny",reason:"Full-screen programs wait for a key that never comes here. Use a one-shot command instead: procs --sortd cpu | head -n 20 for processes, bat -pp FILE to read a file."}'
+  exit 0
+fi
 CLAUDE_PAYLOAD=$(jq -cn --arg c "$CMD" --arg d "$CWD" '{tool_name:"Bash",tool_input:{command:$c},cwd:$d}')
 
 for guard in "$@"; do

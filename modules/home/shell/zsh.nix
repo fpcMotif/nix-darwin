@@ -218,6 +218,13 @@ in
         _terminfo_dirs=(''${_terminfo_dirs:#})
         (( ''${#_terminfo_dirs[@]} > 0 )) && export TERMINFO_DIRS="''${(j/:/)_terminfo_dirs}"
         unset _terminfo_dirs
+
+        # Antigravity runs agent commands on a pty that never answers terminal
+        # queries and has no one to press q: pagers and procs' theme probe wait forever.
+        if [[ -n $ANTIGRAVITY_AGENT || -n $ANTIGRAVITY_SERVER_CSRF_TOKEN || -n $GEMINI_CLI ]]; then
+          export PAGER=cat GIT_PAGER=cat BAT_PAGER=cat DELTA_PAGER=cat GH_PAGER=cat MANPAGER=cat GLAMOUR_STYLE=dark
+          procs() { command procs --theme dark "$@"; }
+        fi
       '';
 
       initContent = ''

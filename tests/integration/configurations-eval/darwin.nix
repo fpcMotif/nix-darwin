@@ -66,8 +66,13 @@ in
     "Darwin should not reintroduce BetterDisplay as a Nix-managed app")
 
   (helpers.assertTest "darwin-zsh-enabled"
-    (darwinConfig.programs.zsh.enable == true)
-    "Darwin should enable zsh at the system level")
+    (
+      darwinConfig.programs.zsh.enable == true
+      && darwinConfig.programs.zsh.enableGlobalCompInit == false
+      && darwinConfig.programs.zsh.enableBashCompletion == false
+      && darwinConfig.programs.zsh.promptInit == ""
+    )
+    "Darwin should enable zsh without duplicate global compinit or promptinit")
 
   (helpers.assertTest "darwin-security-gatekeeper-not-disabled"
     (
@@ -160,8 +165,9 @@ in
       in
       lib.hasPrefix "$directory" settings.format
       && !(lib.hasInfix "\${custom.shell_name}" settings.format)
-      && lib.hasInfix "$directory\${custom.directory_end}\${custom.git_branch}$git_status\${custom.git_end}" settings.format
-      && lib.hasInfix "\${custom.jj}" settings.format
+      && lib.hasInfix "$directory\${custom.directory_end}\${custom.git_branch}\${custom.jj}" settings.format
+      && !(lib.hasInfix "$git_status" settings.format)
+      && settings.right_format == "$nix_shell$time"
       && lib.hasInfix "$line_break$character" settings.format
       && lib.hasInfix "" settings.directory.format
     )
@@ -171,10 +177,10 @@ in
     (
       let jj = darwinHome.programs.starship.settings.custom.jj;
       in
-      jj.when == "jj root >/dev/null 2>&1"
-      && lib.hasInfix "jj log" jj.command
+      jj.when == true
+      && lib.hasInfix "exec jj log --ignore-working-copy" jj.command
+      && !(lib.hasInfix "jj root" jj.command)
       && !(lib.hasInfix "jj-starship" jj.command)
-      && !(lib.hasInfix "jj-starship" jj.when)
     )
     "Darwin Starship Jujutsu prompt should call jj directly, not jj-starship")
 
@@ -185,11 +191,29 @@ in
         git = settings.custom.git_branch;
       in
       settings.git_branch.disabled == true
-      && lib.hasInfix "$all_status$ahead_behind" settings.git_status.format
-      && git.when == "! jj root >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1"
-      && lib.hasInfix "git symbolic-ref" git.command
+      && settings.git_status.disabled == true
+      && settings.python.disabled == true
+      && settings.nodejs.disabled == true
+      && settings.command_timeout >= 2000
+      && git.when == true
+      && git.require_repo == true
+      && git.shell == [ "/bin/sh" ]
+      && darwinHome.home.sessionVariables.STARSHIP_LOG == "error"
+      && lib.hasInfix ''[ -e "$d/.jj" ] && exit 1'' git.command
+      && lib.hasInfix "git --no-optional-locks status --porcelain=v2 --branch -uno" git.command
     )
     "Darwin Starship Git branch chip should be hidden inside Jujutsu repos")
+
+  (helpers.assertTest "darwin-direnv-bypasses-iets"
+    (
+      let
+        stdlib = builtins.unsafeDiscardStringContext darwinHome.programs.direnv.stdlib;
+      in
+      darwinHome.xdg.configFile ? "direnv/direnvrc"
+      && lib.hasInfix "/bin/nix --no-warn-dirty" stdlib
+      && !(lib.hasInfix "iets-classic" stdlib)
+    )
+    "Darwin direnv stdlib should route nix-direnv through real nix instead of iets")
 
   # skhd's CGEventTap conflicts with BetterMouse on this host, so keep the
   # daemon off unless explicitly flipped in both host config and test.
@@ -241,8 +265,8 @@ in
     "Darwin Home Manager packages should include Crush from Charm's NUR repo")
 
   (helpers.assertTest "darwin-has-oh-my-pi"
-    (hasPackage "oh-my-pi" darwinHome.home.packages)
-    "Darwin Home Manager packages should include oh-my-pi")
+    (!darwinHome.martin.piOmp.enable || hasPackage "oh-my-pi" darwinHome.home.packages)
+    "Darwin Home Manager packages should include oh-my-pi when martin.piOmp.enable is set")
 
   (helpers.assertTest "darwin-has-uv"
     (hasPackage "uv-bin" darwinHome.home.packages)

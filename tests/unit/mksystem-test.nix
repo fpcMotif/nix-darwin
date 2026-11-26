@@ -85,12 +85,15 @@ let
 
     (helpers.assertTest "darwin-pi-extension-auto-update"
       (
-        let agent = homeConfig.launchd.agents.pi-extension-update.config;
-        in agent.StartCalendarInterval.Hour == 6
+        !homeConfig.martin.piOmp.enable
+        || (
+          let agent = homeConfig.launchd.agents.pi-extension-update.config;
+          in agent.StartCalendarInterval.Hour == 6
           && agent.StartCalendarInterval.Minute == 15
           && agent.RunAtLoad == false
+        )
       )
-      "Darwin should update mutable Pi extensions daily after the Nix auto-switch")
+      "When enabled, Darwin should update mutable Pi extensions daily after the Nix auto-switch")
 
     (helpers.assertTest "darwin-system-packages-include-duti"
       (hasPackage "duti" darwinConfig.environment.systemPackages)

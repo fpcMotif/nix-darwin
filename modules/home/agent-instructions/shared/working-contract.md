@@ -37,7 +37,7 @@
 The last message of a task is the report. The user scans it before reading it.
 
 - **Lead**: Open with the outcome in one sentence.
-- **Figure**: Show a change that has shape as a figure. Use a `mermaid` flowchart or sequence diagram for a flow of three or more steps. Use a `diff` tree for a file-layout change and a table for items that share fields. The `show-me` skill holds these views; pick the smallest one that makes the point.
+- **Figure**: Show a change that has shape as a figure. Use a `mermaid` `flowchart TD` (unquoted `[Node]` labels ≤ 20 chars and `-->|label|` edges so terminal panes render it accurately inline) or `sequenceDiagram` for a flow of three or more steps. Use a `diff` tree for a file-layout change and a table for items that share fields. The `show-me` skill holds these views; pick the smallest one that makes the point.
 - **Checks**: Put the checks in a table with the command and its result. Name each check that could not run and why.
 - **Files**: Name each changed file as `path:line`.
 - **Length**: Fit the report on one screen. A one-line change gets a one-line report.
