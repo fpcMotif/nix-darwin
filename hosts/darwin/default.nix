@@ -27,10 +27,9 @@
     rime = {
       enable = true;
       config = "${currentSystemUserHome}/devv/MyRime";
-      # Keep nix-darwin from overwriting the local Liquid Glass Squirrel.app
-      # with the vanilla pkgs.martin.squirrel build. That app is built by hand
-      # from rime/squirrel plus ~/devv/MyRime/liquid-glass.patch (steps in the
-      # MyRime README); the fpcMotif/squirrel fork is the fallback source.
+      # Keep nix-darwin from overwriting the local Liquid Glass Squirrel.app with
+      # pkgs.martin.squirrel. That app is built by hand from rime/squirrel plus
+      # ~/devv/MyRime/liquid-glass.patch (MyRime README); fpcMotif/squirrel is the fallback.
       manageApp = false;
     };
 

@@ -74,6 +74,33 @@ in
     )
     "Claude's hidden list should be exactly the skills Skill visibility marks off for Claude")
 
+  (helpers.assertTest "darwin-skill-bundle-no-mattpocock-transform"
+    (
+      let
+        inherit (darwinHome.martin.agentSurface.bundleSkills) pluginProvidedIds;
+        explicit = darwinHome.programs.agent-skills.skills.explicit;
+      in
+      lib.all
+        (id: !(builtins.elem id pluginProvidedIds) && !(lib.hasPrefix "mp-" explicit.${id}.from))
+        (builtins.attrNames explicit)
+    )
+    "a mattpocock skill became an explicit skill, the only place a Nix `transform` can attach; forks shadow the plugin copy and list the skill twice")
+
+  (helpers.assertTest "darwin-skill-bundle-no-in-progress-source"
+    (!(darwinHome.programs.agent-skills.sources ? mp-in-progress))
+    "the mp-in-progress source was re-added; teach lives in productivity/ now, so its regex matches nothing and risks a duplicate-id throw")
+
+  (helpers.assertTest "darwin-skill-bundle-dedup-is-claude-only"
+    (
+      let
+        inherit (darwinHome.martin.agentSurface) bundleSkills skillsOff;
+        inherit (bundleSkills) pluginProvidedIds;
+      in
+      pluginProvidedIds != [ ]
+      && lib.all (id: builtins.elem id bundleSkills.ids && builtins.elem id skillsOff.claude) pluginProvidedIds
+    )
+    "every plugin-provided skill must stay in the shared bundle and be turned off for Claude only; dropping it from the bundle strips Codex, Droid, OpenCode, and Crush")
+
   (helpers.assertTest "darwin-guide-pointers-resolve"
     (
       let

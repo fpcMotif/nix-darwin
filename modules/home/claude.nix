@@ -1,29 +1,16 @@
 { inputs, pkgs, lib, config, ... }:
 
 let
-  inherit (lib) optionalAttrs listToAttrs;
   isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
 
   homeDir = config.home.homeDirectory;
-  mkSource = input: subdir: nameRegex: {
-    inherit input subdir;
-    filter = { maxDepth = 1; }
-      // optionalAttrs (nameRegex != null) { inherit nameRegex; };
-  };
-
-  mkSkill = from: path: packages: { inherit from path packages; };
 
   inherit (config.martin.agentSurface) skillTargetDirs claudeHooks;
 
-  # `link` points every target at the same store SKILL.md files. Pi de-dupes
-  # skills by realpath, so the shared store paths collapse across picker dirs.
-  linkTarget = dest: { enable = true; inherit dest; structure = "link"; systems = [ ]; };
   # The same dirs as a quoted, absolute, space-separated shell list, for the
   # `for dir in …` loops in the activation sweeps below.
   skillTargetDirsSh = lib.concatMapStringsSep " " (d: ''"${homeDir}/${d}"'')
     (lib.attrValues skillTargetDirs);
-
-  skillLinkDirs = config.martin.agentSurface.skillPlacement.pickerDirs;
 
   # An agent-skills `path` source uses IFD and breaks cross-platform
   # `nix flake check`, so local skills go through Skill placement instead.
@@ -67,7 +54,7 @@ let
   '';
 
   inherit (import ./claude/skill-curation.nix)
-    mattpocockBuckets disabledMattpocockSkills leanExcludedMattpocockSkills
+    disabledMattpocockSkills leanExcludedMattpocockSkills
     removedSkillIds harnessProvidedSkillIds convexPluginProvidedSkillIds interfacesSkillNames
     coworkSyncedSkills;
   excludedSkillIds = disabledMattpocockSkills ++ leanExcludedMattpocockSkills;
@@ -285,38 +272,14 @@ let
     ask = claudeAskRules;
   };
 
-  mpSources = listToAttrs (map
-    (b: {
-      name = "mp-${b}";
-      value = mkSource "mattpocock-skills" "skills/${b}" null;
-    })
-    mattpocockBuckets);
-  enabledMattpocockSkills =
-    let
-      bucketSkillNames = b:
-        let
-          root = inputs.mattpocock-skills + "/skills/${b}";
-          entries = builtins.readDir root;
-        in
-        builtins.attrNames (lib.filterAttrs
-          (name: type:
-            type == "directory"
-            && builtins.pathExists (root + "/${name}/SKILL.md")
-            && !(builtins.elem name excludedSkillIds)
-          )
-          entries);
-    in
-    lib.unique (lib.concatMap bucketSkillNames mattpocockBuckets);
-
   # Claude sees these ids in both the bundle and the mattpocock plugin. The
   # plugin copy wins, so skillOverrides hides the bundle copy in Claude only;
   # other agents keep the bundle. verify-agent-skills.sh checks the plugin has each.
-  pluginProvidedSkillIds = enabledMattpocockSkills;
+  pluginProvidedSkillIds = config.martin.agentSurface.bundleSkills.pluginProvidedIds;
   pstackPluginSkillIds = builtins.attrNames pstackDrvs;
   claudeHiddenSkillIds = pluginProvidedSkillIds ++ pstackPluginSkillIds ++ harnessProvidedSkillIds
     ++ convexPluginProvidedSkillIds ++ interfacesSkillNames;
   claudeOffSkillIds = config.martin.agentSurface.skillPlacement.offIds.claude;
-  bundleSkillIds = enabledMattpocockSkills ++ [ "better-github-skill" "ub-mode" "impeccable" ] ++ interfacesSkillNames;
 
   # Plugin skills to block outright. skillOverrides ignores plugin skills, so
   # claudePrunePluginSkills unlists them every switch and a deny rule refuses
@@ -347,10 +310,6 @@ let
     (dir: ids: map (id: "Skill(${baseNameOf dir}:${id})") ids)
     idleClaudePluginSkills);
   deniedPluginMcpServers = [ "mcp__plugin_marketing_figma" ];
-
-  # Effect-TS skills: defined but not enabled globally. Effect repos get them
-  # per project via templates/effect-skills/devshell.flake.nix.
-  effectSources = { effect-ts = mkSource "effect-ts-skills" "skills" null; };
 
   pstack = import ./claude/pstack.nix {
     inherit lib pkgs inputs;
@@ -475,18 +434,12 @@ let
   };
 in
 {
-  imports = [ inputs.agent-skills.homeManagerModules.default ];
-
   # `.local/bin/claude` is a stable user-PATH binary that survives store-path
   # churn so macOS TCC and editor integrations don't re-prompt every switch.
   martin.agentSurface.skills =
     lib.genAttrs localSkillIds (id: { source = ./skills + "/${id}"; audience = "pickers"; })
     // lib.mapAttrs (_: drv: { source = drv; audience = "pickers"; }) pstackDrvs;
 
-  martin.agentSurface.bundleSkills = {
-    ids = bundleSkillIds ++ [ "web-browser" ];
-    audience = "pickers";
-  };
   martin.agentSurface.skillsOff.claude = claudeHiddenSkillIds;
 
   home.file =
@@ -496,7 +449,7 @@ in
       ".config/agent-skills/manifest.json".source =
         pkgs.writeText "agent-skills-manifest.json" (builtins.toJSON {
           targetDirs = lib.attrValues skillTargetDirs;
-          bundled = enabledMattpocockSkills;
+          bundled = pluginProvidedSkillIds;
           localSkills = localSkillIds;
           claudeHidden = claudeOffSkillIds;
           pluginProvided = pluginProvidedSkillIds;
@@ -679,32 +632,4 @@ in
       done
     fi
   '';
-
-  programs.agent-skills = {
-    enable = true;
-
-    sources = {
-      dotfiles-pi = mkSource "dotfiles" "dot_pi/agent/skills"
-        "^web-browser$";
-      better-github-skill = mkSource "better-github-skill" "." null;
-      ub-mode = mkSource "ub-mode" "." null;
-      impeccable = mkSource "impeccable" ".agents/skills" null;
-      interfaces = mkSource "interfaces-skills" "skills" null;
-    } // mpSources // effectSources;
-
-    skills = {
-      enable = bundleSkillIds;
-      enableAll = [ ];
-      explicit = {
-        web-browser = mkSkill "dotfiles-pi" "web-browser" [ ];
-      };
-    };
-
-    targets = lib.mapAttrs (_: linkTarget) skillLinkDirs;
-
-    # Module default (`[ "/.system" ]`); an empty list would let a future
-    # `structure = "symlink-tree"` target rsync --delete over Codex's own
-    # `.system` dir. Every target is `link` today, so this is a latent guard.
-    excludePatterns = [ "/.system" ];
-  };
 }

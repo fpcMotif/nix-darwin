@@ -223,7 +223,8 @@ modules/home/
 ├── yazi.nix             # Yazi file manager
 ├── obsidian.nix         # Obsidian vault wiring
 ├── lsp.nix              # language-server packages and Claude/Neovim configuration
-├── claude.nix           # Claude Code config + the agent-skills bundle
+├── claude.nix           # Claude Code config
+├── skill-bundle.nix     # the Skill bundle: agent-skills sources and enable list
 ├── ai-cli.nix           # claude/cc/codex/amp shell wrappers (proxy and env handling)
 ├── agent-instructions.nix # installs and archives every host's agent guides; Darwin-only Codex and omp files
 ├── ai-model-routing.nix # mutable Pi adapter for the shared routing policy
@@ -244,7 +245,7 @@ This section is the largest because the moving parts (sources, targets, discover
 
 ### Mechanism
 
-`modules/home/claude.nix` imports `inputs.agent-skills.homeManagerModules.default` and uses the upstream `programs.agent-skills` DSL — no custom activation scripts. The module owns one declarative bundle of selected `SKILL.md` directories and links that bundle into each enabled target.
+`modules/home/skill-bundle.nix` imports `inputs.agent-skills.homeManagerModules.default` and uses the upstream `programs.agent-skills` DSL — no custom activation scripts. The module owns one declarative bundle of selected `SKILL.md` directories and links that bundle into each enabled target.
 
 Personal skill sources live in `modules/home/skills/personal/`. Their `placement.nix` assigns each one a skill audience or an explicit host list.
 `skill-placement.nix` links every placed skill to one source. `agent-instructions.nix` installs the guide catalog's files on every system (ADR-0020) and archives previous files and skill links before Home Manager links them.
@@ -266,28 +267,18 @@ Durable Codex defaults belong in Nix. Personal model, reasoning, trust, plugin, 
 
 ### Sources and selection
 
+`skill-bundle.nix` holds one source table. Each row names a flake input, a subdir, and the skill ids it enables.
+
 ```nix
 # `input` references a flake input declared in flake.nix.
-programs.agent-skills = {
-  enable = true;
-
-  sources = {
-    dotfiles-pi     = { input = "dotfiles";          subdir = "dot_pi/agent/skills"; };
-    mp-engineering  = { input = "mattpocock-skills"; subdir = "skills/engineering"; };
-    mp-productivity = { input = "mattpocock-skills"; subdir = "skills/productivity"; };
-    mp-misc         = { input = "mattpocock-skills"; subdir = "skills/misc"; };
-    effect-ts       = { input = "effect-ts-skills";  subdir = "skills"; };
-  };
-
-  skills = {
-    enable = enabledMattpocockSkills;
-    enableAll = [ "effect-ts" ];
-    explicit = {
-      web-browser = { from = "dotfiles-pi"; path = "web-browser"; packages = [ ]; };
-    };
-  };
-};
+sourceRows = [
+  { name = "dotfiles-pi"; input = "dotfiles"; subdir = "dot_pi/agent/skills"; nameRegex = "^web-browser$"; explicitIds = [ "web-browser" ]; }
+  { name = "ub-mode"; input = "ub-mode"; subdir = "."; ids = [ "ub-mode" ]; }
+  { name = "effect-ts"; input = "effect-ts-skills"; subdir = "skills"; }
+] ++ mattpocockRows;
 ```
+
+The module derives `programs.agent-skills.sources`, `skills.enable`, and `skills.explicit` from the table. A row with no ids wires its source and enables nothing. The mattpocock rows come from `mattpocockBuckets` in `claude/skill-curation.nix`, and `skill-bundle/mattpocock.nix` reads their enabled ids from the pinned input.
 
 ### Policy
 

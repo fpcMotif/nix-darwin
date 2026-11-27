@@ -58,6 +58,7 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
   009 and 018 add assertions to that file. Land them before 014, or apply
   their assertion steps to the part file.
 - 012 and 017 both edit `modules/home/claude.nix`. Run 012 first.
+- The Skill bundle moved out of `modules/home/claude.nix` into `modules/home/skill-bundle.nix`, so plan 017's line numbers for that file are stale. Find its entries by name.
 - 008 changes the same tool as 001, `tools/skill-router`, but different files.
 - 011 is rejected. The maintainer keeps the skhd code, as `HOTKEYS.md` says.
   Do not execute it.
@@ -125,7 +126,7 @@ Run 2:
 - A double `compinit` in the zsh init and the Rime activation order: the Home Manager source was not matched against `flake.lock`. Unconfirmed.
 - The repo overlay shadows `zig`, `codex`, `tsrs`, and `typescript` at the top level of `pkgs`: no consumer breaks today.
 - `scripts/setup-varlock-env.sh` has no caller: it is a hand-run utility. Kept.
-- Splitting all of `claude.nix` at once: rejected in favor of plan 017's three self-contained moves, because `tests/unit/skill-hygiene-test.nix` reads the file as text.
+- Splitting all of `claude.nix` at once: rejected in favor of plan 017's three self-contained moves. No test reads the file as text now, so a wider split is no longer blocked.
 - Moving every prebuilt package to JSON pins at once: rejected in favor of the plan 019 pilot, because JSON pins change what the merge driver must parse.
 
 ## Not audited

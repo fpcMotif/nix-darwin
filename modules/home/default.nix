@@ -14,6 +14,7 @@
     ./ai-model-routing.nix
     ./agent-surface.nix
     ./skill-placement.nix
+    ./skill-bundle.nix
     ./agent-instructions.nix
     ./obsidian.nix
     ./tmux.nix
