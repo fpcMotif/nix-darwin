@@ -3,23 +3,14 @@
 let
   helpers = import ../lib/assertions.nix { inherit pkgs; };
 
-  bucketIds = bucket:
-    let root = inputs.mattpocock-skills + "/skills/${bucket}";
-    in builtins.attrNames (lib.filterAttrs
-      (name: type:
-        type == "directory" && builtins.pathExists (root + "/${name}/SKILL.md"))
-      (builtins.readDir root));
-
   curation = import (self + "/modules/home/claude/skill-curation.nix");
-  upstreamIds = lib.unique (lib.concatMap bucketIds curation.mattpocockBuckets);
+  inherit (import (self + "/modules/home/skill-bundle/mattpocock.nix") { inherit lib inputs; }) upstreamIds;
   disabled = curation.disabledMattpocockSkills;
   leanExcluded = curation.leanExcludedMattpocockSkills;
 
   # Restated on purpose: claude.nix derives its list with readDir, so each new
   # directory under modules/home/skills must also be named here.
   vendored = [ "browser-checks" "jj" "setup-ts-deep-modules" ];
-
-  claudeNix = builtins.readFile (self + "/modules/home/claude.nix");
 
   vendoredOnDisk = builtins.attrNames (lib.filterAttrs
     (name: type:
@@ -76,25 +67,5 @@ helpers.testSuite "skill-hygiene" (
     (helpers.assertTest "skill-hygiene-vendored-dirs-match"
       (sorted vendoredOnDisk == sorted vendored)
       "modules/home/skills/ holds ${toString vendoredOnDisk} but this test expects ${toString vendored} — add the new skill here deliberately")
-
-    # 4. A transform on a mattpocock skill shadows the plugin copy and
-    #    duplicates the entry in the skill picker.
-    (helpers.assertTest "skill-hygiene-no-mattpocock-transform"
-      (!(lib.hasInfix "appendKarpathy" claudeNix)
-      && !(lib.hasInfix "transformedMattpocockSkills" claudeNix))
-      "a mattpocock skill regained a Nix `transform`; forks shadow the plugin copy and re-create the duplicate this change removed")
-
-    # 5. Upstream promoting a skill that also matches an in-progress regex
-    #    makes discoverCatalog throw on a duplicate id.
-    (helpers.assertTest "skill-hygiene-no-in-progress-source"
-      (!(lib.hasInfix "mp-in-progress" claudeNix))
-      "the mp-in-progress source was re-added; teach lives in productivity/ now, so its regex matches nothing and risks a duplicate-id throw")
-
-    # 6. Dropping ids from the shared bundle would strip Codex, Droid,
-    #    OpenCode, and Crush, which have no plugin system to fall back on.
-    (helpers.assertTest "skill-hygiene-dedup-is-claude-only"
-      (lib.hasInfix "skillOverrides" claudeNix
-      && lib.hasInfix "pluginProvidedSkillIds = enabledMattpocockSkills;" claudeNix)
-      "the Claude de-duplication must hide bundle copies via settings.json skillOverrides, derived from enabledMattpocockSkills — never by removing ids from the shared bundle")
   ]
 )

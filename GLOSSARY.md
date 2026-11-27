@@ -72,6 +72,10 @@ A skill that is in this flake's bundle *and* declared by an enabled Claude Code 
 **Skill hygiene**:
 The drift checks over the curation lists: Tier 1 `unit-skill-hygiene` (hermetic — exclusion terms still name live upstream skills, no vendored fork shadows a promoted id, no `transform` returns to a mattpocock skill) and Tier 2 `just verify-skills` (live — every id advertised to Claude exactly once, every hidden id genuinely replaced by the plugin, every other agent still sees the full bundle). Deliberately not called a "health check": `martin.healthCheck` already owns that term for the macOS health report.
 
+**Skill bundle**:
+The skills this flake builds from pinned flake inputs and links into every picker dir through `programs.agent-skills`. The module in `modules/home/skill-bundle.nix` owns its source table and enable list. It publishes the ids as `martin.agentSurface.bundleSkills`. A bundle skill is distinct from a placed skill, which Skill placement links per audience, and from a plugin skill.
+_Avoid_: calling a placed skill or a plugin skill a bundle skill.
+
 **Skill placement**:
 The module in `modules/home/skill-placement.nix` that decides which host dirs link each skill. Callers declare `martin.agentSurface.skills.<id> = { source; audience; }`. The module returns the read-only `skillPlacement` record with the links, picker dirs, targets per id, and **Skill visibility**. Personal skills declare their audiences in `modules/home/skills/personal/placement.nix`.
 _Avoid_: manifest (the retired `manifest.json`).

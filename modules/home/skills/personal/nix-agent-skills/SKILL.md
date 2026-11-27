@@ -17,22 +17,16 @@ Procedure for adding, updating, and verifying agent skills across all AI agent t
    };
    ```
 
-2. Wire source and enable in `~/nix-config/modules/home/claude.nix`:
+2. Add one row to `sourceRows` in `~/nix-config/modules/home/skill-bundle.nix`. The row wires the source and enables its ids:
    ```nix
-   sources = {
-     <skill-name> = mkSource "<skill-name>" "." null;
-   };
-
-   skills = {
-     enable = enabledMattpocockSkills ++ [ "<skill-name>" ];
-   };
+   { name = "<skill-name>"; input = "<skill-name>"; subdir = "."; ids = [ "<skill-name>" ]; }
    ```
 
 3. Update lockfile and stage changes:
    ```bash
    cd ~/nix-config
    nix flake lock --update-input <skill-name>
-   git add flake.nix flake.lock modules/home/claude.nix
+   git add flake.nix flake.lock modules/home/skill-bundle.nix
    ```
 
 4. Build and activate Home Manager generation:
