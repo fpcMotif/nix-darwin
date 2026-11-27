@@ -95,7 +95,7 @@ On the Mac, `nix`, `nix-build`, and `nix-shell` are iets, a faster Rust Nix clie
 
 - **Commit intent**: Commands like `jj commit`, `git commit`, `push`, and `land` are VCS operations, not test requests. Execute them directly. Do not run full test suites or build targets (`just check`, `bun build`, `test`) unless explicitly requested. Run at most `hk check`. Chain deterministic VCS operations in one command (`jj pr ... --land` or compound `&&` pipelines) instead of calling one command per turn.
 - Detect a `.jj` workspace before the first version-control operation.
-- Use `jj` in a Jujutsu workspace and Git in a Git-only checkout.
+- Use `jj` in a Jujutsu workspace. Before a pull request in a Git-only checkout, colocate it with `jj git init --colocate`, as the `jj` skill describes. Local Git work without a pull request stays on Git.
 - When a skill or plugin names a Git or GitHub command in a Jujutsu workspace, run its JJ equivalent from the `jj` skill's "Skills written for Git" table. Keep Git and `gh` for what that table lists as not covered by JJ.
 - Read the diff before every commit. Use `type(scope): message`.
 - Run `jj diff --stat` before `jj squash`. Pass explicit paths (`jj squash PATH...`) when another session or editor can write to the working copy.

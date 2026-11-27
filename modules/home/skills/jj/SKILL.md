@@ -41,7 +41,8 @@ nix run .#martin.jj-pr -- <name> -m "type(scope): msg" -t "PR title" -F /path/to
 - **Dry-run plan**: `jj pr <name> -n` prints the base, commits, and diff without pushing.
 - **Update open PR**: `jj pr <name> -F FILE` (pass `-r @-` if new commits were added).
 - **PR body**: write the `-F` file with the `pr` skill. It owns the template (Summary, Evidence, Merge Danger).
-- **Stacked PRs**: give each layer its own bookmark and run `jj pr NAME -F BODY` per layer, bottom first. Each PR's base becomes the bookmark below it. Then run `gh stack link A B C` (bottom to top) to make the formal GitHub Stack. Restack with `jj rebase`, rerun `jj pr` per layer, then rerun `gh stack link`. Keep `gh stack init`, `add`, `submit`, `rebase`, and `sync` out of JJ workspaces, because they track Git branches. `--land` on a layer merges into the layer below, not trunk.
+- **Stacked PRs**: give each layer its own bookmark and run `jj pr NAME -F BODY` per layer, bottom first. Each PR's base becomes the bookmark below it. Then run `gh stack link <pr1> <pr2> <pr3>` (bottom to top) to link them into a GitHub Stack. Restack with `jj rebase`, rerun `jj pr` per layer, then rerun `gh stack link`. Keep `gh stack init`, `add`, `submit`, `rebase`, and `sync` out of JJ workspaces, because they track Git branches. `--land` on a layer merges into the layer below, not trunk.
+- **Git-only checkout**: run `jj git init --colocate` at the repository root before the first PR step, then use `jj pr`. A Git worktree (a `.git` file, not a directory) is the exception: open its PR with `git push` and `gh pr create`.
 - **Completion criterion**: `jj status` shows clean empty `@` on `trunk()`.
 
 ## Interactive hunk curation
