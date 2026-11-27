@@ -44,6 +44,15 @@ check deny  "node -e \"require('fs').writeFileSync('a','x')\""
 check deny  "sed -i '' 's/a/b/' file.ts"
 check deny  "sed -i.bak -e 's/a/b/' file.ts"
 check deny  "cat file | sed -i 's/a/b/' other"
+check deny  "perl -pi -e 's/a/b/' file.ts"
+check deny  "perl -0pi -e 's/a\\n/b/g' file.ts"
+check deny  "perl -i.bak -pe 's/a/b/' file.ts"
+check deny  "perl -p -i -e 's/a/b/' file.ts"
+check deny  "z /x && perl -0pi -e 's/a/b/g' f.ts && rg -n b f.ts"
+check deny  "ruby -pi -e 'gsub(/a/,\"b\")' file.rb"
+check allow "perl -ne 'print if /a/' file.ts"
+check allow "perl -v"
+check allow "rg -n 'perl -pi' modules/"
 check deny  $'cat > out.md <<\'EOF\'\nhello\nEOF'
 check deny  $'cat <<\'EOF\' > out.md\nhello\nEOF'
 check deny  $'cat <<EOF >> notes.md\nline\nEOF'
