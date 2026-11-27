@@ -198,7 +198,7 @@ in
         pbc = "pbcopy";
         pbp = "pbpaste";
         ip = "ipconfig getifaddr en0";
-        sync = "sudo darwin-rebuild switch --flake ~/nix-config";
+        sync = "nh darwin switch";
         claude-conductor = "\"$HOME/Library/Application Support/com.conductor.app/bin/claude\"";
       };
 

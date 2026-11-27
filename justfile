@@ -10,7 +10,7 @@
 # the libgit2 ownership error during darwin-rebuild evaluation.
 _no-sudo:
     @if [ "${EUID:-$(id -u)}" -eq 0 ]; then \
-        echo 'just: do not run me with sudo. Run `just switch` (no sudo); the recipe sudos darwin-rebuild itself.' >&2; \
+        echo 'just: do not run me with sudo. Run `just switch` (no sudo); nh asks for sudo only to activate.' >&2; \
         exit 1; \
     fi
 
@@ -109,11 +109,11 @@ _drift-hint:
 # Build (no activate) the darwin system from the working tree. Use this
 # to dry-run a change before committing to a switch.
 build: _no-sudo _daemon _no-conflicts
-    @darwin-rebuild build --flake . || { just _drift-hint; exit 1; }
+    @nh darwin build . --diff always || { just _drift-hint; exit 1; }
 
 # Activate the working-tree configuration (system + home-manager).
 switch: _no-sudo _daemon _no-conflicts _unlanded
-    @sudo darwin-rebuild switch --flake . || { just _drift-hint; exit 1; }
+    @nh darwin switch . || { just _drift-hint; exit 1; }
 
 _unlanded rev="@" base="main@origin":
     @jj log --no-graph -r '::{{rev}} ~ ::{{base}} ~ empty()' -T 'commit_id.short() ++ " " ++ description.first_line() ++ "\n"' 2>/dev/null \
@@ -135,7 +135,7 @@ sync: _no-sudo
 # Bump every flake input to its latest revision, then activate.
 update-and-switch: _no-sudo _daemon
     nix flake update
-    sudo darwin-rebuild switch --flake .
+    nh darwin switch .
 
 # Run every scripts/update-*.sh updater, then activate. This is what the
 # nightly auto-update GitHub workflow does, but on-demand. Forces the full
@@ -144,7 +144,7 @@ update-and-switch: _no-sudo _daemon
 # own shell, so a separate `export` line would never reach the updaters.
 bump-and-switch: _no-sudo _daemon
     AU_FORCE_FULL_BUMP=1 bash scripts/lib/auto-update.sh run-updaters
-    sudo darwin-rebuild switch --flake .
+    nh darwin switch .
 
 # Show drift between binaries currently on PATH and the versions pinned
 # in the flake. Useful when a CLI prints "newer version available".

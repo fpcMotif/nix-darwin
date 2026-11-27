@@ -31,6 +31,9 @@ let
     jq
     gh
     just
+    nh
+    dix
+    rom
     # Omit nixpkgs bun here because martin.bun-canary-bin provides bin/bun on
     # Darwin. _26 is the floor; see scripts/update-flake-inputs.sh.
     nodejs-slim_26
