@@ -100,6 +100,7 @@ resolve_dir() {
   esac
   (cd "$path" 2>/dev/null && pwd -P)
 }
+JJ_PR_ROUTE="shell-guard: this is a jj workspace, and PRs go through jj pr so the bookmark, push, and PR stay in step. Open or update: 'jj pr NAME -m MSG -F BODY' (write BODY with the pr skill). Land: add '--land', or '--land --wait' to gate on CI. Stack: 'jj pr' per layer, then 'gh stack link A B C'. Reading PRs (gh pr view, gh pr checks, better-github-skill scripts) stays allowed. The jj skill has the rest."
 in_jj_workspace() {
   local dir=$1
   while [ -n "$dir" ] && [ "$dir" != / ]; do [ -d "$dir/.jj" ] && return 0; [ -e "$dir/.git" ] && return 1; dir=${dir%/*}; done
@@ -182,6 +183,27 @@ while IFS= read -r seg; do
           in_jj_workspace "$git_dir" && deny "shell-guard: '$git_dir' is a jj workspace, and 'git ${words[$i]}' desyncs jj's working copy. Use jj: add -> nothing (jj tracks every file); commit -> 'jj commit -m MSG'; checkout/switch -> 'jj new REV' or 'jj edit REV'; stash -> 'jj new @-'; reset/restore -> 'jj restore'; rebase -> 'jj rebase'; merge -> 'jj new A B'; pull -> 'jj git fetch'. Read-only git (log, show, diff, blame) stays allowed. The jj skill has the rest." ;;
         worktree)
           [ "${words[$((i + 1))]:-}" = add ] && in_jj_workspace "$git_dir" && deny "shell-guard: '$git_dir' is a jj workspace, and a Git worktree is a checkout jj does not track. Run 'jj workspace add --name NAME -r REV ../REPO.NAME'. Bring a checkout's commits back under @ with 'agent-checkout land NAME'." ;;
+        push)
+          in_jj_workspace "$git_dir" && deny "$JJ_PR_ROUTE" ;;
+      esac ;;
+    gh)
+      i=1
+      while [ "$i" -lt "${#words[@]}" ]; do
+        case "${words[$i]}" in
+          -R|--repo) i=$((i + 2)) ;;
+          -*) i=$((i + 1)) ;;
+          *) break ;;
+        esac
+      done
+      gh_cmd="${words[$i]:-} ${words[$((i + 1))]:-}"
+      case $gh_cmd in
+        'pr create'|'pr merge'|'stack init'|'stack add'|'stack submit'|'stack rebase'|'stack sync'|'stack push')
+          in_jj_workspace "$WORK_DIR" && deny "$JJ_PR_ROUTE" ;;
+        'pr edit')
+          case " ${words[*]} " in
+            *' --body '*|*' --body-file '*|*' -b '*|*' -F '*|*' --title '*|*' -t '*|*' --base '*|*' -B '*)
+              in_jj_workspace "$WORK_DIR" && deny "$JJ_PR_ROUTE" ;;
+          esac ;;
       esac ;;
   esac
 done <<EOF
