@@ -2,6 +2,7 @@ ctx:
 
 let
   inherit (ctx) helpers lib darwinConfig darwinHome user guideCatalog;
+  inherit (import ../../../modules/home/claude/skill-curation.nix) handInstalledPluginSkillIds;
 in
 [
   (helpers.assertTest "darwin-doc-lock-adapters"
@@ -95,7 +96,7 @@ in
         skillResolves = harness: id:
           if harness == null then builtins.elem id (placement.idsByHost.agents or [ ])
           else (placement.visibility.${harness}.${id} or "absent") == "on"
-            || (harness == "claude" && builtins.elem id manifest.pluginProvided);
+            || (harness == "claude" && builtins.elem id (manifest.pluginProvided ++ handInstalledPluginSkillIds));
         failures = lib.concatLists (lib.mapAttrsToList
           (name: harness:
             let
