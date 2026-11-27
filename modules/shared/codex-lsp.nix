@@ -77,6 +77,7 @@ let
       args = [ ];
       extensions = { ".swift" = "swift"; };
       targets = [ "claude" "codex" ];
+      darwinOnly = true;
     };
     pyright = {
       package = "basedpyright";
@@ -199,8 +200,11 @@ let
 
   packagesForTargets = targets:
     assert pkgs != null;
+    let
+      onThisPlatform = s: !(s.darwinOnly or false) || pkgs.stdenv.hostPlatform.isDarwin;
+    in
     lib.unique (lib.concatMap
-      (s: lib.optional (s.package != null && lib.any (t: builtins.elem t s.targets) targets) pkgs.${s.package})
+      (s: lib.optional (s.package != null && onThisPlatform s && lib.any (t: builtins.elem t s.targets) targets) pkgs.${s.package})
       (lib.attrValues servers));
 in
 assert lib.all

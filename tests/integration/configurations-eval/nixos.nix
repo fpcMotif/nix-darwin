@@ -44,4 +44,11 @@ in
       && !(hasPackage "zed-nightly-bin" vmHome.home.packages)
     )
     "Linux Home Manager package lists must never include the Darwin-only zed-nightly-bin")
+
+  (helpers.assertTest "linux-excludes-sourcekit-lsp-package"
+    (
+      !(hasPackage "sourcekit-lsp" x230Home.home.packages)
+      && !(hasPackage "sourcekit-lsp" vmHome.home.packages)
+    )
+    "Linux Home Manager package lists must not include sourcekit-lsp, whose swiftc is broken on Linux")
 ]
