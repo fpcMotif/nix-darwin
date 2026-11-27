@@ -59,6 +59,10 @@ uses_in_place_sed() {
   printf '%s' "$CMD_WITHOUT_HEREDOCS" | grep -Eq '(^|[;&|(`[:space:]])sed[[:space:]]+(-[a-zA-Z]*i|--in-place)'
 }
 
+uses_in_place_script() {
+  command_segments blank-quoted | grep -Eq '^(perl|ruby)([[:space:]]+-[^[:space:]]*)*[[:space:]]+-[0-9a-zA-Z]*i'
+}
+
 heredoc_writes_file() {
   printf '%s' "$CMD" | grep -Eq '<<' \
     && command_segments blank-quoted | grep -E '^(cat|tee)([[:space:]]|$)' | grep -E '<<' \
@@ -78,6 +82,9 @@ if [ -z "${EDIT_GUARD_OFF:-}" ]; then
   fi
   if uses_in_place_sed; then
     deny "shell-guard: in-place sed is denied (16-38% error rate in your transcripts). Use the Edit tool: old_string -> new_string, replace_all: true for every occurrence."
+  fi
+  if uses_in_place_script; then
+    deny "shell-guard: in-place perl or ruby is denied. It exits 0 when the pattern matches nothing, so a missed edit looks done. Use the Edit tool: old_string -> new_string, replace_all: true for every occurrence. A rule across files: 'sg -p PAT -r REPL --lang X DIR' then -U."
   fi
   if heredoc_writes_file; then
     deny "shell-guard: create the file with the Write tool (content lands verbatim, no heredoc quoting). Change lines with the Edit tool. A heredoc redirected into a file is denied."
