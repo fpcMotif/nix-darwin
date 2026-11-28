@@ -30,7 +30,6 @@
     ];
   };
 
-  # When fzf is enabled, enhance zsh completion with fzf-tab
   programs.zsh.initContent = lib.mkAfter ''
     if (( $+functions[compdef] )) && [[ -r "${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh" ]]; then
       source "${pkgs.zsh-fzf-tab}/share/fzf-tab/fzf-tab.plugin.zsh"

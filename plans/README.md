@@ -8,6 +8,7 @@ starting, honor its STOP conditions, and update your row when done.
 |---|---|---|---|---|
 | 1 | 2026-11-10 | `e0b6770` | Standard depth, whole repository | Quick selection: confirmed findings in correctness, security, and verification, each with a small fix. Plans 001-003. |
 | 2 | 2026-11-17 | `534fc39` | Standard depth, focus on bad code and structure | The maintainer chose all 16 findings. Plans 004-019. |
+| 3 | 2026-11-27 | `5442cca` | Standard depth, structure only | The maintainer chose all 13 findings. Plans 020-031. Two findings merged into plan 031, see "Run 3 notes". |
 
 ## Execution order & status
 
@@ -32,6 +33,18 @@ starting, honor its STOP conditions, and update your row when done.
 | [017](017-split-claude-nix-permissions-and-mcp.md) | `claude.nix` sheds its permission lists, MCP registration, and Antigravity workflows | P2 | M | 012, 014 | [#452](https://github.com/fpcMotif/nix-darwin/issues/452) | TODO |
 | [018](018-codex-defaults-file-holds-only-defaults.md) | The Codex defaults file holds defaults, not one machine's runtime state | P2 | M | — | [#453](https://github.com/fpcMotif/nix-darwin/issues/453) | TODO |
 | [019](019-pin-data-pilot-on-hk-bin.md) | Pilot: `hk-bin` keeps its pins in a data file the updater rewrites with `jq` | P3 | M | 004, 006, 007 | [#454](https://github.com/fpcMotif/nix-darwin/issues/454) | TODO |
+| [020](020-delete-the-home-nix-shim-that-cannot-evaluate.md) | Delete the `home.nix` shim that cannot evaluate | P2 | S | — | [#479](https://github.com/fpcMotif/nix-darwin/issues/479) | TODO |
+| [021](021-remove-four-root-leftovers.md) | Remove four root leftovers | P3 | S | — | [#480](https://github.com/fpcMotif/nix-darwin/issues/480) | TODO |
+| [022](022-drop-the-intel-mac-pins-no-output-evaluates.md) | Drop the Intel Mac pins that no flake output evaluates | P3 | S | — | [#481](https://github.com/fpcMotif/nix-darwin/issues/481) | TODO |
+| [023](023-fix-two-one-line-module-defects.md) | Remove Homebrew from the config, and derive the Crush model labels | P3 | S | — | [#482](https://github.com/fpcMotif/nix-darwin/issues/482) | TODO |
+| [024](024-repo-tools-keep-their-sources-in-tools.md) | Tools this repo writes keep their sources in `tools/<name>/` | P2 | M | — | [#483](https://github.com/fpcMotif/nix-darwin/issues/483) | TODO |
+| [025](025-multi-file-home-features-are-directories.md) | A Home Manager feature with several files is a directory | P2 | M | 024 | [#484](https://github.com/fpcMotif/nix-darwin/issues/484) | TODO |
+| [026](026-mcp-scaffold-and-npm-shims-live-under-their-own-names.md) | The MCP scaffold and the npm shims live in files named for them | P3 | S | 017 | [#485](https://github.com/fpcMotif/nix-darwin/issues/485) | TODO |
+| [027](027-claude-eval-research-leaves-the-module-tree.md) | The Claude eval research scripts leave the Home Manager module tree | P3 | S | — | [#486](https://github.com/fpcMotif/nix-darwin/issues/486) | TODO |
+| [028](028-pi-omp-toggle-gates-the-config-it-names.md) | The Pi and OMP toggle gates the config it names | P3 | M | — (approved 2026-11-27) | [#487](https://github.com/fpcMotif/nix-darwin/issues/487) | TODO |
+| [029](029-check-prefixes-say-whether-a-check-reads-a-host.md) | A check's prefix says whether it reads a real host, and the registry holds no test bodies | P3 | M | — | [#488](https://github.com/fpcMotif/nix-darwin/issues/488) | TODO |
+| [030](030-every-updater-is-named-after-its-package-file.md) | Every updater script is named after its package file, and a test keeps it so | P3 | M | after 019 | [#489](https://github.com/fpcMotif/nix-darwin/issues/489) | TODO |
+| [031](031-maintained-docs-name-real-paths.md) | Maintained docs name paths that exist, and a check keeps it so | P2 | M | after 024, 025, 029, 030 | [#490](https://github.com/fpcMotif/nix-darwin/issues/490) | TODO |
 
 Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJECTED (with one-line rationale)
 
@@ -43,7 +56,54 @@ Status values: TODO | IN PROGRESS | DONE | BLOCKED (with one-line reason) | REJE
 4. Structure, in this order: 013, 014, 015, 017.
 5. Pilot last: 019.
 
+Run 3, after the list above:
+
+6. Small removals and fixes, in any order: 020, 021, 022, 023, 027.
+7. Moves, in this order: 024, 025, then 026 once 017 is DONE.
+8. Tests and naming: 029, then 030 once 019 is DONE.
+9. A behaviour change the maintainer approved on 2026-11-27: 028.
+10. Docs last: 031.
+
+## Run 3 notes
+
+- Plans 001, 002, 003, 016, 017, 018, and 019 were re-read against the code
+  on 2026-11-27. Each is still TODO. Plans 014 and 015 are DONE in the code.
+- While the run 3 plans were written, another session deleted
+  `ARCHITECTURE.md` and `HOTKEYS.md` in the working tree and rewrote
+  `PANIC.md`, `AGENTS.md`, and other docs. None of it was committed. Plan 032
+  was to repair the `ARCHITECTURE.md` trees and guard them. It was not
+  written, because its subject is being removed. Its two lasting parts moved
+  into plan 031: a check for paths named in docs, and the layout rules, now
+  written into `AGENTS.md`.
+- The maintainer confirmed on 2026-11-27 that `ARCHITECTURE.md` stays
+  deleted. No plan 032 will be written. Until the deletion is committed, a
+  checkout from `HEAD` still holds the file, and plan 031 then skips its
+  Step 6 and reports. Commit the deletion before running plan 031.
+- The working tree also held uncommitted edits under `tools/skill-router/`,
+  `modules/home/agent-instructions/`, and `modules/home/claude/`. Executors
+  leave them alone.
+
 ## Dependency notes
+
+Run 3:
+
+- 024 before 025. Plan 025 assumes `modules/home/jj-pr/` is gone.
+- 017 before 026. Both edit how `claude.nix` registers MCP servers.
+- 019 before 030. Plan 019 edits `scripts/update-hk.sh`, which 030 renames.
+- 031 last. Its new check fails on a doc that names a moved file. If 031
+  lands earlier, each later move must fix the doc path the check names.
+- 021, 025, and 028 each touch the agent-instructions module. Land them one
+  at a time.
+- 024, 025, and 026 each edit the import list in `modules/home/default.nix`.
+- 021, 024, 028, 029, 030, and 031 each edit `tests/default.nix`. 029, 030,
+  and 031 also edit the table in `tests/README.md`. Find entries by name.
+- 028 changes what a toggle installs. It states the change under "Behaviour
+  change to accept". The maintainer agreed on 2026-11-27.
+- Plans 020, 021, 027, 029, 030, and 031 edit Markdown or move it, so they
+  need docs work open for the `doc-lock` hook. Plans 024, 025, 026, and 029
+  move comments with their code, which the hook allows.
+
+Runs 1 and 2:
 
 - 001, 002, and 003 touch disjoint files and can run in any order or in parallel.
 - 002 and 003 each append to a different test script under `tests/unit/`.
@@ -92,6 +152,10 @@ issue. None has an executor plan yet.
 Plans 004-019, except the rejected 011, were raised as issues #440 to #454 on
 2026-11-18. Each issue links its picture explainer at the foot.
 
+Plans 020-031 were raised as issues #479 to #490 on 2026-11-27, each with its
+picture explainer at the foot. All carry `ready-for-agent`. The maintainer
+accepted the behaviour change in #487 (plan 028) on 2026-11-27.
+
 ## Maintainer decisions, not defects
 
 Run 2 surfaced these. Each is a choice with a cost, not a bug.
@@ -103,6 +167,22 @@ Run 2 surfaced these. Each is a choice with a cost, not a bug.
 - Each agent harness (Claude, Codex, pi, omp, Antigravity, Crush, Factory,
   OpenCode) is wired in several modules. A single harness table would shrink
   that, at the price of a large refactor.
+
+Run 3 surfaced these.
+
+- `templates/effect-skills`, `templates/lsp-overrides`, and `templates/mcp`
+  are not registered as flake templates. Only `dev-shell` is. Register them
+  or say in each README that they are copied by hand.
+- Two test files under `modules/home/claude/mods/` import
+  `claude-code/testing`, and no check, recipe, or hook runs them. Wire them
+  into a check or document that they are hand-run.
+- `docs/superpowers/specs/` holds design specs for a Drafts integration whose
+  files are not in the repo. Keep them as history or delete them.
+- Nine prebuilt packages carry a `-bin` suffix and about ten do not. A single
+  rule would rename package files and overlay attributes.
+- On Linux the npm shims in `modules/home/cursor.nix` call Bun, and the Linux
+  hosts do not install the canary Bun. Plan 026 moves the shims unchanged.
+- `tools/agent-trace` builds as a package and no module installs it.
 
 ## Findings considered and rejected
 
@@ -129,7 +209,19 @@ Run 2:
 - Splitting all of `claude.nix` at once: rejected in favor of plan 017's three self-contained moves. No test reads the file as text now, so a wider split is no longer blocked.
 - Moving every prebuilt package to JSON pins at once: rejected in favor of the plan 019 pilot, because JSON pins change what the merge driver must parse.
 
+Run 3:
+
+- A gap in ADR numbers at 0018: by design. A deleted ADR's number is never reused.
+- One shared table for the Ghostty key chords in `ghostty.nix` and `skhd.nix`: the skhd helpers are parked code the maintainer keeps (plan 011).
+- One shared helper for every prebuilt-binary package: wait for the plan 019 pilot, as run 2 decided.
+- One shared helper for the activation scripts: not verified against the code. Issue #432 already covers the app-bundle part.
+- Moving skill registration out of `claude.nix`: deferred behind plan 017, because `tests/unit/skill-hygiene-test.nix` reads the file as text.
+
 ## Not audited
+
+Run 3 looked at structure only: file layout, naming, module boundaries, and
+docs that describe them. It ran no correctness, security, performance, or
+dependency audit.
 
 - `modules/shared/codex-lsp.nix`, `pkgs/iets`
 - The source bodies under `tools/agent-trace` (plan 010 only checks that the Go version builds)

@@ -13,8 +13,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   };
 
   # Flat tarball (bin/nub, bin/nubx, runtime/); stay at the extraction root
-  # and let installPhase locate the binaries so this is robust to layout
-  # changes upstream.
+  # so installPhase locates the binaries across upstream layout changes.
   sourceRoot = ".";
 
   # Stripping would rewrite the Mach-O and break nub's code signature, so

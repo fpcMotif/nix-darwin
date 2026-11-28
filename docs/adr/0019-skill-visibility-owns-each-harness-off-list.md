@@ -2,25 +2,17 @@
 
 Status: accepted
 
-Skill placement (`modules/home/skill-placement.nix`) also answers **Skill visibility**: for each harness and skill, `skillPlacement.visibility.<harness>.<id>` is `on`, `off`, or `absent`. Each harness's off list is an input to that module. The settings that turn skills off are generated from its output:
-
-- Claude Code: `claude.nix` sets `skillsOff.claude` from the curation lists. `skillOverrides: "off"` and the `claudeHidden` manifest field read `skillPlacement.offIds.claude`.
-- Codex: `agent-instructions.nix` sets `skillsOff.codex`. `modules/darwin/codex.nix` writes one `[[skills.config]]` entry for each `skillPlacement.offLinks.codex` path into `/etc/codex/config.toml`. This follows the `codexRequirements` precedent: the system module reads a Home Manager option.
-
-Before this, Claude and Codex each turned off skills that placement had just installed. The two lists did not consult placement. The Codex list named `migrate-to-shoehorn`, which nothing installs, and turned off `qa` only in `~/.agents/skills` while `~/.codex/skills` held a second copy.
-
-## Rules
-
-- A harness reads a fixed set of skill hosts (`harnessReads`). A folder not confirmed for a harness counts as not read, so its skills are `absent` there. Confirmed: Codex reads `.codex/skills` and `.agents/skills`, Droid reads `.factory/skills` and `.agents/skills`, omp reads its two `.omp/agent` folders and `.agents/skills` (its loader names "user home" `.agents/skills`), and Antigravity and agy read `.gemini/config/skills`.
-- `integration-configurations-eval` also fails when a guide points at something its reader cannot reach. It reads each host's guides from the guide catalog (ADR-0020), with the extras that the startup guide links. A skill pointer is written as `` `id` skill `` and resolves when its harness has the skill `on`, or when a Claude plugin supplies it. The shared `~/AGENTS.md` guide resolves against `~/.agents/skills`. A file pointer is a `~/` path that Home Manager installs or that the user owns (`~/devv`, `~/nix-config`, `~/.codex/config.toml`). Guides use `~/`, never `/Users/`.
-- Bundle skills are recorded, not linked: `bundleSkills` lists the ids and the audience that the `agent-skills` input links them into.
-- A skill that another tool installs, such as `review` from `~/.skillshub`, is declared per skill host in `foreignSkills`, so a harness can still turn it off.
-- Claude Code plugin skills and **Parked skills** stay outside the module. Only Claude has plugins.
-- `integration-configurations-eval` fails when an off id is not installed in a folder its harness reads. This catches dead entries like `migrate-to-shoehorn`.
+Claude Code and Codex previously kept separate hand-written "off" lists that did not consult `modules/home/skill-placement.nix`. Those lists accumulated dead entries (`migrate-to-shoehorn`) and partial hides (`qa` disabled in `~/.agents/skills` while still active in `~/.codex/skills`). We extended `skill-placement.nix` to compute **Skill visibility** (`skillPlacement.visibility.<harness>.<id>` = `on | off | absent`) from `harnessReads`, placed skills, `bundleSkills`, `foreignSkills`, and `skillsOff`. Claude's `skillOverrides: "off"` and Codex's `/etc/codex/config.toml` `[[skills.config]]` off entries now generate directly from that output.
 
 ## Considered options
 
-- **A separate visibility module that reads placement.** Rejected. It would need placement's host and harness tables, and the deletion test showed the two halves describe one concept.
-- **Keep per-harness off lists in each harness's own config.** Rejected. That is the drift this record removes.
-- **Merge the curation lists into one per-skill status table.** Rejected by ADR-0009 and not reopened here. The lists in `skill-curation.nix` stay as written. Only their reader changed.
-- **Change the audience of `qa` and `request-refactor-plan` instead of turning them off in Codex.** Rejected. Codex shares `~/.agents/skills` with Droid, pi, and others, so an audience change would remove the skills from those harnesses too.
+- **Create a separate visibility module that imports `skill-placement.nix`.** Rejected: it needed the exact same host and harness tables, which showed placement and visibility belong in one module.
+- **Keep hand-maintained off lists inside `claude.nix` and `codex.nix`.** Rejected: allowed dead skill IDs and unhidden mirror paths to drift silently.
+- **Change the `Skill audience` of `qa` and `request-refactor-plan` instead of turning them off in Codex.** Rejected: Codex shares `~/.agents/skills` with Droid, Pi, and Antigravity, so dropping them from `~/.agents/skills` strips them from those harnesses too.
+- **Compute visibility inside `skill-placement.nix` and enforce guide pointer resolution in `integration-configurations-eval` (chosen).** Fails the build if an `off` skill is absent from the harness's directories or if a guide references an `off` or `absent` skill.
+
+## Consequences and trade-offs
+
+- Adding a new skill host directory or agent harness requires updating `harnessReads` in `modules/home/skill-placement.nix` so visibility checks stay accurate.
+- Claude Code plugin skills and **Parked skills** remain outside `skillPlacement.visibility` because only Claude Code has a plugin cache.
+- **Reversal trigger:** If every harness reads only its own dedicated skill directory instead of sharing `~/.agents/skills`, replace `skillsOff` with `Skill audience` lists.

@@ -1,4 +1,4 @@
-# CLAUDE.md — Claude adapter
+# CLAUDE.md (Claude adapter)
 
 ## Claude
 

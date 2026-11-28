@@ -156,7 +156,7 @@ while IFS= read -r seg; do
     cd)
       [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: use 'z DIR && CMD' instead of cd. DIR is a path or a zoxide name. A tool's own directory flag also works: 'git -C DIR', 'make -C DIR', 'rg PAT DIR'." ;;
     cp)
-      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: cp is denied. Use 'fcp SRC DST' or 'fcp SRC... DIR'. fcp takes no flags: it copies directories recursively and keeps file modes, so drop -r, -R, -p, and -a." ;;
+      [ -z "${TOOL_GUARD_OFF:-}" ] && deny "shell-guard: cp is denied. Use 'fcp SRC DST' or 'fcp SRC... DIR'. fcp takes no flags: it copies directories recursively and keeps file modes, so drop -r, -R, -p, and -a. A read-only source such as /nix/store gives read-only directories, so fcp fails inside them. Copy that tree with 'tar -C SRC -cf - . | tar -C DST -xf -', then 'chmod -R u+w DST'." ;;
     cat|bat)
       [ -z "${TOOL_GUARD_OFF:-}" ] && read_too_long "$seg" \
         && deny "shell-guard: $long_file has $long_lines lines, and a whole-file read was 19% of Bash output in past sessions. Read a span: 'bat -pp -r A:B $long_file', or the Read tool with offset and limit. Find the span first with 'rg -n PAT $long_file'. A pipe ('cat FILE | head') or a file of 300 lines or fewer is allowed." ;;

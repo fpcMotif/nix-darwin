@@ -1,4 +1,4 @@
-# Development routing — OMP adapter
+# Development routing (OMP adapter)
 
 ## OMP tools
 

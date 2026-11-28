@@ -2,16 +2,17 @@
 
 Status: accepted
 
-The `gemini-cli-preview` derivation (a fresh `buildNpmPackage` tracking the `@google/gemini-cli` `@preview` dist-tag) repeatedly broke `darwin-rebuild`: whenever the preview channel moved, its `fetchFromGitHub` source hash went stale and the fixed-output derivation failed, which wedged the *entire* system rebuild rather than just that one tool. We removed it in full — along with every other Gemini surface in the config (the Zed favorite model `gemini-3.1-pro-preview`, the `GEMINI_*`/`GOOGLE_API_KEY` env entries, the `⌃⌥⇧g` app-launcher hotkey, and the `gy` shell alias) — and deleted its updater so the nightly auto-update no longer tracks it.
+The vendored `gemini-cli-preview` derivation tracked the moving `@google/gemini-cli` `@preview` npm tag. Every upstream preview release invalidated its `fetchFromGitHub` hash and blocked `darwin-rebuild`. We removed the derivation, its nightly updater, and all Gemini configuration surfaces. Those surfaces covered the Zed favorite model, `GEMINI_*` and `GOOGLE_API_KEY` variables, `⌃⌥⇧g`, and `gy`.
 
 ## Considered options
 
-- **Keep chasing hashes** — refresh `src` + `npmDepsHash` on every preview bump. Rejected: the preview channel moves fast and every stale hash blocks the whole rebuild.
-- **Pin a stable tag, stop auto-updating** — keeps a working CLI but defeats the point of tracking `@preview`, and still rots over time.
-- **Re-route through `bunx @google/gemini-cli`** — a runtime fetch that can never touch the build path. Viable, but the user chose to drop Gemini entirely rather than keep any surface.
+- **Keep refreshing `src` and `npmDepsHash` on every preview bump.** Rejected: the preview channel moves too fast, and any stale hash blocks the rebuild.
+- **Pin a static version and stop auto-updating.** Rejected: a frozen preview CLI drifts behind upstream API changes and still needs maintenance.
+- **Run `@google/gemini-cli` at command time through `bunx`.** Rejected: keeps Gemini off the build path, but the operator dropped Gemini across the profile.
+- **Remove all Gemini derivations and configuration surfaces (chosen).** Eliminates a recurring rebuild failure on an unused tool.
 
-## Consequences
+## Consequences and trade-offs
 
-- The global `~/.claude/CLAUDE.md` workflow (`gemini -y -p`) and the `/deep-research` skill that depend on a `gemini` binary no longer have one on this machine; those live outside this repo and must be adjusted there.
-- `⌃⌥⇧g` is now an unbound hotkey, free for reuse.
-- Gemini models are no longer reachable from Zed/agents (the API surface was removed too). Re-adding any Gemini surface is a deliberate new decision, not a regression fix — see GLOSSARY.md "Flagged ambiguities".
+- External scripts outside this repo that call a `gemini` binary fail until updated.
+- Zed and local CLI agents no longer receive Gemini API keys or model slots from this flake.
+- **Reversal trigger:** If Gemini returns to daily use, expose it via API-only access or a command-time `bunx` wrapper off the rebuild path.

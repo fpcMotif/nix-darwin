@@ -1,4 +1,4 @@
-# Development routing — Codex adapter
+# Development routing (Codex adapter)
 
 Use the relevant section for tool selection, navigation, project environments, or version-control conventions.
 

@@ -2,20 +2,16 @@
 
 Status: accepted
 
-Each MCP server enabled on the global Claude Code surface costs context on every turn. Its tool schemas stay discoverable in every session. The exa code-context server helps only in repos where dependency and code-context lookups matter. Elsewhere it is noise.
-
-So Claude Code does not register exa globally. A project opts in with a standalone `.mcp.json` copied from `templates/mcp/code-context.mcp.json`. The entry is a plain HTTP endpoint, so the template depends on no plugin. exa reads `EXA_API_KEY` through `${EXA_API_KEY}` expansion.
-
-This covers the local Claude Code surface, CLI and Desktop. claude.ai connectors are account-side, and this repo does not manage them.
+Every MCP server on the global Claude Code surface loads its tool schemas into every session. The `exa` code-context server helps only in repositories that need external dependency and code-context lookups. We keep `exa` off the global Claude Code config and ship a per-project template at `templates/mcp/code-context.mcp.json`. That template uses direct HTTP and `${EXA_API_KEY}` expansion.
 
 ## Considered options
 
-- **Register exa globally**, as a user-scope MCP server or through a plugin. Rejected: every repo pays its context cost to serve a few.
-- **Get exa from the `code-context` plugin**, which bundled it with other servers. Rejected: enabling a plugin is all-or-nothing, so it also loads the other servers and the plugin's skills, agents, and commands. Editing its cached `.mcp.json` to drop servers reverts on every plugin update. The plugin is uninstalled.
-- **A per-project `.mcp.json` from a template** (chosen): no global cost, and no dependency on a plugin.
+- **Register `exa` globally in user-scope Claude settings.** Rejected: every repository pays the per-turn context token cost to serve a few codebases.
+- **Install `exa` via the upstream `code-context` Claude plugin.** Rejected: Claude plugins enable all bundled servers and skills together, and plugin updates overwrite cached edits.
+- **Opt in per repository with a standalone `.mcp.json` template (chosen).** Costs zero global context and needs no plugin.
 
-## Consequences
+## Consequences and trade-offs
 
-- A repo that wants exa copies the template, then approves the server or lists it under `enabledMcpjsonServers` in its `.claude/settings.json`.
-- exa depends on `EXA_API_KEY` in the environment.
-- To keep a plugin that bundles MCP servers installed but off the global surface, add its id to `disabledClaudePlugins` in `modules/home/claude.nix`. The settings reconciler then sets its `enabledPlugins` flag to `false` on every switch.
+- Adopting `exa` in a repository requires copying `templates/mcp/code-context.mcp.json` to `.mcp.json`. The user must export `EXA_API_KEY` and approve the server once.
+- Template edits do not propagate automatically to repositories that already copied the file.
+- **Reversal trigger:** If Claude Code adds lazy on-demand MCP schema loading with zero idle token cost, revisit global registration.

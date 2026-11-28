@@ -1,6 +1,6 @@
-# Claude Code Session Transcript Schema (contract for the agent-trace implementation)
+# Claude Code session transcript schema (contract for the agent-trace implementation)
 
-Source: `~/.claude/projects/<project-slug>/<session-uuid>.jsonl` — one JSON record per line. Tolerate malformed lines (skip, count them). Project slug = cwd path with `/` → `-`.
+Source: `~/.claude/projects/<project-slug>/<session-uuid>.jsonl`, with one JSON record per line. Tolerate malformed lines (skip and count them). Project slug = cwd path with `/` replaced by `-`.
 
 ## Record envelope (all types)
 `type`, `uuid`, `parentUuid` (links to previous record, forms the conversation DAG), `sessionId`, `timestamp` (ISO8601), `cwd`, `gitBranch`, `version`, `userType`, `entrypoint`, `isSidechain` (true = subagent/Task transcript).
@@ -13,7 +13,7 @@ Source: `~/.claude/projects/<project-slug>/<session-uuid>.jsonl` — one JSON re
 - `message`: `{ id, model, role, content: [...], stop_reason, stop_sequence, stop_details, usage, ... }`
 - `message.model`: e.g. `claude-sonnet-5`, may be `<synthetic>`.
 - `message.content[]` block types: `text`, `thinking`, `tool_use` (`{id, name, input}`).
-- `message.usage`: `{ input_tokens, output_tokens, cache_creation_input_tokens, cache_read_input_tokens, service_tier, speed, ... }` — treat all as optional integers.
+- `message.usage`: `{ input_tokens, output_tokens, cache_creation_input_tokens, cache_read_input_tokens, service_tier, speed, ... }` (treat all as optional integers).
 
 ## `user`
 - Optional: `isMeta`, `permissionMode`, `promptSource`, `promptId`, `toolUseResult`, `sourceToolAssistantUUID`, `classifierMetaLines`.
@@ -21,7 +21,7 @@ Source: `~/.claude/projects/<project-slug>/<session-uuid>.jsonl` — one JSON re
 - Human prompts = records where content is a string and `isMeta != true`.
 
 ## `queue-operation`
-`{operation: "enqueue"|"dequeue", content?, timestamp, sessionId}` — `enqueue.content` holds the raw queued user prompt text.
+`{operation: "enqueue"|"dequeue", content?, timestamp, sessionId}` where `enqueue.content` holds the raw queued user prompt text.
 
 ## Error signals
 - `assistant.isApiErrorMessage == true` / `apiErrorStatus` / `error`
@@ -35,7 +35,7 @@ Source: `~/.claude/projects/<project-slug>/<session-uuid>.jsonl` — one JSON re
 agent-trace [--root PATH] [--format json|table] <command>
 ```
 - `--root` default: `~/.claude/projects`
-- `stats` — aggregate over all transcripts: sessions, records by type, tool_use histogram, models, token totals (input/output/cache-read/cache-creation), API error count, per-project breakdown.
-- `prompts` — first human prompt per session (queue-operation enqueue content, else first non-meta user string), with timestamp, project, sessionId. Flags: `--grep PAT`, `--min-len N`.
-- `flow <session.jsonl>` — render uuid/parentUuid tree: indent by depth, mark sidechains, tool_use names, errors.
+- `stats`: aggregate over all transcripts: sessions, records by type, tool_use histogram, models, token totals (input/output/cache-read/cache-creation), API error count, per-project breakdown.
+- `prompts`: first human prompt per session (queue-operation enqueue content, else first non-meta user string), with timestamp, project, sessionId. Flags: `--grep PAT`, `--min-len N`.
+- `flow <session.jsonl>`: render uuid/parentUuid tree: indent by depth, mark sidechains, tool_use names, errors.
 - Streaming line-by-line parse. Never load a whole file into memory as one blob.

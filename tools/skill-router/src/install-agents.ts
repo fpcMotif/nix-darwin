@@ -2,10 +2,12 @@ import { join } from "node:path";
 import { buildCatalog } from "./catalog.ts";
 import type { RouterContext } from "./types.ts";
 
-const MARKER_START = "<!-- skill-router:available_skills:start -->";
-const MARKER_END = "<!-- skill-router:available_skills:end -->";
-const INTENT_START = "<!-- intent-skills:start -->";
-const INTENT_END = "<!-- intent-skills:end -->";
+const COMPACT_START = "<!-- skill-router:compact:start -->";
+const COMPACT_END = "<!-- skill-router:compact:end -->";
+const LEGACY_MARKER_START = "<!-- skill-router:available_skills:start -->";
+const LEGACY_MARKER_END = "<!-- skill-router:available_skills:end -->";
+const LEGACY_INTENT_START = "<!-- intent-skills:start -->";
+const LEGACY_INTENT_END = "<!-- intent-skills:end -->";
 
 function replaceMarkedBlock(content: string, start: string, end: string, inner: string): string {
   const pattern = new RegExp(`${escapeRegExp(start)}[\\s\\S]*${escapeRegExp(end)}`, "m");
@@ -39,23 +41,21 @@ export async function installAgentsMd(
   targetPath: string,
   opts: { map?: boolean; dryRun?: boolean; ctx?: RouterContext },
 ): Promise<{ path: string; text: string; wrote: boolean }> {
-  const { text: intentText } = await buildCatalog(cwd, {
+  const { text: compactText } = await buildCatalog(cwd, {
     map: opts.map,
     format: "compact",
-    includePackage: false,
     ctx: opts.ctx,
   });
-  const intentInner = markedInner(intentText, INTENT_START, INTENT_END);
+  const compactInner = markedInner(compactText, COMPACT_START, COMPACT_END);
 
   const file = Bun.file(targetPath);
   const exists = await file.exists();
   let content = exists ? await file.text() : "# AGENTS.md\n";
 
-  content = replaceMarkedBlock(content, INTENT_START, INTENT_END, intentInner);
-  content = removeMarkedBlock(content, MARKER_START, MARKER_END);
-
-  // Drop legacy flat <available_skills> blocks outside skill-router markers.
+  content = removeMarkedBlock(content, LEGACY_INTENT_START, LEGACY_INTENT_END);
+  content = removeMarkedBlock(content, LEGACY_MARKER_START, LEGACY_MARKER_END);
   content = removeLegacyAvailableSkills(content);
+  content = replaceMarkedBlock(content, COMPACT_START, COMPACT_END, compactInner);
 
   if (!opts.dryRun) {
     await Bun.write(targetPath, content);

@@ -1,4 +1,4 @@
-# Development routing — Claude adapter
+# Development routing (Claude adapter)
 
 ## Claude tools
 

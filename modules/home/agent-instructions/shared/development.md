@@ -1,6 +1,6 @@
 ## Command routing
 
-Use a purpose-built tool before its shell equivalent. Confirm it is exposed; use the documented fallback when absent.
+Use a purpose-built tool before its shell equivalent. Confirm the session exposes it; use the documented fallback when absent.
 
 | Job | Command |
 | --- | --- |
@@ -55,7 +55,7 @@ Ranked results alone cannot prove absence.
 ## Project environments
 
 - Agent shells never run direnv's prompt hook. In a project with `.envrc`, run commands through `direnv exec . COMMAND`.
-- If direnv reports the `.envrc` is blocked, ask the user. `direnv allow` runs the file's code.
+- If direnv reports a blocked `.envrc`, ask the user. `direnv allow` runs the file's code.
 
 ## Shell
 
@@ -87,21 +87,22 @@ On the Mac, `nix`, `nix-build`, and `nix-shell` are iets, a faster Rust Nix clie
 
 ## Execution style & Code Mode
 
-- **Code Mode**: Use programmatic execution (`eval` with Bun/JS or Python in OMP, or compound scripts) to run bulk inspections, filter in memory, and take deterministic multi-step actions in one or two calls.
+- **Code Mode**: Use programmatic execution (`eval` with Bun/JS or Python in OMP, or compound scripts) for bulk inspections. Filter in memory and act in one or two calls.
 - **Bulk gathering**: Retrieve status, diffs, logs, and branch state in a single pass instead of calling inspection tools one by one across multiple turns.
 - **Single-flight VCS**: Run deterministic commit, push, PR, merge, and sync sequences in one command (`jj pr ... --land`) rather than stepping turn-by-turn.
+- **Fail fast**: Start a multi-line shell script with `set -euo pipefail`. Without it, one failed step makes every later step fail too, and the real error drowns in the output.
 
 ## Version control
 
 - **Commit intent**: Commands like `jj commit`, `git commit`, `push`, and `land` are VCS operations, not test requests. Execute them directly. Do not run full test suites or build targets (`just check`, `bun build`, `test`) unless explicitly requested. Run at most `hk check`. Chain deterministic VCS operations in one command (`jj pr ... --land` or compound `&&` pipelines) instead of calling one command per turn.
 - Detect a `.jj` workspace before the first version-control operation.
 - Use `jj` in a Jujutsu workspace. Before a pull request in a Git-only checkout, colocate it with `jj git init --colocate`, as the `jj` skill describes. Local Git work without a pull request stays on Git.
-- When a skill or plugin names a Git or GitHub command in a Jujutsu workspace, run its JJ equivalent from the `jj` skill's "Skills written for Git" table. Keep Git and `gh` for what that table lists as not covered by JJ.
+- In a Jujutsu workspace, map Git or GitHub steps to their JJ equivalents from the `jj` skill. Keep Git and `gh` for steps outside JJ.
 - Read the diff before every commit. Use `type(scope): message`.
 - Run `jj diff --stat` before `jj squash`. Pass explicit paths (`jj squash PATH...`) when another session or editor can write to the working copy.
 - When merge conflicts resolve to one side, list each merged pull request the other side loses, and ask first.
 - Use `gh` for GitHub when no host-specific GitHub tool applies.
-- Open, update, or land a pull request from JJ with `jj pr` (pass `--land` to merge and advance trunk in one flight), as the `jj` skill describes. Add `--wait` when the change must pass CI before it merges. Check `jj pr --help` first, because an older installed build lacks `-m`, `--land`, and `--wait`. The `pr` skill writes the body.
+- Open, update, or land a pull request from JJ with `jj pr` (`--land` merges and advances trunk), per the `jj` skill. Add `--wait` when the change must pass CI before it merges. Check `jj pr --help` first, because an older installed build lacks `-m`, `--land`, and `--wait`. The `pr` skill writes the body.
 - Inspect diff shape first, then read path-scoped changes.
 - Search history with merge diffs included: `jj log -r '::@ & files(PATH)'` or `git log -m -S TEXT`. Plain `git log -S` and `git log -- PATH` can miss a merge that dropped text.
 
@@ -115,12 +116,12 @@ On the Mac, `nix`, `nix-build`, and `nix-shell` are iets, a faster Rust Nix clie
 6. Report executed checks and limitations. Empty call graphs do not establish correctness; preserve human review notes.
 7. Use the `better-github-skill` skill with explicit PR numbers and `-R owner/repo` under JJ. Posting requires user authorization.
 
-Calldiff needs network access on first use. Its CLI version is pinned; Bun resolves transitive dependencies into its cache.
+Calldiff needs network access on first use. The wrapper pins its CLI version; Bun resolves transitive dependencies into its cache.
 
 ## Git hooks
 
-- **hk**: Run Git hooks and project linters through hk. Its hooks are installed once for every repository, so `hk install` is already done.
-- **Opt in**: A repository runs hooks once it has `hk.pkl` at its root. When a task sets up linting, formatting, or hooks, run `hk init`, review its steps, and commit `hk.pkl`. In a project with `mise.toml`, pin hk there with `mise use hk`.
+- **hk**: Run Git hooks and project linters through hk. Global configuration installs its hooks once for every repository, so `hk install` is already done.
+- **Opt in**: A repository runs hooks once it has `hk.pkl` at its root. When a task sets up linting, formatters, or hooks, run `hk init`, review its steps, and commit `hk.pkl`. In a project with `mise.toml`, pin hk there with `mise use hk`.
 - **Check**: `hk check` covers changed files; `hk check --all` covers the tree. `hk fix` applies fixes without staging them.
 - **JJ**: `jj commit` runs no Git hooks. In a Jujutsu workspace, run `hk check` before `jj commit`.
 - **Skip**: `HK=0` skips every hk hook for one command. Use it only when the user asks.

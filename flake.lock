@@ -267,11 +267,11 @@
     "pstack-claude": {
       "flake": false,
       "locked": {
-        "lastModified": 1794585184,
-        "narHash": "sha256-3DHKsSIdqyNjGEnCNbOnp2JZLkVnLIOB8jFqqGMJIIU=",
+        "lastModified": 1795812417,
+        "narHash": "sha256-EJwkNeiuCG6fvugAsI/jiUKGfSVkz+vi3+B+1QAauUQ=",
         "owner": "michael-denyer",
         "repo": "pstack-claude",
-        "rev": "a12b04786023e762f12f5de7bb5fafb8c23f8c36",
+        "rev": "b15f9d8cc5400f12a9cd1d7756894eccff7532f9",
         "type": "github"
       },
       "original": {

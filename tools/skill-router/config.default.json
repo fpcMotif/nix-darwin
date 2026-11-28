@@ -1,7 +1,7 @@
 {
   "scopes": {
     "repo": {
-      "precedence": 4,
+      "precedence": 3,
       "dirs": [
         ".cursor/skills",
         ".claude/skills",
@@ -16,7 +16,7 @@
       ]
     },
     "workspace": {
-      "precedence": 3,
+      "precedence": 2,
       "dirs": [
         ".cursor/skills",
         ".claude/skills",
@@ -29,7 +29,7 @@
       ]
     },
     "user": {
-      "precedence": 2,
+      "precedence": 1,
       "dirs": [
         "${HOME}/.cursor/skills",
         "${HOME}/.claude/skills",
@@ -42,10 +42,6 @@
         "${HOME}/.factory/skills"
       ],
       "exclude": ["skills-cursor"]
-    },
-    "package": {
-      "precedence": 1,
-      "provider": "intent"
     }
   },
   "agents": {
@@ -61,8 +57,6 @@
   },
   "catalog": {
     "maxEntries": 48,
-    "maxDescriptionChars": 220,
-    "intentRunner": "bunx @tanstack/intent@0.0.41",
-    "packageScope": false
+    "maxDescriptionChars": 220
   }
 }

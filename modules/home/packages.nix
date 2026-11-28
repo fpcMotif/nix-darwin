@@ -89,7 +89,7 @@ in
 {
   home.packages = commonPackages ++ lib.optionals isDarwin darwinPackages;
 
-  # gh finds extensions here. programs.gh would also take over ~/.config/gh/config.yml.
+  # programs.gh takes over ~/.config/gh/config.yml.
   xdg.dataFile."gh/extensions/gh-stack/gh-stack".source = "${pkgs.gh-stack}/bin/gh-stack";
 
   programs.bat = {

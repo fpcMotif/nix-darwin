@@ -29,7 +29,7 @@ pkgs.runCommand "unit-skill-router"
 
   # bunfig.toml preloads test/support/preload.ts (SKILL_ROUTER_NO_REAL_SPAWN=1),
   # so a forgotten CommandRunner injection fails offline here instead of spawning
-  # `bunx`. No network, no real subprocess — fully hermetic.
+  # `bunx`. No network and no real subprocess keep the run hermetic.
   bun test
 
   touch $out

@@ -36,11 +36,8 @@ async function ensureSymlink(target: string, linkPath: string, dryRun: boolean):
   return "linked";
 }
 
-function skillsForAgent(skills: SkillRecord[], agent: string, scopes: Set<string>): SkillRecord[] {
-  if (agent === "all") {
-    return skills.filter((s) => scopes.has(s.scope) && s.path && !s.intentId);
-  }
-  return skills.filter((s) => scopes.has(s.scope) && s.path && !s.intentId);
+function skillsForAgent(skills: SkillRecord[], scopes: Set<string>): SkillRecord[] {
+  return skills.filter((s) => scopes.has(s.scope) && s.path);
 }
 
 export async function syncAgents(
@@ -49,7 +46,7 @@ export async function syncAgents(
 ): Promise<SyncResult[]> {
   const ctx = opts.ctx ?? (await resolveContext());
   const { runtime, config } = ctx;
-  const skills = await discoverSkills({ cwd, includePackage: false, ctx });
+  const skills = await discoverSkills({ cwd, ctx });
   const scopeSet = new Set(opts.scopes ?? ["repo", "workspace"]);
   const agentNames = opts.agents ?? Object.keys(config.agents);
   const dryRun = opts.dryRun ?? false;
@@ -63,7 +60,7 @@ export async function syncAgents(
     const linked: string[] = [];
     const skipped: string[] = [];
 
-    for (const skill of skillsForAgent(skills, agent, scopeSet)) {
+    for (const skill of skillsForAgent(skills, scopeSet)) {
       const linkPath = join(destRoot, skill.id);
       const outcome = await ensureSymlink(skill.path.replace(/\/SKILL\.md$/, ""), linkPath, dryRun);
       if (outcome === "linked") linked.push(skill.id);

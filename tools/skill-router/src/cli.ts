@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { buildCatalog } from "./catalog.ts";
 import { resolveContext } from "./config.ts";
-import { discoverSkills, resolveSkill, toLogicalId } from "./discover.ts";
+import { discoverSkills, toLogicalId } from "./discover.ts";
 import { loadSkill, loadSkillPathOnly } from "./load.ts";
 import { defaultAgentsPath, installAgentsMd } from "./install-agents.ts";
 import { syncAgents } from "./sync.ts";
@@ -9,8 +9,8 @@ import { syncAgents } from "./sync.ts";
 const USAGE = `skill-router - unified agent skill discovery and loading
 
 Usage:
-  skill-router discover [--json] [--cwd <path>] [--package | --no-package]
-  skill-router catalog [--map] [--format compact|agents|intent|all] [--package | --no-package] [--cwd <path>]
+  skill-router discover [--json] [--cwd <path>]
+  skill-router catalog [--map] [--format compact|agents|all] [--cwd <path>]
   skill-router load <id> [--path] [--cwd <path>]
   skill-router sync [--agent <name>] [--scope repo,workspace] [--dry-run] [--cwd <path>]
   skill-router install-agents [--map] [--dry-run] [--target <AGENTS.md>] [--cwd <path>]
@@ -18,14 +18,8 @@ Usage:
 Identity formats:
   user:diagnose          local scope skill
   repo:jj                repository skill (highest precedence)
-  @tanstack/query#core   package skill via TanStack Intent
 
-Precedence: repo > workspace > user > package
-
-Package scope (TanStack Intent) is opt-in and dormant by default. Pass
---package to discover or catalog installed intent-enabled npm packages via
-the pinned \`bunx @tanstack/intent\` runner, or load a package skill directly
-with \`skill-router load @pkg#skill\`.
+Precedence: repo > workspace > user
 `;
 
 function parseArgs(argv: string[]) {
@@ -38,8 +32,6 @@ function parseArgs(argv: string[]) {
     if (arg === "--json") flags.json = true;
     else if (arg === "--map") flags.map = true;
     else if (arg === "--dry-run") flags.dryRun = true;
-    else if (arg === "--no-package") flags.noPackage = true;
-    else if (arg === "--package") flags.package = true;
     else if (arg === "--path") flags.path = true;
     else if (arg === "--cwd") flags.cwd = args.shift() ?? process.cwd();
     else if (arg === "--format") flags.format = args.shift() ?? "all";
@@ -60,19 +52,11 @@ function parseArgs(argv: string[]) {
 async function main() {
   const { cmd, rest, flags } = parseArgs(process.argv.slice(2));
   const cwd = (flags.cwd as string | undefined) ?? process.cwd();
-  // Resolve config + runtime once at the edge; threaded so every command reads
-  // the same context (no per-consumer loadConfig, no double-read).
   const ctx = await resolveContext();
 
   switch (cmd) {
     case "discover": {
-      const skills = await discoverSkills({
-        cwd,
-        // Opt-in: --package forces the TanStack Intent scope on, --no-package
-        // forces it off, neither defers to config.catalog.packageScope (false).
-        includePackage: flags.package === true ? true : flags.noPackage === true ? false : undefined,
-        ctx,
-      });
+      const skills = await discoverSkills({ cwd, ctx });
       if (flags.json) {
         console.log(JSON.stringify(skills.map((s) => ({ ...s, logical: toLogicalId(s) })), null, 2));
       } else {
@@ -90,8 +74,7 @@ async function main() {
     case "catalog": {
       const { text, skills } = await buildCatalog(cwd, {
         map: !!flags.map,
-        format: (flags.format as "compact" | "agents" | "intent" | "all" | undefined) ?? "all",
-        includePackage: flags.package === true ? true : flags.noPackage === true ? false : undefined,
+        format: (flags.format as "compact" | "agents" | "all" | undefined) ?? "all",
         ctx,
       });
       console.log(text);

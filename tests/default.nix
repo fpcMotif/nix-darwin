@@ -224,6 +224,14 @@ lib.fix (checks: {
   unit-skill-router = callTest ./unit/skill-router-test.nix { };
   unit-skill-hygiene = callTest ./unit/skill-hygiene-test.nix { };
   unit-pstack-hygiene = callTest ./unit/pstack-hygiene-test.nix { };
+  unit-pstack-commands =
+    let pstack = import ../modules/home/claude/pstack.nix { inherit lib pkgs inputs; };
+    in shellTest "unit-pstack-commands" {
+      script = ./unit/pstack-commands-test.sh;
+      inputs = [ pkgs.jq pkgs.gnugrep pkgs.gnused pkgs.gawk pkgs.zoxide pkgs.coreutils ];
+      args = [ ../modules/home/claude/hooks/shell-guard.sh ]
+        ++ map (drv: "${drv}/SKILL.md") (builtins.attrValues pstack.pstackDrvs);
+    };
   unit-ai-model-routing = callTest ./unit/ai-model-routing-test.nix { };
 
   # Load the rendered zshrc in a sandboxed zsh to verify keymap tables across

@@ -1,29 +1,17 @@
 # code-review is the review host; routing lives in CLAUDE.md, not in a router skill
 
-Status: accepted (2026-09-09)
+Status: accepted
 
-## Context
+Three skills previously competed for "review this" and PR review triggers: `dotfiles-pi` `review` (Git-only), `mattpocock` `code-review`, and `/code-review`. None coordinated with the others or with Jujutsu's colocated Git repository. We made `mattpocock` `code-review` the single proactive **Review host** and retired `dotfiles-pi` `review`. We kept `/code-review` for explicit user-invoked PR comments, and placed review routing in the development guide and `jj` skill (**Colocated contract**).
 
-An architecture pass over the git, GitHub, jj, and review skills (2026-09-09) found three proactive claimants for "review this" and PR URLs: the dotfiles-pi `review` (git-only, reimplementing `gh` without better-github-skill's gotchas), mattpocock `code-review`, and the `/code-review` plugin command (posts `gh pr comment`). None named another, CLAUDE.md's "review before commit" routed to none, and every one hardcoded git while the jj skill forbade all git, so nothing composed in a colocated repo. The candidate fix was a vendored local `review` router (the jj precedent, ADR-0017).
+## Considered options
 
-## Decision
+- **Keep both `dotfiles-pi` `review` and `mattpocock` `code-review` enabled.** Rejected: overlapping triggers make skill selection non-deterministic and duplicate GitHub CLI instructions.
+- **Write a local vendored `review-router` skill.** Rejected: adds another skill to the catalog when a few lines in the development guide route `code-review`, `better-github-skill`, and `hunk` directly.
+- **Fork or transform `mattpocock` `code-review` to add JJ commands.** Rejected: because `git HEAD` equals `@-` in a colocated JJ repo, `code-review`'s `git diff <base>...HEAD` works after `jj commit` or `jj new`.
 
-1. mattpocock `code-review` is the **review host** (GLOSSARY.md), installed verbatim through the Claude plugin. It is not forked, transformed, or changed upstream: it arrives as a plugin, so a change there is a plugin bump, not a repo edit.
-2. The dotfiles-pi `review` is retired from `skills.explicit`. The plugin `/code-review` command stays as the only posting path, user-invoked only.
-3. Routing lives in the Git section of CLAUDE.md, one line per branch: jj first, the review host and its fixed point, better-github-skill for reads, diff shape before lines, hunk for human review. The jj skill carries the command tables and the **colocated contract** (GLOSSARY.md). No router skill.
-4. The host reads committed history (`git diff <point>...HEAD`), so the rule is commit first (`jj new` in jj). The default fixed point is trunk (`main`).
-5. The settings seed drops the seven plugins no machine has installed (`ralph-loop` and the six `frad-dotclaude` entries), and the `frad-dotclaude` marketplace itself, so a fresh machine matches this one.
+## Consequences and trade-offs
 
-## Consequences
-
-- One proactive review skill; the hygiene lists do not change (no new vendored id).
-- CLAUDE.md pays one line per branch; the hunk and jj command duplicates leave it.
-- `skills.explicit` keeps only `web-browser`, and no entry carries a CLI-deps list.
-- Known gap left in the host: its description promises work-in-progress review while its diff excludes the working tree (verified 2026-09-09 on this repo; upstream mattpocock/skills #511 and #958 track it). The commit-first rule covers it here.
-- No `frad-dotclaude` marketplace is registered for Claude or enabled for Codex.
-
-## What would change this decision
-
-- The host gaining a working-tree mode or jj awareness upstream: the commit-first line in CLAUDE.md goes.
-- A second real review host (another plugin claiming the same triggers): revisit the router, since routing by one CLAUDE.md line stops scaling past one host.
-- The plugin surface disappearing (mattpocock skills only as a flake input): the transformed-skill pattern (ADR-0014) becomes available and "installed verbatim" can be reconsidered.
+- Because `code-review` diffs committed Git history (`<base>...HEAD`), the user or agent must commit or run `jj new` before reviewing working-copy edits.
+- Review tool composition (`code-review` + `better-github-skill` + `hunk`) relies on agents reading the development guide's version-control section.
+- **Reversal trigger:** Introduce a router skill if a second proactive review skill lands; drop the commit-first rule if upstream `code-review` adds JJ support.

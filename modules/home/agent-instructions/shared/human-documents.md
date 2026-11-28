@@ -12,7 +12,7 @@ Open with **At a glance**: three sentences that state the problem and cause, the
 
 Quote exact evidence and label estimates. Put working cases beside failures.
 Add a visual only when it answers one review question better than prose.
-In a document that is not an issue, when the mechanism stays subtle, load `eli5` for the picture version and link its artifact at the foot.
+In a non-issue document with a subtle mechanism, load `eli5` for the picture version and link its artifact at the foot.
 When later evidence changes the analysis, update the body and attach that evidence to the comment.
 
 The document is done when a reviewer can name the cause, change, and unchanged behavior from **At a glance** alone, without reconstructing the author's reasoning.
@@ -39,9 +39,17 @@ Done when each issue carries its four parts, one label, and its ELI5 link, and y
 
 ADRs and GLOSSARY.md follow the `domain-modeling` skill's formats, not the **At a glance** structure above. Without that skill, match the existing files in `docs/adr/` and `GLOSSARY.md`. These rules extend Current-state integrity's Present rule.
 
-An ADR records one current decision, its reason, and any non-obvious constraint. Keep the rejected options that explain the choice. Leave implementation detail in code unless it is the decision.
+Keep `GLOSSARY.md` symmetric and readable for humans. Each entry defines what one domain term is in one or two plain sentences, followed by an `_Avoid_:` line of conflicting terms. Leave file paths, function names, and implementation rules out of `GLOSSARY.md`.
 
-Before recording a decision, read the relevant code and existing ADRs. Ask the user only about choices the repository cannot answer. Mark proposed behavior as proposed until it is built.
+Give every ADR in `docs/adr/` the same symmetric structure:
+- `# Title` and `Status: accepted` (or `deferred`).
+- One short opening paragraph stating the problem, the decision, and the reason.
+- `## Considered options`: the real alternatives and why they lost.
+- `## Consequences and trade-offs`: the downstream effects, the cost or limitation the decision accepts, and what condition reverses it.
+
+Leave implementation detail in code unless it is the decision.
+
+Before recording a decision, read the relevant code and existing ADRs. Ask the user only about choices the repository cannot answer. Mark proposed behavior as proposed until code implements it.
 
 When a decision changes, rewrite its ADR in place. Delete an ADR that no longer holds a current decision. Repair links to it. Never reuse its number. Git history, not the files on disk, shows the highest number used. Do not add superseded notices, amendment banners, or update sections.
 

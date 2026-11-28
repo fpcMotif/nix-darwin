@@ -42,7 +42,7 @@
 
   # Twice-daily (~every 12h) instead of weekly: bounds store growth faster.
   # Retention stays at 14d (not `-d`) so a broken switch always has a rollback
-  # target — see PANIC.md.
+  # target (see PANIC.md).
   nix.gc = {
     automatic = true;
     interval = [

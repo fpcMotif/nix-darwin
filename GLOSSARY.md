@@ -1,229 +1,223 @@
 # nix-config
 
-Martin's cross-platform Nix configuration (nix-darwin is the active target; Linux/NixOS hosts are staged). This glossary pins terms that are overloaded across the repo's tooling so plans and code don't drift on vocabulary.
+Martin's cross-platform Nix configuration (`nix-darwin` is the active Mac target; Linux and NixOS hosts wait in stage). This glossary defines repository terms so plans and code keep one name per concept.
 
 ## Language
 
 ### Darwin baseline
 
 **Darwin baseline**:
-The Nix-managed shape of the active Mac (`f`): system packages, macOS defaults, launchd policy, and Home Manager handoff points that should be reproducible after `darwin-rebuild switch`.
-_Avoid_: using this term for mutable app data, auth state, caches, or personal files outside the Nix configuration.
+The reproducible Mac state Nix manages on host `f`: packages, defaults, launchd policy, and Home Manager handoffs.
+_Avoid_: mutable app data, auth state.
 
 **Darwin baseline activation state**:
-The reversible local state the Darwin baseline owns during activation, such as launchd helper suppression ledgers and managed path markers. It records only changes made by Nix so disabling a baseline feature can clean up or restore its own effects without touching unmanaged app or user state.
-_Avoid_: using this term for arbitrary activation scripts, mutable app settings, or one-off filesystem setup with no reversible ownership record.
+The reversible ledger of launchd helpers and path markers Nix changed, so turning an option off restores state.
+_Avoid_: one-off script.
 
 **Background churn**:
-Unwanted helper, updater, indexing, or diagnostic activity that keeps running without an explicit current task. The Darwin baseline suppresses background churn when the main app or development tree remains available by other deliberate workflows.
-_Avoid_: treating every background process as churn; only use this for optional activity that competes with the user's Nix-managed baseline.
+Optional helper, updater, indexer, or diagnostic processes that run continuously without an active user task.
+_Avoid_: core system daemons, user-launched app processes.
 
 **Hotkey plane**:
-The small, low-privilege global shortcut layer for launching apps or forwarding existing app-native shortcuts. It is not a macOS window-manager policy and should not own rich app/window state.
-_Avoid_: using this term for app-local keymaps, text-editor shortcuts, or launcher search.
+The global shortcut layer that launches apps or forwards app shortcuts without managing window layout.
+_Avoid_: window manager, app keymap, prompt search plane.
 
 **Terminal-first split control**:
-The preferred coding-layout control path: split, move between, resize, and equalise terminal panes from terminal-native mechanisms before reaching for macOS-wide tiling.
-_Avoid_: treating every window split as a Finder/Dock/Spaces concern; most coding splits belong inside the terminal session.
-
+Managing coding panes (split, focus, resize, equalize) inside the terminal or multiplexer rather than macOS window tiling.
+_Avoid_: desktop tiling, Spaces layout.
 
 **Prompt vi mode**:
-Vi keybindings for zsh's line editor (ZLE), provided by the `zsh-vi-mode` plugin behind `martin.shell.viMode` in `modules/home/zsh.nix`. It governs the input line only: normal/insert modes, motions, text objects, surround, per-mode cursor shape. Distinct surfaces keep their own names: tmux copy-mode (`mode-keys vi`, scrollback selection), Zed's `vim_mode` (editor), and the vim modes built into AI CLI TUIs.
-_Avoid_: calling tmux copy-mode, Zed's `vim_mode`, or an AI CLI TUI's vim mode "vi mode" without a qualifier.
-
+Vi keybindings for Zsh's line editor (ZLE) on the shell input line.
+_Avoid_: unqualified "vi mode" (name tmux, Zed, or TUI).
 
 **Prompt search plane**:
-The zsh-owned, prefix-chord key plane over the fzf pickers (`^G` + key, behind `martin.shell.search` in `modules/home/zsh.nix`): ripgrep content search, zoxide directory jump, and process kill on plain-letter chords; fzf-git.sh's git-object pickers on ctrl chords. The optional Ghostty cmd-key layer (`martin.terminal.ghostty.search`) only *types* those chords — it is a veneer over the one definition, never a second one.
-_Avoid_: calling it a hotkey plane — that term is reserved for the retired skhd global-shortcut layer.
-
+The Zsh prefix-chord keymap (`^G` plus a key) that opens fzf pickers for files, directories, processes, and Git objects.
+_Avoid_: hotkey plane.
 
 **Manual-only app**:
-An app that may be installed or launched manually while its background launchd helpers are kept out of the baseline. Manual-only means user-initiated use is preserved; always-on helper behavior is not.
+An application installed for user-launched sessions whose background launchd helpers stay off in the Darwin baseline.
 _Avoid_: disabled app, uninstalled app.
 
 **macOS health report**:
-A local diagnostic snapshot for the Mac's own maintenance loop, not telemetry and not a remote monitoring system. It exists to make drift, storage pressure, crashes, backups, and Nix garbage-collection state inspectable.
-_Avoid_: monitoring, analytics, metrics pipeline.
+A local diagnostic snapshot of drift, disk pressure, crashes, backups, and Nix store state.
+_Avoid_: telemetry, remote monitoring, skill hygiene.
 
 ### Shell sessions
 
 **PATH tier**:
-An ordered group of directories in the base session PATH: shims, Nix profiles, then user installers. For an external command, the first executable match wins. Project environments may put their own tools first.
+An ordered directory group in base `PATH` (shims, Nix profiles, user installers) where the first match wins.
 _Avoid_: PATH priority, PATH layer.
 
 ### Writable app files
 
 **Seeded file**:
-A writable app file Nix creates when missing. Nix reconciles declared values and additions each switch; the app owns other data.
-_Avoid_: managed file, symlinked config (a seeded file is a real file, not a link into the Nix store).
+A writable app config file Nix creates if missing and reconciles on declared keys while preserving runtime edits.
+_Avoid_: store symlink, immutable config.
 
 **Owned key**:
-A key in a seeded file that Nix sets on every switch. When Nix stops owning a key, Nix removes it only if the live value is still the value Nix wrote.
+A key in a seeded file Nix sets each switch and deletes on retirement if unchanged.
 _Avoid_: pinned setting, forced setting.
 
 ### Agent-skills curation
 
 **Parked skill**:
-A skill deliberately moved into a sibling `skills-disabled/` directory so no skill picker can discover it. Used when a skill ships inside a third-party plugin we otherwise keep. Reversible and re-applied on every rebuild — distinct from a skill that is simply not enabled.
+A skill moved into `skills-disabled/` each rebuild so pickers skip it while its parent plugin stays installed.
+_Avoid_: unenabled skill, deleted skill.
 
 **Plugin-provided skill**:
-A skill that is in this flake's bundle *and* declared by an enabled Claude Code plugin, so Claude Code would list it twice. The plugin copy wins on the Claude surface — it tracks upstream faster than the flake pin — and the bundle copy is hidden with `skillOverrides: "off"` in `~/.claude/settings.json`, a file no other agent reads. The id stays in the bundle and stays live in the other eight picker dirs, because Codex/Droid/OpenCode/Crush have no plugin system. Distinct from a *parked* skill, which is hidden from every picker.
+A skill in both the shared bundle and a Claude plugin, hidden from the bundle on Claude Code only.
+_Avoid_: parked skill.
 
 **Skill hygiene**:
-The drift checks over the curation lists: Tier 1 `unit-skill-hygiene` (hermetic — exclusion terms still name live upstream skills, no vendored fork shadows a promoted id, no `transform` returns to a mattpocock skill) and Tier 2 `just verify-skills` (live — every id advertised to Claude exactly once, every hidden id genuinely replaced by the plugin, every other agent still sees the full bundle). Deliberately not called a "health check": `martin.healthCheck` already owns that term for the macOS health report.
+The automated drift checks confirming curation lists match upstream skills and every agent sees each skill at most once.
+_Avoid_: health check.
 
 **Skill bundle**:
 The skills this flake builds from pinned flake inputs and links into every picker dir through `programs.agent-skills`. The module in `modules/home/skill-bundle.nix` owns its source table and enable list. It publishes the ids as `martin.agentSurface.bundleSkills`. A bundle skill is distinct from a placed skill, which Skill placement links per audience, and from a plugin skill.
 _Avoid_: calling a placed skill or a plugin skill a bundle skill.
 
 **Skill placement**:
-The module in `modules/home/skill-placement.nix` that decides which host dirs link each skill. Callers declare `martin.agentSurface.skills.<id> = { source; audience; }`. The module returns the read-only `skillPlacement` record with the links, picker dirs, targets per id, and **Skill visibility**. Personal skills declare their audiences in `modules/home/skills/personal/placement.nix`.
-_Avoid_: manifest (the retired `manifest.json`).
+The Nix module that maps each declared skill and audience to target host directories and computes skill visibility.
+_Avoid_: manifest.
 
 **Skill visibility**:
-The answer, per harness and skill, of whether the harness can use the skill: `on`, `off`, or `absent`. `absent` means no skill host the harness reads holds the skill. `off` means a host it reads holds the skill, and the harness's own settings turn it off (Claude's `skillOverrides`, Codex's `skills.config`). Skill placement computes it as `skillPlacement.visibility` from placed skills, the recorded `bundleSkills`, `foreignSkills`, and each harness's `skillsOff` list. Claude's and Codex's off settings are generated from it (ADR-0019). Plugin skills and parked skills are outside it.
-_Avoid_: health check (the macOS health report owns that term).
+The per-harness status of a skill (`on`, `off`, or `absent`) derived from linked host directories and harness off-lists.
+_Avoid_: skill hygiene, health check.
 
 **Skill audience**:
-A named set of skill hosts. `pickers` is every picker target except Droid. `everywhere` is agents, claude, codex, gemini, skillshub, and omp. `outside-claude` is agents, gemini, and omp. `codex-family` is agents, codex, and gemini. A skill that needs another set lists its hosts directly.
+A named group of skill host directories (`pickers`, `everywhere`, `outside-claude`, or `codex-family`) that a skill targets together.
+_Avoid_: skill host, agent host.
 
 **Skill host**:
-One dir that a skill placement can link into, such as `.agents/skills` or `.omp/agent/managed-skills`. Picker targets are hosts. `.skillshub` and the two omp dirs are hosts only: another tool writes real dirs into `~/.skillshub`, so the name-based picker sweeps never touch these dirs.
+A directory on disk where skill placement links skill folders for one or more agent harnesses to read.
+_Avoid_: agent host, skill audience.
 
-**Enabled skill** vs **Discovered skill**:
-A *discovered* skill exists in the catalog (its source is wired up) but is not placed in any picker. An *enabled* skill is additionally surfaced into the picker target dirs and is selectable. Wiring a source discovers its skills; it does not enable them.
-Rejected workflow skills should be removed from source filters instead of left discovered-but-disabled.
+**Discovered skill**:
+A skill that exists in a wired upstream source catalog before any rule selects it for placement.
+_Avoid_: enabled skill.
+
+**Enabled skill**:
+A discovered skill that skill placement links into picker host directories for agents to load.
+_Avoid_: discovered-only skill, parked skill.
 
 **Transformed skill**:
-A skill sourced from a flake input whose `SKILL.md` is rewritten at build time by a Nix `transform` (pure string replacement on the pinned text) so plugin-only or foreign-runtime spellings resolve here; every other file in the skill ships verbatim. pstack is the instance (ADR-0014, `modules/home/claude/pstack.nix`); `unit-pstack-hygiene` is its regression test. _Avoid_: fork, patch (nothing is vendored; the input stays pinned and bumps nightly).
+A skill built from a pinned flake input whose `SKILL.md` undergoes build-time string replacement for local names.
+_Avoid_: vendored fork, manual patch.
 
 **Alias section**:
-The "Names used in the playbooks" section a transformed router skill carries so that names in files the module cannot rewrite (playbooks, references) resolve to installed skills in one place. Single source for that mapping; the trigger-line rewrites in the transform follow it.
+The mapping table added to a transformed router skill so references inside unmodified playbooks resolve to installed skills.
+_Avoid_: per-file patch.
 
 **Collapsed principles**:
-`pstack-principles`: one module built at eval time from the upstream `principle-*` leaves, one section per upstream id, so 23 catalog entries become one and the router's index bullets still name exact ids.
+A single combined skill built at eval time from upstream leaf principle skills, with one section per upstream identifier.
+_Avoid_: upstream leaf skills.
 
 **Role sheet**:
-`~/.claude/pstack-models.md`, Nix-owned, one line per pstack role in Agent tool aliases (`fable`, `opus`, `sonnet`, `haiku`). pstack's own override contract makes it the one place model routing changes; the skills' Models sections are upstream defaults it overrides.
+The single Nix-owned file (`~/.claude/pstack-models.md`) that maps pstack agent roles to model aliases.
+_Avoid_: hardcoded per-skill model slugs.
 
 ### Skill-router effects
 
 **Router runtime (`RouterRuntime`)**:
-The injected runtime record that carries the effect adapters and process environment used by `skill-router`: `run` (Command seam), `readText` (Skill-read seam), `env`, and optional `configPath`. Production uses `defaultRuntime`; tests pass a runtime with a recording command adapter, controlled `HOME`, and a test config path. This is the seam for config/env loading — tests should not mutate `process.env.HOME` to make discovery work.
-_Avoid_: using this term for `RouterConfig` (the parsed config data) or for a long-lived application context with unrelated state.
+The injected capability record holding the process-spawn adapter, file-read adapter, environment variables, and config path for `skill-router`.
+_Avoid_: `RouterConfig`, global `process.env`.
 
 **Router context (`RouterContext`)**:
-The once-per-invocation `{ runtime, config }` pair resolved at the `cli.ts` edge by `resolveContext` and threaded through every module. Config is read and merged exactly once here; downstream modules read `ctx.config` and `ctx.runtime` rather than re-calling `loadConfig` — so a `catalog`/`install`/`sync` command no longer parses config twice. The `RouterRuntime` carries *how/where* (effect adapters + env); the `RouterContext` adds the resolved *what* (parsed config).
-_Avoid_: calling `loadConfig` from a downstream module (resolve once at the edge and pass `ctx`), or putting per-request data like `cwd` on it — `cwd` stays a separate argument.
+The per-call `{ runtime, config }` pair resolved once at the CLI entry point so commands never re-parse config.
+_Avoid_: re-calling `loadConfig` in leaf modules.
 
 **Command seam (`CommandRunner`)**:
-The injected process-spawn capability `run(argv) → { exitCode, stdout }` through which every external-process call in `skill-router` flows — the dormant-by-default `intentRunner` (`bunx @tanstack/intent@…`, package scope) and `git rev-parse` (workspace scope). Production wires `bunCommandRunner`; tests wire a recording adapter that captures the full argv (the pinned binary included) and returns scripted output. The seam expresses only *how* a process launches, never *when* — the `includePackage` gate and the `@0.0.41` pin stay above it, and offline/ENOENT degrades to `[]`/`null` inside the adapter rather than throwing. `bunCommandRunner` refuses to run under `bun test`, so a forgotten injection fails loud and offline instead of spawning the pinned runner over the network.
-_Avoid_: using this term for the `intentRunner` command string (that is data the seam executes), or for build/activation-time work — the seam is never on the `darwin-rebuild` path (see `docs/adr/0006`).
+The injected process-spawn function through which `skill-router` runs `git rev-parse` while blocking real spawns in tests.
+_Avoid_: direct `Bun.spawn` calls in leaf modules.
 
 **Skill-read seam (`ReadText`)**:
-The injected file-read capability `read(path) → string | null` through which `skill-router` reads file *contents*: the `config.json` files (via `loadConfig`) and a resolved skill's body (the `loadSkill` / `loadIntentSkill` path). Production wires `bunReadText`; tests wire a reader that serves package bodies from memory with a real-file fallback, so the load path is exercised without staging skill files on disk. Distinct from directory discovery, which still walks the real filesystem.
-_Avoid_: widening this to *all* file I/O — directory listing, symlinking, and writes stay on the real filesystem; it reads file contents, it is not a virtual filesystem.
-
-**intentRunner**:
-The command *string* (e.g. `bunx @tanstack/intent@0.0.41`) that `config.catalog` hands to the Command seam — *data the seam executes*, distinct from the `CommandRunner` capability that executes it. The source parameter is spelled `runnerCmd` to keep the string one rename away from the `run` capability.
-_Avoid_: conflating `intentRunner`/`runnerCmd` (what to exec) with `run`/`CommandRunner` (how to exec).
+The injected file-content reader through which `skill-router` loads config files and skill bodies from memory or disk.
+_Avoid_: full virtual filesystem.
 
 ### AI tooling surfaces
 
 **Semantic job-routing policy**:
-The Nix module that maps `search`, `check`, `general`, `plan`, and `economy` work to model families and effort.
-Runtime adapters translate those jobs into OMP roles, Pi frontmatter, Codex profiles, Crush slots, and Zed favorites.
-Claude pstack keeps its native-alias role sheet under ADR-0014.
-_Avoid_: copying model ids into adapters or treating a model picker as a routing policy.
+The shared Nix policy mapping work classes (`search`, `check`, `general`, `plan`, `economy`) to model families and effort.
+_Avoid_: hardcoded per-adapter model IDs.
 
 **Vendored agent CLI**:
-An AI coding-agent binary packaged under `pkgs/` and installed via `home.packages` (codex, droid, opencode, amp, pi, oh-my-pi). It lives on the `darwin-rebuild` build path, so its upstream pinning is a maintenance surface for the whole system rebuild — a stale source hash wedges the rebuild, not just that one tool.
-_Avoid_: conflating it with a model used only over its API, or with a GUI app launched from the hotkey plane.
+An AI coding-agent binary packaged under `pkgs/` on the rebuild path, where stale hashes block builds.
+_Avoid_: API-only access, GUI-managed app.
 
 **Agent host**:
-An AI coding agent program that reads agent guides, such as Claude Code, Codex, or omp. The *general* host stands for any other agent that reads the shared `~/AGENTS.md`.
-_Avoid_: "agent" alone (it also means a subagent), client, tool.
+An AI coding agent application (Claude Code, Codex, OMP, or Antigravity) that reads installed agent guides.
+_Avoid_: bare "agent", skill host.
 
 **Agent guide**:
-A text file that tells an agent host how to work. Every host has a *startup guide*, which it reads when a session starts (for example `~/.claude/CLAUDE.md`). Every host also has a *development guide*, which it reads only when needed; a line in the startup guide gives its path (for example `~/.claude/guidance/development.md`). Nix builds each agent guide from shared sections, after a host adapter when the host has one. The guide catalog (`guides.nix`) lists every host's guide files, including *extras* such as `~/.claude/search-routing.md`, and installs and archives them on every system (ADR-0020). Every skill (`` `id` skill ``) and `~/` file a guide names must resolve for the host that reads it, which `integration-configurations-eval` checks through **Skill visibility** (ADR-0019).
-_Avoid_: prompt, system prompt, rules file.
+A Nix-assembled instruction file telling an agent host how to work, with eval-checked skill and file pointers.
+_Avoid_: system prompt, ad-hoc rules file.
 
 **Host adapter**:
-The first part of an agent guide. It has only the text that one host needs, such as its tool names and its search routes. The catalog writes the lines that point to the host's other guides. Text that is correct for every host goes in a shared section, not in a host adapter.
-_Avoid_: host override, per-agent config.
+The opening section of an agent guide that declares only tool names and search routes unique to that host.
+_Avoid_: duplicating shared rules.
 
 **API-only model access**:
-Use of an AI model purely over its provider API from inside an editor or agent — e.g. a Zed `agent_servers` favorite model plus the provider's `*_API_KEY` env. There is no binary and nothing on the build path.
-_Avoid_: assuming API-only model access implies an installed CLI for that provider.
+Calling a model provider over HTTP via an API key, without a local CLI binary.
+_Avoid_: vendored agent CLI.
 
-### Version control & review
+### Version control and review
 
 **Review host**:
-The one proactive skill that owns "review this", a branch, a PR, or "review since X": mattpocock's `code-review`, installed verbatim (plugin copy on Claude, bundle copy for the other agents). Everything else in the area is a read adapter it composes with (better-github-skill for PR state, threads, and CI) or a user-invoked writer (`/code-review` posts). Routing lives in the Git section of CLAUDE.md, never in the host (ADR-0015).
-_Avoid_: a second proactive review skill (the dotfiles-pi `review` was retired for this), or editing the host by fork, transform, or upstream request.
+The single proactive code-review skill (`code-review`) that owns branch, diff, and PR review requests.
+_Avoid_: duplicate proactive review skills, forked review routers.
 
 **Colocated contract**:
-What a git-reading tool may do in a repo with both `.git` and `.jj`: git HEAD is `@-`, so read-only git sees the current change and code-review, calldiff, and hunk work unchanged; git writes (checkout, add, stash, commit, branch) desync the two until the next jj command resets the working copy. Stated once, in the jj skill.
-_Avoid_: "no git in jj repos" (too strict; it excludes every git-reading review tool), or passing a jj revset where a git-reading tool wants a ref (use the bookmark name).
+In a `.jj` and `.git` repo, Git reads work against `HEAD` (`@-`), while Git writes break JJ.
+_Avoid_: banning Git reads, `git commit`.
 
 **Workspace backend**:
-The one tool that creates parallel checkouts beside a repository, chosen by `martin.development.workspaceBackend`: Worktrunk (`wt`, Git worktrees, the default) or experimental dojjo (`djo`, JJ workspaces). It selects the package, its config, its Zsh wrapper, agent guidance, and Claude's Worktrunk markers; it never converts repositories or touches existing checkouts (docs/workspace-backends.md).
-_Avoid_: calling a JJ workspace a worktree, or treating dojjo as a replacement for jj (it drives jj).
+The tool selected by `martin.development.workspaceBackend` for sibling checkouts: Worktrunk (`wt`, default) or experimental dojjo (`djo`).
+_Avoid_: calling a JJ workspace a Git worktree.
 
 ### Auto-update cadence
 
 **Heavy input**:
-A flake input whose bump rehashes a large share of the Darwin baseline closure. The set is `nixpkgs`. Heavy inputs move only on the cadence day, enforced by `AU_HEAVY_INPUTS`/`au_inputs_to_bump` in `scripts/lib/auto-update.sh`.
-_Avoid_: hand-listing heavy inputs outside the library.
+A flake input (`nixpkgs`) whose update rehashes much of the system closure and moves only on cadence day.
+_Avoid_: ad-hoc lists outside `scripts/lib/auto-update.sh`.
 
 **Light input**:
-Every other top-level flake input, bumped nightly by the auto-update workflow — chiefly the vendored agent CLIs the operator tracks daily.
-_Avoid_: enumerating light inputs anywhere; the set is always "everything minus the heavy set", computed from live flake metadata.
+Any top-level flake input outside the heavy set, updated nightly by the auto-update workflow.
+_Avoid_: hand-enumerating light inputs.
 
 **Cadence day**:
-The ISO weekday (Monday, evaluated on the runner's UTC clock) on which heavy inputs are allowed to move. A single constant (`AU_CADENCE_DAY`) beside the heavy set; overridable per-run via `AU_WEEKDAY_OVERRIDE` and bypassable with `AU_FORCE_FULL_BUMP=1`.
-_Avoid_: expressing the cadence rule as a workflow YAML conditional — it must stay runnable locally.
+The ISO weekday (Monday UTC) when the auto-update workflow bumps heavy inputs unless forced.
+_Avoid_: hardcoding the weekday gate in workflow YAML.
 
 **Glue derivation**:
-A profile, activation, or generated-config derivation present in every build plan that rebuilds in milliseconds (home-manager profiles and file trees, user environment, system etc, activation scripts, top-level system derivation, generated LSP config files). The source-build guard never counts glue as a source build.
-_Avoid_: treating an unfamiliar plan entry as glue without naming it; unknown entries fail the guard until classified.
+A fast profile, activation, or config derivation rebuilt each switch that the source-build guard excludes.
+_Avoid_: classifying unknown slow builds as glue.
 
 **Vendored derivation**:
-A package defined in this repo under `pkgs/` and built from vendored sources or lockfiles (drafts-mcp-server, sourcegraph-amp, the agent CLI repacks). No binary cache will ever hold them; they always build locally by design and are exempt from the source-build guard. The exemption list is derived from `pkgs/*.nix` pnames at run time, so it cannot name packages that no longer exist.
-_Avoid_: maintaining a hand-written exemption list, or confusing "vendored" (always local builds, seconds to minutes) with "glue" (trivial derivations every rebuild has).
+A package in `pkgs/` built locally from vendored source or lockfiles because no binary cache holds it.
+_Avoid_: hand-written exemption lists, glue derivation.
 
 **Rust toolchain derivation**:
-A rust-overlay component (rustc, cargo, rust-std, rust-src, and the clippy, rustfmt, and rust-analyzer previews) that unpacks rust-lang's prebuilt archive, or the `rust-minimal` profile that joins them into `martin.rust-toolchain`. No binary cache holds them; they build locally in seconds and are exempt from the source-build guard. The exemption matches the version and target triple in the name.
-_Avoid_: exempting bare `rustc` or `cargo` prefixes, which would hide a from-source nixpkgs compiler build.
+A `rust-overlay` package unpacking prebuilt Rust archives locally in seconds, exempted by version and target triple.
+_Avoid_: bare `rustc` or `cargo` prefixes.
 
 **Release pin**:
-A package under `pkgs/` fixed to one upstream version plus the hash of each file it downloads. A bump detects change by comparing versions and moves the version and every hash together, or not at all.
-_Avoid_: calling a flake-input bump or an npm lockfile regeneration a release pin; those move through `flake.lock` or a lockfile, not per-file hashes.
+A derivation under `pkgs/` fixed to an upstream version and URL whose version and hashes update together.
+_Avoid_: rolling pin, `flake.lock` pin.
 
 **Rolling pin**:
-A package whose download URL carries no version, so upstream can republish different bytes at the same URL. A bump detects change by comparing hashes, because there is no version to compare.
-_Avoid_: calling a nightly or prerelease channel rolling when each build has its own versioned URL; that is still a release pin.
+A derivation at an unversioned upstream URL where the publisher overwrites bytes in place, updated via `just refresh-rolling`.
+_Avoid_: release pin.
 
-### Hosts & identity
+### Hosts and identity
 
 **f**:
-The active Mac's host identity — simultaneously the flake attribute (`darwinConfigurations.f`), the OS `HostName`/`LocalHostName` (so `f.local` on the LAN), and Martin's personal handle. Driven by the `hostname` argument threaded through `mkSystem`.
-_Avoid_: conflating it with the Unix user or the display name.
+The active Mac's host identity: flake output (`darwinConfigurations.f`), macOS `HostName` and `LocalHostName` (`f.local`), and personal handle.
+_Avoid_: `martinfan`, `ComputerName`.
 
 **martinfan**:
-The Unix user account (`/Users/martinfan`). The login is `martinfan`; the host identity is `f` — they are not the same thing.
+The Unix user account name (`/Users/martinfan`) on the active Mac and staged Linux profiles.
+_Avoid_: `f`.
 
 **ComputerName**:
-The human-facing device name in macOS Sharing/Finder — "Martin's Mac mini". Deliberately left readable and *not* set to `f`; only the technical `HostName`/`LocalHostName` are `f`.
-
-## Flagged ambiguities
-
-- **"f"** — the host identity (flake attr ≡ OS `HostName`/`LocalHostName` ≡ personal handle), *not* the Unix user (`martinfan`) and *not* the display ComputerName ("Martin's Mac mini").
-- **"Gemini"** — formerly spanned every AI tooling surface at once (the vendored CLI `gemini-cli-preview`, a Zed favorite model, `GEMINI_*`/`GOOGLE_API_KEY` env, and a `⌃⌥⇧g` app-launcher hotkey) and was deliberately removed in full (see `docs/adr/0002`). Treat the reappearance of any Gemini surface as a regression, not a gap to fill.
-
-## Example dialogue
-
-> **Dev:** Should we package Dropbox, Google Drive, or Raycast as `pkgs.martin.*` derivations?
-> **Maintainer:** No — Dropbox, Google Drive, Raycast, BetterMouse, and BetterDisplay are deliberate GUI-managed exceptions (see `docs/adr/0005`, `0011`, `0012`, `0013`). Their self-updaters, system extensions, and privileged helpers fight read-only Nix store paths. Install them natively and let them self-update; re-adding a Nix scaffold is a regression, not a gap.
-> **Dev:** Is the macOS health report a monitoring stack?
-> **Maintainer:** No. It is a local snapshot for maintenance evidence, so it belongs in the baseline without adding remote telemetry.
+The human-facing device name in Finder and AirDrop ("Martin's Mac mini"), kept distinct from the technical hostname `f`.
+_Avoid_: setting `ComputerName` to `f`.

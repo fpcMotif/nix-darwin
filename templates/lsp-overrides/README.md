@@ -15,8 +15,8 @@ same `[lsp]` / `[lsp.servers.*]` schema.
 ## Modern TypeScript stack
 
 The default stack uses Microsoft's TS 7 native `tsc --lsp` for type
-intelligence and `oxlint --lsp` for lint — both Rust/Go-native, both
-10-30x faster than the legacy `tsserver`. Vite ecosystem is the
+intelligence and `oxlint --lsp` for lint. Both are Rust or Go-native and
+10-30x faster than the legacy `tsserver`. The Vite ecosystem is the
 reference target (rolldown, Vue/Astro/Svelte SFCs, Tailwind).
 
 | Template | Stack | When |
@@ -34,16 +34,16 @@ reference target (rolldown, Vue/Astro/Svelte SFCs, Tailwind).
 
 | Concern | tsc --lsp | oxlint --lsp | What it replaces |
 |---|---|---|---|
-| Type-checking, hover, definitions | ✅ | — | typescript-language-server (tsserver wrapper) |
-| Lint diagnostics | — | ✅ | eslint-language-server |
-| Vue/Astro/Svelte SFC type-checking | partial (delegate to vue-language-server) | ✅ lint only | volar / astro / svelte LSPs supplement |
+| Type-checking, hover, definitions | yes | no | typescript-language-server (tsserver wrapper) |
+| Lint diagnostics | no | yes | eslint-language-server |
+| Vue/Astro/Svelte SFC type-checking | partial (delegate to vue-language-server) | lint only | volar / astro / svelte LSPs supplement |
 | Effect diagnostics | via `@effect/tsgo` (TS 7 loads no tsserver plugins) | n/a | `@effect/language-service` tsserver plugin |
 | Startup time | ~10x faster | ~30x faster | both |
 | Memory | ~3x less | ~5x less | both |
 
-The two servers register the same filetypes and run in parallel —
-Claude Code/Codex merges diagnostics from both. `oxlint` is marked
-`isLinter: true` so hover/definitions only come from `tsc`.
+The two servers register the same filetypes and run in parallel.
+Claude Code and Codex merge diagnostics from both. `oxlint` is marked
+`isLinter: true` so hover and definitions come from `tsc`.
 
 ## Schema reminder
 
@@ -78,5 +78,5 @@ jq '.enabledPlugins["typescript-lsp@claude-plugins-official"] = false' \
   ~/.claude/settings.json > /tmp/s.json && mv /tmp/s.json ~/.claude/settings.json
 ```
 
-(Leaving it enabled is harmless — it just adds another LSP process per
-.ts file with overlapping diagnostics.)
+(Leaving it enabled is harmless; it adds another LSP process per
+`.ts` file with overlapping diagnostics.)
