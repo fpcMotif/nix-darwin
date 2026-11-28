@@ -4,22 +4,22 @@
 }:
 
 let
-  version = "0.13.8";
+  version = "0.13.10";
 
   releaseBase = "https://github.com/astral-sh/uv/releases/download/${version}";
 
   sources = {
     aarch64-darwin = {
       asset = "uv-aarch64-apple-darwin.tar.gz";
-      hash = "sha256-a3ECimuQTyrjNA71LllVEt6AfQbAog6u8vaSWBskZVg=";
+      hash = "sha256-5Bm/B1M72/SHlfx5NgHINN1521eoxJzo4lz+OoY5lY0=";
     };
     aarch64-linux = {
       asset = "uv-aarch64-unknown-linux-musl.tar.gz";
-      hash = "sha256-DG+Fk/zx6t/GDmY7aFxAgmdVnXxdYcaJu7nzp+NpujI=";
+      hash = "sha256-aBdAhP5AtjADYcWyA4BmEg3GLJKSDCKg8x9vx0sGa1c=";
     };
     x86_64-linux = {
       asset = "uv-x86_64-unknown-linux-musl.tar.gz";
-      hash = "sha256-Yfsm2rxPDPHQUPxsZ9QOQ+T64plK8h68HgULIzvyte0=";
+      hash = "sha256-VZeXA4AIOjQLeYOvBahIJLTbHGK3BZx5aTW3/W3JX9I=";
     };
   };
 
