@@ -76,7 +76,7 @@ _daemon:
     echo '  System Settings > General > Login Items & Extensions > Allow in the Background' >&2; \
     echo '  enable every entry pointing at /Library/LaunchDaemons/org.nixos.*.plist' >&2; \
     echo '  (they show up as "sh", plus "martin-auto-switch").' >&2; \
-    echo 'See PANIC.md section 6.' >&2; \
+    echo 'See PANIC.md section 2.' >&2; \
     exit 1
 
 # Default: print available recipes.
@@ -104,7 +104,7 @@ _drift-hint:
     echo 'just: if the failure above is "hash mismatch in fixed-output derivation",' >&2; \
     echo '  a rolling pin drifted — upstream republished the same URL. Recover with:' >&2; \
     echo '      just refresh-rolling' >&2; \
-    echo '  then re-run. See PANIC.md section 8.' >&2
+    echo '  then re-run. See PANIC.md section 3.' >&2
 
 # Build (no activate) the darwin system from the working tree. Use this
 # to dry-run a change before committing to a switch.
@@ -187,7 +187,7 @@ test-router:
         '.#checks.aarch64-darwin.unit-skill-router'
 
 # Lint Nix sources: statix (antipatterns) + deadnix (dead code). hk runs both
-# before each commit, but CI does not (see ARCHITECTURE.md). Tools come pinned
+# before each commit, while CI does not. Tools come pinned
 # from the repo dev shell. statix.toml scopes both away from references/.
 lint:
     nix develop --command statix check .

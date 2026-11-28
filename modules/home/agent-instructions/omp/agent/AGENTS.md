@@ -1,4 +1,4 @@
-# AGENTS.md — OMP adapter
+# AGENTS.md (OMP adapter)
 
 ## OMP
 

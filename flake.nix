@@ -182,7 +182,7 @@
       });
 
       # Repo dev shell: `nix develop` (or direnv via the root .envrc) provides
-      # the pinned maintainer toolchain — just, formatter, and the Nix linters
+      # the pinned maintainer toolchain: just, formatter, and the Nix linters
       # `just lint` runs.
       devShells = lib.genAttrs supportedSystems (s:
         let

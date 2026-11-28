@@ -1,7 +1,6 @@
 import { isAbsolute, join } from "node:path";
 import { resolveContext, resolveScopeDirs } from "./config.ts";
 import { discoverFromDirs } from "./discover-local.ts";
-import { discoverIntentSkills } from "./discover-intent.ts";
 import { findGitRoot } from "./git.ts";
 import type { DiscoverOptions, SkillRecord } from "./types.ts";
 
@@ -38,23 +37,6 @@ export async function discoverAllSkills(options: DiscoverOptions): Promise<Skill
     ),
   );
 
-  // Package scope (TanStack Intent) is opt-in and dormant by default: a caller
-  // must explicitly pass includePackage (CLI `--package`), otherwise fall back
-  // to config.catalog.packageScope (false). This keeps the common discover path
-  // local-only — no `bunx @tanstack/intent` subprocess / network on every run.
-  const includePackage = options.includePackage ?? config.catalog.packageScope ?? false;
-  if (includePackage) {
-    batches.push(
-      await discoverIntentSkills(
-        cwd,
-        config.catalog.intentRunner,
-        config.scopes.package.precedence,
-        options.includeGlobalPackages ?? false,
-        runtime.run,
-      ),
-    );
-  }
-
   const sorted = batches.flat().sort((a, b) => b.precedence - a.precedence);
 
   return sorted.sort((a, b) => {
@@ -78,14 +60,10 @@ export async function discoverSkills(options: DiscoverOptions): Promise<SkillRec
 }
 
 export function toLogicalId(skill: SkillRecord): string {
-  if (skill.intentId) return skill.intentId;
   return `${skill.scope}:${skill.id}`;
 }
 
 export function resolveSkill(skills: SkillRecord[], query: string): SkillRecord | undefined {
-  if (query.includes("#") || query.startsWith("@")) {
-    return skills.find((s) => s.intentId === query);
-  }
   if (query.includes(":")) {
     const [scope, id] = query.split(":", 2);
     return skills.find((s) => s.scope === scope && s.id === id);

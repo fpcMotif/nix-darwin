@@ -46,9 +46,9 @@ let
 
     ## Nix install
 
-    This skill lives in a read-only Nix store, so `scripts/` cannot install its own `node_modules`. Before the first `orch` or `watch-pr` call, copy it somewhere writable: `cp -RL ~/.claude/skills/poteto-mode/scripts /tmp/pstack-scripts && cd /tmp/pstack-scripts && bun install`, then run the tools from there.
+    Nix builds `scripts/node_modules` into the store with the install key that `bootstrap.ts` checks, so `watch-pr/watch-pr` and `watch-pr/ship-pr` run in place. Do not copy `scripts/` or run `bun install`.
   '';
-  pstackTddTrigger = "- Test-first work, or a bug with a cheap local test target → the **tdd** skill (`/tdd`). It is the mattpocock skill installed here: one red-green slice at a time, tests at seams, and the failing run quoted before the fix.\n";
+  pstackTddTrigger = "- Test-first work, or a bug with a cheap local test target → the **tdd** skill (`/tdd`). It is the mattpocock skill installed here: one red-green slice at a time, tests at seams, and the failing run quoted before the fix. A bug that resists a first look builds its red loop with the **diagnosing-bugs** skill first.\n";
   pstackCommentRule =
     if docLock
     then "Comments change only in docs work, per the Docs lock in CLAUDE.md. There, keep a comment only for a non-obvious *why* the code can't show."
@@ -62,20 +62,14 @@ let
           "pstack:effort-"
           "Plugin agents register under the plugin namespace. The bare name `poteto-agent` errors."
           "Plugin agents register under the plugin namespace; the bare name `poteto-agent` errors."
-          "- Any prose surface, your reply to the user included → the **unslop** skill. Write the reply per **Writing the reply**. Agent-facing prose also follows the **plugin-dev:skill-development** skill (Claude Code's authoring guidance for SKILL.md files).\n"
+          "- Prose, your reply included → **unslop**. Docs, PR descriptions, commit messages → **technical-writing**, on top of **unslop**."
           "plugin-dev:skill-development"
-          "- Before commit → the **deslop** skill (`/deslop`).\n"
-          "- Before review → the **no-comments** skill (`/no-comments`).\n"
-          "- Docs, RFCs, readmes, PR descriptions, or commit messages → the **technical-writing** skill (`/technical-writing`), on top of **unslop**.\n"
-          "- **A colon as a mid-sentence connector is also out** (unslop rule 14). A colon before a list is fine."
+          "- Before commit → `/deslop`. Before review → **no-comments**.\n"
           "(the **unslop** skill applies to log text too)"
-          "- Shipping UI / IDE / CLI → the driver skill. `run` ships with Claude Code and the model can invoke it for CLIs, TUIs, servers, and browser or Electron apps. The bundled `verify` runs only when the user types `/verify`, so for UIs use the project `verify` skill at `.claude/skills/verify/` (generate it with `/create-verification-skill`) and fall back to `run` when the repo has none. For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception."
-          "Sketch it via the Prototype playbook (`playbooks/prototype.md`) and let the result decide."
-          "(\"prototype\", \"mock it up\", \"try this layout\", \"sketch it to decide\")."
-          "- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence."
-          "Read the leaf skill in full for any principle you apply. Each entry names when it applies."
+          "- Shipping UI / IDE / CLI → the driver skill. `run` ships with Claude Code and the model can invoke it for CLIs, TUIs, servers, and browser or Electron apps. The bundled `verify` runs only when the user types `/verify`, so for UIs use the project `verify` skill at `.claude/skills/verify/` (generate it with `/create-verification-skill`) and fall back to `run` when the repo has none."
+          "- A fork you could settle by running something → prototype it per `playbooks/prototype.md` instead of asking."
+          "Read the leaf skill in full for any principle you apply. Each entry names when it applies. Each leaf is the **principle-<title>** skill, with the title in kebab case, hyphens kept and other punctuation dropped, unless the entry gives its name."
           "Cite only principles whose leaf SKILL.md you read this session."
-          "Keep a comment only for a non-obvious *why* the code can't show."
           "Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). A matching role line in the `pstack-models.md` override sheet overrides each at runtime; `/setup-pstack` writes it and lists its path per runtime."
           "`/setup-pstack` writes it and lists its path per runtime"
           "(`/setup-pstack` lists its path per runtime)"
@@ -95,20 +89,14 @@ let
           "effort-"
           "The agent lives in `~/.claude/agents`, so the bare name resolves."
           "The agent lives in `~/.claude/agents`, so the bare name resolves."
-          "- Any prose surface, your reply to the user included → the Writing section of CLAUDE.md, and **Writing the reply** below. Agent-facing prose also follows the **writing-for-agents** skill.\n"
+          "- Prose, your reply included → the Writing section of CLAUDE.md, and **Writing the reply** below. Docs, PR descriptions, commit messages → `~/.claude/guidance/human-documents.md` on top of that. Agent-facing prose → the **writing-for-agents** skill."
           "writing-for-agents"
-          (pstackTddTrigger + "- Before commit → the **simplify** skill (`/simplify`).\n")
-          "- Before review → sweep comments to the Code Quality rule in CLAUDE.md: a comment only for what the code cannot say.\n"
-          "- Docs, RFCs, readmes, PR descriptions, commit messages → `~/.claude/guidance/human-documents.md` and the Writing section of CLAUDE.md. Agent-facing docs → the **writing-for-agents** skill.\n"
-          "- **A colon as a mid-sentence connector is also out.** A colon before a list is fine."
+          (pstackTddTrigger + "- Before commit → the **simplify** skill (`/simplify`). Before review → check comments. " + pstackCommentRule + "\n")
           "(the Writing section of CLAUDE.md applies to log text too)"
-          "- Shipping UI / IDE / CLI → the driver skill: `run` (a Claude Code built-in) for CLIs and TUIs; for UIs the **web-browser** skill or the harness's browser and simulator tools, which the playbooks call `verify`. For bug fixes, reproduce first on the same surface yourself. Hand to the user only under the narrow Bug fix step 1 exception."
-          "Sketch it via the **prototype** skill (`/prototype`) and let the result decide."
-          "(\"prototype\", \"mock it up\", \"try this layout\", \"sketch it to decide\"). Route: the **prototype** skill (`/prototype`), which keeps the sketch as a primary source on a `prototype/<name>` branch."
-          "- **Bug fix.** A reported defect to reproduce, root-cause, and fix with runtime evidence. `playbooks/bug-fix.md`. A bug that resists a first look builds its red loop with the **diagnosing-bugs** skill first, then the regression test with **tdd**."
+          "- Shipping UI / IDE / CLI → the driver skill: `run` (a Claude Code built-in) for CLIs and TUIs. For UIs, the **web-browser** skill or the harness's browser and simulator tools, which the playbooks call `verify`."
+          "- A fork you could settle by running something → sketch it with the **prototype** skill (`/prototype`) instead of asking. It keeps the sketch as a primary source on a `prototype/<name>` branch."
           "Every **principle-…** id below is a section of the **pstack-principles** skill. Read that section in full for any principle you apply. Each entry names when it applies."
           "Cite only principles whose section you read this session."
-          pstackCommentRule
           pstackModelsIntro
           "nix installs it at `~/.claude/pstack-models.md`"
           "(nix installs it at `~/.claude/pstack-models.md`)"
@@ -177,12 +165,44 @@ let
   '' + lib.concatMapStringsSep "\n" (r: "${r.role}: ${r.models}") pstackModelRoles + "\n";
   pstackModelsSheet = pkgs.writeText "pstack-models.md" pstackModelsSheetText;
 
+  # bootstrap.ts runs `bun install` in scripts/ unless node_modules matches bun.lock.
+  # The store is read-only, so node_modules ships prebuilt. A bun.lock change
+  # upstream breaks outputHash; take the new hash from the build error.
+  pstackPotetoScriptsSrc = pstackSkillsRoot + "/poteto-mode/scripts";
+  pstackPotetoNodeModules = pkgs.stdenvNoCC.mkDerivation {
+    name = "pstack-poteto-mode-node-modules";
+    src = pstackPotetoScriptsSrc;
+    nativeBuildInputs = [ pkgs.bun ];
+    dontConfigure = true;
+    dontFixup = true;
+    buildPhase = ''
+      export HOME=$TMPDIR
+      bun install --frozen-lockfile --production --ignore-scripts --no-progress
+    '';
+    installPhase = ''
+      mv node_modules "$out"
+    '';
+    outputHashMode = "recursive";
+    outputHashAlgo = "sha256";
+    outputHash = "sha256-2aTzrxVZvURXL+MimBZzH36C6IUmKvxlztu+2NLiLZg=";
+  };
+  pstackPotetoScripts = pkgs.runCommand "pstack-poteto-mode-scripts" { preferLocalBuild = true; } ''
+    cp -r ${pstackPotetoScriptsSrc} "$out"
+    chmod -R u+w "$out"
+    cp -r ${pstackPotetoNodeModules} "$out/node_modules"
+    chmod -R u+w "$out/node_modules"
+    { cat "$out/package.json"; printf '\0'; cat "$out/bun.lock"; } | sha256sum | cut -d' ' -f1 \
+      > "$out/node_modules/.poteto-mode-tools-install-key"
+  '';
+
   pstackSkillDrv = id: pkgs.runCommand "pstack-skill-${id}" { preferLocalBuild = true; } ''
     mkdir -p "$out"
     shopt -s nullglob
     for f in ${pstackSkillsRoot}/${id}/*; do
       fname="$(basename "$f")"
-      if [ "$fname" != "SKILL.md" ]; then
+      if [ "${id}/$fname" = "poteto-mode/scripts" ]; then
+        ln -s ${pstackPotetoScripts} "$out/scripts"
+      elif [ "$fname" != "SKILL.md" ]; then
         ln -s "$f" "$out/$fname"
       fi
     done
@@ -217,5 +237,5 @@ in
 {
   inherit pstackSkillsRoot pstackPrinciples pstackSkills pstackAliases
     pstackTransform pstackPrinciplesSkill pstackModelRoles pstackModelsSheetText
-    pstackModelsSheet pstackDrvs pstackAgentText;
+    pstackModelsSheet pstackDrvs pstackAgentText pstackPotetoAppendix pstackPotetoScripts;
 }

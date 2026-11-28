@@ -64,8 +64,8 @@
 
     finder = {
       _FXSortFoldersFirst = true;
-      # Hide extensions globally — keeps .app from rendering as "Safari.app"
-      # in Finder/Spotlight/Raycast. macOS still picks the right opener.
+      # Hide extensions globally so .app does not render as "Safari.app"
+      # in Finder, Spotlight, or Raycast. macOS still picks the right opener.
       AppleShowAllExtensions = false;
       AppleShowAllFiles = true;
       FXDefaultSearchScope = "SCcf";

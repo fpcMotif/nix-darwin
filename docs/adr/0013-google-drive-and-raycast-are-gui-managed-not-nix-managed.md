@@ -2,22 +2,15 @@
 
 Status: accepted
 
-Date: 2026-09-03
+Google Drive and Raycast conflict with `/nix/store` for the same reasons as Dropbox (ADR-0005), BetterMouse (ADR-0011), and BetterDisplay (ADR-0012). Both apps run continuous built-in auto-updaters that write in place. Google serves `GoogleDrive.dmg` from an unversioned rolling URL whose upstream updates repeatedly broke `just switch`. Google Drive registers File Provider extensions and `SMAppService` helpers in `/Applications`, and Raycast requires persistent Accessibility permissions and runtime extension state. We removed `pkgs/google-drive.nix`, `pkgs/raycast.nix`, and their updaters; the user installs and updates both apps through their macOS GUI installers.
 
-Google Drive (`GoogleDrive.dmg` / `pkgs/google-drive.nix`) and Raycast (`Raycast.dmg` / `pkgs/raycast.nix`) are removed from the Nix flake. Both apps are installed and updated **directly through their native macOS GUI installers and self-updaters**.
+## Considered options
 
-## Why
+- **Keep refreshing the rolling `GoogleDrive.dmg` hash and versioned `Raycast.dmg` pin in Nix.** Rejected: Google Drive's unversioned DMG breaks system builds whenever Google republishes it, and both self-updaters fight read-only store symlinks.
+- **Install and update Google Drive and Raycast natively via their GUI installers (chosen).** Eliminates rolling-URL build breakages and preserves macOS File Provider and Accessibility registrations.
 
-The reasons from ADR 0005 (Dropbox), ADR 0011 (BetterMouse), and ADR 0012 (BetterDisplay) apply to Google Drive and Raycast:
+## Consequences and trade-offs
 
-- **Self-updater vs. immutable store**: Both Google Drive and Raycast contain aggressive built-in auto-updaters designed to run continuously and write in place. Stamping `/Applications/Nix Apps/` with read-only store symlinks causes self-updates to fail, nag the user, or silently spawn secondary unmanaged bundles in user caches.
-- **Unversioned rolling URLs (Google Drive)**: Google serves `GoogleDrive.dmg` from a single rolling, unversioned URL without public release archives. Every time upstream silently updates the installer bytes, the fixed-output derivation hash broke the entire system build (`just switch`) until manually bumped.
-- **System extensions, file providers, and permissions**: Google Drive registers file provider extensions, virtual drive mounts, and privileged helper services (`SMAppService`) that require stable bundle signatures in `/Applications`. Raycast requires global accessibility permissions, hotkey taps, and extension store management that are owned at user runtime.
-- **Native GUI workflow**: Both applications are interactive GUI tools installed once via macOS DMG/GUI and maintained by their own release channels.
-
-## Consequences
-
-- `pkgs/google-drive.nix`, `pkgs/raycast.nix`, `scripts/update-google-drive.sh`, and `scripts/update-raycast.sh` are deleted.
-- `pkgs.martin.google-drive` and `pkgs.martin.raycast` are removed from the overlay and Darwin host packages (`hosts/darwin/default.nix` and `modules/home/packages.nix`).
-- `update-google-drive` is removed from `justfile` (`refresh-rolling`) and `.github/workflows/auto-update.yml`.
-- Re-adding Nix derivations for Google Drive or Raycast is considered a regression.
+- The operator installs Google Drive and Raycast manually on a new Mac rather than through `darwin-rebuild switch`.
+- Rolling-pin maintenance covers only font archives (`pkgs/sf-mono.nix`) that have no self-updater or system extension.
+- **Reversal trigger:** Revisit if a pure CLI or declarative tool replaces Raycast or Google Drive without privileged helpers or rolling URLs.

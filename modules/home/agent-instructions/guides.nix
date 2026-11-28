@@ -20,13 +20,13 @@ let
       ## Guides
 
       - **Develop**: Before choosing a shell command, adding an environment variable, using version control, or setting up Git hooks, read `~/${developmentTarget}`.
-      - **Languages**: Before writing or running TypeScript, Python, Go, or Rust, read that language's file: `${languagesDir}/typescript.md`, `python.md`, `go.md`, or `rust.md`.
+      - **Languages**: Before writing or running TypeScript, Python, Go, Rust, or Zig, read that language's file: `${languagesDir}/typescript.md`, `python.md`, `go.md`, `rust.md`, or `zig.md`.
     '' + lib.optionalString (humanDocumentsTarget != null) ''
       - **Documents**: Before writing an issue, specification, PRD, analysis, ADR, or GLOSSARY.md, read `~/${humanDocumentsTarget}`.
     '' + ''
       - **Workspaces**: Before creating a Git worktree or JJ workspace, or landing a subagent's checkout, read Parallel checkouts in `~/${developmentTarget}`.
     '');
-  languageNames = [ "typescript" "python" "go" "rust" ];
+  languageNames = [ "typescript" "python" "go" "rust" "zig" ];
   languageGuide = guidanceDir: language:
     let
       source = ./shared/languages + "/${language}.md";

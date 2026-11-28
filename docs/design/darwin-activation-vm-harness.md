@@ -2,8 +2,8 @@
 
 Status: **designed, not wired.** This is the end-to-end tier described in
 [ADR-0004](../adr/0004-macos-settings-testing-strategy.md). It is documented
-here as real, buildable-on-paper work so it can be picked up later, but it is
-deliberately absent from `flake.checks` — see "Why it is not wired" below.
+here as buildable-on-paper work so it can be picked up later, and it is
+absent from `flake.checks` (see "Why it is not wired" below).
 
 ## What it would prove that Tiers 1 and 2 cannot
 
@@ -62,9 +62,9 @@ darwin-activation-vm = lib.optionalAttrs pkgs.stdenv.isDarwin
    virt (tart/UTM/Apple Virtualization). GitHub's `macos-14` runners do not
    reliably offer it, and self-hosting a Mac purely for this is not justified
    for a single-host config.
-3. **Cost/benefit.** Tier 1 catches declaration drift on every push; Tier 2
-   catches application drift on demand. The residual risk — fresh-machine
-   convergence of the reversible engine — is low-frequency and observable on the
+3. **Cost and benefit.** Tier 1 catches declaration drift on every push; Tier 2
+   catches application drift on demand. The residual risk (fresh-machine
+   convergence of the reversible engine) is low-frequency and observable on the
    real machine. The VM's marginal coverage does not pay for its infrastructure.
 
 ## Prerequisites to revive this

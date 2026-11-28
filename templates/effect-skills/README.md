@@ -31,7 +31,7 @@ tracks the repo rather than a global flake pin.
 - **Won't clobber.** The copy-tree install refuses to overwrite a non-store
   directory unless `AGENT_SKILLS_FORCE=1`, so hand-authored repo skills are safe.
 - **Git-ignore the copies.** Add `/.claude/skills/effect-ts` and
-  `/.agents/skills/effect-ts` to the project's `.gitignore` — they are generated.
+  `/.agents/skills/effect-ts` to the project's `.gitignore` because they are generated.
 - **Re-enable globally** (undo the demotion) by restoring
   `enableAll = builtins.attrNames effectSources;` in `modules/home/claude.nix`.
 

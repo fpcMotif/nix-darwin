@@ -16,7 +16,6 @@
     let
       agentLib = agent-skills.lib.agent-skills;
 
-      # Source/selection are platform-independent — compute once.
       sources = { effect-ts = { path = effect-ts-skills; subdir = "skills"; }; };
       catalog = agentLib.discoverCatalog sources;
       allowlist = agentLib.allowlistFor {

@@ -9,7 +9,7 @@ let
   defaultInit = ''
     -- Hammerspoon is reserved for rich macOS automation.
     -- skhd owned the small, fast global hotkey layer; it is off since
-    -- 2026-07-19 over a BetterMouse event-tap conflict. See HOTKEYS.md.
+    -- 2026-07-19 over a BetterMouse event-tap conflict (hosts/darwin/default.nix).
     -- Current Hammerspoon uses Lua 5.4, not LuaJIT.
 
     local function notify(message)

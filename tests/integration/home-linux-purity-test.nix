@@ -11,8 +11,8 @@ let
   user = "martinfan";
 
   # Substrings that identify Darwin-only paths or tools. Checked against
-  # generated config text, so Nix-comment mentions in module sources don't
-  # count — only what lands in the Linux closure does.
+  # generated config text, so Nix-comment mentions in module sources do not
+  # count; only what lands in the Linux closure does.
   macOnlyPatterns = [
     "/Applications/"
     "Library/Application Support"

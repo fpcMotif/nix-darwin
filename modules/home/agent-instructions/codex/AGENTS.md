@@ -1,11 +1,11 @@
-# AGENTS.md — Codex adapter
+# AGENTS.md (Codex adapter)
 
 ## Codex
 
 - **Configure**: Before changing Codex instructions, skills, profiles, MCP, or settings, read `~/.codex/guidance/setup.md`.
 - **Edit**: Use `apply_patch` for file changes. Track a plan when dependencies or uncertainty require it.
 - **Tools**: Use tools exposed in the current session. Translate examples to their available equivalents.
-- **Skills**: Use the user’s named skill. Otherwise load the narrowest skill whose workflow helps the requested outcome.
+- **Skills**: Use the user's named skill. Otherwise load the narrowest skill whose workflow helps the requested outcome.
 - **Proof**: Tool configuration, discovery, and a successful harmless call establish separate facts.
 
 ## Search

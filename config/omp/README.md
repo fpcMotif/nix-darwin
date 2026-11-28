@@ -55,7 +55,7 @@ Retries are bounded; sessions do not sleep until a distant quota reset.
 
 The `default` role uses Google Antigravity's `gemini-3.8-flash:high`; every other role and fallback chain uses the subscription-backed `openai-codex` provider.
 The `/model` picker and `--model` expose GPT-6 Astra, Sol, and Luna, plus the
-current Google Antigravity catalog—including Gemini Flash, Claude Opus, and Claude Sonnet.
+current Google Antigravity catalog, including Gemini Flash, Claude Opus, and Claude Sonnet.
 No other provider is enabled.
 
 GPT-6 models share allowance. Switching models can conserve usage but cannot create another allowance.

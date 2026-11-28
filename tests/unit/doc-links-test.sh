@@ -6,7 +6,7 @@ root=$1
 maintained_docs=$(
   cd "$root"
   find docs -type f -name '*.md' | sort
-  printf '%s\n' AGENTS.md ARCHITECTURE.md GLOSSARY.md
+  printf '%s\n' AGENTS.md GLOSSARY.md
 )
 
 # Fenced blocks and inline code spans hold examples, not links.

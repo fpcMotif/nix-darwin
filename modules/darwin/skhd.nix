@@ -62,7 +62,6 @@ let
 
     # Workflows
     ${prefix} - n      : open -a "Cursor" "$HOME/nix-config"
-    ${prefix} - h      : open "$HOME/nix-config/HOTKEYS.md"
 
     # Utilities
     ${prefix} - l      : pmset displaysleepnow

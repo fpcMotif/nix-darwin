@@ -2,9 +2,15 @@
 
 Repo-level guidance for coding agents working in this Nix configuration.
 
+## Targets and package ownership
+
+- **Targets**: `darwinConfigurations.f` (`aarch64-darwin`, nix-darwin) is the active target. `nixosConfigurations.x230` and `nixosConfigurations.vm-aarch64-utm` are inactive NixOS scaffolds, and `homeConfigurations.martinfan-omakub` is a staged design target with no flake output yet.
+- **Pure Nix first**: Package CLI and dev tools in `modules/home/packages.nix` and custom or vendored derivations in `pkgs/` under `pkgs.martin.*` with versioned, immutable URLs. GUI apps with built-in self-updaters or privileged helpers (Dropbox, BetterMouse, BetterDisplay, Google Drive, Raycast) stay GUI-managed outside Nix (ADR-0005, 0011, 0012, 0013). Homebrew stays off by default.
+- **Cross-platform purity**: Darwin and Linux hosts share `modules/home/`. Gate macOS-only paths and tools behind `pkgs.stdenv.isDarwin` (ADR-0008).
+
 ## Agent skills
 
-Skill discovery and loading: `skill-router discover`, `skill-router load <scope:id>`, package skills via `bunx @tanstack/intent@0.0.41 load <pkg>#<skill>`. See [docs/agents/skill-router.md](docs/agents/skill-router.md).
+Skill discovery and loading: `skill-router discover`, `skill-router load <scope:id>`. See [docs/agents/skill-router.md](docs/agents/skill-router.md).
 
 ### Issue tracker
 
@@ -16,18 +22,18 @@ Uses the canonical five-role vocabulary unchanged (`needs-triage`, `needs-info`,
 
 ### Domain docs
 
-Single-context — one `GLOSSARY.md` + `docs/adr/` at the repo root. See [docs/agents/domain.md](docs/agents/domain.md).
+Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See [docs/agents/domain.md](docs/agents/domain.md).
 
 ## HTTP
 
-`ax URL` is the required first choice for every HTTP request, including fetch, discovery, extraction, and API calls. Use `curl` only when `ax` cannot support the required operation or has a concrete failure; state that reason.
+`ax URL` is the required first choice for every HTTP request (fetch, discovery, extraction, and API calls). Use `curl` only when `ax` cannot support the required operation or has a concrete failure; state that reason.
 
 ## Code Mode & programmatic execution
 
 Use Code Mode (`eval` with Bun/JS or Python in OMP, or compound programmatic scripts) for multi-step inspection and operations:
-- **Bulk inspection**: Gather all relevant repository status, diffs, bookmarks, and open PRs in one pass (`Promise.all` or compound commands) instead of ping-ponging individual tools across turns.
-- **Single-flight actions**: Execute multi-step operations in 1–2 dense invocations. Parse and filter data in-memory; do not spend agent turns on intermediate terminal output.
-- **Deterministic VCS**: For committing, opening PRs, and landing on main, run in a single flight:
+- **Bulk inspection**: Gather repository status, diffs, bookmarks, and open PRs in one pass (`Promise.all` or compound commands). Do not ping-pong tools across turns.
+- **Single-flight actions**: Execute multi-step operations in one or two dense invocations. Parse and filter data in-memory; do not spend agent turns on intermediate terminal output.
+- **Deterministic VCS**: To commit, open a PR, and land on main, run in a single flight:
   ```bash
   nix run .#martin.jj-pr -- <name> -m "type(scope): msg" -t "PR title" -F /path/to/body.md --land -- <paths>
   ```

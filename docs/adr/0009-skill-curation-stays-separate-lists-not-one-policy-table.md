@@ -2,24 +2,15 @@
 
 Status: accepted
 
-`modules/home/claude/skill-curation.nix` curates the mattpocock bundle with three hand-written lists. `modules/home/claude.nix` and `unit-skill-hygiene` import them:
+`modules/home/claude/skill-curation.nix` curates upstream `mattpocock-skills` with three flat lists (`disabledMattpocockSkills`, `leanExcludedMattpocockSkills`, and `removedSkillIds`). The module derives `excludedSkillIds` and `enabledMattpocockSkills` from those three lists. We keep these three lists separate instead of merging them into a single per-skill `skillPolicy` table.
 
-- `disabledMattpocockSkills`: skills turned off everywhere, including the Claude plugin surface.
-- `leanExcludedMattpocockSkills`: niche skills trimmed from discovery. It is empty and kept for a future bucket.
-- `removedSkillIds`: skills dropped from every source. Each rebuild deletes their stale copies.
+## Considered options
 
-`excludedSkillIds` and `enabledMattpocockSkills` are derived from these lists.
+- **Replace the three lists with one `skillPolicy` attribute set and a `compile` function.** Rejected: `compile` reduced to a trivial `filterAttrs`, scattered group rationales, collided with `GLOSSARY.md` terms, and omitted `skills.explicit`.
+- **Keep three separate lists with group-level comments (chosen).** States each group's rationale once and lets `unit-skill-hygiene` check membership directly.
 
-We keep the lists separate. An architecture review (Handoff E, 2026-07-02) proposed one `skillPolicy` attrset instead. Each skill would get a `status` and a `reason`. One compile function would derive the enabled set and own the sweep declarations. The proposal set its own refutation bar: if that function ends up a trivial `filterAttrs`, the candidate fails.
+## Consequences and trade-offs
 
-## Why
-
-- **The compile function is a trivial filter.** The review's `nix eval` of the proposed `compile` over a hand-built table reproduced the hand-written lists byte for byte. The proposal credited `compile` with the duplicate-id rule. That throw lives in the agent-skills flake input (`lib/sources.nix`), not in this repo. The two sweeps already share one body: `mkSessionSweep` takes the step that differs as `cacheAction`.
-- **A per-entry `reason` would scatter the rationale.** Each list states once, in the comment above it, why its whole group is excluded. Per-skill strings would make a reader re-cluster them to recover that.
-- **The status names collide with GLOSSARY.md.** The proposal's `disabled` status is what GLOSSARY.md calls a **Parked skill**. `claudePruneExcludedSkills` moves each disabled skill's Claude Desktop cache copy into a sibling `skills-disabled/` directory. `removed` matches the glossary's "removed from source filters". `lean` has no glossary term. One enum cannot absorb these without renaming a pinned term.
-- **The table could never hold all curation.** Skills wired one by one carry what a status table cannot. `web-browser` names a source and a dependency list in `skills.explicit`. Each pstack skill carries a build-time `transform` closure in `modules/home/claude/pstack.nix`. Those stay hand-written either way.
-
-## What would change this decision
-
-- A proposal that uses GLOSSARY.md's terms exactly (`parked`, not `disabled`), defines or drops `lean`, and keeps the group-level comments. Re-evaluate the second and third reasons against it.
-- A list gaining logic beyond membership, so that a compile step does real work. Re-run the deletion test.
+- Moving a skill between curation buckets requires editing two lists in `skill-curation.nix` rather than changing one status field.
+- Individual skills inside a list share their list's top-level comment unless given an inline comment.
+- **Reversal trigger:** If curation rules grow per-skill logic beyond `filterAttrs` and adopt `GLOSSARY.md` terms (`parked`, `removed`), revisit a unified table.

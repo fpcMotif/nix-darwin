@@ -35,6 +35,8 @@ let
     "## Code search"
     "## Python"
     "## Go"
+    "## Rust"
+    "## Zig"
     "## Version control"
     "## Git hooks"
     "## Parallel checkouts"
@@ -54,6 +56,7 @@ let
     "## Python"
     "## Go"
     "## Rust"
+    "## Zig"
   ];
   # The adapter line that links human-documents.md must name ADRs, or an
   # agent writing one never loads the ADR rules.
@@ -74,7 +77,7 @@ let
       (line:
         lib.hasInfix "~/${host.languages.typescript.target}" line
         && lib.all (language: lib.hasInfix "${language}.md" line) (lib.attrNames host.languages)
-        && lib.all (name: lib.hasInfix name line) [ "TypeScript" "Python" "Go" "Rust" ])
+        && lib.all (name: lib.hasInfix name line) [ "TypeScript" "Python" "Go" "Rust" "Zig" ])
       (lib.splitString "\n" host.startup.content);
   bannedTerms = [ "gemini" "deepwiki" "mgrep" "lazygit" "deep-research" "chezmoi" ];
   requiredTools = [ "fd" "rg" "bat" "eza" "dust" "procs" "btm" "ax" "delta" "hyperfine" ];

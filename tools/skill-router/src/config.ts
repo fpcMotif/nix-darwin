@@ -61,7 +61,9 @@ export function resolveScopeDirs(dirs: string[] | undefined, env: Env = process.
 function mergeConfig(defaults: RouterConfig, user: UserRouterConfig): RouterConfig {
   const scopes = { ...defaults.scopes };
   for (const [name, scope] of Object.entries(user.scopes ?? {}) as Array<[keyof RouterConfig["scopes"], Partial<ScopeConfig>]>) {
-    scopes[name] = { ...defaults.scopes[name], ...scope };
+    if (name in defaults.scopes) {
+      scopes[name] = { ...defaults.scopes[name], ...scope };
+    }
   }
 
   const agents = { ...defaults.agents };
@@ -70,13 +72,5 @@ function mergeConfig(defaults: RouterConfig, user: UserRouterConfig): RouterConf
   }
 
   const catalog = { ...defaults.catalog, ...user.catalog };
-  catalog.intentRunner = pinnedIntentRunner(catalog.intentRunner, defaults.catalog.intentRunner);
-
   return { scopes, agents, catalog };
-}
-
-function pinnedIntentRunner(runner: string | undefined, fallback: string): string {
-  const trimmed = runner?.trim();
-  if (!trimmed || /@latest(?:\s|$)/.test(trimmed)) return fallback;
-  return trimmed;
 }

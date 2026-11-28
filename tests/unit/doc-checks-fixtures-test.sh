@@ -24,7 +24,7 @@ make_tree() {
     '```' \
     '[ref]: ../../AGENTS.md' >"$1/docs/agents/domain.md"
   printf '[domain](docs/agents/domain.md) [adr dir](docs/adr/) [root](/GLOSSARY.md)\n' >"$1/AGENTS.md"
-  touch "$1/ARCHITECTURE.md" "$1/GLOSSARY.md"
+  touch "$1/GLOSSARY.md"
 }
 
 expect_pass() {

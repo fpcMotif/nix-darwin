@@ -317,6 +317,27 @@ let
   };
   inherit (pstack) pstackModelsSheet pstackDrvs;
 
+  # The pstack plugin updates itself outside Nix, so no flake check sees it.
+  # This scans each new plugin version once against the shell guard.
+  pstackPluginScan = pkgs.writeShellApplication {
+    name = "pstack-plugin-scan";
+    runtimeInputs = [ pkgs.bash pkgs.jq pkgs.gnugrep pkgs.gawk pkgs.coreutils pkgs.fd pkgs.zoxide ];
+    text = ''
+      plugin=$(jq -r '.plugins["${pstackPluginId}"][0].installPath // empty' "$HOME/.claude/plugins/installed_plugins.json")
+      [ -d "$plugin" ] || { echo "pstack-plugin-scan: ${pstackPluginId} is not installed"; exit 0; }
+      stamp="$HOME/.cache/pstack-plugin-scan/$(basename "$plugin").ok"
+      [ -f "$stamp" ] && exit 0
+      echo "=== $(date '+%Y-%m-%d %H:%M:%S') scanning $plugin ==="
+      mapfile -t docs < <(fd -e md . "$plugin")
+      if bash ${../../tests/unit/pstack-commands-test.sh} ${./claude/hooks/shell-guard.sh} "''${docs[@]}"; then
+        mkdir -p "$(dirname "$stamp")" && touch "$stamp"
+      else
+        /usr/bin/osascript -e 'display notification "pstack plugin tells Claude to run a command the shell guard denies. See ~/Library/Logs/pstack-plugin-scan.log" with title "pstack plugin scan"'
+        exit 1
+      fi
+    '';
+  };
+
   # Defaults only: a value already in settings.json wins.
   claudeSeedEnv = {
     API_TIMEOUT_MS = "3000000";
@@ -545,6 +566,19 @@ in
       done
     '') idleClaudePluginSkills)}
   '';
+
+  launchd.agents.pstack-plugin-scan = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin {
+    enable = true;
+    config = {
+      ProgramArguments = [ (lib.getExe pstackPluginScan) ];
+      StartCalendarInterval = { Hour = 9; Minute = 30; };
+      RunAtLoad = true;
+      ProcessType = "Background";
+      LowPriorityIO = true;
+      StandardOutPath = "${homeDir}/Library/Logs/pstack-plugin-scan.log";
+      StandardErrorPath = "${homeDir}/Library/Logs/pstack-plugin-scan.log";
+    };
+  };
 
   home.activation.claudeSettingsOwnership =
     assert lib.elem "Read(~/.ssh/**)" claudePermissions.deny;

@@ -1,4 +1,4 @@
-# AGENTS.md — shared adapter
+# AGENTS.md (shared adapter)
 
 User: f.
 
@@ -15,3 +15,7 @@ Search with FFF and CodeDB first: one call returns a ranked, bounded answer. Wit
 - **Folder**: CodeDB `codedb_list_dir` or `eza --tree -L 2 DIR`.
 - **Other repo**: Pass its path as `project`; confirm the checkout before editing.
 - **Fallback**: After the servers and the CLI fail, use scoped `rg`, `fd`, or direct reads, and name the failure.
+
+## Shell
+
+- **Shell guard**: A hook denies `cd`, `cp`, `sed`, `find`, `python`, `pip`, and `echo` or `printf` into a file. Run a command elsewhere with `z DIR && CMD` or the tool's own directory flag, such as `git -C DIR`. Copy with `fcp SRC DST`. Find files with `fd`. Run Python with `uv run`. Rewrite a stream with `rg -o PAT -r REPL` or awk. Read a span with `bat -pp --line-range A:B FILE`. Change files with the edit tool.
