@@ -4,26 +4,26 @@
 }:
 
 let
-  version = "0.11.1-nightly.ab3002a";
+  version = "0.11.1-nightly.eb58401";
 
   releaseBase = "https://github.com/dmtrKovalenko/fff/releases/download/${version}";
 
   sources = {
     aarch64-darwin = {
       asset = "fff-mcp-aarch64-apple-darwin";
-      hash = "sha256-v8DEQ3sVtqvfoZ52rtUjqvr3Fz4RHAEtsHWn2XqXmC4=";
+      hash = "sha256-VEtQHz4RCOfFQXisHRYld8s2IV0C+i5n/yZof8kwSgU=";
     };
     x86_64-darwin = {
       asset = "fff-mcp-x86_64-apple-darwin";
-      hash = "sha256-fIrMdH+ievzx2M4cSqFPGYWOkQcBhx0dTMrtwA7CJZ0=";
+      hash = "sha256-PcYYhoLB2u8E/C3shXQfTdQD77VUOvE2LwP+2RWlLpw=";
     };
     aarch64-linux = {
       asset = "fff-mcp-aarch64-unknown-linux-gnu";
-      hash = "sha256-IRAI82AZgorD1E8/J+MRy/jDfwImmVO8iv5zVoGMcvc=";
+      hash = "sha256-n5lqvDN8k0gV5CtfqYdZGJcj4yZibKv8RKIY+ZApP6g=";
     };
     x86_64-linux = {
       asset = "fff-mcp-x86_64-unknown-linux-gnu";
-      hash = "sha256-TFTNjbaKQWOrpFUyTUS1kdGYSaFEFNgNFaWWJT/JUqA=";
+      hash = "sha256-9Zr8XuV7iYOrGWvacWhf94D9Hx5uoF1RwsPhDWX1OSY=";
     };
   };
 
