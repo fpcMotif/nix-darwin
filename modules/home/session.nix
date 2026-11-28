@@ -52,6 +52,9 @@ in
 
     HOMEBREW_NO_ANALYTICS = "1";
 
+    NH_FLAKE = "$HOME/nix-config";
+    NH_SHOW_ACTIVATION_LOGS = "1";
+
     CDPATH = ".:$HOME:$HOME/Developer:$HOME/Downloads:$HOME/Documents";
 
     AGENT_BROWSER_CDP_URL = "http://localhost:9222";
